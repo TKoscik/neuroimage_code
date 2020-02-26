@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+#===============================================================================
+# Function Description
+# Authors: <<author names>>
+# Date: <<date>>
+#===============================================================================
+
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvk --long researcher:,project:,group:,subject:,session:,prefix:,\
 other-inputs:,template:,space:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
@@ -52,3 +58,66 @@ while true; do
 done
 
 # Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: $0"
+  echo 'Author: <<author names>>'
+  echo 'Date:   <<date of authorship>>'
+  echo '------------------------------------------------------------------------'
+  echo "Usage: $0.sh \"
+  echo '  -h | --help              display command help'
+  echo '  -c | --dry-run           test run of function'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
+  echo '  --researcher <value>     directory containing the project,'
+  echo '                           e.g. /Shared/koscikt'
+  echo '  --project <value>        name of the project folder, e.g., iowa_black'
+  echo '  --group <value>          group permissions for project,'
+  echo '                           e.g., Research-kosciklab'
+  echo '  --subject <value>        subject identifer, e.g., 123'
+  echo '  --session <value>        session identifier, e.g., 1234abcd'
+  echo '  --prefix <value>         scan prefix, e.g., sub-123_ses-1234abcd'
+  echo '  --other-inputs <value>   other inputs necessary for function'
+  echo '  --template <value>       name of template to use (if necessary),'
+  echo '                           e.g., HCPICBM'
+  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
+  echo '                           templates, etc. are stored,'
+  echo '                           default: /Shared/nopoulos/nimg_core'
+  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
+  echo '                       default: /Shared/pinc/sharedopt/apps/sourcefiles'
+  echo ''
+fi
+
+# Get time stamp for log -------------------------------------------------------
+proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
+
+#===============================================================================
+# Function Title
+#===============================================================================
+# <<body of function here>>
+# insert comments for important chunks
+
+# move files to appropriate locations
+
+#===============================================================================
+# End of Function
+#===============================================================================
+
+# Clean workspace --------------------------------------------------------------
+# edit directory for appropriate modality prep folder
+if [[ "${KEEP}" == "true" ]]; then
+  mkdir -p ${RESEARCHER}/${PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_SCRATCH}/* ${RESEARCHER}/${PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}/
+  rmdir ${DIR_SCRATCH}
+else
+  rm ${DIR_SCRATCH}/*
+  rmdir ${DIR_SCRATCH}
+fi
+
+# Write log entry on conclusion ------------------------------------------------
+LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+
