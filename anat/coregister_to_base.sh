@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvks \
---long researcher:,project:,group:,subject:,session:,prefix:,\
+--long researcher:,project:,group:,subject:,session:,\
 fixed-image:,fixed-modality:,fixed-space:,\
 moving-image:,moving-modality:,moving-space:,\
 do-syn,\
@@ -26,7 +26,6 @@ PROJECT=
 GROUP=
 SUBJECT=
 SESSION=
-PREFIX=
 FIXED_IMAGE=
 FIXED_MODALITY=T1w
 FIXED_SPACE=native
@@ -53,7 +52,6 @@ while true; do
     --group) GROUP="$2" ; shift 2 ;;
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
     --fixed-image) FIXED_IMAGE="$2" ; shift 2 ;;
     --fixed-modality) FIXED_MODALITY="$2" ; shift 2 ;;
     --fixed-space) FIXED_SPACE="$2" ; shift 2 ;;
@@ -88,8 +86,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --subject <value>        subject identifer, e.g., 123'
   echo '  --session <value>        session identifier, e.g., 1234abcd'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           e.g., sub-123_ses-1234abcd_acq-MPRAGE_T1w'
   echo '  --fixed-space <value>    "native" to keep base image spacing [default],'
   echo '                           "raw" to keep moving image spacing, or'
   echo '                           "MxNxO" to set desired spacing'
@@ -108,12 +104,17 @@ fi
 # Get time stamp for log -------------------------------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Make scratch directory -------------------------------------------------------
+# Setup directories ------------------------------------------------------------
 mkdir -r ${DIR_SCRATCH}
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
 DIR_XFM==${RESEARCHER}/${PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
+
+# set output prefix if not provided --------------------------------------------
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
 
 #===============================================================================
 # Start of Function
@@ -167,23 +168,22 @@ for (( i=0; i<${NUM_MOVING}; i++ )); do
   xfm_fcn="${xfm_fcn} -r ${REFERENCE_IMAGE}"
   eval ${xfm_fcn}
   
-  # gather names for output
-  OUT_PREFIX=(${MOVING_IMAGE[${i}]})
-  OUT_PREFIX=(`basename "${OUTPUT_PREFIX%.nii.gz}"`)
-  OUT_MODALITY=(${OUTPUT_PREFIX##*_})
-  OUT_PREFIX=(${OUTPUT_PREFIX%_*})
+  # get image modality
+  MOD=(${MOVING_IMAGE[${i}]})
+  MOD=(`basename "${MOD%.nii.gz}"`)
+  MOD=(${MOD##*_})
 
   # Move registered images and transforms 
   FIXED_NAME=${FIXED_MODALITY}+${FIXED_SPACE}
   mv ${DIR_SCRATCH}/reg${i}.nii.gz \
-    ${DIR_SAVE}/${OUT_PREFIX}_reg-${FIXED_NAME}_${OUT_MODALITY}.nii.gz
+    ${DIR_SAVE}/${PREFIX}_reg-${FIXED_NAME}_${MOD}.nii.gz
   mv ${DIR_SCRATCH}/xfm${i}_0GenericAffine.mat \
-    ${DIR_XFM}/${OUT_PREFIX}_from-${OUT_MODALITY}+raw_to-${FIXED_NAME}_xfm-affine.mat
+    ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${FIXED_NAME}_xfm-affine.mat
   if [[ "${DO_SYN}" == "true" ]]; then
     mv ${DIR_SCRATCH}/xfm${i}_1Warp.nii.gz \
-      ${DIR_XFM}/${OUT_PREFIX}_from-${OUT_MODALITY}+raw_to-${FIXED_NAME}_xfm-syn.nii.gz
+      ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${FIXED_NAME}_xfm-syn.nii.gz
     mv ${DIR_SCRATCH}/xfm${i}_1InverseWarp.nii.gz \
-      ${DIR_XFM}/${OUT_PREFIX}_from-${FIXED_NAME}_to-${OUT_MODALITY}+raw_xfm-syn.nii.gz
+      ${DIR_XFM}/${PREFIX}_from-${FIXED_NAME}_to-${MOD}+raw_xfm-syn.nii.gz
   fi
 done
 

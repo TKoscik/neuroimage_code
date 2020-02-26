@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvk --long researcher:,project:,group:,subject:,session:,prefix:,\
-other-inputs:,template:,space:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+other-inputs:,template:,space:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,dry-run,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -26,6 +26,7 @@ PREFIX=
 OTHER_INPUTS=
 TEMPLATE=HCPICBM
 SPACE=1mm
+DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -49,6 +50,7 @@ while true; do
     --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -79,11 +81,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --subject <value>        subject identifer, e.g., 123'
   echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         scan prefix,'
-  echo '                           e.g., sub-123_ses-1234abcd_acq-MPRAGE_T1w'
+  echo '                           default: sub-123_ses-1234abcd'
   echo '  --other-inputs <value>   other inputs necessary for function'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
@@ -96,14 +99,28 @@ fi
 # Get time stamp for log -------------------------------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Make scratch directory -------------------------------------------------------
+# Setup directories ------------------------------------------------------------
 mkdir -r ${DIR_SCRATCH}
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+fi
+DIR_XFM==${RESEARCHER}/${PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
+
+# set output prefix if not provided --------------------------------------------
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
 
 #===============================================================================
 # Start of Function
 #===============================================================================
 # <<body of function here>>
 # insert comments for important chunks
+
+# get image modality
+  MOD=(${IMAGE})
+  MOD=(`basename "${MOD%.nii.gz}"`)
+  MOD=(${MOD##*_})
 
 # move files to appropriate locations
 

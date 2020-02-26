@@ -8,9 +8,9 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hv --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,image-dim:,dir-nimgcore:,dir-pincsource:,\
-help,verbose -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,\
+image:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -25,24 +25,28 @@ SUBJECT=
 SESSION=
 PREFIX=
 IMAGE=
-IMAGE_DIM=3
+DIR_SAVE=
+DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
+KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE="$2" ; shift 2 ;;
-    --image-dim) IMAGE_DIM="$2" ; shift 2 ;;
+    --prefix)  PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE+=("$2") ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -69,10 +73,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --subject <value>        subject identifer, e.g., 123'
   echo '  --session <value>        session identifier, e.g., 1234abcd'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           e.g., sub-123_ses-1234abcd_acq-MPRAGE_T1w'
+  echo '  --prefix <value>         prefix for output,'
+  echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image to denoise'
-  echo '  --image-dim <value>      dimensions of input, 3=3D 4=4D'
+  echo '  --dir-save <value>       directory to save output,'
+  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
   echo "                           default: ${DIR_NIMGCORE}"
@@ -85,15 +91,52 @@ fi
 # Get time stamp for log -------------------------------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
+# Setup directories ------------------------------------------------------------
+mkdir-p ${DIR_SCRACTH}
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+fi
+mkdir -p ${DIR_SAVE}
+
+# set output prefix if not provided --------------------------------------------
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
+
 #===============================================================================
 # Rician Denoising
 #===============================================================================
-DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-mkdir -p ${DIR_SAVE}
+NUM_IMAGE=${#IMAGE[@]}
+for (( i=0; i<${NUM_IMAGE}; i++ )); do
+  #find dimensionality of image (3d or 4d)
+  NUM_VOLS=`PrintHeader ${IMAGE[${i}]} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1`
+  if [[ "${NUM_VOLS}" == 1 ]]; then
+    IMAGE_DIM=3
+  else
+    IMAGE_DIM=4
+  fi
+  
+  # gather names for output
+  MOD=(${IMAGE[${i}]})
+  MOD=(`basename "${MOD%.nii.gz}"`)
+  MOD=(${MOD##*_})
 
-DenoiseImage -d ${IMAGE_DIM} -s 1 -p 1 -r 2 -v ${VERBOSE} -n Rician \
-  -i ${IMAGE} \
-  -o [${DIR_SAVE}/${PREFIX}_prep-denoise.nii.gz,${DIR_SAVE}/${PREFIX}_prep-noise.nii.gz]
+  # Denoise image
+  DenoiseImage -d ${IMAGE_DIM} -s 1 -p 1 -r 2 -v ${VERBOSE} -n Rician \
+    -i ${IMAGE[${i}]} \
+    -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]
+done
+
+mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-denoise* ${DIR_SAVE}/
+
+# Clean workspace --------------------------------------------------------------
+if [[ "${KEEP}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-noise* ${DIR_SAVE}/
+  rmdir ${DIR_SCRATCH}
+else
+  rm ${DIR_SCRATCH}/*
+  rmdir ${DIR_SCRATCH}
+fi
 
 #===============================================================================
 # End of Function

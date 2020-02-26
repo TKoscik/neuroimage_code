@@ -25,10 +25,10 @@ SUBJECT=
 SESSION=
 PREFIX=
 IMAGE=
-MODALITY=T1w
 TEMPLATE=HCPICBM
 SPACE=1mm
 TARGET=T1w
+DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -44,12 +44,12 @@ while true; do
     --group) GROUP="$2" ; shift 2 ;;
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
+    --prefix_ PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
-    --modality) MODALITY="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --target) TARGET="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -76,11 +76,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --subject <value>        subject identifer, e.g., 123'
   echo '  --session <value>        session identifier, e.g., 1234abcd'
-  echo '  --prefix <value>         scan prefix, e.g., sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image to align'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --target <value>         Modality of image to warp to, e.g., T1w'
+  echo '  --dir-save <value>       directory to save output,'
+  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
@@ -93,12 +95,28 @@ fi
 # Get time stamp for log -------------------------------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Make workspace folder --------------------------------------------------------
+# Setup directories ------------------------------------------------------------
 mkdir -p ${DIR_SCRATCH}
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+fi
+mkdir -p ${DIR_SAVE}
+DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
+mkdir -p ${DIR_XFM}
+
+# set output prefix if not provided --------------------------------------------
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
 
 #===============================================================================
 # Rigid Alignment
 #===============================================================================
+# get image modality from filename ---------------------------------------------
+MOD=(${IMAGE})
+MOD=(`basename "${MOD%.nii.gz}"`)
+MOD=(${MOD##*_})
+
 # resample template image to the spacing of the image --------------------------
 DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}
 IFS=x read -r -a pixdim <<< $(PrintHeader ${IMAGE} 1)
@@ -108,8 +126,13 @@ ResampleImage 3 ${FIXED} \
   ${pixdim[0]}x${pixdim[1]}x${pixdim[2]} 0 0 6
   
 # rigid registration -----------------------------------------------------------
+if [[ "${MOD}" == "${TARGET}" ]]; then
+  HIST_MATCH=1
+else
+  HIST_MATCH=0
+fi
 antsRegistration \
-  -d 3 --float 1 --verbose ${VERBOSE} -u 0 -z 1 \
+  -d 3 --float 1 --verbose ${VERBOSE} -u ${HIST_MATCH} -z 1 \
   -r [${FIXED},${IMAGE},1] \
   -t Rigid[0.1] \
   -m MI[${FIXED},${IMAGE},1,32,Regular,0.25] \
@@ -121,21 +144,16 @@ antsRegistration \
 # apply transform --------------------------------------------------------------
 antsApplyTransforms -d 3 \
   -i ${IMAGE} \
-  -o ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
+  -o ${DIR_SCRATCH}/${PREFIX}_prep-rigid_${MOD}.nii.gz \
   -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
   -n BSpline[3] \
   -r ${FIXED}
 
 # move files to appropriate locations ------------------------------------------
-DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
-mkdir -p ${DIR_XFM}
 mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-  ${DIR_XFM}/${PREFIX}_from-${MODALITY}+raw_to-${TEMPLATE}+native_xfm-rigid.mat
-
-DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-mkdir -p ${DIR_SAVE}
+  ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${TEMPLATE}+native_xfm-rigid.mat
 mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
-  ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+native_${MODALITY}.nii.gz
+  ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+native_${MOD}.nii.gz
 
 #===============================================================================
 # End of Function
