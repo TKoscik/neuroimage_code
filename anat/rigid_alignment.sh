@@ -9,7 +9,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hv --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,modality:,template:,space:,target:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+image:,modality:,template:,space:,target:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -60,13 +60,14 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
+  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: $0"
+  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
   echo 'Author: <<author names>>'
   echo 'Date:   <<date of authorship>>'
   echo '------------------------------------------------------------------------'
-  echo "Usage: $0.sh \"
+  echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  --researcher <value>     directory containing the project,'
