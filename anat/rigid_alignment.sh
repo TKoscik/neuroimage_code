@@ -135,7 +135,7 @@ mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
 DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_SAVE}
 mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
-  ${DIR_SAVE}/${PREFIX}_prep-rigid.nii.gz
+  ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+native_${MODALITY}.nii.gz
 
 #===============================================================================
 # End of Function
