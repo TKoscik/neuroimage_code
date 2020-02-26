@@ -9,7 +9,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hv --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,dir-nimgcore:,dir-pincsource:,\
+image:,image-dim:,dir-nimgcore:,dir-pincsource:,\
 help,verbose -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -25,6 +25,7 @@ SUBJECT=
 SESSION=
 PREFIX=
 IMAGE=
+IMAGE_DIM=3
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
@@ -41,6 +42,7 @@ while true; do
     --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
+    --image-dim) IMAGE_DIM="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -68,6 +70,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         scan prefix, e.g., sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image to denoise'
+  echo '  --image-dim <value>      dimensions of input, 3=3D 4=4D'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
   echo '                           default: /Shared/nopoulos/nimg_core'
@@ -79,57 +82,19 @@ fi
 # Get time stamp for log -------------------------------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Make workspace folder --------------------------------------------------------
-mkdir -p ${DIR_SCRATCH}
-
 #===============================================================================
-# Rigid Alignment
+# Rician Denoising
 #===============================================================================
-# resample template image to the spacing of the image --------------------------
-DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}
-IFS=x read -r -a pixdim <<< $(PrintHeader ${IMAGE} 1)
-FIXED=${DIR_SCRATCH}/fixed_image.nii.gz
-ResampleImage 3 ${FIXED} \
-  ${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_${TARGET}.nii.gz \
-  ${pixdim[0]}x${pixdim[1]}x${pixdim[2]} 0 0 6
-  
-# rigid registration -----------------------------------------------------------
-antsRegistration \
-  -d 3 --float 1 --verbose ${VERBOSE} -u 0 -z 1 \
-  -r [${FIXED},${IMAGE},1] \
-  -t Rigid[0.1] \
-  -m MI[${FIXED},${IMAGE},1,32,Regular,0.25] \
-  -c [2000x2000x1000x1000,1e-6,10] \
-  -f 8x4x2x1 \
-  -s 3x2x1x0vox \
-  -o ${DIR_SCRATCH}/xfm_
-
-# apply transform --------------------------------------------------------------
-antsApplyTransforms -d 3 \
-  -i ${IMAGE} \
-  -o ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
-  -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-  -n BSpline[3] \
-  -r ${FIXED}
-
-# move files to appropriate locations ------------------------------------------
-DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
-mkdir -p ${DIR_XFM}
-mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-  ${DIR_XFM}/${PREFIX}_from-${MODALITY}+raw_to-${TEMPLATE}+native_xfm-rigid.mat
-
 DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_SAVE}
-mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
-  ${DIR_SAVE}/${PREFIX}_prep-rigid.nii.gz
+
+DenoiseImage -d ${IMAGE_DIM} -s 1 -p 1 -r 2 -v ${VERBOSE} -n Rician \
+  -i ${IMAGE} \
+  -o [${DIR_SAVE}/${PREFIX}_prep-denoise.nii.gz,${DIR_SAVE}/${PREFIX}_prep-noise.nii.gz]
 
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Clean workspace --------------------------------------------------------------
-rm ${DIR_SCRATCH}/*
-rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
