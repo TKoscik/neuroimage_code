@@ -96,12 +96,12 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 # Setup directories ------------------------------------------------------------
-mkdir -p ${DIR_SCRATCH}
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
-mkdir -p ${DIR_SAVE}
 DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 
 # set output prefix if not provided --------------------------------------------
