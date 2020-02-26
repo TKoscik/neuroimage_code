@@ -59,13 +59,14 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
+  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: $0"
+  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
   echo 'Author: <<author names>>'
   echo 'Date:   <<date of authorship>>'
   echo '------------------------------------------------------------------------'
-  echo "Usage: $0.sh \"
+  echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
@@ -77,7 +78,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --subject <value>        subject identifer, e.g., 123'
   echo '  --session <value>        session identifier, e.g., 1234abcd'
-  echo '  --prefix <value>         scan prefix, e.g., sub-123_ses-1234abcd'
+  echo '  --prefix <value>         scan prefix,
+  echo '                           'e.g., sub-123_ses-1234abcd_acq-MPRAGE_T1w'
   echo '  --other-inputs <value>   other inputs necessary for function'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
@@ -85,9 +87,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
-  echo '                           default: /Shared/nopoulos/nimg_core'
+  echo '                           default: ${DIR_NIMGCORE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                       default: /Shared/pinc/sharedopt/apps/sourcefiles'
+  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
 fi
 
