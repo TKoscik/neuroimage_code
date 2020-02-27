@@ -9,7 +9,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+image:,mask:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -25,6 +25,7 @@ SUBJECT=
 SESSION=
 PREFIX=
 IMAGE=
+MASK=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
@@ -77,6 +78,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix <value>         prefix for output,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image to denoise'
+  echo '  --mask <value>           full path to binary mask'
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
