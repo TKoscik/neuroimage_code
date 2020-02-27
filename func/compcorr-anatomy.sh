@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 OPTS=`getopt -hvk --long researcher:,project:,group:,subject:,session:,prefix:,ts-bold:,label-tissue:,value-csf:,value-wm:,dir-scratch:,dir-nimgcore:,dir-pincsource:,keep,help,verbose -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then

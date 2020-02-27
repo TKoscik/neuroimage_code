@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash -e
 
 OPTS=`getopt -ovk --long researcher:,project:,group:,subject:,session:,prefix:,template:,space:,ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,dir-scratch:,dir-nimgcore:,dir-pincsource:,keep,help,verbose -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then

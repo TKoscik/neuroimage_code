@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,ts-bold:,target:,template:,space:,dir-scratch:,dir-nimgcore:,dir-pincsource:,keep,help,verbose -n 'parse-options' -- "$@"`
