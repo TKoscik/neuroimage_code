@@ -92,10 +92,10 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 # Setup directories ------------------------------------------------------------
-mkdir-p ${DIR_SCRACTH}
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
+mkdir-p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # set output prefix if not provided --------------------------------------------
@@ -132,11 +132,10 @@ mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-denoise* ${DIR_SAVE}/
 # Clean workspace --------------------------------------------------------------
 if [[ "${KEEP}" == "true" ]]; then
   mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-noise* ${DIR_SAVE}/
-  rmdir ${DIR_SCRATCH}
 else
   rm ${DIR_SCRATCH}/*
-  rmdir ${DIR_SCRATCH}
 fi
+rmdir ${DIR_SCRATCH}
 
 #===============================================================================
 # End of Function
