@@ -48,8 +48,8 @@ while true; do
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+=("$2") ; shift 2 ;;
-    --method) METHOD+=("$2") ; shift 2 ;;
+    --image) IMAGE+="$2" ; shift 2 ;;
+    --method) METHOD+="$2" ; shift 2 ;;
     --suffix) SUFFIX="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;

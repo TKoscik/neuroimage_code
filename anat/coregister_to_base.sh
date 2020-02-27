@@ -55,7 +55,7 @@ while true; do
     --fixed-image) FIXED_IMAGE="$2" ; shift 2 ;;
     --fixed-modality) FIXED_MODALITY="$2" ; shift 2 ;;
     --fixed-space) FIXED_SPACE="$2" ; shift 2 ;;
-    --moving-image) MOVING_IMAGE+=("$2") ; shift 2 ;;
+    --moving-image) MOVING_IMAGE+="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;

@@ -46,7 +46,7 @@ while true; do
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
     --prefix_ PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+=("$2") ; shift 2 ;;
+    --image) IMAGE+="$2" ; shift 2 ;;
     --method) METHOD="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --smooth-kernel) SMOOTH_KERNEL="$2" ; shift 2 ;;

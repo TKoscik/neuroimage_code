@@ -44,7 +44,7 @@ while true; do
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+=("$2") ; shift 2 ;;
+    --image) IMAGE+="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;

@@ -47,7 +47,7 @@ while true; do
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+=("$2") ; shift 2 ;;
+    --image) IMAGE+="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --n-class) N_CLASS="$2" ; shift 2 ;;
     --class-label) CLASS_LABEL="$2" ; shift 2 ;;
