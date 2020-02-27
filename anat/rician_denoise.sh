@@ -45,6 +45,7 @@ while true; do
     --session) SESSION="$2" ; shift 2 ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --image) IMAGE+="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
@@ -122,9 +123,12 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   MOD=(${MOD##*_})
 
   # Denoise image
-  DenoiseImage -d ${IMAGE_DIM} -s 1 -p 1 -r 2 -v ${VERBOSE} -n Rician \
-    -i ${IMAGE[${i}]} \
-    -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]
+  dn_fcn="DenoiseImage -d ${IMAGE_DIM} -s 1 -p 1 -r 2 -v ${VERBOSE} -n Rician"
+  dn_fcn="${dn_fcn} -i ${IMAGE[${i}]}"
+  if [ -z "${MASK}" ]; then
+    dn_fcn="${dn_fcn} -i ${MASK}"
+  fi
+  dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]"
 done
 
 mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-denoise* ${DIR_SAVE}/
