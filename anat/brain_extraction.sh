@@ -144,6 +144,10 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     ants_fcn="${ants_fcn} -f ${DIR_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
     ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/ants-bex_"
     eval ${ants_fcn}
+    
+    CopyImageHeaderInformation ${IMAGE[${j}]} \
+      ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
+      ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz 1 1 1
     mv ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
       ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
     rm ${DIR_SCRATCH}/ants-bex_BrainExtraction*
