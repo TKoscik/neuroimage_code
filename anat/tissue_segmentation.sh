@@ -121,7 +121,7 @@ fi
 # =============================================================================
 # Start of Function
 # =============================================================================
-INIT_VALUES=`Rscript ${DIR_NIMGCORE}/histogram_peaks_GMM.R ${IMAGE[0]} ${MASK} ${DIR_SCRATCH} "k" ${N_CLASS}`
+INIT_VALUES=`Rscript ${DIR_NIMGCORE}/code/anat/histogram_peaks_GMM.R ${IMAGE[0]} ${MASK} ${DIR_SCRATCH} "k" ${N_CLASS}`
 
 NUM_IMAGE=${#IMAGE[@]}
 atropos_fcn="Atropos -d 3 -c [5,0.0] -k Gaussian -m [0.1,1x1x1] -r 1 -p Socrates[0] -v ${VERBOSE}"
