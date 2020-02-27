@@ -45,7 +45,7 @@ while true; do
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
     --pass-lo) PASS_LO="$2" ; shift 2 ;;
     --pass-hi) PASS_HI="$2" ; shift 2 ;;
-    --regressor) REGRESSOR+=("$2") ; shift 2 ;;
+    --regressor) REGRESSOR+="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
