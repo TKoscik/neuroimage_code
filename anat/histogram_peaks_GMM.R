@@ -2,19 +2,20 @@ args <- commandArgs(trailingOnly = TRUE)
 
 nii.file <- args[1]
 mask.file <- args[2]
+dir.scratch <- sprintf("%s/hist_peak_GMM", arg[3])
 k <- 3
 iter <- 10
 size <- 10000
-dir.scratch <- sprintf("/Shared/inc_scratch/scratch_%s", format(Sys.time(), "%Y%m%d%H%M%S"))
-if (length(args)>2) {
-  for (i in seq(3,length(args),2)) {
+
+if (length(args)>3) {
+  for (i in seq(4,length(args),2)) {
     if (arg[i] <- "k") {
       k <- arg[i+1]
     } else if (arg[i] <- "iter") {
       iter <- arg[i+1]
     } else if (arg[i] <- "size") {
       size <- arg[i+1]
-    }
+    } 
   }
 }
 
@@ -23,8 +24,8 @@ suppressMessages(library(tools))
 suppressMessages(library(mixtools))
 suppressMessages(library(nifti.io))
 
-mask.file <- "/Shared/koscikt_scratch/scratch_tk/sub-105_ses-35n7dw4yu9_site-00201_mask-brain.nii.gz"
-nii.file <- "/Shared/koscikt_scratch/scratch_tk/sub-105_ses-35n7dw4yu9_site-00201_T1w.nii.gz"
+#mask.file <- "/Shared/koscikt_scratch/scratch_tk/sub-105_ses-35n7dw4yu9_site-00201_mask-brain.nii.gz"
+#nii.file <- "/Shared/koscikt_scratch/scratch_tk/sub-105_ses-35n7dw4yu9_site-00201_T1w.nii.gz"
 
 if (file_ext(nii.file)=="gz") {
   dir.create(dir.scratch, showWarnings = FALSE, recursive=TRUE)

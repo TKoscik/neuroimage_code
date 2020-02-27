@@ -7,9 +7,10 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvk --long researcher:,project:,group:,subject:,session:,prefix:,\
-other-inputs:,template:,space:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
-help,dry-run,verbose,keep -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,\
+image:,mask:,n-class:,class-label:,\
+dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -23,22 +24,21 @@ GROUP=
 SUBJECT=
 SESSION=
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
+IMAGE=
+MASK=
+N_CLASS=
+CLASS_LABEL=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
 VERBOSE=0
 KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
@@ -47,9 +47,10 @@ while true; do
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --image) IMAGE+=("$2") ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
+    --n-class) N_CLASS="$2" ; shift 2 ;;
+    --class-label) CLASS_LABEL="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
@@ -82,11 +83,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --image <value>          image(s) to use for segmentation, multiple'
+  echo '                           inputs allowed. T1w first, T2w second, etc.'
+  echo '  --mask <value>           binary maskl of region to include in segmentation'
+  echo '  --n-class <value>        number of segmentation classes, default=3'
+  echo '  --class-label <values>  array of names for classes, default is numeric'
+  echo '  --dir-save <value>       directory to save output,'
+  echo '                           default" ${RESEARCHER}/${PROJECT}/derivatives/anat/label'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
@@ -100,13 +103,49 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 # Setup directories ------------------------------------------------------------
-mkdir -r ${DIR_SCRATCH}
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/label
 fi
-DIR_XFM==${RESEARCHER}/${PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
+mkdir -r ${DIR_SCRATCH}
+mkdir -r ${DIR_SAVE}
 
 # set output prefix if not provided --------------------------------------------
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
+
+if [ -z "${CLASS_LABEL}" ]; then
+  CLASS_LABEL=(`seq 1 1 ${N_CLASS}`)
+fi
+
+# =============================================================================
+# Start of Function
+# =============================================================================
+INIT_VALUES=`Rscript ${DIR_NIMGCORE}/histogram_peaks_GMM.R ${IMAGE[0]} ${MASK} ${DIR_SCRATCH} "k" ${N_CLASS}`
+
+NUM_IMAGE=${#IMAGE[@]}
+atropos_fcn="Atropos -d 3 -c [5,0.0] -k Gaussian -m [0.1,1x1x1] -r 1 -p Socrates[0] -v ${VERBOSE}"
+for (( i=0; i<${NUM_IMAGE}; i++ )); do
+ atropos_fcn="${atropos_fcn} -a ${IMAGE[${i}]}"
+done
+atropos_fcn="${atropos_fcn} -x ${MASK}"
+atropos_fcn="${atropos_fcn} -i kmeans[${N_CLASS},${INIT_VALUES}]"
+atropos_fcn="${atropos_fcn} -o [${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz,${DIR_SCRATCH}/posterior%d.nii.gz]"
+eval ${atropos_fcn}
+
+mv ${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz ${DIR_SAVE}/
+for (( i=0; i<${N_CLASS}; i++)); do
+  POST_NUM=$((${i}+1))
+  mv ${DIR_SCRATCH}/posterior${POST_NUM}.nii.gz ${DIR_SAVE}/${PREFIX}_posterior-${CLASS_LABEL[${i}]}
+done
+
+#===============================================================================
+# End of Function
+#===============================================================================
+# Clean workspace --------------------------------------------------------------
+rmdir ${DIR_SCRATCH}
+
+# Write log entry on conclusion ------------------------------------------------
+LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+
