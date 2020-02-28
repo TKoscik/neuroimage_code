@@ -8,8 +8,8 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,mask:,model:,shrink:,patch:,search:,\
+OPTS=`getopt -o hvkd --long researcher:,project:,group:,subject:,session:,prefix:,\
+dimension:,image:,mask:,model:,shrink:,patch:,search:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -25,6 +25,7 @@ GROUP=
 SUBJECT=
 SESSION=
 PREFIX=
+DIM=3
 IMAGE=
 MASK=
 MODEL=Rician
@@ -44,6 +45,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
+    -d | --dimension) DIM="$2" ; shift 2 ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
@@ -86,6 +88,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         prefix for output,'
   echo '                           default: sub-123_ses-1234abcd'
+  echo '  -d | --dimension <value> image dimension, 3=3D (default) or 4=4D'
   echo '  --image <value>          full path to image to denoise'
   echo '  --mask <value>           full path to binary mask'
   echo '  --model <value>          Rician (default) or Gaussian noise model'
@@ -124,22 +127,14 @@ fi
 # Rician Denoising
 #===============================================================================
 NUM_IMAGE=${#IMAGE[@]}
-for (( i=0; i<${NUM_IMAGE}; i++ )); do
-  #find dimensionality of image (3d or 4d)
-  NUM_VOLS=`PrintHeader ${IMAGE[${i}]} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1`
-  if [[ "${NUM_VOLS}" == 1 ]]; then
-    IMAGE_DIM=3
-  else
-    IMAGE_DIM=4
-  fi
-  
+for (( i=0; i<${NUM_IMAGE}; i++ )); do  
   # gather names for output
   MOD=(${IMAGE[${i}]})
   MOD=(`basename "${MOD%.nii.gz}"`)
   MOD=(${MOD##*_})
 
   # Denoise image
-  dn_fcn="DenoiseImage -d ${IMAGE_DIM}"
+  dn_fcn="DenoiseImage -d ${DIM}"
   dn_fcn="${dn_fcn} -n ${MODEL}"
   dn_fcn="${dn_fcn} -s ${SHRINK}"
   dn_fcn="${dn_fcn} -p ${PATCH}"
@@ -147,9 +142,10 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   dn_fcn="${dn_fcn} -v ${VERBOSE}"
   dn_fcn="${dn_fcn} -i ${IMAGE[${i}]}"
   if [ -z "${MASK}" ]; then
-    dn_fcn="${dn_fcn} -i ${MASK}"
+    dn_fcn="${dn_fcn} -x ${MASK}"
   fi
   dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]"
+  eval ${dn_fcn}
 done
 
 mv ${DIR_SCRATCH}/${PREFIX}_prep-denoise* ${DIR_SAVE}/

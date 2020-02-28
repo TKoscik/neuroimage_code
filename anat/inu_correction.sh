@@ -8,8 +8,8 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hv --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,method:,mask:,smooth-kernel:,\
+OPTS=`getopt -o hvd --long researcher:,project:,group:,subject:,session:,prefix:,\
+dimension:,image:,method:,mask:,smooth-kernel:,weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -25,10 +25,16 @@ GROUP=
 SUBJECT=
 SESSION=
 PREFIX=
+DIM=3
 IMAGE=
 METHOD=
 MASK=
 SMOOTH_KERNEL=5
+WEIGHT=
+SHRINK=4
+CONVERGENCE=[50x50x50x50,0.0]
+BSPLINE=[200,3]
+HIST_SHARPEN=[0.15,0.01,200]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
@@ -40,6 +46,7 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -d | --dimension) DIM="$2" ; shift 2 ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
@@ -50,6 +57,11 @@ while true; do
     --method) METHOD="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --smooth-kernel) SMOOTH_KERNEL="$2" ; shift 2 ;;
+    --weight) WEIGHT="$2" ; shift 2 ;;
+    --shrink) SHRINK="$2" ; shift 2 ;;
+    --convergence) CONVERGENCE="$2" ; shift 2 ;;
+    --bspline) BSPLINE="$2" ; shift 2 ;;
+    --hist-sharpen]) HIST_SHARPEN="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
@@ -78,12 +90,26 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --subject <value>        subject identifer, e.g., 123'
   echo '  --session <value>        session identifier, e.g., 1234abcd'
+  echo '  --prefix <value>         prefix for output,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  -d | --dimension <value> image dimension, 3=3D (default) or 4=4D'
+  echo '                           T1T2 method only works on 3D images.'
   echo '  --image <value>          full path to image, multiple images allowed'
   echo '                           if using T1T2, image 1 must be T1w, image 2'
   echo '                           must be T2w'
   echo '  --method <value>         one of N4 or T1T2 (case insensitive)'
   echo '  --mask <value>           full path to region mask'
   echo '  --smooth-kernel <value>  smoothing kernel size in mm, default: 5'
+  echo '  --weight <value>         full path to weight image'
+  echo '  --shrink <value>         shrink factor, default=4'
+  echo '  --convergence <value>    convergence, [iterations,threshold]'
+  echo '                           default=[50x50x50x50,0.0]'
+  echo '  --bspline <value>        bspline fitting parameters,'
+  echo '                           default=[200,3], seems to work well for 3T'
+  echo '                           try changing to [85,3] for 7T'
+  echo '  --hist-sharpen <value>   histogram sharpening,'
+  echo '                           [FWHM,wienerNoise,binNumber]'
+  echo '                           default=[0.15,0.01,200]'
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
@@ -180,8 +206,24 @@ if [[ "${METHOD,,}" == "n4" ]]; then
     MOD=(`basename "${MOD%.nii.gz}"`)
     MOD=(${MOD##*_})
 
-    N4BiasFieldCorrection -d 3 -r 1 -i ${IMAGE[${i}]} \
-      -o [${DIR_SCRATCH}/${PREFIX}_prep-bias+N4_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz]
+    n4_fcn="N4BiasFieldCorrection"
+    n4_fcn="${n4_fcn} -d ${DIM}"
+    n4_fcn="${n4_fcn} -i ${IMAGE[${i}]}"
+    if [ -z "${MASK}" ]; then
+      n4_fcn="${n4_fcn} -x ${MASK}"
+    fi
+    if [ -z "${WEIGHT}" ]; then
+      n4_fcn="${n4_fcn} -w ${WEIGHT}"
+    fi
+    n4_fcn="${n4_fcn} -r ${RESCALE}"
+    n4_fcn="${n4_fcn} -s ${SHRINK}"
+    n4_fcn="${n4_fcn} -c ${CONVERGENCE}"
+    n4_fcn="${n4_fcn} -b ${BSPLINE}"
+    n4_fcn="${n4_fcn} -t ${HIST_SHARPEN}"
+    n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-bias+N4_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz]"
+    n4_fcn="${n4_fcn} -v ${VERBOSE}"
+    eval ${n4_fcn}
+    
     mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4_${MOD}.nii.gz ${DIR_SAVE}/
     if [[ "${KEEP}" == "true" ]]; then
       mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz ${DIR_SAVE}/
