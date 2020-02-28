@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash -e
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvk --long researcher:,project:,group:,email:,dicom-zip:,dicom-depth:,dont-use:,dir-scratch:,dir-nimgcore:,dir-pincsource:,dir-dicomsource:,help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then

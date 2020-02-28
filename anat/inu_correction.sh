@@ -1,7 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Intensity Non-Uniformity Correction based on T1w and T2 images
+# Intensity Non-Uniformity Correction
+# - Myelin mapping method, sqrt(T1w*T2w)
+# - N4 bias correction
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-02-26
 # Software: FSL
