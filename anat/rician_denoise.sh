@@ -9,7 +9,8 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,mask:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+image:,mask:,model:,shrink:,patch:,search:,\
+dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -26,6 +27,10 @@ SESSION=
 PREFIX=
 IMAGE=
 MASK=
+MODEL=Rician
+SHRINK=1
+PATCH=1
+SEARCH=2
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
@@ -47,6 +52,10 @@ while true; do
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --image) IMAGE+="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
+    --model) MODEL="$2" ; shift 2 ;;
+    --shrink) SHRINK="$2" ; shift 2 ;;
+    --patch) PATCH="$2" ; shift 2 ;;
+    --search) SEARCH="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
@@ -79,6 +88,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image to denoise'
   echo '  --mask <value>           full path to binary mask'
+  echo '  --model <value>          Rician (default) or Gaussian noise model'
+  echo '  --shrink <value>         shrink factor, large images are time-'
+  echo '                           consuming. default: 1'
+  echo '  --patch <value>          patch radius, default:1 (1x1x1)'
+  echo '  --search <value>         search radius, default:2 (2x2x2)'
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
@@ -125,7 +139,12 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   MOD=(${MOD##*_})
 
   # Denoise image
-  dn_fcn="DenoiseImage -d ${IMAGE_DIM} -s 1 -p 1 -r 2 -v ${VERBOSE} -n Rician"
+  dn_fcn="DenoiseImage -d ${IMAGE_DIM}"
+  dn_fcn="${dn_fcn} -n ${MODEL}"
+  dn_fcn="${dn_fcn} -s ${SHRINK}"
+  dn_fcn="${dn_fcn} -p ${PATCH}"
+  dn_fcn="${dn_fcn} -r ${SEARCH}"
+  dn_fcn="${dn_fcn} -v ${VERBOSE}"
   dn_fcn="${dn_fcn} -i ${IMAGE[${i}]}"
   if [ -z "${MASK}" ]; then
     dn_fcn="${dn_fcn} -i ${MASK}"
