@@ -133,11 +133,11 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]"
 done
 
-mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-denoise* ${DIR_SAVE}/
+mv ${DIR_SCRATCH}/${PREFIX}_prep-denoise* ${DIR_SAVE}/
 
 # Clean workspace --------------------------------------------------------------
 if [[ "${KEEP}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/${OUT_PREFIX}_prep-noise* ${DIR_SAVE}/
+  mv ${DIR_SCRATCH}/${PREFIX}_prep-noise* ${DIR_SAVE}/
 else
   rm ${DIR_SCRATCH}/*
 fi
