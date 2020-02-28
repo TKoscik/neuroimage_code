@@ -196,7 +196,6 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
     mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${PREFIX}_prep-bias+T1T2+field.nii.gz
   fi
 fi
-fi
 
 if [[ "${METHOD,,}" == "n4" ]]; then
   NUM_IMAGE=${#IMAGE[@]}
