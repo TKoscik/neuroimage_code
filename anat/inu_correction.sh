@@ -10,10 +10,10 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvd --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvdk --long researcher:,project:,group:,subject:,session:,prefix:,\
 dimension:,image:,method:,mask:,smooth-kernel:,weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
-help,verbose -n 'parse-options' -- "$@"`
+help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -43,18 +43,20 @@ DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
+KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -d | --dimension) DIM="$2" ; shift 2 ;;
+    -k | --keep) KEEP=true ; shift ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
-    --prefix_ PREFIX="$2" ; shift 2 ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE+="$2" ; shift 2 ;;
     --method) METHOD="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
@@ -63,7 +65,7 @@ while true; do
     --shrink) SHRINK="$2" ; shift 2 ;;
     --convergence) CONVERGENCE="$2" ; shift 2 ;;
     --bspline) BSPLINE="$2" ; shift 2 ;;
-    --hist-sharpen]) HIST_SHARPEN="$2" ; shift 2 ;;
+    --hist-sharpen) HIST_SHARPEN="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
