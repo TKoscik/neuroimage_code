@@ -234,9 +234,13 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
 fi
 eval ${reg_fcn}
 
+# set output flags
+FROM=${MOD[0]}+${ORIG_SPACE}
+TO=${TEMPLATE}+${SPACE}
+
 # Apply registration to all modalities
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
-  OUT_NAME=${DIR_SCRATCH}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_${MOD[${i}]}.nii.gz
+  OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD[${i}]}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${IMAGE[${i}]}"
   xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
@@ -246,12 +250,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
   xfm_fcn="${xfm_fcn} -r ${FIXED_IMAGE[0]}"
   eval ${xfm_fcn}
-  mv ${OUT_NAME} ${DIR_SAVE}/
 done
-
-# set output flags
-FROM=${MOD[0]}+${ORIG_SPACE}
-TO=${TEMPLATE}+${SPACE}
 
 # create and save stacked transforms
 if [[ "${AFFINE_ONLY}" == "false" ]]; then
