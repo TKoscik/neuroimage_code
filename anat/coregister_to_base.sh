@@ -7,13 +7,13 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvks \
+OPTS=`getopt -o hcvksl \
 --long researcher:,project:,group:,subject:,session:,\
 fixed-image:,fixed-modality:,fixed-space:,\
 moving-image:,moving-modality:,moving-space:,\
 do-syn,\
 dir-scratch:,dir-nimgcore:,dir-pincsource:,\
-help,dry-run,verbose,keep -n 'parse-options' -- "$@"`
+help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -39,6 +39,7 @@ HELP=false
 DRY_RUN=false
 VERBOSE=0
 KEEP=false
+NO_LOG=false
 
 while true; do
   case "$1" in
@@ -47,6 +48,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -s | --do-syn) DO_SYN=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
@@ -79,6 +81,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
   echo '  --researcher <value>     directory containing the project,'
   echo '                           e.g. /Shared/koscikt'
   echo '  --project <value>        name of the project folder, e.g., iowa_black'
@@ -205,6 +208,8 @@ else
 fi
 
 # Write log entry on conclusion ------------------------------------------------
-LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
-date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi
 

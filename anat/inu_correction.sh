@@ -10,10 +10,10 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvdk --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvdkl --long researcher:,project:,group:,subject:,session:,prefix:,\
 dimension:,image:,method:,mask:,smooth-kernel:,weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
-help,verbose,keep -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -44,6 +44,7 @@ DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 KEEP=false
+NO_LOG=false
 
 while true; do
   case "$1" in
@@ -51,6 +52,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -d | --dimension) DIM="$2" ; shift 2 ;;
     -k | --keep) KEEP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
@@ -87,6 +89,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
+  echo '  -l | --no-log            disable writing to output log'
   echo '  --researcher <value>     directory containing the project,'
   echo '                           e.g. /Shared/koscikt'
   echo '  --project <value>        name of the project folder, e.g., iowa_black'
@@ -241,6 +244,8 @@ fi
 rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
-LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
-date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi
 

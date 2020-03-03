@@ -2,15 +2,15 @@
 
 #===============================================================================
 # K-Means Tissue Segmentation
-# Authors: <<author names>>
-# Date: <<date>>
+# Authors: Timothy R. Koscik
+# Date: 2020-03-03
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvk --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvkl --long researcher:,project:,group:,subject:,session:,prefix:,\
 image:,mask:,n-class:,class-label:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
-help,verbose,keep -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -35,12 +35,14 @@ DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 KEEP=false
+NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     --researcher) RESEARCHER="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
@@ -74,6 +76,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
   echo '  --researcher <value>     directory containing the project,'
   echo '                           e.g. /Shared/koscikt'
   echo '  --project <value>        name of the project folder, e.g., iowa_black'
@@ -85,7 +88,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          image(s) to use for segmentation, multiple'
   echo '                           inputs allowed. T1w first, T2w second, etc.'
-  echo '  --mask <value>           binary maskl of region to include in segmentation'
+  echo '  --mask <value>           binary mask of region to include in segmentation'
   echo '  --n-class <value>        number of segmentation classes, default=3'
   echo '  --class-label <values>  array of names for classes, default is numeric'
   echo '  --dir-save <value>       directory to save output,'
@@ -146,6 +149,8 @@ done
 rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
-LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
-date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi
 
