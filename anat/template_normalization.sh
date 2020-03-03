@@ -9,7 +9,8 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long researcher:,project:,group:,subject:,session:,prefix:,\
-image:,mask:,mask-dil:,orig-space:,template:,space:,affine-only,hardcore,stack-xfm,
+image:,mask:,mask-dil:,orig-space:,template:,space:,\
+affine-only,hardcore,stack-xfm,
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -96,16 +97,19 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., [fixed_mask.nii.gz,moving-mask.nii.gz]'
   echo '  --mask-dilation <value>  Amount to dilate mask to avoid edge'
   echo '                           effects of registration'
+  echo '  --orig-space <value>     label for original spacing, default=native'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --affine-only            No non-linear registration steps.'
   echo '                           (potentially useful for building'
-  echo '                           within-subject averages)'
+  echo '                           within-subject averages), default=false'
   echo '  --hardcore               Use hardcore non-linear registration,'
   echo '                           may provide more-accurate fine-scale'
   echo '                           registrations, however much more'
-  echo '                           time-consuming.'
+  echo '                           time-consuming. default=false'
+  echo '  --stack-xfm              save a stacked version of the transform,'
+  echo '                           default=false'
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
