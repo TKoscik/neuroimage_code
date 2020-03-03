@@ -234,36 +234,70 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
 fi
 eval ${reg_fcn}
 
+# Apply registration to all modalities
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
+  OUT_NAME=${DIR_SCRATCH}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_${MOD[${i}]}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${IMAGE[${i}]}"
-  xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_${MOD[${i}]}.nii.gz"
+  xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
   if [[ "${AFFINE_ONLY}" == "false" ]]; then
     xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
   fi
   xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
   xfm_fcn="${xfm_fcn} -r ${FIXED_IMAGE[0]}"
-  eval ${xfm_fcn}    
+  eval ${xfm_fcn}
+  mv ${OUT_NAME} ${DIR_SAVE}/
 done
 
+# set output flags
+FROM=${MOD[0]}+${ORIG_SPACE}
+TO=${TEMPLATE}+${SPACE}
+
+# create and save stacked transforms
+if [[ "${AFFINE_ONLY}" == "false" ]]; then
 if [[ "${STACK_XFM}" == "true" ]]; then
-  xfm_fcn="antsApplyTransforms -d 3"
-  xfm_fcn="${xfm_fcn} -o [${DIR_SCRATCH}/${PREFIX}_from-${MOD[0]}+${ORIG_SPACE}_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz,1]"
-  if [[ "${AFFINE_ONLY}" == "false" ]]; then
-    xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
-  fi
-  xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
-  xfm_fcn="${xfm_fcn} -r ${FIXED_IMAGE[0]}"
-  eval ${xfm_fcn} 
+  antsApplyTransforms -d 3 \
+    -o [${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz,1] \
+    -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+    -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+    -r ${FIXED_IMAGE[0]}
+  
+  antsApplyTransforms -d 3 \
+    -o [${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-stack.nii.gz,1] \
+    -t ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+    -t [${DIR_SCRATCH}/xfm_0GenericAffine.mat,1] \
+    -r ${FIXED_IMAGE[0]}
+fi
 fi
 
+# move transforms to appropriate location
 if [[ "${AFFINE_ONLY}" == "false" ]]; then
   if [[ "${HARDCORE}" == "false" ]]; then
-    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz ${DIR_XFM}/${PREFIX}_from-${MOD[0]}+${ORIG_SPACE}_to-${TEMPLATE}+${SPACE}_xfm-syn.nii.gz
+    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
+    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz
   else
-    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz ${DIR_XFM}/${PREFIX}_from-${MOD[0]}+${ORIG_SPACE}_to-${TEMPLATE}+${SPACE}_xfm-bspline.nii.gz
+    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz
+    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
   fi
-  if [[ "${STACK_XFM}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/${PREFIX}_from-${MOD[0]}+${ORIG_SPACE}_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz ${DIR_XFM}
-  fi
+fi
+mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+  ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
+
+#===============================================================================
+# End of Function
+#===============================================================================
+
+# Clean workspace --------------------------------------------------------------
+touch ${DIR_SCRATCH}/f.chk
+rm ${DIR_SCRATCH}/*
+rmdir ${DIR_SCRATCH}
+
+# Write log entry on conclusion ------------------------------------------------
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
