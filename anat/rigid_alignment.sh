@@ -46,7 +46,7 @@ while true; do
     --group) GROUP="$2" ; shift 2 ;;
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
-    --prefix_ PREFIX="$2" ; shift 2 ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
@@ -114,7 +114,7 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 #===============================================================================
-# Rigid Alignment
+# Start of Function
 #===============================================================================
 # get image modality from filename ---------------------------------------------
 MOD=(${IMAGE})

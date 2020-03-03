@@ -113,7 +113,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           Images must be coregistered within'
   echo '                           participants.'
   echo '  --mask <value>           full path to region mask to include in,'
-  echo '                           hgiher-order stages of registration'
+  echo '                           higher-order stages of registration'
+  echo '  --mask-dilation <value>  Amount to dilate mask to avoid edge'
+  echo '                           effects of registration'
   echo '  --iterations <value>     number of iterations to generate '
   echo '                           template, default=5'
   echo '  --resolution <value>     resolution of final image in mm, '
@@ -322,7 +324,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
     fi
   done
   if [ -z ${MASK} ]; then
-    echo "-x[${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
+    echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
   else
     echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]
   fi
@@ -338,7 +340,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
         fi
       done
       if [ -z ${MASK} ]; then
-        echo "-x[${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
+        echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
       else
         echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]}
       fi
@@ -353,7 +355,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
         fi
       done
       if [ -z ${MASK} ]; then
-        echo "-x[${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
+        echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
       else
         echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]}
       fi
@@ -367,7 +369,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
         fi
       done
       if [ -z ${MASK} ]; then
-        echo "-x[${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
+        echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
       else
         echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]}
       fi
