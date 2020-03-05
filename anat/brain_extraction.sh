@@ -157,7 +157,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
   fi
 
   # run FSL's BET
-  if [[ "${METHOD[${i}],,}" == "FSL" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
+  if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
     fsl_fcn="bet ${IMAGE[0]}"
     fsl_fcn="${fsl_fcn} ${DIR_SCRATCH}/fsl_bet.nii.gz"
     if [[ ${NUM_IMAGE} > 1 ]]; then
@@ -181,7 +181,7 @@ if [[ ${NUM_METHOD} > 1 ]]; then
   if [[ "${METHOD[${i}],,}" == "ants" ]]; then
     majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
   fi
-  if [[ "${METHOD[${i}],,}" == "FSL" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
+  if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
     majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
   fi
 fi
@@ -199,7 +199,7 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 

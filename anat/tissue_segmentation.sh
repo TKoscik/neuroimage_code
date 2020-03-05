@@ -152,7 +152,9 @@ atropos_fcn="${atropos_fcn} -v ${VERBOSE}"
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
  atropos_fcn="${atropos_fcn} -a ${IMAGE[${i}]}"
 done
-atropos_fcn="${atropos_fcn} -x ${MASK}"
+if [ -n "${MASK}" ]; then
+  atropos_fcn="${atropos_fcn} -x ${MASK}"
+fi
 atropos_fcn="${atropos_fcn} -i kmeans[${N_CLASS},${INIT_VALUES}]"
 atropos_fcn="${atropos_fcn} -o [${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz,${DIR_SCRATCH}/posterior%d.nii.gz]"
 eval ${atropos_fcn}
@@ -171,7 +173,7 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 

@@ -132,14 +132,14 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 # Setup directories ------------------------------------------------------------
-if [ -z "${DIR_SAVE}" ]; then
+if [ -n "${DIR_SAVE}" ]; then
   DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
 mkdir -r ${DIR_SCRATCH}
 mkdir -r ${DIR_SAVE}
 
 # set output prefix if not provided --------------------------------------------
-if [ -z "${PREFIX}" ]; then
+if [ -n "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
@@ -215,10 +215,10 @@ if [[ "${METHOD,,}" == "n4" ]]; then
     n4_fcn="N4BiasFieldCorrection"
     n4_fcn="${n4_fcn} -d ${DIM}"
     n4_fcn="${n4_fcn} -i ${IMAGE[${i}]}"
-    if [ -z "${MASK}" ]; then
+    if [ -n "${MASK}" ]; then
       n4_fcn="${n4_fcn} -x ${MASK}"
     fi
-    if [ -z "${WEIGHT}" ]; then
+    if [ -n "${WEIGHT}" ]; then
       n4_fcn="${n4_fcn} -w ${WEIGHT}"
     fi
     n4_fcn="${n4_fcn} -r ${RESCALE}"
@@ -245,7 +245,7 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 

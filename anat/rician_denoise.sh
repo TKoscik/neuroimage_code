@@ -145,7 +145,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   dn_fcn="${dn_fcn} -r ${SEARCH}"
   dn_fcn="${dn_fcn} -v ${VERBOSE}"
   dn_fcn="${dn_fcn} -i ${IMAGE[${i}]}"
-  if [ -z "${MASK}" ]; then
+  if [ -n "${MASK}" ]; then
     dn_fcn="${dn_fcn} -x ${MASK}"
   fi
   dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]"
@@ -168,7 +168,7 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 

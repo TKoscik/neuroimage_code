@@ -156,10 +156,12 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); then
 fi
 
 # dilate mask if requested
+if [ -n ${MASK} ]; then
 if [[ "${MASK_DIL}" > 0 ]]; then
   ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
     MD ${MASK} ${MASK_DIL}
   MASK=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
+fi
 fi
 
 # register to template
@@ -187,7 +189,7 @@ reg_fcn="${reg_fcn} -t Affine[0.1]"
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
   reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,64,Regular,0.30]"
 done
-if [ -z ${MASK} ]; then
+if [ -n ${MASK} ]; then
   reg_fcn="${reg_fcn} -x ${MASK}"
 else
   reg_fcn="${reg_fcn} -x [NULL,NULL]"
@@ -201,7 +203,7 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
     for (( i=0; i<${NUM_IMAGE}; i++ )); do
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
-    if [ -z ${MASK} ]; then
+    if [ -n ${MASK} ]; then
       reg_fcn="${reg_fcn} -x ${MASK}"
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
@@ -214,7 +216,7 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
     for (( i=0; i<${NUM_IMAGE}; i++ )); do
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
-    if [ -z ${MASK} ]; then
+    if [ -n ${MASK} ]; then
       reg_fcn="${reg_fcn} -x ${MASK}"
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
@@ -226,7 +228,7 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
     for (( i=0; i<${NUM_IMAGE}; i++ )); do
       reg_fcn="${reg_fcn} -m CC[$${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,6]"
     done
-    if [ -z ${MASK} ]; then
+    if [ -n ${MASK} ]; then
       reg_fcn="${reg_fcn} -x ${MASK}"
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
@@ -301,6 +303,6 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi

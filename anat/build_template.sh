@@ -230,7 +230,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
     TEMP_NAME=(`basename "${IMAGE_TEMP[${j}]}"`)
     echo "ResampleImage 3 ${IMAGE_TEMP[${j}]} ${DIR_IMAGE}/${TEMP_NAME} ${RESOLUTION} 0 0 6" >> ${SH_RESAMPLE}
   done
-  if [ -z ${MASK} ]; then
+  if [ -n ${MASK} ]; then
     TEMP_NAME=(`basename "${IMAGE_TEMP[0]}"`)
     TEMP_MASK=(`basename "${MASK[${i}]}%.nii.gz"`)
     echo "antsApplyTransforms -d 3 -n NearestNeighbor -i ${MASK[${i}]} -o ${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz -r ${DIR_IMAGE}/${TEMP_NAME}" >> ${SH_RESAMPLE}
@@ -239,7 +239,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   echo "" >> ${SH_RESAMPLE}
 done
 if [[ "${NO_LOG}" == "false" ]]; then
-  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log" >> ${SH_RESAMPLE}
+  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_RESAMPLE}
   echo 'date +"task:resample_images,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_RESAMPLE}
 fi
 echo "" >> ${SH_RESAMPLE}
@@ -264,11 +264,14 @@ echo "" >> ${SH_AVERAGE}
 for (( j=0; j<${NUM_MOD}; j++ )); do
   echo "AverageImages 3 ${DIR_SCRATCH}/${PREFIX}_${MOD[${j}]}.nii.gz 1 ${DIR_IMAGE}/*${MOD[${j}]}.nii.gz" >> ${SH_AVERAGE}
 done
-echo "ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask.nii.gz MajorityVoting ${DIR_IMAGE}/*MASK.nii.gz" >> ${SH_AVERAGE}
-echo "ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask.nii.gz MD ${DIR_SCRATCH}/${PREFIX}_mask.nii.gz 3" >> ${SH_AVERAGE}
 echo "" >> ${SH_AVERAGE}
+if [ -n ${MASK} ]; then
+  echo "ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask.nii.gz MajorityVoting ${DIR_IMAGE}/*MASK.nii.gz" >> ${SH_AVERAGE}
+  echo "ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask.nii.gz MD ${DIR_SCRATCH}/${PREFIX}_mask.nii.gz 3" >> ${SH_AVERAGE}
+  echo "" >> ${SH_AVERAGE}
+fi
 if [[ "${NO_LOG}" == "false" ]]; then
-  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log" >> ${SH_AVERAGE}
+  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_AVERAGE}
   echo 'date +"task:average_images,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_AVERAGE}
 fi
 echo "" >> ${SH_AVERAGE}
@@ -323,7 +326,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
       echo "-m Mattes[${DIR_SCRATCH}/${PREFIX}_${MOD[${j}]}.nii.gz,${IMAGE_TEMP[${j}]},1,64,Regular,0.30]" >> ${SH_REGISTER[${i}]}
     fi
   done
-  if [ -z ${MASK} ]; then
+  if [ -n ${MASK} ]; then
     echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
   else
     echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]
@@ -339,7 +342,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
           echo "-m CC[${DIR_SCRATCH}/${PREFIX}_${MOD[${j}]}.nii.gz,${IMAGE_TEMP[${j}]},1,4]" >> ${SH_REGISTER[${i}]}
         fi
       done
-      if [ -z ${MASK} ]; then
+      if [ -n ${MASK} ]; then
         echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
       else
         echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]}
@@ -354,7 +357,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
           echo "-m CC[${DIR_SCRATCH}/${PREFIX}_${MOD[${j}]}.nii.gz,${IMAGE_TEMP[${j}]},1,4]" >> ${SH_REGISTER[${i}]}
         fi
       done
-      if [ -z ${MASK} ]; then
+      if [ -n ${MASK} ]; then
         echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
       else
         echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]}
@@ -368,7 +371,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
           echo "-m CC[${DIR_SCRATCH}/${PREFIX}_${MOD[${j}]}.nii.gz,${IMAGE_TEMP[${j}]},1,6]" >> ${SH_REGISTER[${i}]}
         fi
       done
-      if [ -z ${MASK} ]; then
+      if [ -n ${MASK} ]; then
         echo "-x [${DIR_SCRATCH}/${PREFIX}_mask.nii.gz,${DIR_IMAGE}/${TEMP_MASK}_MASK.nii.gz]" >> ${SH_REGISTER[${i}]}
       else
         echo "-x [NULL,NULL]" >> ${SH_REGISTER[${i}]}
@@ -394,7 +397,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
     fi
   done
   if [[ "${NO_LOG}" == "false" ]]; then
-    echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log" >> ${SH_REGISTER[${i}]}
+    echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_REGISTER[${i}]}
     echo 'date +"task:register_images'${i}'_to_average,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_REGISTER[${i}]}
   fi
   echo "" >> ${SH_REGISTER[${i}]}
@@ -430,7 +433,7 @@ else
   echo "rmdir ${DIR_SCRATCH}" >> ${SH_CLEAN}
 fi
 if [[ "${NO_LOG}" == "false" ]]; then
-  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log" >> ${SH_CLEAN}
+  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_CLEAN}
   echo 'date +"task:clean_template_build_workspace,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_CLEAN}
   echo 'date +"task:build_template,start:"'${proc_start}'",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_CLEAN}
 fi

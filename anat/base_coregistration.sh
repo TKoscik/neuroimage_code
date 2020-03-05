@@ -137,11 +137,11 @@ for (( i=0; i<${NUM_MOVING}; i++ )); do
   elif [[ "${FIXED_SPACE[0]}" == "raw" ]]; then
     # set reference image to spacing of moving image
     IFS=x read -r -a pixdim <<< $(PrintHeader ${MOVING_IMAGE} 1)
-    ResampleImage 3 ${REFERENCE_IMAGE} ${FIXED_IMAGE} \
+    ResampleImage 3 ${FIXED_IMAGE} ${REFERENCE_IMAGE} \
       ${pixdim[0]}x${pixdim[1]}x${pixdim[2]} 0 0 6
   else
     # set reference image to spacing provided
-    ResampleImage 3 ${REFERENCE_IMAGE} ${FIXED_IMAGE} ${FIXED_SPACE} 0 0 6
+    ResampleImage 3  ${FIXED_IMAGE} ${REFERENCE_IMAGE} ${FIXED_SPACE} 0 0 6
   fi
 
   # perform ANTs registration
@@ -209,7 +209,7 @@ fi
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
+  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 
