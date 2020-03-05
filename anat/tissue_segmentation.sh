@@ -124,8 +124,8 @@ proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/label
 fi
-mkdir -r ${DIR_SCRATCH}
-mkdir -r ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
 
 # set output prefix if not provided --------------------------------------------
 if [ -z "${PREFIX}" ]; then
