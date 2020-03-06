@@ -63,7 +63,7 @@ for i in ${DIR_NATIVE}/*_dwi.nii.gz; do
   fslsplit ${i} ${DIR_SCRATCH}/split/${NAMEBASE}-split-0000 -t
 
   for j in ${!B0s[@]}; do 
-    k=$(echo "(${B0s[${j}]}+0.5)/1" | bc)
+    k=$(echo "(${B0s[${j}]}/10)" | bc)
     if [ ${k} -ne 0 ]; then
       rm ${DIR_SCRATCH}/split/${NAMEBASE}-split-*000${j}.nii.gz
     fi
