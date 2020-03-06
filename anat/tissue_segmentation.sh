@@ -9,7 +9,7 @@
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long researcher:,project:,group:,subject:,session:,prefix:,\
 image:,mask:,n-class:,class-label:,\
-dimension:,convergence:,likelihood-model:,mrf:,random:,posterior-form:,\
+dimension:,convergence:,likelihood-model:,mrf:,use-random:,posterior-form:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -33,7 +33,7 @@ DIM=3
 CONVERGENCE=[5,0.001]
 LIKELIHOOD_MODEL=Gaussian
 MRF=[0.1,1x1x1]
-RANDOM=1
+USE_RANDOM=1
 POSTERIOR_FORM=Socrates[0]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
@@ -64,7 +64,7 @@ while true; do
     --convergence) CONVERGENCE="$2" ; shift 2 ;;
     --likelihood-model) LIKELIHOOD_MODEL="$2" ; shift 2 ;;
     --mrf) MRF="$2" ; shift 2 ;;
-    --random) RANDOM="$2" ; shift 2 ;;
+    --use-random) USE_RANDOM="$2" ; shift 2 ;;
     --posterior-form) POSTERIOR_FORM="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -139,14 +139,22 @@ fi
 # =============================================================================
 # Start of Function
 # =============================================================================
-INIT_VALUES=(`Rscript ${DIR_NIMGCORE}/code/anat/histogram_peaks_GMM.R ${IMAGE[0]} ${MASK} ${DIR_SCRATCH} "k" ${N_CLASS}`)
+# Resample images to 1mm isotropic voxels for GMM modeling,
+# useful for very large images
+ResampleImage 3 ${IMAGE[0]} ${DIR_SCRATCH}/temp.nii.gz 1x1x1 0 0 1
+ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
+gunzip ${DIR_SCRATCH}/*.gz
 
+# fit a Gaussian mixture model to get initial values for k-means
+INIT_VALUES=(`Rscript ${DIR_NIMGCORE}/code/anat/histogram_peaks_GMM.R ${DIR_SCRATCH}/temp.nii ${DIR_SCRATCH}/mask.nii ${DIR_SCRATCH} "k" ${N_CLASS}`)
+
+# run Atropos tisue segmentation
 NUM_IMAGE=${#IMAGE[@]}
 atropos_fcn="Atropos -d ${DIM}"
 atropos_fcn="${atropos_fcn} -c ${CONVERGENCE}"
 atropos_fcn="${atropos_fcn} -k ${LIKELIHOOD_MODEL}"
 atropos_fcn="${atropos_fcn} -m ${MRF}"
-atropos_fcn="${atropos_fcn} -r ${RANDOM}"
+atropos_fcn="${atropos_fcn} -r ${USE_RANDOM}"
 atropos_fcn="${atropos_fcn} -p ${POSTERIOR_FORM}"
 atropos_fcn="${atropos_fcn} -v ${VERBOSE}"
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
@@ -169,6 +177,7 @@ done
 # End of Function
 #===============================================================================
 # Clean workspace --------------------------------------------------------------
+rm ${DIR_SCRATCH}/*
 rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
