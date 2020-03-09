@@ -170,18 +170,19 @@ for (( i=0; i<${NUM_VALUE}; i++ )); do
         echo ${volume} >> ${DIR_SCRATCH}/temp.txt
       fi
       ### Restart here
-      if [[ "${STATS[${k}]},," == "" ]]; then
-        temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -`
+      if [[ "${STATS[${k}]},," == "mean" ]]; then
+        temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -m`
         echo ${temp} >> ${DIR_SCRATCH}/temp.txt
       fi
-      if [[ "${STATS[${k}]},," == "" ]]; then
-        temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -`
+      if [[ "${STATS[${k}]},," == "std" ]]; then
+        temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -s`
         echo ${temp} >> ${DIR_SCRATCH}/temp.txt
       fi
-      if [[ "${STATS[${k}]},," == "" ]]; then
-        temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -`
+      if [[ "${STATS[${k}]},," == "cog" ]]; then
+        temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -c`
         echo ${temp} >> ${DIR_SCRATCH}/temp.txt
       fi
+      last_char=
       if [[ "${STATS[${k}]},," == "" ]]; then
         temp=`fslstats ${VALUE[${i}]} -k ${temp_mask} -`
         echo ${temp} >> ${DIR_SCRATCH}/temp.txt
