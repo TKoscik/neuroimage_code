@@ -463,7 +463,7 @@ fi
 QSUB_RESAMPLE="HOLD_RESAMPLE=(`qsub -terse ${HPC_OPTS} ${JOB_RESAMPLE}`)"
 eval ${QSUB_RESAMPLE}
 
-# maske / copy initial templates
+# mask / copy initial templates
 if [ -z "${INIT_TEMPLATE}" ]; then
   QSUB_AVG0="HOLD_AVG0=(`qsub -terse -hold_jid ${HOLD_RESAMPLE} ${JOB_AVERAGE}`)"
   eval ${QSUB_AVG0}
@@ -498,5 +498,5 @@ eval ${QSUB_END}
 #===============================================================================
 # End of Function
 #===============================================================================
-# moving files, cleaniong workspace, and logging is in sub jobs
+# moving files, cleaning workspace, and logging is in sub jobs
 

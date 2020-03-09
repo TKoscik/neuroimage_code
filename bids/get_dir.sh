@@ -49,7 +49,6 @@ DIR_PROJECT=
 temp=$(dirname ${INPUT})
 temp=(${temp//// })
 for (( i=0; i<${#temp[@]}; i++ )); do
-  DIR_PROJECT="${DIR_PROJECT}/${temp[${i}]}"
   if [[ "${temp[i]}" == "code" ]]; then break; fi
   if [[ "${temp[i]}" == "derivatives" ]]; then break; fi
   if [[ "${temp[i]}" == "log" ]]; then break; fi
@@ -57,6 +56,7 @@ for (( i=0; i<${#temp[@]}; i++ )); do
   if [[ "${temp[i]}" == "sourcedata" ]]; then break; fi
   if [[ "${temp[i]}" == "summary" ]]; then break; fi
   if [[ "${temp[i]}" == "nifti" ]]; then break; fi
+  DIR_PROJECT="${DIR_PROJECT}/${temp[${i}]}"
 done
 echo ${DIR_PROJECT}
 #==============================================================================
