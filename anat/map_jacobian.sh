@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvl --long group:,prefix:,\
 xfm:,interpolation:,from:,to:,\
 log-jac,geom-jac,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
@@ -19,11 +19,7 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
-RESEARCHER=
-PROJECT=
 GROUP=
-SUBJECT=
-SESSION=
 PREFIX=
 XFM=
 INTERPOLATION=Linear
@@ -44,11 +40,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --xfm) XFM+="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
@@ -78,13 +70,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --researcher <value>     directory containing the project,'
-  echo '                           e.g. /Shared/koscikt'
-  echo '  --project <value>        name of the project folder, e.g., iowa_black'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --subject <value>        subject identifer, e.g., 123'
-  echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --xfm <value>            transforms to use to calculate the jacobian,'
@@ -102,23 +89,22 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
 fi
 
-# Get time stamp for log -------------------------------------------------------
+# Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Setup directories ------------------------------------------------------------
-mkdir -r ${DIR_SCRATCH}
-
-# set output prefix if not provided --------------------------------------------
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT_FILE}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
+mkdir -p ${DIR_SCRATCH}
+
 #==============================================================================
 # Start of function
 #==============================================================================
-
 N_XFM=${#XFM[@]}
-
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
   FROM=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[0]} -f "from"`
@@ -133,7 +119,7 @@ fi
 
 # create save directory
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/jac_from-${FROM}_to-${TO}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/jac_from-${FROM}_to-${TO}
 fi
 mkdir -p ${DIR_SAVE}
 
@@ -155,7 +141,7 @@ CreateJacobianDeterminantImage 3 \
 
 # Clean up workspace
 if [[ "${KEEP}" == "true" ]]; then
-  DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
+  DIR_XFM=${DIR_PROJECT}/derivatives/xfm
   mkdir -p ${DIR_XFM}
   mv ${DIR_SCRATCH}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz ${DIR_XFM}/
   rmdir ${DIR_SCRATCH}
@@ -168,6 +154,6 @@ fi
 # End of function
 #==============================================================================
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi

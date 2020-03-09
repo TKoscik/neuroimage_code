@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvkl --long group:,prefix:,\
 image:,method:,suffix:, \
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
@@ -18,11 +18,7 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
-RESEARCHER=
-PROJECT=
 GROUP=
-SUBJECT=
-SESSION=
 PREFIX=
 IMAGE=
 METHOD=
@@ -44,11 +40,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE+="$2" ; shift 2 ;;
     --method) METHOD+="$2" ; shift 2 ;;
@@ -78,13 +70,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --researcher <value>     directory containing the project,'
-  echo '                           e.g. /Shared/koscikt'
-  echo '  --project <value>        name of the project folder, e.g., iowa_black'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --subject <value>        subject identifer, e.g., 123'
-  echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          Images to use for brain extraction, multiple'
@@ -105,20 +92,21 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
 fi
 
-# Get time stamp for log -------------------------------------------------------
+# Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Setup directories ------------------------------------------------------------
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/mask
-fi
-mkdir -r ${DIR_SCRATCH}
-mkdir -r ${DIR_SAVE}
-
-# set output prefix if not provided --------------------------------------------
-if [ -z "${PREFIX}" ]; then
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT_FILE}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+if [ -z "${PREFIX}" ]; then 
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
+
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/mask
+fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
 
 #===============================================================================
 # Start of Function
@@ -184,6 +172,7 @@ if [[ ${NUM_METHOD} > 1 ]]; then
   if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
     majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
   fi
+  eval ${majVote_fcn}
 fi
 
 # move files to appropriate locations
@@ -199,7 +188,7 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 

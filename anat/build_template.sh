@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvkl --long group:,prefix:,\
 image:,mask:,maSK-dilation:,iterations:,resolution:,initial-template:,affine-only,hardcore,\
 hpc-email:,hpc-msg:,hpc-q:,hpc-pe:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
@@ -19,11 +19,7 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
-RESEARCHER=
-PROJECT=
 GROUP=Research-INC_img_core
-SUBJECT=
-SESSION=
 PREFIX=
 IMAGE=
 MASK=
@@ -54,11 +50,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE+="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
@@ -95,13 +87,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --researcher <value>     directory containing the project,'
-  echo '                           e.g. /Shared/koscikt'
-  echo '  --project <value>        name of the project folder, e.g., iowa_black'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --subject <value>        subject identifer, e.g., 123'
-  echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          images to use to build the template,'
@@ -147,15 +134,21 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
 fi
 
-# Get time stamp for log -------------------------------------------------------
+# Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Setup directories ------------------------------------------------------------
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/template
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${IMAGE[0]}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
-DIR_CODE=${RESEARCHER}/${PROJECT}/code/build_template_${DATE_SUFFIX}
-DIR_LOG=${RESEARCHER}/${PROJECT}/log/hpc_output
+
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/template
+fi
+DIR_CODE=${DIR_PROJECT}/code/build_template_${DATE_SUFFIX}
+DIR_LOG=${DIR_PROJECT}/log/hpc_output
 DIR_IMAGE=${DIR_SCRATCH}/source_images
 DIR_XFM=${DIR_SCRATCH}/xfm
 
@@ -168,6 +161,7 @@ mkdir -p ${DIR_XFM}
 
 # set output prefix if not provided --------------------------------------------
 if [ -z "${PREFIX}" ]; then
+  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${IMAGE[0]}`
   PREFIX=${PROJECT}_template
 fi
 
@@ -184,8 +178,7 @@ NUM_IMAGE=${#IMAGE[@]}
 
 # get image modalities
 for (( j=0; j<${NUM_MOD}; j++ )); do
-  MOD_TEMP=(`basename "${TEMP[${j}]%.nii.gz}"`)
-  MOD+=(${MOD_TEMP##*_})
+  MOD+=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${${TEMP[${j}]} -f "modality"`)
 done
 
 # get target resolution if not given
@@ -239,7 +232,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   echo "" >> ${SH_RESAMPLE}
 done
 if [[ "${NO_LOG}" == "false" ]]; then
-  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_RESAMPLE}
+  echo "LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log" >> ${SH_RESAMPLE}
   echo 'date +"task:resample_images,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_RESAMPLE}
 fi
 echo "" >> ${SH_RESAMPLE}
@@ -271,7 +264,7 @@ if [ -n ${MASK} ]; then
   echo "" >> ${SH_AVERAGE}
 fi
 if [[ "${NO_LOG}" == "false" ]]; then
-  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_AVERAGE}
+  echo "LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log" >> ${SH_AVERAGE}
   echo 'date +"task:average_images,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_AVERAGE}
 fi
 echo "" >> ${SH_AVERAGE}
@@ -397,7 +390,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
     fi
   done
   if [[ "${NO_LOG}" == "false" ]]; then
-    echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_REGISTER[${i}]}
+    echo "LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log" >> ${SH_REGISTER[${i}]}
     echo 'date +"task:register_images'${i}'_to_average,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_REGISTER[${i}]}
   fi
   echo "" >> ${SH_REGISTER[${i}]}
@@ -433,7 +426,7 @@ else
   echo "rmdir ${DIR_SCRATCH}" >> ${SH_CLEAN}
 fi
 if [[ "${NO_LOG}" == "false" ]]; then
-  echo "LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log" >> ${SH_CLEAN}
+  echo "LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log" >> ${SH_CLEAN}
   echo 'date +"task:clean_template_build_workspace,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_CLEAN}
   echo 'date +"task:build_template,start:"'${proc_start}'",end:%Y-%m-%dT%H:%M:%S%z" >> '${LOG_FILE} >> ${SH_CLEAN}
 fi

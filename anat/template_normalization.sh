@@ -8,7 +8,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long researcher:,project:,group:,subject:,session:,prefix:,\
+OPTS=`getopt -o hvl --long group:,prefix:,\
 image:,mask:,mask-dil:,orig-space:,template:,space:,\
 affine-only,hardcore,stack-xfm,
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
@@ -20,11 +20,7 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
-RESEARCHER=
-PROJECT=
 GROUP=
-SUBJECT=
-SESSION=
 PREFIX=
 IMAGE=
 MASK=
@@ -48,11 +44,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE+="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
@@ -84,13 +76,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --researcher <value>     directory containing the project,'
-  echo '                           e.g. /Shared/koscikt'
-  echo '  --project <value>        name of the project folder, e.g., iowa_black'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --subject <value>        subject identifer, e.g., 123'
-  echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --image <value>          full path to image to align'
   echo '  --mask <value>           full path to fixed image mask, or comma-'
   echo '                           separated fixed and moving masks,'
@@ -121,22 +108,23 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
 fi
 
-# Get time stamp for log -------------------------------------------------------
+# Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Setup directories ------------------------------------------------------------
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT_FILE}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
+
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/reg_${TEMPLATE}_${SPACE}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
 DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
-
-# set output prefix if not provided --------------------------------------------
-if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
-fi
 
 #===============================================================================
 # Start of Function
@@ -303,6 +291,6 @@ rmdir ${DIR_SCRATCH}
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi

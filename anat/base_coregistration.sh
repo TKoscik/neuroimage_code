@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvksl \
---long researcher:,project:,group:,subject:,session:,\
+--long group:,prefix:,\
 fixed-image:,fixed-modality:,fixed-space:,\
 moving-image:,moving-modality:,moving-space:,\
 do-syn,\
@@ -21,11 +21,8 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
-RESEARCHER=
-PROJECT=
 GROUP=
-SUBJECT=
-SESSION=
+PREFIX=
 FIXED_IMAGE=
 FIXED_MODALITY=T1w
 FIXED_SPACE=native
@@ -49,11 +46,7 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     -s | --do-syn) DO_SYN=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --fixed-image) FIXED_IMAGE="$2" ; shift 2 ;;
     --fixed-modality) FIXED_MODALITY="$2" ; shift 2 ;;
     --fixed-space) FIXED_SPACE="$2" ; shift 2 ;;
@@ -82,13 +75,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --researcher <value>     directory containing the project,'
-  echo '                           e.g. /Shared/koscikt'
-  echo '  --project <value>        name of the project folder, e.g., iowa_black'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --subject <value>        subject identifer, e.g., 123'
-  echo '  --session <value>        session identifier, e.g., 1234abcd'
   echo '  --fixed-space <value>    "native" to keep base image spacing [default],'
   echo '                           "raw" to keep moving image spacing, or'
   echo '                           "MxNxO" to set desired spacing'
@@ -104,22 +92,23 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
 fi
 
-# Get time stamp for log -------------------------------------------------------
+# Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-# Setup directories ------------------------------------------------------------
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-DIR_XFM==${RESEARCHER}/${PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
-mkdir -r ${DIR_SCRATCH}
-mkdir -r ${DIR_SAVE}
-mkdir -r ${DIR_XFM}
-
-# set output prefix if not provided --------------------------------------------
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${MOVING_IMAGE[0]}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${MOVING_IMAGE[0]} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${MOVING_IMAGE[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
+
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+fi
+DIR_XFM==${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_XFM}
 
 #===============================================================================
 # Start of Function
@@ -199,8 +188,8 @@ done
 # Clean workspace --------------------------------------------------------------
 # edit directory for appropriate modality prep folder
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${RESEARCHER}/${PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
-  mv ${DIR_SCRATCH}/* ${RESEARCHER}/${PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}/
+  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
   rmdir ${DIR_SCRATCH}
 else
   rm ${DIR_SCRATCH}/*
@@ -209,7 +198,7 @@ fi
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${RESEARCHER}/${PROJECT}/log/${PREFIX}.log
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 
