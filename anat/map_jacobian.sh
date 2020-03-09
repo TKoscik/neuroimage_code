@@ -121,34 +121,14 @@ N_XFM=${#XFM[@]}
 
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
-  temp=(`basename ${XFM[-1]}`)
-  temp=(${temp//_/ })
-  for (( i=0; i<${#temp[@]}; i++ )); do
-    field=(${temp[${i}]//-/ })
-    if [[ "${field[0]}" == "from" ]]; then
-      FROM=${field[1]}
-    fi
-    if [[ "${field[0]}" == "xfm" ]]; then
-      value=(${field[1]//./ })
-      FROM="${FROM}+${value[0]}"
-      break
-    fi
-  done
+  FROM=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[0]} -f "from"`
+  xfm_from=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[0]} -f "xfm"`
+  FROM="${FROM}+${xfm_from}"
 fi
 if [[ "${TO}" == "NULL" ]]; then
-  temp=(`basename ${XFM[0]}`)
-  temp=(${temp//_/ })
-  for (( i=0; i<${#temp[@]}; i++ )); do
-    field=(${temp[${i}]//-/ })
-    if [[ "${field[0]}" == "to" ]]; then
-      TO=${field[1]}
-    fi
-    if [[ "${field[0]}" == "xfm" ]]; then
-      value=(${field[1]//./ })
-      TO="${TO}+${value[0]}"
-      break
-    fi
-  done
+  TO=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[-1]} -f "to"`
+  xfm_to=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[-1]} -f "xfm"`
+  TO="${TO}+${xfm_to}"
 fi
 
 # create save directory
