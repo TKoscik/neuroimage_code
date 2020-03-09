@@ -1,0 +1,214 @@
+value,acronym,label
+4,l_csf_lateral-ventricle,Left Lateral Ventricle
+5,l_csf_inferior-lateral-ventricle,Left Inferior Lateral Ventricle
+7,l_cerebellum_wm,Left Cerebellar White Matter
+8,l_cerebellum_gm,Left Cerebellar Cortex
+10,l_subcortical_thalamus_gm,Left Thalamus
+11,l_subcortical_caudate_gm,Left Caudate
+12,l_subcortical_putamen_gm,Left Putamen
+13,l_subcortical_pallidum_gm,Left Pallidum
+15,csf_4th-ventricle,4th Ventricle
+16,m_subcortical_brainstem_wm,Brain Stem
+17,l_temporal_hippocampus_gm,Left Hippocampus
+18,l_temporal_amygdala_gm,Left Amygdala
+24,csf,CSF
+26,l_subcortical_accumbens_gm,Left Accumbens
+28,l_subcortical_ventral-dc_wm,Left Ventral DC
+31,l_nonbrain_choroid-plexus_gm,Left Choroid Plexus
+43,r_csf_lateral-ventricle,Right Lateral Ventricle
+44,r_csf_inferior-lateral-ventricle,Right Inferior Lateral Ventricle
+46,r_cerebellum_wm,Right Cerebellar White Matter
+47,r_cerebellum_gm,Right Cerebellar Cortex
+49,r_subcortical_thalamus_gm,Right Thalamus
+50,r_subcortical_caudate_gm,Right Caudate
+51,r_subcortical_putamen_gm,Right Putamen
+52,r_subcortical_pallidum_gm,Right Pallidum
+53,r_temporal_hippocampus_gm,Right Hippocampus
+54,r_temporal_amygdala_gm,Right Amygdala
+58,r_subcortical_accumbens_gm,Right Accumbens
+60,r_subcortical_ventral-dc_wm,Right VentralDC
+63,r_nonbrain_choroid-plexus_gm,Right Choroid Plexus
+85,nonbrain_optic-chiasm,Optic Chiasm
+98,nonbrain_dura,Dura
+128,nonbrain_nerve,Nerve
+251,m_corpus-callosum_posterior_wm,Posterior Corpus Callosum
+252,m_corpus-callosum_midposterior_wm,Mid Posterior Corpus Callosum
+253,m_corpus-callosum_central_wm,Central Corpus Callosum
+254,m_corpus-callosum_midanterior_wm,Mid Anterior Corpus Callosum
+255,m_corpus-callosum_anterior_wm,Anterior Corpus Callosum
+999,suspicious,Suspicious
+1000,l_frontal_unknown_gm,Left Unknown GM
+1002,l_frontal_caudal-acc_gm,Left Caudal ACC GM
+1005,l_occipital_cuneus_gm,Left Cuneus GM
+1006,l_temporal_entorhinal_gm,Left Entorhinal GM
+1007,l_temporal_fusiform_gm,Left Fusiform GM
+1008,l_parietal_inferior-parietal_gm,Left Inferior Parietal GM
+1009,l_temporal_inferior_gm,Left Inferior Temporal GM
+1010,l_parietal_isthmus-cc_gm,Left Isthmus GM
+1011,l_occipital_lateral-occipital_gm,Left Lateral Occipital GM
+1012,l_frontal_lateral-orbitofrontal_gm,Left Lateral Orbitofrontal GM
+1013,l_occipital_lingual_gm,Left Lingual Gyrus
+1014,l_frontal_medial-orbitofrontal_gm,Left Medial Orbitofrontal GM
+1015,l_temporal_middle_gm,Left Middle Temporal GM
+1016,l_temporal_parahippocampal_gm,Left Parahippocampal GM
+1017,l_frontal_paracentral_gm,Left Paracentral GM
+1018,l_frontal_pars-opercularis_gm,Left Pars Opercularis GM
+1019,l_frontal_pars-orbitalis_gm,Left Pars Orbitalis GM
+1020,l_frontal_pars-triangularis_gm,Left Pars Triangularis GM
+1021,l_occipital_pericalcarine_gm,Left Pericalcarine GM
+1022,l_parietal_postcentral_gm,Left Postcentral GM
+1024,l_frontal_precentral_gm,Left Precentral GM
+1025,l_parietal_precuneus_gm,Left Precuneus GM
+1026,l_frontal_rostral-acc_gm,Left Rostral ACC GM
+1027,l_frontal_rostral-middle_gm,lLeft Rostral Middle Frontal GM
+1028,l_frontal_superior_gm,Left Superior Frontal GM
+1029,l_parietal_superior-parietal_gm,Left Superior Parietal GM
+1030,l_temporal_superior_gm,Left Superior Temporal GM
+1031,l_parietal_supramarginal_gm,Left Supramarginal GM
+1032,l_frontal_frontalpole_gm,Left Frontal Pole GM
+1033,l_temporal_pole_gm,Left Temporal Pole GM
+1034,l_temporal_transverse_gm,Left Transverse GM
+1035,l_frontal_insula_gm,Left Insula GM
+1116,l_occipital_superior_gm,Left Superior Occipital GM
+1129,l_frontal_subcallosal_gm,Left Subcallosal GM
+2000,r_frontal_unknown_gm,Right Unknown GM
+2002,r_frontal_caudal-acc_gm,Right Caudal ACC GM
+2005,r_occipital_cuneus_gm,Right Cuneus GM
+2006,r_temporal_entorhinal_gm,Right Entorhinal GM
+2007,r_temporal_fusiform_gm,Right Fusiform GM
+2008,r_parietal_inferior-parietal_gm,Right Inferior Parietal GM
+2009,r_temporal_inferior_gm,Right Inferior Temporal GM
+2010,r_parietal_isthmus-cc_gm,Right Isthmus GM
+2011,r_occipital_lateral-occipital_gm,Right Lateral Occipital GM
+2012,r_frontal_lateral-orbitofrontal_gm,Right Lateral Orbitofrontal GM
+2013,r_occipital_lingual_gm,Right Lingual Gyrus
+2014,r_frontal_medial-orbitofrontal_gm,Right Medial Orbitofrontal GM
+2015,r_temporal_middle_gm,Right Middle Temporal GM
+2016,r_temporal_parahippocampal_gm,Right Parahippocampal GM
+2017,r_frontal_paracentral_gm,Right Paracentral GM
+2018,r_frontal_pars-opercularis_gm,Right Pars Opercularis GM
+2019,r_frontal_pars-orbitalis_gm,Right Pars Orbitalis GM
+2020,r_frontal_pars-triangularis_gm,Right Pars Triangularis GM
+2021,r_occipital_pericalcarine_gm,Right Pericalcarine GM
+2022,r_parietal_postcentral_gm,Right Postcentral GM
+2024,r_frontal_precentral_gm,Right Precentral GM
+2025,r_parietal_precuneus_gm,Right Precuneus GM
+2026,r_frontal_rostral-acc_gm,Right Rostral ACC GM
+2027,r_frontal_rostral-middle_gm,lRight Rostral Middle Frontal GM
+2028,r_frontal_superior_gm,Right Superior Frontal GM
+2029,r_parietal_superior-parietal_gm,Right Superior Parietal GM
+2030,r_temporal_superior_gm,Right Superior Temporal GM
+2031,r_parietal_supramarginal_gm,Right Supramarginal GM
+2032,r_frontal_frontalpole_gm,Right Frontal Pole GM
+2033,r_temporal_pole_gm,Right Temporal Pole GM
+2034,r_temporal_transverse_gm,Right Transverse GM
+2035,r_frontal_insula_gm,Right Insula GM
+2116,r_occipital_superior_gm,Right Superior Occipital GM
+2129,r_frontal_subcallosal_gm,Right Subcallosal GM
+3001,l_temporal_basks-sts_wm,Left Banks of the Superior Temporal Sulcus WM
+3002,l_frontal_caudal-acc_wm,Left Caudal ACC WM
+3003,l_frontal_caudal-middle_wm,Left Caudal Middle Frontal WM
+3005,l_occipital_cuneus_wm,Left Cuneus WM
+3006,l_temporal_entorhinal_wm,Left Entorhinal WM
+3007,l_temporal_fusiform_wm,Left Fusiform WM
+3008,l_parietal_inferior_wm,Left Inferior Parietal WM
+3009,l_temporal_inferior_wm,Left Inferior Temporal WM
+3010,l_parietal_isthmus-cc_wm,Left Isthmus WM
+3011,l_occipital_lateral-occipital_wm,Left Lateral Occipital WM
+3012,l_frontal_lateral-orbitofrontal_wm,Left Lateral Orbitofrontal WM
+3013,l_occipital_lingual_wm,Left Lingual Gyrus
+3014,l_frontal_medial-orbitofrontal_wm,Left Medial Orbitofrontal WM
+3015,l_temporal_middle_wm,Left Middle Temporal WM
+3016,l_temporal_parahippocampal_wm,Left Parahippocampal WM
+3017,l_frontal_paracentral_wm,Left Paracentral WM
+3018,l_frontal_pars-opercularis_wm,Left Pars Opercularis WM
+3019,l_frontal_pars-orbitalis_wm,Left Pars Orbitalis WM
+3020,l_frontal_pars-triangularis_wm,Left Pars Triangularis WM
+3021,l_occipital_pericalcarine_wm,Left Pericalcarine WM
+3022,l_parietal_postcentral_wm,Left Postcentral WM
+3023,l_frontal_posteriorcingulate_wm,Left Posterior Cingulate WM
+3024,l_frontal_precentral_wm,Left Precentral WM
+3025,l_parietal_precuneus_wm,Left Precuneus WM
+3026,l_frontal_rostral-acc_wm,Left Rostral ACC WM
+3027,l_frontal_rostral-middle-frontal_wm,Left Rostral Middle Frontal WM
+3028,l_frontal_superior-frontal_wm,Left Superior Frontal WM
+3029,l_parietal_superior_wm,Left Superior Parietal WM
+3030,l_temporal_superior_wm,Left Superior Temporal WM
+3031,l_parietal_supramarginal_wm,Left Supramarginal WM
+3032,l_frontal_pole_wm,Left Frontal Pole WM
+3033,l_temporal_pole_wm,Left Temporal Pole WM
+3034,l_temporal_transverse_wm,Left Transverse WM
+3035,l_frontal_insula_wm,Left Insula WM
+4001,r_temporal_basks-sts_wm,Right Banks of the Superior Temporal Sulcus WM
+4002,r_frontal_caudal-acc_wm,Right Caudal ACC WM
+4003,r_frontal_caudal-middle_wm,Right Caudal Middle Frontal WM
+4005,r_occipital_cuneus_wm,Right Cuneus WM
+4006,r_temporal_entorhinal_wm,Right Entorhinal WM
+4007,r_temporal_fusiform_wm,Right Fusiform WM
+4008,r_parietal_inferior_wm,Right Inferior Parietal WM
+4009,r_temporal_inferior_wm,Right Inferior Temporal WM
+4010,r_parietal_isthmus-cc_wm,Right Isthmus WM
+4011,r_occipital_lateral-occipital_wm,Right Lateral Occipital WM
+4012,r_frontal_lateral-orbitofrontal_wm,Right Lateral Orbitofrontal WM
+4013,r_occipital_lingual_wm,Right Lingual Gyrus
+4014,r_frontal_medial-orbitofrontal_wm,Right Medial Orbitofrontal WM
+4015,r_temporal_middle_wm,Right Middle Temporal WM
+4016,r_temporal_parahippocampal_wm,Right Parahippocampal WM
+4017,r_frontal_paracentral_wm,Right Paracentral WM
+4018,r_frontal_pars-opercularis_wm,Right Pars Opercularis WM
+4019,r_frontal_pars-orbitalis_wm,Right Pars Orbitalis WM
+4020,r_frontal_pars-triangularis_wm,Right Pars Triangularis WM
+4021,r_occipital_pericalcarine_wm,Right Pericalcarine WM
+4022,r_parietal_postcentral_wm,Right Postcentral WM
+4023,r_frontal_posterior-cc_wm,Right Posterior Cingulate WM
+4024,r_frontal_precentral_wm,Right Precentral WM
+4025,r_parietal_precuneus_wm,Right Precuneus WM
+4026,r_frontal_rostral-acc_wm,Right Rostral ACC WM
+4027,r_frontal_rostral-middle-frontal_wm,Right Rostral Middle Frontal WM
+4028,r_frontal_superior-frontal_wm,Right Superior Frontal WM
+4029,r_parietal_superior_wm,Right Superior Parietal WM
+4030,r_temporal_superior_wm,Right Superior Temporal WM
+4031,r_parietal_supramarginal_wm,Right Supramarginal WM
+4032,r_frontal_pole_wm,Right Frontal Pole WM
+4033,r_temporal_pole_wm,Right Temporal Pole WM
+4034,r_temporal_transverse_wm,Right Transverse WM
+4035,r_frontal_insula_wm,Right Insula WM
+5001,l_unknown_unsegmented_wm,Left Unsegmented WM
+5002,r_unknown_unsegmented_wm,Right Unsegmented WM
+15000,venous-blood,Venous Blood
+15001,nonbrain_pineal,Pineal Gland
+15071,m_cerebellum_vermis1-5_gm,Cerebellar Vermis I-V
+15072,m_cerebellum_vermis6-7_gm,Cerebellar Vermis VI-VII
+15073,m_cerebellum_vermis8-10_gm,Cerebellar Vermis VIII-X
+15140,r_frontal_medial_gm,Right Medial Frontal GM
+15141,l_frontal_medial_gm,Left Medial Frontal GM
+15142,r_frontal_middle_gm,Right Middle Frontal GM
+15143,l_frontal_middle_gm,Left Middle Frontal GM
+15144,r_occipital_middle_gm,Right Middle Occipital GM
+15145,l_occipital_middle_gm,Left Middle Occipital GM
+15150,r_frontal_medial-precentral_gm,Right Medial Precentral GM
+15151,l_frontal_medial-precentral_gm,Left Medial Precentral GM
+15156,r_occipital_pole_gm,Right Occipital Pole
+15157,l_occipital_pole_gm,Left Occipital Pole
+15160,r_occipital_fusiform_gm,Right Occipital Fusiform GM
+15161,l_occipital_fusiform_gm,Left Occipital Fusiform GM
+15162,r_frontal_operculum_gm,Right Frontal Operculum GM
+15163,l_frontal_operculum_gm,Left Frontal Operculum GM
+15164,r_frontal_orbital-inferior_gm,Right Orbital Inferior Frontal GM
+15165,l_frontal_orbital-inferior_gm,Left Orbital Inferior Frontal GM
+15172,r_temporal_posterior-insula_gm,Right Posterior Insula GM
+15173,l_temporal_posterior-insula_gm,Left Posterior Insula GM
+15174,r_parietal_operculum_gm,Right Parietal Operculum GM
+15175,l_parietal_operculum_gm,Left Parietal Operculum GM
+15178,r_frontal_posterior-orbital_gm,Right Posterior Orbital GM
+15179,l_frontal_posterior-orbital_gm,Left Posterior Orbital GM
+15184,r_temporal_planum-temporale_gm,Right Planum Temporale GM
+15185,l_temporal_planum-temporale_gm,Left Planum Temporale GM
+15190,r_frontal_superior-SFG_gm,Right Superior Frontal Gyrus GM
+15191,l_frontal_superior-SFG_gm,Left Superior Frontal Gyrus GM
+15192,r_frontal_supplementary-motor_gm,Right Supplementary Motor Cortex
+15193,l_frontal_supplementary-motor_gm,Left Supplementary Motor Cortex
+15194,r_parietal_supramarginal_gm,Right Supramarginal* GM
+15195,l_parietal_supramarginal_gm,Left Supramarginal* GM
+15200,r_temporal_STG_gm,Right Superior Temporal Gyrus GM
+15201,l_temporal_STG_gm,Left Superior Temporal Gyrus GM
