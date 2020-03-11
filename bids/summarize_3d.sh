@@ -7,8 +7,8 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvln --long group:,prefix:,\
-label:,value:,which-stats:,normal-label,\
+OPTS=`getopt -o hvl --long group:,prefix:,\
+label:,value:,stats:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -20,9 +20,8 @@ eval set -- "$OPTS"
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
 GROUP=
 LABEL=
-VALUE=
-STATS=("volume" "mean" "std" "cog" "5%" "95%" "min" "max" "entropy")
-NORMAL=false
+VALUE=NULL
+STATS=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
@@ -39,8 +38,8 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --label) LABEL="$2" ; shift 2 ;;
-    --value) VALUE+="$2" ; shift 2 ;;
-    --stats) STATS+="$2" ; shift 2 ;;
+    --value) VALUE="$2" ; shift 2 ;;
+    --stats) STATS="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
@@ -104,12 +103,16 @@ mkdir -p ${DIR_SAVE}
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [[ -z ${VALUE} ]]; then
-  STATS=("volume")
-  VALUE=${LABEL}
+if [ -z ${STATS} ]; then
+  STATS="voxels,volume,mean,std,cog,5%,95%,min,max,entropy"
 fi
-NUM_VALUE=${#VALUE[@]}
+STATS=(${STATS//,/ })
 NUM_STATS=${#STATS[@]}
+
+if [[ "${VALUE}" == "NULL" ]]; then
+  VALUE=${LABEL}
+  STATS=("volume")
+fi
 
 # Load lookup table for labels
 LABEL_NAME=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "label"`)
@@ -122,111 +125,97 @@ do
 done < ${LUT}
 NUM_LABEL=${#LABEL_VALUE[@]}
 
-LABEL_ORIG=${LABEL}
-for (( i=0; i<${NUM_VALUE}; i++ )); do
-  if [[ "${VALUE[${i}]}" == "${LABEL}" ]]; do
-    # Assuming subject specific labels
-    SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "sub"`)
-    SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "ses"`)
-    MOD="volume"
+if [[ "${VALUE}" == "${LABEL}" ]]; then
+  # Assuming subject specific labels
+  SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "sub"`)
+  SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "ses"`)
+  MOD="volume"
+else
+  # Assuming labels apply to all inputs,
+  # inputs must be coregistered, but not necessarily the same spacing
+  SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "sub"`)
+  SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "ses"`)
+  IFS=x read -r -a pixdim <<< $(PrintHeader ${VALUE} 1)
+
+  # Resample label to match value file
+  LABEL_ORIG=${LABEL}
+  IFS=x read -r -a pixdim_label <<< $(PrintHeader ${LABEL_ORIG} 1)
+  if [[ "${pixdim[0]}" != "${pixdim_label[0]}" ]] || [[ "${pixdim[1]}" != "${pixdim_label[1]}" ]] || [[ "${pixdim[2]}" != "${pixdim_label[2]}" ]]; then
+    LABEL=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_label-${LABEL_NAME}.nii.gz
+    antsApplyTransforms -d 3 -n NearestNeighbor \
+      -i ${LABEL_ORIG} -o ${LABEL} -r ${VALUE}
   else
-    # Assuming labels apply to all inputs,
-    # inputs must be coregistered, but not necessarily the same spacing
-    SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE[${i}]} -f "sub"`)
-    SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE[${i}]} -f "ses"`)
-    IFS=x read -r -a pixdim <<< $(PrintHeader ${VALUE[${i}]} 1)
-        
-    # Resample label to match value file
-    IFS=x read -r -a pixdim_label <<< $(PrintHeader ${LABEL_ORIG} 1)
-    if [[ "${pixdim[0]}" -ne "${pixdim_label[0]}" ]] || [[ "${pixdim[1]}" -ne "${pixdim_label[1]}" ]] || [[ "${pixdim[2]}" -ne "${pixdim_label[2]}" ]]; then
-      LABEL=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_label-${LABEL_NAME}.nii.gz
-      antsApplyTransforms -d 3 -n NearestNeighbor \
-        -i ${LABEL_ORIG} -o ${LABEL} -r ${VALUE[${i}]}
-    else
-      LABEL=${LABEL_ORIG}
-    fi
-    MOD=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE[${i}]} -f "modality"`
+    LABEL=${LABEL_ORIG}
   fi
+  MOD=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "modality"`
+fi
   
-  # initialize temporary file for output
-  OUTPUT=${DIR_SCRATCH}/output.txt
-  if [[ -f ${OUTPUT} ]]; then rm ${OUTPUT}; fi
-  for (( k=0; k<${NUM_STATS}; k ++ )); do echo ${SUBJECT} >> ${OUTPUT}; done
+# initialize temporary file for output
+OUTPUT=${DIR_SCRATCH}/output.txt
+DATE_WRITE=$(date +%Y-%m-%dT%H:%M:%S)
+for (( k=0; k<${NUM_STATS}; k ++ )); do
+  echo ${SUBJECT} >> ${DIR_SCRATCH}/sub.txt
+  echo ${SESSION} >> ${DIR_SCRATCH}/ses.txt
+  echo ${DATE_WRITE} >> ${DIR_SCRATCH}/date.txt
+  echo ${STATS[${k}]} >> ${DIR_SCRATCH}/stats.txt
+done
+paste -d , ${DIR_SCRATCH}/sub.txt ${DIR_SCRATCH}/ses.txt ${DIR_SCRATCH}/date.txt ${DIR_SCRATCH}/stats.txt > ${OUTPUT}
 
-  for (( k=0; k<${NUM_STATS}; k ++ )); do echo ${SESSION} >> temp.txt; done
-  paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt > ${DIR_SCRATCH}/temp_cat.txt
-  mv ${DIR_SCRATCH}/temp_cat.txt ${OUTPUT}
-  rm ${DIR_SCRATCH}/temp.txt
-
-  DATE_WRITE=$(date +%Y-%m-%dT%H:%M:%S)
-  for (( k=0; k<${NUM_STATS}; k ++ )); do echo ${DATE_WRITE} >> temp.txt; done
-  paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt > ${DIR_SCRATCH}/temp_cat.txt
-  mv ${DIR_SCRATCH}/temp_cat.txt ${OUTPUT}
-  rm ${DIR_SCRATCH}/temp.txt
-
-  for (( k=0; k<${NUM_STATS}; k ++ )); do echo ${STATS[${k}]} >> temp.txt; done
-  paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt > ${DIR_SCRATCH}/temp_cat.txt
-  mv ${DIR_SCRATCH}/temp_cat.txt ${OUTPUT}
-  rm ${DIR_SCRATCH}/temp.txt
-
-  # get stats
-  for (( j=1; j<=${NUM_LABEL}; j++ )); do
-    temp_mask=${DIR_SCRATCH}/roi_temp.nii.gz
-    fslmaths ${LABEL} -thr ${LABEL_VALUE[${j}]} -uthr ${LABEL_VALUE[${j}]} -bin ${temp_mask}
-    for (( k=0; k<${NUM_STATS}; k++ )); do
-      if [[ "${STATS[${k}]},," == "volume" ]]; then
-        volume=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -v`)
-        echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
-      fi
-      if [[ "${STATS[${k}]},," == "mean" ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -m`)
-        echo ${temp} >> ${DIR_SCRATCH}/temp.txt
-      fi
-      if [[ "${STATS[${k}]},," == "std" ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -s`)
-        echo ${temp} >> ${DIR_SCRATCH}/temp.txt
-      fi
-      if [[ "${STATS[${k}]},," == "cog" ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -c`)
-        echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
-      fi
-      last_char=${STATS[${k}]: -1}
-      if [[ "${STATS[${k}]: -1}" == "%"  ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -p ${STATS[${k}]::-1}`)
-        echo ${temp} >> ${DIR_SCRATCH}/temp.txt
-      fi
-      if [[ "${STATS[${k}]},," == "min" ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -R`)
-        echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
-      fi
-      if [[ "${STATS[${k}]},," == "max" ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -R`)
-        echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
-      fi
-      if [[ "${STATS[${k}]},," == "entropy" ]]; then
-        temp=(`fslstats ${VALUE[${i}]} -k ${temp_mask} -e`)
-        echo ${temp} >> ${DIR_SCRATCH}/temp.txt
-      fi
-    done
-    paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt > ${DIR_SCRATCH}/temp_cat.txt
-    mv ${DIR_SCRATCH}/temp_cat.txt ${OUTPUT}
-    rm ${DIR_SCRATCH}/temp.txt
+# get stats
+for (( j=1; j<${NUM_LABEL}; j++ )); do
+  temp_mask=${DIR_SCRATCH}/roi_temp.nii.gz
+  fslmaths ${LABEL} -thr ${LABEL_VALUE[${j}]} -uthr ${LABEL_VALUE[${j}]} -bin ${temp_mask}
+  for (( k=0; k<${NUM_STATS}; k++ )); do
+    if [[ "${STATS[${k}],,}" == "voxels" ]]; then
+      temp=(`fslstats ${VALUE} -k ${temp_mask} -v`)
+      echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "volume" ]]; then
+      volume=(`fslstats ${VALUE} -k ${temp_mask} -v`)
+      echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "mean" ]]; then
+      fslstats ${VALUE} -k ${temp_mask} -m >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "std" ]]; then
+      fslstats ${VALUE} -k ${temp_mask} -s >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "cog" ]]; then
+      temp=(`fslstats ${VALUE} -k ${temp_mask} -c`)
+      echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
+    fi
+    last_char=${STATS[${k}]: -1}
+    if [[ "${STATS[${k}]: -1}" == "%"  ]]; then
+      fslstats ${VALUE} -k ${temp_mask} -p ${STATS[${k}]::-1} >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "min" ]]; then
+      temp=(`fslstats ${VALUE} -k ${temp_mask} -R`)
+      echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "max" ]]; then
+      temp=(`fslstats ${VALUE} -k ${temp_mask} -R`)
+      echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
+    fi
+    if [[ "${STATS[${k}],,}" == "entropy" ]]; then
+      fslstats ${VALUE} -k ${temp_mask} -e >> ${DIR_SCRATCH}/temp.txt
+    fi
   done
-
-  # write output to summary file
-  mkdir -p ${DIR_PROJECT}/summary
-  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i `
-  if 
-  SUMMARY_FILE=${DIR_PROJECT}/summary/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
-  if [[ ! -f ${SUMMARY_FILE} ]]; then
-    LABEL_TEMP="${LABEL_ACRONYM[@]:1}"
-    HEADER=("participant_id" "session_id" "summary_date" "measure" "${LABEL_TEMP}")
-    HEADER="${HEADER[@]}"
-    echo ${HEADER// /,} >> ${SUMMARY_FILE}
-  fi
-  cat ${OUTPUT} >> ${SUMMARY_FILE}
+  paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
+  mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
+  rm ${DIR_SCRATCH}/temp.txt
 done
 
+# append output to summary file
+mkdir -p ${DIR_PROJECT}/summary
+PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${VALUE}`
+SUMMARY_FILE=${DIR_PROJECT}/summary/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
+if [[ ! -f ${SUMMARY_FILE} ]]; then
+  LABEL_TEMP="${LABEL_ACRONYM[@]:1}"
+  HEADER=("participant_id" "session_id" "summary_date" "measure" "${LABEL_TEMP}")
+  HEADER="${HEADER[@]}"
+  echo ${HEADER// /,} >> ${SUMMARY_FILE}
+fi
+cat ${OUTPUT} >> ${SUMMARY_FILE}
 
 #===============================================================================
 # End of Function
@@ -241,4 +230,3 @@ if [[ "${NO_LOG}" == "false" ]]; then
   LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
-

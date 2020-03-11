@@ -8,7 +8,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hif --long input:,field:,help -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hi:f: --long input:,field:,help -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -59,7 +59,7 @@ OUTPUT=
 temp=$(basename ${INPUT})
 temp=(${temp//_/ })
 if [[ "${FIELD,,}" == "modality" ]]; then
-  OUTPUT=${TEMP[-1]}
+  OUTPUT=${temp[-1]}
 else
   for (( i=0; i<${#temp[@]}; i++ )); do
     flag=(${temp[${i}]//-/ })
@@ -69,9 +69,8 @@ else
     fi
   done
 fi
-OUPUT=(${OUTPUT//./ }) # remove file extensions if present
+OUTPUT=(${OUTPUT//./ }) # remove file extensions if present
 echo ${OUTPUT[0]}
 #==============================================================================
 # End of function
 #==============================================================================
-
