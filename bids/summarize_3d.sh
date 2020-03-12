@@ -7,8 +7,8 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,\
-label:,value:,stats:,\
+OPTS=`getopt -o hvla --long group:,prefix:,\
+label:,value:,stats:,no-append,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -17,11 +17,12 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 LABEL=
 VALUE=NULL
 STATS=
+NO_APPEND=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
@@ -31,11 +32,13 @@ DRY_RUN=false
 VERBOSE=0
 NO_LOG=false
 
+
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -a | --no-append) NO_APPEND=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --label) LABEL="$2" ; shift 2 ;;
     --value) VALUE="$2" ; shift 2 ;;
@@ -205,7 +208,7 @@ for (( j=1; j<${NUM_LABEL}; j++ )); do
   rm ${DIR_SCRATCH}/temp.txt
 done
 
-# append output to summary file
+# Check if summary file exists and create if not
 mkdir -p ${DIR_PROJECT}/summary
 PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${VALUE}`
 SUMMARY_FILE=${DIR_PROJECT}/summary/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
@@ -215,7 +218,15 @@ if [[ ! -f ${SUMMARY_FILE} ]]; then
   HEADER="${HEADER[@]}"
   echo ${HEADER// /,} >> ${SUMMARY_FILE}
 fi
-cat ${OUTPUT} >> ${SUMMARY_FILE}
+
+# append to summary file or save output .txt if not
+if [[ "${NO_APPEND}" == "true" ]]; then
+  cat ${OUTPUT} >> ${SUMMARY_FILE}
+else
+  DIR_SAVE=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
+  mkdir -p ${DIR_SAVE}
+  mv ${OUTPUT} ${DIR_SAVE}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
+fi
 
 #===============================================================================
 # End of Function
