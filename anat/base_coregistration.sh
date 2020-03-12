@@ -47,6 +47,7 @@ while true; do
     -s | --do-syn) DO_SYN=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
     --fixed-image) FIXED_IMAGE="$2" ; shift 2 ;;
     --fixed-modality) FIXED_MODALITY="$2" ; shift 2 ;;
     --fixed-space) FIXED_SPACE="$2" ; shift 2 ;;
@@ -77,6 +78,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
   echo '  --fixed-space <value>    "native" to keep base image spacing [default],'
   echo '                           "raw" to keep moving image spacing, or'
   echo '                           "MxNxO" to set desired spacing'

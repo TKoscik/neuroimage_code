@@ -25,7 +25,7 @@ PREFIX=
 IMAGE=
 MASK=
 MASK_DIL=5
-ORIG_SPACE=native
+ORIG_SPACE=
 TEMPLATE=HCPICBM
 SPACE=1mm
 AFFINE_ONLY=false
@@ -78,6 +78,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image to align'
   echo '  --mask <value>           full path to fixed image mask, or comma-'
   echo '                           separated fixed and moving masks,'
@@ -118,12 +120,8 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
 DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 
 #===============================================================================
@@ -134,14 +132,24 @@ NUM_IMAGE=${#IMAGE[@]}
 # get and set modalities for output and fixed image targets
 DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}
 for (( i=0; i<${NUM_IMAGE}; i++ )); then
-  MOD_TEMP=(`basename "${IMAGE[${i}]%.nii.gz}"`)
-  MOD+=(${MOD_TEMP##*_})
+  MOD+=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE[${i}]} -f "modality"`)
   if [[ "${MOD[${i}]}" == "T2w" ]]; then
-    FIXED_IMAGE+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
+    FIXED_IMAGE+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
   else
     FIXED_IMAGE+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
   fi
 fi
+
+# set output flags and create save directory as needed
+if [[ -z "${ORIG_SPACE}" ]]; then
+  ORIG_SPACE=`${DIR_NIMGCORE}/code/bids/get_space_label.sh -i ${IMAGE[0]}`
+fi
+FROM=${MOD[0]}+${ORIG_SPACE}
+TO=${TEMPLATE}+${SPACE}
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/reg_to-${TO}
+fi
+mkdir -p ${DIR_SAVE}
 
 # dilate mask if requested
 if [ -n ${MASK} ]; then
@@ -228,9 +236,6 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
 fi
 eval ${reg_fcn}
 
-# set output flags
-FROM=${MOD[0]}+${ORIG_SPACE}
-TO=${TEMPLATE}+${SPACE}
 
 # Apply registration to all modalities
 for (( i=0; i<${NUM_IMAGE}; i++ )); do

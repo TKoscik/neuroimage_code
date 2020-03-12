@@ -32,7 +32,6 @@ DRY_RUN=false
 VERBOSE=0
 NO_LOG=false
 
-
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
@@ -220,7 +219,7 @@ if [[ ! -f ${SUMMARY_FILE} ]]; then
 fi
 
 # append to summary file or save output .txt if not
-if [[ "${NO_APPEND}" == "true" ]]; then
+if [[ "${NO_APPEND}" == "false" ]]; then
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
   DIR_SAVE=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
