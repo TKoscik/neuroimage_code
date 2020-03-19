@@ -106,12 +106,12 @@ labels=("31,43,44,63,85,98,128,999,15000,15001"\
  "10,11,12,13,17,18,26,28,49,50,51,52,53,54,58,60,251,252,253,254,255,1000,1002,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1024,1025,1026,1027,1028,1029,1030,1031,1032,1033,1034,1035,1116,1129,2000,2002,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2116,2129,3001,3002,3003,3005,3006,3007,3008,3009,3010,3011,3012,3013,3014,3015,3016,3017,3018,3019,3020,3021,3022,3023,3024,3025,3026,3027,3028,3029,3030,3031,3032,3033,3034,3035,4001,4002,4003,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,4031,4032,4033,4034,4035,5001,5002,15140,15141,15142,15143,15144,15145,15150,15151,15156,15157,15160,15161,15162,15163,15164,15165,15172,15173,15174,15175,15178,15179,15184,15185,15190,15191,15192,15193,15194,15195,15200,15201"\
  "7,8,46,47,15071,15072,15073")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
-flsmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
+fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
 for (( j=0; j<${#labels[@]}; j++ )) {
   lut_values=("${labels[${j}]//,/ }")
   label_value=$((${j} + 1 ))
   for (( i=0; i<${#lut_values[@]}; i ++ )) {
-    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_valuess[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
+    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
   }
 }
@@ -126,12 +126,12 @@ labels=("1000,1002,1012,1014,1017,1018,1019,1020,1024,1026,1027,1028,1032,1035,1
  "1005,1011,1013,1021,1116,2005,2011,2013,2021,2116,3005,3011,3013,3021,4005,4011,4013,4021,15144,15145,15156,15157,15160,15161"\
  "251,252,253,254,255")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
-flsmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
+fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
 for (( j=0; j<${#labels[@]}; j++ )) {
   lut_values=("${labels[${j}]//,/ }")
-  label_value=$((${j} + 1 ))
+  label_value=$(( ${j} + 1 ))
   for (( i=0; i<${#lut_values[@]}; i ++ )) {
-    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_valuess[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
+    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
   }
 }
@@ -142,12 +142,12 @@ mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 label_name="basalGanglia"
 labels=("11,50" "12,51" "13,52" "26,58")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
-flsmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
+fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
 for (( j=0; j<${#labels[@]}; j++ )) {
   lut_values=("${labels[${j}]//,/ }")
-  label_value=$((${j} + 1 ))
+  label_value=$(( ${j} + 1 ))
   for (( i=0; i<${#lut_values[@]}; i ++ )) {
-    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_valuess[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
+    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
   }
 }
@@ -158,12 +158,12 @@ mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 label_name="subcortical"
 labels=("10,49" "28,60" "17,53" "18,54")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
-flsmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
+fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
 for (( j=0; j<${#labels[@]}; j++ )) {
   lut_values=("${labels[${j}]//,/ }")
-  label_value=$((${j} + 1 ))
+  label_value=$(( ${j} + 1 ))
   for (( i=0; i<${#lut_values[@]}; i ++ )) {
-    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_valuess[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
+    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
   }
 }
@@ -175,12 +175,12 @@ label_name="hemi"
 labels=("4,5,7,8,10,11,12,13,17,18,26,28,31,1000,1002,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1024,1025,1026,1027,1028,1029,1030,1031,1032,1033,1034,1035,1116,1129,3001,3002,3003,3005,3006,3007,3008,3009,3010,3011,3012,3013,3014,3015,3016,3017,3018,3019,3020,3021,3022,3023,3024,3025,3026,3027,3028,3029,3030,3031,3032,3033,3034,3035,5001,15141,15143,15145,15151,15157,15161,15163,15165,15173,15175,15179,15185,15191,15193,15195,15201"\
  "43,44,46,47,49,50,51,52,53,54,58,60,63,2000,2002,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2116,2129,4001,4002,4003,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,4031,4032,4033,4034,4035,5002,15140,15142,15144,15150,15156,15160,15162,15164,15172,15174,15178,15184,15190,15192,15194,15200")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
-flsmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
+fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
 for (( j=0; j<${#labels[@]}; j++ )) {
   lut_values=("${labels[${j}]//,/ }")
-  label_value=$((${j} + 1 ))
+  label_value=$(( ${j} + 1 ))
   for (( i=0; i<${#lut_values[@]}; i ++ )) {
-    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_valuess[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
+    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
   }
 }
@@ -192,12 +192,12 @@ label_name="tissue"
 labels=("8,47,15071,15072,15073,7,46,10,11,12,13,17,18,26,49,50,51,52,53,54,58,1000,1002,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1024,1025,1026,1027,1028,1029,1030,1031,1032,1033,1034,1035,1116,1129,2000,2002,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2116,2129,15140,15141,15142,15143,15144,15145,15150,15151,15156,15157,15160,15161,15162,15163,15164,15165,15172,15173,15174,15175,15178,15179,15184,15185,15190,15191,15192,15193,15194,15195,15200,15201"\
  "28,60,251,252,253,254,255,3001,3002,3003,3005,3006,3007,3008,3009,3010,3011,3012,3013,3014,3015,3016,3017,3018,3019,3020,3021,3022,3023,3024,3025,3026,3027,3028,3029,3030,3031,3032,3033,3034,3035,4001,4002,4003,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,4031,4032,4033,4034,4035,5001,5002")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
-flsmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
+fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
 for (( j=0; j<${#labels[@]}; j++ )) {
   lut_values=("${labels[${j}]//,/ }")
-  label_value=$((${j} + 1 ))
+  label_value=$(( ${j} + 1 ))
   for (( i=0; i<${#lut_values[@]}; i ++ )) {
-    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_valuess[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
+    fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
   }
 }
