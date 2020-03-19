@@ -125,11 +125,11 @@ for (( i=0; i<${NUM_LABELS}; i++ )); do
   while IFS=$',\r' read -r a b;
   do
     TEMP_VALUE+=(${a})
-    TEMP_ACRONYM+=(${b})
+    TEMP_LABEL+=(${b})
   done < ${LUT}
   NUM_LABEL+=${#TEMP_VALUE[@]}
   LABEL_VALUE+=(${TEMP_VALUE[@]// /,})
-  LABEL_ACRONYM+=(${TEMP_ACRONYM[@]// /,})
+  LABEL_LABEL+=(${TEMP_LABEL[@]// /,})
 done
 NUM_SET=${#LABEL_VALUE[@]}
 
@@ -224,8 +224,8 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       if [[ "${j}" > "0" ]]; then
         hdr_temp="${hdr_temp}_"
       fi
-      temp_acronym=(${LABEL_ACRONYM[${j}]//,/ })
-      hdr_temp="${hdr_temp}${temp_acronym[${WHICH_LABEL[${j}]}]}"
+      temp_LABEL=(${LABEL_LABEL[${j}]//,/ })
+      hdr_temp="${hdr_temp}${temp_LABEL[${WHICH_LABEL[${j}]}]}"
     fi
   done
   HEADER+=(${hdr_temp})
