@@ -171,47 +171,99 @@ for (( k=0; k<${NUM_STATS}; k ++ )); do
 done
 paste -d , ${DIR_SCRATCH}/sub.txt ${DIR_SCRATCH}/ses.txt ${DIR_SCRATCH}/date.txt ${DIR_SCRATCH}/stats.txt > ${OUTPUT}
 
-# get stats - original ROIs
-###must get labels out of array, comma separated to space
-BASE_VALUE=(${LABEL_VALUE[0]//,/ })
-BASE_ACRONYM=(${LABEL_ACRONYM[0]//,/ })
-for (( j=1; j<${NUM_LABEL[0]}; j++ )); do
-  temp_mask=${DIR_SCRATCH}/roi_temp.nii.gz
-  fslmaths ${LABEL[0]} -thr ${BASE_VALUE[${j}]} -uthr ${BASE_VALUE[${j}]} -bin ${temp_mask}
-  HEADER+=(${BASE_ACRONYM[${j}]})
+# sub-parcellate each roi by included additional labels
+perm_fcn="echo "
+for (( i=0; i<${NUM_SET}; i++ )); do
+  temp=(${LABEL_VALUE[${i}]//,/ })
+  if [[ "${i}" > "0" ]]; then
+    perm_fcn="${perm_fcn},"
+  fi
+  if [[ "${DO_SUM}" == "true" ]]; then
+    count_start=0
+  else
+    if [[ "${i}" == "0" ]]; then
+      count_start=1
+    else
+      count_start=0
+    fi
+  fi
+  count_stop=$(( ${#temp[@]} - 1 ))
+  perm_fcn="${perm_fcn}{${count_start}..${count_stop}}"
+done
+PERM=(`eval ${perm_fcn}`)
+NUM_PERM=${#PERM[@]}
+
+temp_mask=${DIR_SCRATCH}/temp_mask.nii.gz
+roi_mask=${DIR_SCRATCH}/roi_mask.nii.gz
+for (( i=0; i<${NUM_PERM}; i++ )); do
+  WHICH_LABEL=(${PERM[${i}]//,/ })
+  fslmaths ${LABEL[0]} -mul 0 -add 1 ${roi_mask}
+  hdr_temp=""
+  # load labels
+  for (( j=0; j<${NUM_SET}; j++ )); do
+    if [[ "${WHICH_LABEL[${j}]}" == 0 ]]; then
+      # if value is zero use all labels in given mask
+      # (will exclude non-overlapping portions betwen masks)
+      fslmaths ${LABEL[${j}]} -bin ${temp_mask}
+      fslmaths ${roi_mask} -mas ${temp_mask} ${roi_mask}
+
+      # write header value for output, only out put header
+      # label for base label set
+      if [[ "${j}" == "0" ]]; then 
+        temp="${LABEL[${j}]##*+}"
+        temp=$(echo "${temp}" | cut -f 1 -d '.')
+        hdr_temp="${hdr_temp}${temp}"
+      fi
+    else
+      # create and use ROI mask
+      temp_value=(${LABEL_VALUE[${j}]//,/ })
+      fslmaths ${LABEL[${j}]} -thr ${temp_value[${WHICH_LABEL[${j}]}]} -uthr ${temp_value[${WHICH_LABEL[${j}]}]} -bin ${temp_mask}
+      fslmaths ${roi_mask} -mas ${temp_mask} ${roi_mask}
+      
+      # append to header label
+      if [[ "${j}" > "0" ]]; then
+        hdr_temp="${hdr_temp}_"
+      fi
+      temp_acronym=(${LABEL_ACRONYM[${j}]//,/ })
+      hdr_temp="${hdr_temp}${temp_acronym[${WHICH_LABEL[${j}]}]}"
+    fi
+  done
+  HEADER+=(${hdr_temp})
+
+  # use mask to calculate stats for label set
   for (( k=0; k<${NUM_STATS}; k++ )); do
     if [[ "${STATS[${k}],,}" == "voxels" ]]; then
-      temp=(`fslstats ${temp_mask} -v`)
+      temp=(`fslstats ${roi_mask} -v`)
       echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "volume" ]]; then
-      volume=(`fslstats ${temp_mask} -v`)
+      volume=(`fslstats ${roi_mask} -v`)
       echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "mean" ]]; then
-      fslstats ${VALUE} -k ${temp_mask} -m >> ${DIR_SCRATCH}/temp.txt
+      fslstats ${VALUE} -k ${roi_mask} -m >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "std" ]]; then
-      fslstats ${VALUE} -k ${temp_mask} -s >> ${DIR_SCRATCH}/temp.txt
+      fslstats ${VALUE} -k ${roi_mask} -s >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "cog" ]]; then
-      temp=(`fslstats ${VALUE} -k ${temp_mask} -c`)
+      temp=(`fslstats ${VALUE} -k ${roi_mask} -c`)
       echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
     fi
     last_char=${STATS[${k}]: -1}
     if [[ "${STATS[${k}]: -1}" == "%"  ]]; then
-      fslstats ${VALUE} -k ${temp_mask} -p ${STATS[${k}]::-1} >> ${DIR_SCRATCH}/temp.txt
+      fslstats ${VALUE} -k ${roi_mask} -p ${STATS[${k}]::-1} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "min" ]]; then
-      temp=(`fslstats ${VALUE} -k ${temp_mask} -R`)
+      temp=(`fslstats ${VALUE} -k ${roi_mask} -R`)
       echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "max" ]]; then
-      temp=(`fslstats ${VALUE} -k ${temp_mask} -R`)
+      temp=(`fslstats ${VALUE} -k ${roi_mask} -R`)
       echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "entropy" ]]; then
-      fslstats ${VALUE} -k ${temp_mask} -e >> ${DIR_SCRATCH}/temp.txt
+      fslstats ${VALUE} -k ${roi_mask} -e >> ${DIR_SCRATCH}/temp.txt
     fi
   done
   paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
@@ -219,125 +271,23 @@ for (( j=1; j<${NUM_LABEL[0]}; j++ )); do
   rm ${DIR_SCRATCH}/temp.txt
 done
 
-# sub-parcellate each roi by included additional labels
-if [[ "${NUM_SET}" > "1" ]]; then
-  base_mask=${DIR_SCRATCH}/base_mask.nii.gz
-  sub_mask=${DIR_SCRATCH}/sub_mask.nii.gz
-  for (( i=1; i<${NUM_SET}; i++ )); do
-    SUB_VALUE=(${LABEL_VALUE[${i}]//,/ })
-    SUB_ACRONYM=(${LABEL_ACRONYM[${i}]//,/ })
-    for (( j=1; j<${NUM_LABEL[0]}; j++ )); do
-      fslmaths ${LABEL[0]} -thr ${BASE_VALUE[${j}]} -uthr ${BASE_VALUE[${j}]} -bin ${bask_mask}
-      for (( k=1; k<${NUM_LABEL[${i}]}; k++ )); do
-        fslmaths ${LABEL[${i}]} -thr ${SUB_VALUE[${k}]} -uthr ${SUB_VALUE[${k}]} -bin -mas ${base_mask} ${sub_mask}
-        HEADER+=(${BASE_ACRONYM[${j}]}_${SUB_ACRONYM[${k}]})
-        for (( l=0; l<${NUM_STATS}; l++ )); do
-          if [[ "${STATS[${l}],,}" == "voxels" ]]; then
-            temp=(`fslstats ${sub_mask} -v`)
-            echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "volume" ]]; then
-            volume=(`fslstats ${sub_mask} -v`)
-            echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "mean" ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -m >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "std" ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -s >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "cog" ]]; then
-            temp=(`fslstats ${VALUE} -k ${sub_mask} -c`)
-            echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
-          fi
-          last_char=${STATS[${l}]: -1}
-          if [[ "${STATS[${l}]: -1}" == "%"  ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -p ${STATS[${l}]::-1} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "min" ]]; then
-            temp=(`fslstats ${VALUE} -k ${sub_mask} -R`)
-            echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "max" ]]; then
-            temp=(`fslstats ${VALUE} -k ${sub_mask} -R`)
-            echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "entropy" ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -e >> ${DIR_SCRATCH}/temp.txt
-          fi
-        done
-        paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
-        mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
-        rm ${DIR_SCRATCH}/temp.tx
-      done
-    done
-  done
-fi
-
-# sub-parcellate combined roi by all additional labels
-################################how to make this work????????????????
-if [[ "${NUM_SET}" > "1" ]]; then
-  base_mask=${DIR_SCRATCH}/base_mask.nii.gz
-  sub_mask=${DIR_SCRATCH}/sub_mask.nii.gz
-  for (( i=1; i<${NUM_SET}; i++ )); do
-    SUB_VALUE=(${LABEL_VALUE[${i}]//,/ })
-    SUB_ACRONYM=(${LABEL_ACRONYM[${i}]//,/ })
-    for (( j=1; j<${NUM_LABEL[0]}; j++ )); do
-      fslmaths ${LABEL[0]} -thr ${BASE_VALUE[${j}]} -uthr ${BASE_VALUE[${j}]} -bin ${bask_mask}
-      for (( k=1; k<${NUM_LABEL[${i}]}; k++ )); do
-        fslmaths ${LABEL[${i}]} -thr ${SUB_VALUE[${k}]} -uthr ${SUB_VALUE[${k}]} -bin -mas ${base_mask} ${sub_mask}
-        HEADER+=(${BASE_ACRONYM[${j}]}_${SUB_ACRONYM[${k}]})
-        for (( l=0; l<${NUM_STATS}; l++ )); do
-          if [[ "${STATS[${l}],,}" == "voxels" ]]; then
-            temp=(`fslstats ${sub_mask} -v`)
-            echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "volume" ]]; then
-            volume=(`fslstats ${sub_mask} -v`)
-            echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "mean" ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -m >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "std" ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -s >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "cog" ]]; then
-            temp=(`fslstats ${VALUE} -k ${sub_mask} -c`)
-            echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
-          fi
-          last_char=${STATS[${l}]: -1}
-          if [[ "${STATS[${l}]: -1}" == "%"  ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -p ${STATS[${l}]::-1} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "min" ]]; then
-            temp=(`fslstats ${VALUE} -k ${sub_mask} -R`)
-            echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "max" ]]; then
-            temp=(`fslstats ${VALUE} -k ${sub_mask} -R`)
-            echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
-          fi
-          if [[ "${STATS[${l}],,}" == "entropy" ]]; then
-            fslstats ${VALUE} -k ${sub_mask} -e >> ${DIR_SCRATCH}/temp.txt
-          fi
-        done
-        paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
-        mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
-        rm ${DIR_SCRATCH}/temp.tx
-      done
-    done
-  done
-fi
+# get label name, e.g., baw+basalGanglia+hemi+tissue
+NAME_TEMP=""
+for (( i=0; i<${NUM_SET}; i++ )); do
+  if [[ "${i}" == "0" ]]; then
+    NAME_TEMP="${NAME_TEMP}${LABEL_NAME[${i}]}"
+  else
+    NAME_TEMP="${NAME_TEMP}+${LABEL_NAME[${i}]##*+}"
+  fi
+done
+LABEL_NAME=${NAME_TEMP}
 
 # Check if summary file exists and create if not
 mkdir -p ${DIR_PROJECT}/summary
 PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${VALUE}`
 SUMMARY_FILE=${DIR_PROJECT}/summary/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  LABEL_TEMP="${LABEL_ACRONYM[@]:1}"
-  HEADER=("participant_id" "session_id" "summary_date" "measure" "${LABEL_TEMP}")
-  HEADER="${HEADER[@]}"
+  HEADER=("participant_id" "session_id" "summary_date" "measure" "${HEADER[@]}")
   echo ${HEADER// /,} >> ${SUMMARY_FILE}
 fi
 
@@ -353,7 +303,6 @@ fi
 #===============================================================================
 # End of Function
 #===============================================================================
-
 # Clean workspace --------------------------------------------------------------
 rm ${DIR_SCRATCH}/*
 rmdir ${DIR_SCRATCH}
@@ -363,3 +312,4 @@ if [[ "${NO_LOG}" == "false" ]]; then
   LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
+
