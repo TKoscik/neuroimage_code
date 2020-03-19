@@ -2,8 +2,8 @@
 
 #===============================================================================
 # Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Authors: Timothy R. Koscik, PhD
+# Date: 2020-03-19
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
@@ -57,18 +57,15 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
+  echo '  -b | --baw-label         full file path to Brainstools/BRAINSAutoworkup'
+  echo '                           labels (dust cleaned version, renamed to fit'
+  echo '                           in BIDS IA format)'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
@@ -107,14 +104,15 @@ labels=("31,43,44,63,85,98,128,999,15000,15001"\
  "7,8,46,47,15071,15072,15073")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -127,14 +125,15 @@ labels=("1000,1002,1012,1014,1017,1018,1019,1020,1024,1026,1027,1028,1032,1035,1
  "251,252,253,254,255")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -143,14 +142,15 @@ label_name="basalGanglia"
 labels=("11,50" "12,51" "13,52" "26,58")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -159,14 +159,15 @@ label_name="subcortical"
 labels=("10,49" "28,60" "17,53" "18,54")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -187,14 +188,15 @@ labels=("3001,4001" "1002,2002,3002,4002" "3003,4003" "1005,2005,3005,4005"\
  "1000,2000" "5001,5002")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -203,14 +205,15 @@ label_name="nonbrain"
 labels=("31,63" "24" "98" "5,44" "4,43" "128" "85" "15001" "15000" "999")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -220,14 +223,15 @@ labels=("4,5,7,8,10,11,12,13,17,18,26,28,31,1000,1002,1005,1006,1007,1008,1009,1
  "43,44,46,47,49,50,51,52,53,54,58,60,63,2000,2002,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2116,2129,4001,4002,4003,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,4031,4032,4033,4034,4035,5002,15140,15142,15144,15150,15156,15160,15162,15164,15172,15174,15178,15184,15190,15192,15194,15200")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+for (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
@@ -237,14 +241,15 @@ labels=("8,47,15071,15072,15073,7,46,10,11,12,13,17,18,26,49,50,51,52,53,54,58,1
  "28,60,251,252,253,254,255,3001,3002,3003,3005,3006,3007,3008,3009,3010,3011,3012,3013,3014,3015,3016,3017,3018,3019,3020,3021,3022,3023,3024,3025,3026,3027,3028,3029,3030,3031,3032,3033,3034,3035,4001,4002,4003,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,4016,4017,4018,4019,4020,4021,4022,4023,4024,4025,4026,4027,4028,4029,4030,4031,4032,4033,4034,4035,5001,5002")
 OUTPUT=${DIR_SCRATCH}/${PREFIX}_baw+${label_name}.nii.gz
 fslmaths ${BAW_LABEL} -mul 0 ${OUTPUT}
-for (( j=0; j<${#labels[@]}; j++ )) {
+ffor (( j=0; j<${#labels[@]}; j++ )); do
   lut_values=(${labels[${j}]//,/ })
   label_value=$(( ${j} + 1 ))
-  for (( i=0; i<${#lut_values[@]}; i ++ )) {
+  for (( i=0; i<${#lut_values[@]}; i ++ )); do
     fslmaths ${BAW_LABEL} -thr ${lut_values[${i}]} -uthr ${lut_values[${i}]} -bin -mul ${label_value} ${DIR_SCRATCH}/roi_temp.nii.gz
     fslmaths ${OUTPUT} -add ${DIR_SCRATCH}/roi_temp.nii.gz ${OUTPUT}
-  }
-}
+    rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  done
+done
 mkdir -p ${DIR_SAVE}/baw+${label_name}
 mv ${OUTPUT} ${DIR_SAVE}/baw+${label_name}/
 
