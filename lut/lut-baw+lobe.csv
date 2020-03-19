@@ -1,0 +1,17 @@
+value,label
+9003,l_temporal_gm
+9006,l_occipital_gm
+9007,l_frontal_gm
+9008,l_parietal_gm
+9503,r_temporal_gm
+9506,r_occipital_gm
+9507,r_frontal_gm
+9508,r_parietal_gm
+9703,l_temporal_wm
+9706,l_occipital_wm
+9707,l_frontal_wm
+9708,l_parietal_wm
+9803,r_temporal_wm
+9806,r_occipital_wm
+9807,r_frontal_wm
+9808,r_parietal_wm
