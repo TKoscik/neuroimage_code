@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvlsa --long group:,prefix:,\
-label:,value:,stats:,sum,no-append,\
+label:,value:,stats:,do-sum,no-append,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -22,17 +22,17 @@ GROUP=
 LABEL=
 VALUE=NULL
 STATS=
-SUM=false
+DO_SUM=false
 NO_APPEND=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
 VERBOSE=0
 NO_LOG=false
 
+IFS=$' \t\n'
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
@@ -96,47 +96,48 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
-
 mkdir -p ${DIR_SCRATCH}
 
 #===============================================================================
 # Start of Function
 #===============================================================================
+LABEL_TEMP=(${LABEL//,/ })
+unset LABEL
+LABEL=(${LABEL_TEMP[@]})
+NUM_SET=${#LABEL[@]}
+
 if [ -z ${STATS} ]; then
   STATS="voxels,volume,mean,std,cog,5%,95%,min,max,entropy"
+fi
+if [[ "${VALUE}" == "NULL" ]]; then
+  unset STATS
+  STATS=("volume")
 fi
 STATS=(${STATS//,/ })
 NUM_STATS=${#STATS[@]}
 
-if [[ "${VALUE}" == "NULL" ]]; then
-  STATS=("volume")
-fi
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${VALUE[0]}`
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/summary
-fi
-mkdir -p ${DIR_SAVE}
-
 # Load lookup table for labels
-NUM_LABELS=${#LABEL[@]}
-for (( i=0; i<${NUM_LABELS}; i++ )); do
+for (( i=0; i<${NUM_SET}; i++ )); do
   LABEL_NAME+=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL[${i}]} -f "label"`)
   LUT=${DIR_NIMGCORE}/code/lut/lut-${LABEL_NAME[${i}]}.csv
+  unset temp_value temp_label
+  temp_value=""
+  temp_label=""
   while IFS=$',\r' read -r a b;
   do
-    TEMP_VALUE+=(${a})
-    TEMP_LABEL+=(${b})
+    if [[ "${a}" != "value" ]]; then
+      temp_value="${temp_value},${a}"
+      temp_label="${temp_label},${b}"
+    fi
   done < ${LUT}
-  NUM_LABEL+=${#TEMP_VALUE[@]}
-  LABEL_VALUE+=(${TEMP_VALUE[@]// /,})
-  LABEL_LABEL+=(${TEMP_LABEL[@]// /,})
+  LABEL_VALUE+=(${temp_value:1})
+  LABEL_LABEL+=(${temp_label:1})
 done
-NUM_SET=${#LABEL_VALUE[@]}
 
 if [[ "${VALUE}" == "NULL" ]]; then
   # Assuming subject specific labels
-  SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "sub"`)
-  SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL} -f "ses"`)
+  SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL[0]} -f "sub"`)
+  SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL[0]} -f "ses"`)
   MOD="volume"
 else
   # Assuming labels apply to all inputs,
@@ -146,15 +147,13 @@ else
   IFS=x read -r -a pixdim <<< $(PrintHeader ${VALUE} 1)
 
   # Resample label to match value file
+  LABEL_ORIG=${LABEL[@]}
   for (( i=0; i<${NUM_SET}; i++ )); do
-    LABEL_ORIG+=(${LABEL[${i}]})
     IFS=x read -r -a pixdim_label <<< $(PrintHeader ${LABEL_ORIG[${i}]} 1)
     if [[ "${pixdim[0]}" != "${pixdim_label[0]}" ]] || [[ "${pixdim[1]}" != "${pixdim_label[1]}" ]] || [[ "${pixdim[2]}" != "${pixdim_label[2]}" ]]; then
       LABEL[${i}]=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_label-${LABEL_NAME[${i}]}.nii.gz
       antsApplyTransforms -d 3 -n NearestNeighbor \
         -i ${LABEL_ORIG} -o ${LABEL[${i}]} -r ${VALUE}
-    else
-      LABEL[${i}]=${LABEL_ORIG[${i}]}
     fi
   done
   MOD=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "modality"`
@@ -187,17 +186,18 @@ for (( i=0; i<${NUM_SET}; i++ )); do
       count_start=0
     fi
   fi
-  count_stop=$(( ${#temp[@]} - 1 ))
-  perm_fcn="${perm_fcn}{${count_start}..${count_stop}}"
+  perm_fcn="${perm_fcn}{${count_start}..${#temp[@]}}"
 done
 PERM=(`eval ${perm_fcn}`)
 NUM_PERM=${#PERM[@]}
 
 temp_mask=${DIR_SCRATCH}/temp_mask.nii.gz
 roi_mask=${DIR_SCRATCH}/roi_mask.nii.gz
+HEADER=""
 for (( i=0; i<${NUM_PERM}; i++ )); do
   WHICH_LABEL=(${PERM[${i}]//,/ })
   fslmaths ${LABEL[0]} -mul 0 -add 1 ${roi_mask}
+  unset hdr_temp
   hdr_temp=""
   # load labels
   for (( j=0; j<${NUM_SET}; j++ )); do
@@ -216,7 +216,9 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       fi
     else
       # create and use ROI mask
-      temp_value=(${LABEL_VALUE[${j}]//,/ })
+      unset temp_value
+      temp_value=NULL
+      temp_value+=(${LABEL_VALUE[${j}]//,/ })
       fslmaths ${LABEL[${j}]} -thr ${temp_value[${WHICH_LABEL[${j}]}]} -uthr ${temp_value[${WHICH_LABEL[${j}]}]} -bin ${temp_mask}
       fslmaths ${roi_mask} -mas ${temp_mask} ${roi_mask}
       
@@ -224,20 +226,21 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       if [[ "${j}" > "0" ]]; then
         hdr_temp="${hdr_temp}_"
       fi
-      temp_LABEL=(${LABEL_LABEL[${j}]//,/ })
+      unset temp_LABEL
+      temp_LABEL=NULL
+      temp_LABEL+=(${LABEL_LABEL[${j}]//,/ })
       hdr_temp="${hdr_temp}${temp_LABEL[${WHICH_LABEL[${j}]}]}"
     fi
   done
-  HEADER+=(${hdr_temp})
-
+  HEADER="${HEADER},${hdr_temp}"
   # use mask to calculate stats for label set
   for (( k=0; k<${NUM_STATS}; k++ )); do
     if [[ "${STATS[${k}],,}" == "voxels" ]]; then
-      temp=(`fslstats ${roi_mask} -v`)
+      temp=(`fslstats ${roi_mask} -k ${roi_mask} -v`)
       echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "volume" ]]; then
-      volume=(`fslstats ${roi_mask} -v`)
+      volume=(`fslstats ${roi_mask} -k ${roi_mask} -v`)
       echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
     fi
     if [[ "${STATS[${k}],,}" == "mean" ]]; then
@@ -283,21 +286,31 @@ done
 LABEL_NAME=${NAME_TEMP}
 
 # Check if summary file exists and create if not
-mkdir -p ${DIR_PROJECT}/summary
-PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${VALUE}`
-SUMMARY_FILE=${DIR_PROJECT}/summary/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
+if [[ "${VALUE}" == "NULL" ]]; then
+  DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${LABEL[0]}`
+  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${LABEL[0]}`
+else
+  DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${VALUE}`
+  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${VALUE}`
+fi
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/summary
+fi
+mkdir -p ${DIR_SAVE}
+
+SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  HEADER=("participant_id" "session_id" "summary_date" "measure" "${HEADER[@]}")
-  echo ${HEADER// /,} >> ${SUMMARY_FILE}
+  HEADER="participant_id,session_id,summary_date,measure${HEADER}"
+  echo ${HEADER} >> ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not
 if [[ "${NO_APPEND}" == "false" ]]; then
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
-  DIR_SAVE=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
-  mkdir -p ${DIR_SAVE}
-  mv ${OUTPUT} ${DIR_SAVE}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
+  DIR_SAVE_SUB=${DIR_SAVE}/${MOD}_label-${LABEL_NAME}
+  mkdir -p ${DIR_SAVE_SUB}
+  mv ${OUTPUT} ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
 fi
 
 #===============================================================================
