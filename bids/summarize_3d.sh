@@ -38,7 +38,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -s | --do-sum) DO_SOME=true ; shift ;;
+    -s | --do-sum) DO_SUM=true ; shift ;;
     -a | --no-append) NO_APPEND=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --label) LABEL+="$2" ; shift 2 ;;
@@ -73,7 +73,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --label <value>          file path to label to generate stats for.'
-  echo '                           Only one label file per function call allowed.'
+  echo '                           Multiple inputs should be a comma separated'
+  echo '                           string. Secondary inputs will be used as'
+  echo '                           subset masks for each ROI, e.g., fontal left wm'
   echo '                           Label and Value files are assumed to be'
   echo '                           registered, however they do not have to have'
   echo '                           the same spacing. Label maps will be resampled'
@@ -193,6 +195,7 @@ NUM_PERM=${#PERM[@]}
 
 temp_mask=${DIR_SCRATCH}/temp_mask.nii.gz
 roi_mask=${DIR_SCRATCH}/roi_mask.nii.gz
+unset HEADER
 HEADER=""
 for (( i=0; i<${NUM_PERM}; i++ )); do
   WHICH_LABEL=(${PERM[${i}]//,/ })
@@ -226,13 +229,14 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       if [[ "${j}" > "0" ]]; then
         hdr_temp="${hdr_temp}_"
       fi
-      unset temp_LABEL
-      temp_LABEL=NULL
-      temp_LABEL+=(${LABEL_LABEL[${j}]//,/ })
-      hdr_temp="${hdr_temp}${temp_LABEL[${WHICH_LABEL[${j}]}]}"
+      unset temp_label
+      temp_label=NULL
+      temp_label+=(${LABEL_LABEL[${j}]//,/ })
+      hdr_temp="${hdr_temp}${temp_label[${WHICH_LABEL[${j}]}]}"
     fi
   done
   HEADER="${HEADER},${hdr_temp}"
+
   # use mask to calculate stats for label set
   for (( k=0; k<${NUM_STATS}; k++ )); do
     if [[ "${STATS[${k}],,}" == "voxels" ]]; then
@@ -285,7 +289,7 @@ for (( i=0; i<${NUM_SET}; i++ )); do
 done
 LABEL_NAME=${NAME_TEMP}
 
-# Check if summary file exists and create if not
+# Setup save directories
 if [[ "${VALUE}" == "NULL" ]]; then
   DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${LABEL[0]}`
   PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${LABEL[0]}`
@@ -297,10 +301,11 @@ if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/summary
 fi
 mkdir -p ${DIR_SAVE}
-
 SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
+
+# Check if summary file exists and create if not
+HEADER="participant_id,session_id,summary_date,measure${HEADER}"
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  HEADER="participant_id,session_id,summary_date,measure${HEADER}"
   echo ${HEADER} >> ${SUMMARY_FILE}
 fi
 
@@ -308,10 +313,11 @@ fi
 if [[ "${NO_APPEND}" == "false" ]]; then
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
-  DIR_SAVE_SUB=${DIR_SAVE}/${MOD}_label-${LABEL_NAME}
+  DIR_SAVE_SUB=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
   mkdir -p ${DIR_SAVE_SUB}
-  mv ${OUTPUT} ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
-fi
+  echo ${HEADER} > ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
+  echo ${OUTPUT} >> ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
+fi 
 
 #===============================================================================
 # End of Function
