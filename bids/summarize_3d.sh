@@ -97,11 +97,7 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/summary
-fi
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 
 #===============================================================================
 # Start of Function
@@ -116,6 +112,10 @@ if [[ "${VALUE}" == "NULL" ]]; then
   STATS=("volume")
 fi
 DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${VALUE[0]}`
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/summary
+fi
+mkdir -p ${DIR_SAVE}
 
 # Load lookup table for labels
 NUM_LABELS=${#LABEL[@]}
