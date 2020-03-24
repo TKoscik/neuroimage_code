@@ -1,7 +1,11 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
+# This function remaps the output brain labels from BRAINSAutoworkup and makes 
+# a set of new labels that include the original labels and summaries of
+# hierarchically larger regions. The output is in a format where the
+# summarize_3d function can summarize the variables and apply subregion masks
+# e.g., hemisphere and tissue class, as needed.
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-19
 #===============================================================================
@@ -63,7 +67,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  -b | --baw-label         full file path to Brainstools/BRAINSAutoworkup'
   echo '                           labels (dust cleaned version, renamed to fit'
-  echo '                           in BIDS IA format)'
+  echo '                           in BIDS IA format and to work with our'
+  echo '                           summarize_3d function)'
+  echo '  -r | --redo              True/False flag to remap a dataset, if false,'
+  echo '                           remapping will be done only if the remapped'
+  echo '                           output does not exist (DEFAULT), if true,'
+  echo '                           will be redone '
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
