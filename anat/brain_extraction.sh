@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long group:,prefix:,\
-image:,method:,suffix:, \
+image:,method:,suffix:,spatial-filter:,filter-radius:,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -23,6 +23,8 @@ PREFIX=
 IMAGE=
 METHOD=
 SUFFIX=
+SPATIAL_FILTER="NULL"
+FILTER_RADIUS=1
 TEMPLATE="OASIS"
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
@@ -45,6 +47,8 @@ while true; do
     --image) IMAGE+="$2" ; shift 2 ;;
     --method) METHOD+="$2" ; shift 2 ;;
     --suffix) SUFFIX="$2" ; shift 2 ;;
+    --spatial-filter) SPATIAL_FILTER="$2" ; shift 2 ;;
+    --filter_radius) FILTER_RADIUS="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -120,6 +124,14 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
       -input ${IMAGE[0]} \
       -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
     fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
+    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
+      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
+      eval ${sf_fcn}
+      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
+    fi
   fi
 
   # run ANTs brain extraction
@@ -142,6 +154,15 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     mv ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
       ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
     rm ${DIR_SCRATCH}/ants-bex_BrainExtraction*
+
+    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
+      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
+      eval ${sf_fcn}
+      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
+    fi
   fi
 
   # run FSL's BET
@@ -156,6 +177,15 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz \
       ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
     rm ${DIR_SCRATCH}/fsl*
+    
+    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL`${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
+      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
+      eval ${sf_fcn}
+      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
+    fi
   fi
 done
 
