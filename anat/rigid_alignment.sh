@@ -107,14 +107,27 @@ mkdir -p ${DIR_XFM}
 # get image modality from filename ---------------------------------------------
 MOD=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE} -f "modality"`)
 
-# resample template image to the spacing of the image --------------------------
-DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}
-IFS=x read -r -a pixdim <<< $(PrintHeader ${IMAGE} 1)
-FIXED=${DIR_SCRATCH}/fixed_image.nii.gz
-ResampleImage 3 ${FIXED} \
-  ${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_${TARGET}.nii.gz \
-  ${pixdim[0]}x${pixdim[1]}x${pixdim[2]} 0 0 6
-  
+# resample template image to desired output spacing ----------------------------
+# always push image to an isotropic spacing to prevent issues with voxel
+# aliasing varying by orientation
+if [ -d ${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE} ]; then
+  echo "resampling image to ${SPACE} isotropic spacing."
+  DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}
+  FIXED=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_${TARGET}.nii.gz
+else
+  dir_temp=(`ls -d ${DIR_NIMGCORE}/templates_human/${TEMPLATE}/*um`)
+  if [ -n ${dir_temp} ]; then
+    dir_temp=(`ls -d ${DIR_NIMGCORE}/templates_human/${TEMPLATE}/*mm`)
+  fi
+  DIR_TEMPLATE=${dir_temp[0]}
+  space_temp=${DIR_TEMPLATE##*/}
+  FIXED=${DIR_SCRATCH}/fixed_image.nii.gz
+  ResampleImage 3 \
+    ${DIR_TEMPLATE}/${TEMPLATE}_${space_temp}_${TARGET}.nii.gz \
+    ${FIXED} \
+    ${SPACE}x${SPACE}x${SPACE} 0 0 6
+fi
+
 # rigid registration -----------------------------------------------------------
 if [[ "${MOD}" == "${TARGET}" ]]; then
   HIST_MATCH=1
@@ -141,9 +154,9 @@ antsApplyTransforms -d 3 \
 
 # move files to appropriate locations ------------------------------------------
 mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-  ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${TEMPLATE}+native_xfm-rigid.mat
+  ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${TEMPLATE}+${SPACE}_xfm-rigid.mat
 mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
-  ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+native_${MOD}.nii.gz
+  ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_${MOD}.nii.gz
 
 #===============================================================================
 # End of Function
