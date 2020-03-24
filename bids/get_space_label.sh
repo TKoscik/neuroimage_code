@@ -59,7 +59,7 @@ SPACE=(${SPACE//-/ })
 SPACE=${SPACE[-1]}
 SPACE=(${SPACE//_/ })
 SPACE=${SPACE[-1]}
-if [[ "${SPACE,,}" == "nifti"]] || [[ "${SPACE,,}" == "rawdata"]]; then
+if [[ "${SPACE,,}" == "nifti" ]] || [[ "${SPACE,,}" == "rawdata" ]]; then
   SPACE="raw"
 fi
 echo ${SPACE}
