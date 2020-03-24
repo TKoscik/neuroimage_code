@@ -1,6 +1,3 @@
 value,label
 1,nonbrain
-2,csf
-3,brainstem
-4,cerebrum
-5,cerebellum
+2,brain

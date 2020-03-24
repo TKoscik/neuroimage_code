@@ -1,0 +1,14 @@
+value,label
+1,lateral_ventricle_l
+2,lateral_ventricle_r
+3,inferior_lateral_ventricle_l
+4,inferior_lateral_ventricle_r
+5,4th_ventricle
+6,csf
+7,choroid_plexus_l
+8,choroid_plexus_r
+9,optic_chiasm
+10,dura
+11,nerve
+12,venous_blood
+13,pineal
