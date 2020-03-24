@@ -18,7 +18,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=Research-INC_img_core
 PREFIX=
 IMAGE=

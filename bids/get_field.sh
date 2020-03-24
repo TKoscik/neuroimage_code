@@ -15,7 +15,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 INPUT=
 FIELD=
 HELP=false
