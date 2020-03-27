@@ -8,7 +8,8 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvkl --long group:,prefix:,\
-other-inputs:,template:,space:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+other-inputs:,template:,space:,\
+dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
