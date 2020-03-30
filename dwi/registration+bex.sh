@@ -52,11 +52,12 @@ mkdir -p ${DIR_SCRATCH}
 DIR_PREP=${RESEARCHER}/${PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
 DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 DIR_ANAT_MASK=${RESEARCHER}/${PROJECT}/derivatives/anat/mask
+DIR_ANAT_NATIVE=${RESEARCHER}/${PROJECT}/derivatives/anat/native
 
 rm ${DIR_PREP}/*.mat
 rm ${DIR_PREP}/*prep-rigid*
 
-FIXED_IMAGE=${DIR_ANAT_MASK}/${PREFIX}_T2w.nii.gz
+FIXED_IMAGE=${DIR_ANAT_NATIVE}/${PREFIX}_T2w.nii.gz
 MOVING_IMAGE=${DIR_PREP}/All_hifi_b0_mean.nii.gz
 antsRegistration \
   -d 3 \
