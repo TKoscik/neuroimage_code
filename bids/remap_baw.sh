@@ -11,7 +11,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvlb --long group:,prefix:,\
+OPTS=`getopt -o hvlbr --long group:,prefix:,\
 baw-label:,redo,\
 dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
