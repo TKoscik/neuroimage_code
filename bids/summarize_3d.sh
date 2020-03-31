@@ -149,7 +149,7 @@ else
   IFS=x read -r -a pixdim <<< $(PrintHeader ${VALUE} 1)
 
   # Resample label to match value file
-  LABEL_ORIG=${LABEL[@]}
+  LABEL_ORIG=(${LABEL[@]})
   for (( i=0; i<${NUM_SET}; i++ )); do
     IFS=x read -r -a pixdim_label <<< $(PrintHeader ${LABEL_ORIG[${i}]} 1)
     if [[ "${pixdim[0]}" != "${pixdim_label[0]}" ]] || [[ "${pixdim[1]}" != "${pixdim_label[1]}" ]] || [[ "${pixdim[2]}" != "${pixdim_label[2]}" ]]; then
