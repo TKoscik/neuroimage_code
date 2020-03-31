@@ -1,6 +1,15 @@
-#!/bin/bash
+#!/bin/bash -e
 
-OPTS=`getopt -hvk --long researcher:,project:,group:,subject:,session:,prefix:,dir-scratch:,dir-nimgcore:,dir-pincsource:,keep,help,verbose -n 'parse-options' -- "$@"`
+#===============================================================================
+# Find acquisition parameters for DWI files
+# Authors: Josh Cochran
+# Date: 3/30/2020
+#===============================================================================
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
+dir-raw:,dir-scratch:,dir-nimgcore:,dir-pincsource:,dir-save:,\
+keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -8,30 +17,34 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-RESEARCHER=
-PROJECT=
 GROUP=
-SUBJECT=
-SESSION=
 PREFIX=
+TEMPLATE=HCPICBM
+SPACE=1mm
+DIR_RAW=
+DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
 VERBOSE=0
 HELP=false
+DRY_RUN=false
+NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -c | --dry-run) DRY-RUN=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
+    --template) TEMPLATE="$2" ; shift 2 ;;
+    --space) SPACE="$2" ; shift 2 ;;
+    --dir-raw) DIR_RAW="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -41,20 +54,64 @@ while true; do
 done
 
 # Usage Help ------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  FUNC_NAME=(`basename "$0"`)
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo 'Author: Josh Cochran'
+  echo 'Date:   3/30/2020'
+  echo '------------------------------------------------------------------------'
+  echo "Usage: ${FUNC_NAME}"
+  echo '  -h | --help              display command help'
+  echo '  -c | --dry-run           test run of function'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --group <value>          group permissions for project,'
+  echo '                           e.g., Research-kosciklab'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --dir-raw <value>        location of the raw DWI data'
+  echo '  --template <value>       name of template to use (if necessary),'
+  echo '                           e.g., HCPICBM'
+  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
+  echo '                           templates, etc. are stored,'
+  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
+  echo '                           default: ${DIR_PINCSOURCE}'
+  echo ''
+fi
+
+# Set up BIDs compliant variables and workspace --------------------------------
+proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
+
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${DIR_RAW}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_RAW} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_RAW} -f "ses"`
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
+
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
 
 
 #==============================================================================
 # AcqParams + All bvec, bval, index + Merge files for All_B0 and All_dwi
 #==============================================================================
-DIR_NATIVE=${RESEARCHER}/${PROJECT}/nifti/sub-${SUBJECT}/ses-${SESSION}/dwi
-DIR_PREP=${RESEARCHER}/${PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
 
-mkdir -p ${DIR_SCRATCH}
 #remove old files
-rm ${DIR_PREP}/All_dwisAcqParams.txt
-rm ${DIR_PREP}/All.bvec
-rm ${DIR_PREP}/All.bval
-rm ${DIR_PREP}/All_index.txt
+rm ${DIR_SAVE}/All_dwisAcqParams.txt  > /dev/null 2>&1
+rm ${DIR_SAVE}/All.bvec  > /dev/null 2>&1
+rm ${DIR_SAVE}/All.bval  > /dev/null 2>&1
+rm ${DIR_SAVE}/All_index.txt  > /dev/null 2>&1
 
 unset ACQ_LINE INDX TOTAL_BVALS TOTAL_XVALS TOTAL_YVALS TOTAL_ZVALS ALL_DWI_NAMES B0s
 #set up variables
@@ -69,10 +126,10 @@ TOTAL_XVALS=""
 TOTAL_YVALS=""
 TOTAL_ZVALS=""
 
-touch ${DIR_PREP}/All_dwisAcqParams.txt
+touch ${DIR_SAVE}/All_dwisAcqParams.txt
 
 #loop through DWI files to pull out info
-for i in ${DIR_NATIVE}/*_dwi.nii.gz; do
+for i in ${DIR_RAW}/*_dwi.nii.gz; do
   unset DTI_NAME B0s NUM_B0s PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME NAME_BASE BVALS XVALS YVALS ZVALS PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME
 #pull the file name with and without file path
   NAME_BASE=$( basename $i )
@@ -122,15 +179,15 @@ for i in ${DIR_NATIVE}/*_dwi.nii.gz; do
     EES_STRING=$(grep '"PhilipsScaleSlope"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   fi
   EES=${EES_STRING::-1}
-    if [[ ${SCANNER_TYPE} == Philips ]]; then
-      EES=$(echo "(${EES} / 10)" | bc -l)
-    fi
+  if [[ ${SCANNER_TYPE} == Philips ]]; then
+    EES=$(echo "(${EES} / 10)" | bc -l)
+  fi
 
   ACQ_MPE_STRING=$(grep '"AcquisitionMatrixPE"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   ACQ_MPE=${ACQ_MPE_STRING::-1}
   READOUT_TIME=$(echo "${EES} * ((${ACQ_MPE} / 2) - 1)" | bc -l)
 
-  echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_PREP}/All_dwisAcqParams.txt
+  echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_SAVE}/All_dwisAcqParams.txt
   ACQ_LINE=$(echo "${ACQ_LINE} + 1" | bc -l)
 
   touch ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt
@@ -140,17 +197,17 @@ for i in ${DIR_NATIVE}/*_dwi.nii.gz; do
       echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt
     fi
   done
-  ALL_DWI_NAMES+=(${DIR_PREP}/${NAME_BASE})
+  ALL_DWI_NAMES+=(${DIR_SAVE}/${NAME_BASE})
   ALL_HOME_DWI_NAMES+=(${DTI_NAME})
   ALL_SCRATCH_NAMES+=(${DIR_SCRATCH}/${NAME_BASE})
 done
 
-echo $INDX > ${DIR_PREP}/All_index.txt
-echo $TOTAL_BVALS > ${DIR_PREP}/All.bval
+echo $INDX > ${DIR_SAVE}/All_index.txt
+echo $TOTAL_BVALS > ${DIR_SAVE}/All.bval
 echo $TOTAL_XVALS > ${DIR_SCRATCH}/XVals.txt
 echo $TOTAL_YVALS > ${DIR_SCRATCH}/YVals.txt
 echo $TOTAL_ZVALS > ${DIR_SCRATCH}/ZVals.txt
-cat ${DIR_SCRATCH}/XVals.txt ${DIR_SCRATCH}/YVals.txt ${DIR_SCRATCH}/ZVals.txt >> ${DIR_PREP}/All.bvec
+cat ${DIR_SCRATCH}/XVals.txt ${DIR_SCRATCH}/YVals.txt ${DIR_SCRATCH}/ZVals.txt >> ${DIR_SAVE}/All.bvec
 
 FIRST_NAME=${ALL_DWI_NAMES[0]}
 FIRST_NAME2=${ALL_HOME_DWI_NAMES[0]}
@@ -177,15 +234,27 @@ for j in ${ALL_SCRATCH_NAMES[@]}; do
   fi
 done
 
-fslmerge -t ${DIR_PREP}/All_B0s.nii.gz ${FIRST_NAME}_b0.nii.gz ${TEMP_B0_FILES[@]}
-fslmerge -t ${DIR_PREP}/All_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FILES[@]}
+fslmerge -t ${DIR_SAVE}/All_B0s.nii.gz ${FIRST_NAME}_b0.nii.gz ${TEMP_B0_FILES[@]}
+fslmerge -t ${DIR_SAVE}/All_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FILES[@]}
 
-cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_PREP}/All_B0sAcqParams.txt
+cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_SAVE}/All_B0sAcqParams.txt
 
+chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
+chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
 
-rm ${DIR_SCRATCH}/*
-rmdir ${DIR_SCRATCH}
+# Clean workspace --------------------------------------------------------------
+# edit directory for appropriate modality prep folder
+if [[ "${KEEP}" == "true" ]]; then
+  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
+  rmdir ${DIR_SCRATCH}
+else
+  rm ${DIR_SCRATCH}/*  > /dev/null 2>&1
+  rmdir ${DIR_SCRATCH}
+fi
 
-
-chgrp -R ${GROUP} ${DIR_PREP} > /dev/null 2>&1
-chmod -R g+rw ${DIR_PREP} > /dev/null 2>&1
+# Write log entry on conclusion ------------------------------------------------
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi

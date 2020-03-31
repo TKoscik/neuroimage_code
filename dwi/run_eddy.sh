@@ -1,6 +1,15 @@
-#!/bin/bash
+#!/bin/bash -e
 
-OPTS=`getopt -hvk --long researcher:,project:,group:,subject:,session:,prefix:,dir-scratch:,dir-nimgcore:,dir-pincsource:,keep,help,verbose -n 'parse-options' -- "$@"`
+#===============================================================================
+# Run Eddy correction
+# Authors: Josh Cochran
+# Date: 3/30/2020
+#===============================================================================
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
+dir-scratch:,dir-nimgcore:,dir-pincsource:,dir-save:,\
+keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -8,30 +17,32 @@ fi
 eval set -- "$OPTS"
 
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-RESEARCHER=
-PROJECT=
 GROUP=
-SUBJECT=
-SESSION=
 PREFIX=
+TEMPLATE=HCPICBM
+SPACE=1mm
+DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
 VERBOSE=0
 HELP=false
+DRY_RUN=false
+NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -c | --dry-run) DRY-RUN=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
-    --researcher) RESEARCHER="$2" ; shift 2 ;;
-    --project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
-    --session) SESSION="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
+    --template) TEMPLATE="$2" ; shift 2 ;;
+    --space) SPACE="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -41,36 +52,95 @@ while true; do
 done
 
 # Usage Help ------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  FUNC_NAME=(`basename "$0"`)
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo 'Author: Josh Cochran'
+  echo 'Date:   3/30/2020'
+  echo '------------------------------------------------------------------------'
+  echo "Usage: ${FUNC_NAME}"
+  echo '  -h | --help              display command help'
+  echo '  -c | --dry-run           test run of function'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --group <value>          group permissions for project,'
+  echo '                           e.g., Research-kosciklab'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --template <value>       name of template to use (if necessary),'
+  echo '                           e.g., HCPICBM'
+  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
+  echo '                           templates, etc. are stored,'
+  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
+  echo '                           default: ${DIR_PINCSOURCE}'
+  echo ''
+fi
+
+# Set up BIDs compliant variables and workspace --------------------------------
+proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
+
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${DIR_SAVE}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
+if [ -z "${PREFIX}" ]; then
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+fi
+
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
 
 
 #==============================================================================
 # Eddy Correction
 #==============================================================================
 
-mkdir -p ${DIR_SCRATCH}
+DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+DIR_CORRECTED=${DIR_PROJECT}/derivatives/dwi/corrected
 
-DIR_PREP=${RESEARCHER}/${PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
-DIR_CORRECTED=${RESEARCHER}/${PROJECT}/derivatives/dwi/corrected
+mkdir -p ${DIR_CORRECTED}
 
 eddy_openmp \
   --data_is_shelled \
-  --imain=${DIR_PREP}/All_dwis.nii.gz \
-  --mask=${DIR_PREP}/DTI_mask.nii.gz \
-  --acqp=${DIR_PREP}/All_dwisAcqParams.txt \
-  --index=${DIR_PREP}/All_index.txt \
-  --bvecs=${DIR_PREP}/All.bvec \
-  --bvals=${DIR_PREP}/All.bval \
-  --topup=${DIR_PREP}/topup_results \
-  --out=${DIR_PREP}/All_dwi_hifi_eddy.nii.gz
+  --imain=${DIR_SAVE}/All_dwis.nii.gz \
+  --mask=${DIR_SAVE}/DTI_mask.nii.gz \
+  --acqp=${DIR_SAVE}/All_dwisAcqParams.txt \
+  --index=${DIR_SAVE}/All_index.txt \
+  --bvecs=${DIR_SAVE}/All.bvec \
+  --bvals=${DIR_SAVE}/All.bval \
+  --topup=${DIR_SAVE}/topup_results \
+  --out=${DIR_SAVE}/All_dwi_hifi_eddy.nii.gz
 
-cp ${DIR_PREP}/All_dwi_hifi_eddy.nii.gz ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz
-
-
-rm ${DIR_SCRATCH}/*
-rmdir ${DIR_SCRATCH}
+cp ${DIR_SAVE}/All_dwi_hifi_eddy.nii.gz ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz
 
 
-chgrp -R ${GROUP} ${DIR_PREP} > /dev/null 2>&1
-chmod -R g+rw ${DIR_PREP} > /dev/null 2>&1
+chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
+chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
 chgrp ${GROUP} ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz > /dev/null 2>&1
 chmod g+rw ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz > /dev/null 2>&1
+
+# Clean workspace --------------------------------------------------------------
+# edit directory for appropriate modality prep folder
+if [[ "${KEEP}" == "true" ]]; then
+  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
+  rmdir ${DIR_SCRATCH}
+else
+  rm ${DIR_SCRATCH}/*  > /dev/null 2>&1
+  rmdir ${DIR_SCRATCH}
+fi
+
+# Write log entry on conclusion ------------------------------------------------
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi
