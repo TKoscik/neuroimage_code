@@ -9,7 +9,8 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long group:,prefix:,\
-image:,modality:,template:,space:,target:,dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+image:,template:,space:,target:,\
+dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -122,6 +123,8 @@ else
   DIR_TEMPLATE=${dir_temp[0]}
   space_temp=${DIR_TEMPLATE##*/}
   FIXED=${DIR_SCRATCH}/fixed_image.nii.gz
+  SPACE=${SPACE//mm/}
+  SPACE=${SPACE//um/}
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}_${space_temp}_${TARGET}.nii.gz \
     ${FIXED} \
