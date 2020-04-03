@@ -63,7 +63,7 @@ SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
 TASK=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "task"`
 RUN=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "run"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}_task-${TASK}_run-${run}
+  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then

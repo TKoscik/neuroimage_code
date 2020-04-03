@@ -103,7 +103,7 @@ DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${IMAGE}`
 SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE} -f "sub"`
 SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then 
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
