@@ -11,7 +11,7 @@ OPTS=`getopt -o hcvksl \
 --long group:,prefix:,\
 fixed-image:,moving-image:,interpolation:,\
 do-syn,\
-dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -29,7 +29,8 @@ DO_SYN=false
 INTERPOLATION=BSpline[3]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
+DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 DRY_RUN=false
@@ -52,7 +53,8 @@ while true; do
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
+    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -85,9 +87,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
+  echo '  --dir-template <value>   directory where INC templates are stored,'
+  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -96,11 +99,11 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${MOVING_IMAGE}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${MOVING_IMAGE} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${MOVING_IMAGE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${MOVING_IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -136,8 +139,8 @@ else
 fi
 
 # setup filenames
-FIXED_MOD=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${FIXED_IMAGE} -f "modality"`
-MOVING_MOD=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${MOVING_IMAGE} -f "modality"`
+FIXED_MOD=`${DIR_CODE}/bids/get_field.sh -i ${FIXED_IMAGE} -f "modality"`
+MOVING_MOD=`${DIR_CODE}/bids/get_field.sh -i ${MOVING_IMAGE} -f "modality"`
 
 # perform ANTs registration
 reg_fcn="antsRegistration"
