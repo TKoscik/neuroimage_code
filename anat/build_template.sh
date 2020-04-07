@@ -1,16 +1,16 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Script to Bulid a template from a set of NIfTI images
+# Authors: Timothy R. Koscik, PhD
+# Date: 2020-04-07
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long group:,prefix:,\
-image:,mask:,maSK-dilation:,iterations:,resolution:,initial-template:,affine-only,hardcore,\
+image:,mask:,mask-dilation:,iterations:,resolution:,initial-template:,affine-only,hardcore,\
 hpc-email:,hpc-msg:,hpc-q:,hpc-pe:,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -35,7 +35,7 @@ HPC_Q=CCOM,UI,PINC
 HPC_PE="smp 14"
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 DRY_RUN=false
@@ -62,7 +62,7 @@ while true; do
     --hardcore) HARDCORE=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -126,9 +126,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/template'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -137,31 +136,26 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${IMAGE[0]}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
-fi
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
 
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/template
 fi
-DIR_CODE=${DIR_PROJECT}/code/build_template_${DATE_SUFFIX}
+DIR_JOB=${DIR_PROJECT}/code/build_template_${DATE_SUFFIX}
 DIR_LOG=${DIR_PROJECT}/log/hpc_output
 DIR_IMAGE=${DIR_SCRATCH}/source_images
 DIR_XFM=${DIR_SCRATCH}/xfm
 
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
-mkdir -p ${DIR_CODE}
+mkdir -p ${DIR_JOB}
 mkdir -p ${DIR_LOG}
 mkdir -p ${DIR_IMAGE}
 mkdir -p ${DIR_XFM}
 
 # set output prefix if not provided --------------------------------------------
 if [ -z "${PREFIX}" ]; then
-  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${IMAGE[0]}`
+  PROJECT=`${DIR_CODE}/code/bids/get_project.sh -i ${IMAGE[0]}`
   PREFIX=${PROJECT}_template
 fi
 
@@ -178,7 +172,7 @@ NUM_IMAGE=${#IMAGE[@]}
 
 # get image modalities
 for (( j=0; j<${NUM_MOD}; j++ )); do
-  MOD+=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${${TEMP[${j}]} -f "modality"`)
+  MOD+=(`${DIR_CODE}/bids/get_field.sh -i ${${TEMP[${j}]} -f "modality"`)
 done
 
 # get target resolution if not given
@@ -207,8 +201,8 @@ fi
 #------------------------------------------------------------------------------
 # resample images to target resolution
 #------------------------------------------------------------------------------
-JOB_RESAMPLE=${DIR_CODE}/${PREFIX}_resample_images.job
-SH_RESAMPLE=${DIR_CODE}/${PREFIX}_resample_images.sh
+JOB_RESAMPLE=${DIR_JOB}/${PREFIX}_resample_images.job
+SH_RESAMPLE=${DIR_JOB}/${PREFIX}_resample_images.sh
 
 echo "#!/bin/bash -e" > ${JOB_RESAMPLE}
 echo "child_script=${SH_RESAMPLE}" >> ${JOB_RESAMPLE}${DIR_SCRATCH}/${PREFIX}_${MOD[${j}]}.nii.gz
@@ -241,8 +235,8 @@ echo "" >> ${SH_RESAMPLE}
 #------------------------------------------------------------------------------
 # Generate average image (run as necessary)
 #------------------------------------------------------------------------------
-JOB_AVERAGE=${DIR_CODE}/${PREFIX}_generate_average.job
-SH_AVERAGE=${DIR_CODE}/${PREFIX}_generate_average.sh
+JOB_AVERAGE=${DIR_JOB}/${PREFIX}_generate_average.job
+SH_AVERAGE=${DIR_JOB}/${PREFIX}_generate_average.sh
 
 echo "#!/bin/bash -e" > ${JOB_AVERAGE}
 echo "child_script=${SH_AVERAGE}" >> ${JOB_AVERAGE}
@@ -276,8 +270,8 @@ echo "" >> ${SH_AVERAGE}
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
   IMAGE_TEMP=(${IMAGE[${i}]//,/ })
 
-  JOB_REGISTER+=${DIR_CODE}/${PREFIX}_register_image-${i}.job
-  SH_REGISTER+=${DIR_CODE}/${PREFIX}_register_image-${i}.sh
+  JOB_REGISTER+=${DIR_JOB}/${PREFIX}_register_image-${i}.job
+  SH_REGISTER+=${DIR_JOB}/${PREFIX}_register_image-${i}.sh
 
   echo "#!/bin/bash -e" > ${JOB_REGISTER[${i}]}
   echo "child_script=${SH_REGISTER}" >> ${JOB_REGISTER[${i}]}
@@ -400,8 +394,8 @@ done
 #------------------------------------------------------------------------------
 # Move files and clean up workspace
 #------------------------------------------------------------------------------
-JOB_CLEAN=${DIR_CODE}/${PREFIX}_clean_workspace.job
-SH_CLEAN=${DIR_CODE}/${PREFIX}_clean_workspace.sh
+JOB_CLEAN=${DIR_JOB}/${PREFIX}_clean_workspace.job
+SH_CLEAN=${DIR_JOB}/${PREFIX}_clean_workspace.sh
 
 echo "#!/bin/bash -e" > ${JOB_CLEAN}
 echo "child_script=${SH_REGISTER}" >> ${JOB_CLEAN}

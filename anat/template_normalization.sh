@@ -11,7 +11,7 @@
 OPTS=`getopt -o hvl --long group:,prefix:,\
 image:,mask:,mask-dil:,orig-space:,template:,space:,\
 affine-only,hardcore,stack-xfm,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -33,7 +33,8 @@ HARDCORE=false
 STACK_XFM=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
+DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
@@ -56,7 +57,8 @@ while true; do
     --hardcore) HARDCORE=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
+    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -102,9 +104,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: /Shared/nopoulos/nimg_core'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
+  echo '  --dir-template <value>   directory where INC templates are stored,'
+  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                       default: /Shared/pinc/sharedopt/apps/sourcefiles'
   echo ''
@@ -113,11 +116,11 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${IMAGE}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
@@ -130,9 +133,9 @@ mkdir -p ${DIR_XFM}
 NUM_IMAGE=${#IMAGE[@]}
 
 # get and set modalities for output and fixed image targets
-DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}
+DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}
 for (( i=0; i<${NUM_IMAGE}; i++ )); then
-  MOD+=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${IMAGE[${i}]} -f "modality"`)
+  MOD+=(`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[${i}]} -f "modality"`)
   if [[ "${MOD[${i}]}" == "T2w" ]]; then
     FIXED_IMAGE+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
   else
@@ -142,7 +145,7 @@ fi
 
 # set output flags and create save directory as needed
 if [[ -z "${ORIG_SPACE}" ]]; then
-  ORIG_SPACE=`${DIR_NIMGCORE}/code/bids/get_space_label.sh -i ${IMAGE[0]}`
+  ORIG_SPACE=`${DIR_CODE}/bids/get_space_label.sh -i ${IMAGE[0]}`
 fi
 FROM=${MOD[0]}+${ORIG_SPACE}
 TO=${TEMPLATE}+${SPACE}

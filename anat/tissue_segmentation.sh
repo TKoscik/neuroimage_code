@@ -10,7 +10,7 @@
 OPTS=`getopt -o hvkl --long group:,prefix:,\
 image:,mask:,n-class:,class-label:,\
 dimension:,convergence:,likelihood-model:,mrf:,use-random:,posterior-form:,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -33,7 +33,7 @@ USE_RANDOM=1
 POSTERIOR_FORM=Socrates[0]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
@@ -60,7 +60,7 @@ while true; do
     --posterior-form) POSTERIOR_FORM="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -96,9 +96,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default" ${RESEARCHER}/${PROJECT}/derivatives/anat/label'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -107,11 +106,11 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -134,7 +133,7 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
 gunzip ${DIR_SCRATCH}/*.gz
 
 # fit a Gaussian mixture model to get initial values for k-means
-INIT_VALUES=(`Rscript ${DIR_NIMGCORE}/code/anat/histogram_peaks_GMM.R ${DIR_SCRATCH}/temp.nii ${DIR_SCRATCH}/mask.nii ${DIR_SCRATCH} "k" ${N_CLASS}`)
+INIT_VALUES=(`Rscript ${DIR_CODE}/anat/histogram_peaks_GMM.R ${DIR_SCRATCH}/temp.nii ${DIR_SCRATCH}/mask.nii ${DIR_SCRATCH} "k" ${N_CLASS}`)
 
 # run Atropos tisue segmentation
 NUM_IMAGE=${#IMAGE[@]}

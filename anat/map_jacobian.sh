@@ -10,7 +10,7 @@
 OPTS=`getopt -o hvl --long group:,prefix:,\
 xfm:,interpolation:,from:,to:,\
 log-jac,geom-jac,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -29,7 +29,7 @@ FROM=NULL
 TO=NULL
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
@@ -50,7 +50,7 @@ while true; do
     --to) TO="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -81,9 +81,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --to <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -92,9 +91,9 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -107,13 +106,13 @@ mkdir -p ${DIR_SCRATCH}
 N_XFM=${#XFM[@]}
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
-  FROM=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[0]} -f "from"`
-  xfm_from=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[0]} -f "xfm"`
+  FROM=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "from"`
+  xfm_from=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "xfm"`
   FROM="${FROM}+${xfm_from}"
 fi
 if [[ "${TO}" == "NULL" ]]; then
-  TO=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[-1]} -f "to"`
-  xfm_to=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${XFM[-1]} -f "xfm"`
+  TO=`${DIR_CODE}/bids/get_field.sh -i ${XFM[-1]} -f "to"`
+  xfm_to=`${DIR_CODE}/bids/get_field.sh -i ${XFM[-1]} -f "xfm"`
   TO="${TO}+${xfm_to}"
 fi
 

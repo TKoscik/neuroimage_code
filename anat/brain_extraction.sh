@@ -139,7 +139,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
 
   # run ANTs brain extraction
   if [[ "${METHOD[${i}],,}" == "ants" ]]; then
-    DIR_TEMPLATE=${DIR_NIMGCORE}/templates_human/${TEMPLATE}
+    DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}
     ants_fcn="antsBrainExtraction.sh"
     ants_fcn="${ants_fcn} -d 3"
     for (( j=0; j<${NUM_IMAGE}; j++ )); do
@@ -224,5 +224,4 @@ if [[ "${NO_LOG}" == "false" ]]; then
   LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
-
 

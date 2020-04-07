@@ -13,7 +13,7 @@
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvlbr --long group:,prefix:,\
 baw-label:,redo,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -28,7 +28,7 @@ BAW_LABEL=
 REDO=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
@@ -45,7 +45,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -79,9 +79,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -90,9 +89,9 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${BAW_LABEL}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${BAW_LABEL} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${BAW_LABEL} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${BAW_LABEL}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi

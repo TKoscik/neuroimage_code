@@ -11,7 +11,7 @@ OPTS=`getopt -o hcvksl \
 --long group:,prefix:,\
 fixed-image:,moving-image:,interpolation:,\
 do-syn,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -30,7 +30,6 @@ INTERPOLATION=BSpline[3]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 DRY_RUN=false
@@ -54,7 +53,6 @@ while true; do
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -89,8 +87,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''

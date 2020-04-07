@@ -9,7 +9,7 @@
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvlsa --long group:,prefix:,\
 label:,value:,stats:,do-sum,no-append,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -26,7 +26,7 @@ DO_SUM=false
 NO_APPEND=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
@@ -46,7 +46,7 @@ while true; do
     --stats) STATS="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -88,9 +88,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: DIR_PROJECT/summary'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo "                           default: ${DIR_NIMGCORE}"
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo "                           default: ${DIR_PINCSOURCE}"
   echo ''
@@ -120,8 +119,8 @@ NUM_STATS=${#STATS[@]}
 
 # Load lookup table for labels
 for (( i=0; i<${NUM_SET}; i++ )); do
-  LABEL_NAME+=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL[${i}]} -f "label"`)
-  LUT=${DIR_NIMGCORE}/code/lut/lut-${LABEL_NAME[${i}]}.csv
+  LABEL_NAME+=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL[${i}]} -f "label"`)
+  LUT=${DIR_CODE}/lut/lut-${LABEL_NAME[${i}]}.csv
   unset temp_value temp_label
   temp_value=""
   temp_label=""
@@ -138,14 +137,14 @@ done
 
 if [[ "${VALUE}" == "NULL" ]]; then
   # Assuming subject specific labels
-  SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL[0]} -f "sub"`)
-  SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${LABEL[0]} -f "ses"`)
+  SUBJECT=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL[0]} -f "sub"`)
+  SESSION=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL[0]} -f "ses"`)
   MOD="volume"
 else
   # Assuming labels apply to all inputs,
   # inputs must be coregistered, but not necessarily the same spacing
-  SUBJECT=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "sub"`)
-  SESSION=(`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "ses"`)
+  SUBJECT=(`${DIR_CODE}/bids/get_field.sh -i ${VALUE} -f "sub"`)
+  SESSION=(`${DIR_CODE}/bids/get_field.sh -i ${VALUE} -f "ses"`)
   IFS=x read -r -a pixdim <<< $(PrintHeader ${VALUE} 1)
 
   # Resample label to match value file
@@ -158,7 +157,7 @@ else
         -i ${LABEL_ORIG} -o ${LABEL[${i}]} -r ${VALUE}
     fi
   done
-  MOD=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${VALUE} -f "modality"`
+  MOD=`${DIR_CODE}/bids/get_field.sh -i ${VALUE} -f "modality"`
 fi
   
 # initialize temporary file for output
@@ -291,11 +290,11 @@ LABEL_NAME=${NAME_TEMP}
 
 # Setup save directories
 if [[ "${VALUE}" == "NULL" ]]; then
-  DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${LABEL[0]}`
-  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${LABEL[0]}`
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL[0]}`
+  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${LABEL[0]}`
 else
-  DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${VALUE}`
-  PROJECT=`${DIR_NIMGCORE}/code/bids/get_project.sh -i ${VALUE}`
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${VALUE}`
+  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${VALUE}`
 fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/summary
