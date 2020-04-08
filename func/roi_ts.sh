@@ -51,7 +51,7 @@ done
 #==============================================================================
 # gather ROI timeseries
 #==============================================================================
-DIR_TS=${RESEARCHER}/${PROJECT}/derivatives/func/ts_${TEMPLATE}_${SPACE}_${LABEL}
+DIR_TS=${RESEARCHER}/${PROJECT}/derivatives/func/ts_${TEMPLATE}+${SPACE}+${LABEL}
 mkdir -p ${DIR_TS}
 fslmeants \
   -i ${TS_BOLD} \
