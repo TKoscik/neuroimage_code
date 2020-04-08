@@ -169,7 +169,7 @@ for (( k=0; k<${NUM_STATS}; k ++ )); do
   echo ${DATE_WRITE} >> ${DIR_SCRATCH}/date.txt
   echo ${STATS[${k}]} >> ${DIR_SCRATCH}/stats.txt
 done
-paste -d , ${DIR_SCRATCH}/sub.txt ${DIR_SCRATCH}/ses.txt ${DIR_SCRATCH}/date.txt ${DIR_SCRATCH}/stats.txt > ${OUTPUT}
+paste -d "\t" ${DIR_SCRATCH}/sub.txt ${DIR_SCRATCH}/ses.txt ${DIR_SCRATCH}/date.txt ${DIR_SCRATCH}/stats.txt > ${OUTPUT}
 
 # sub-parcellate each roi by included additional labels
 perm_fcn="echo "
@@ -234,7 +234,7 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       hdr_temp="${hdr_temp}${temp_label[${WHICH_LABEL[${j}]}]}"
     fi
   done
-  HEADER="${HEADER},${hdr_temp}"
+  HEADER="${HEADER}\t${hdr_temp}"
 
   # use mask to calculate stats for label set
   for (( k=0; k<${NUM_STATS}; k++ )); do
@@ -272,7 +272,7 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       fslstats ${VALUE} -k ${roi_mask} -e >> ${DIR_SCRATCH}/temp.txt
     fi
   done
-  paste -d , ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
+  paste -d "\t" ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
   mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
   rm ${DIR_SCRATCH}/temp.txt
 done
@@ -300,10 +300,10 @@ if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/summary
 fi
 mkdir -p ${DIR_SAVE}
-SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
+SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.tsv
 
 # Check if summary file exists and create if not
-HEADER="participant_id,session_id,summary_date,measure${HEADER}"
+HEADER="participant_id\tsession_id\tsummary_date\tmeasure${HEADER}"
 if [[ ! -f ${SUMMARY_FILE} ]]; then
   echo ${HEADER} >> ${SUMMARY_FILE}
 fi
@@ -314,8 +314,8 @@ if [[ "${NO_APPEND}" == "false" ]]; then
 else
   DIR_SAVE_SUB=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
   mkdir -p ${DIR_SAVE_SUB}
-  echo ${HEADER} > ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
-  echo ${OUTPUT} >> ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.txt
+  echo ${HEADER} > ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
+  echo ${OUTPUT} >> ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
 fi 
 
 #===============================================================================
