@@ -12,7 +12,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvlbr --long group:,prefix:,\
-baw-label:,redo,\
+baw-label:,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -25,7 +25,6 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 BAW_LABEL=
-REDO=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -40,7 +39,6 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -b | --baw-label) BAW_LABEL="$2" ; shift 2 ;;
-    -r | --redo) REDO=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -69,10 +67,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           labels (dust cleaned version, renamed to fit'
   echo '                           in BIDS IA format and to work with our'
   echo '                           summarize_3d function)'
-  echo '  -r | --redo              True/False flag to remap a dataset, if false,'
-  echo '                           remapping will be done only if the remapped'
-  echo '                           output does not exist (DEFAULT), if true,'
-  echo '                           will be redone '
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
@@ -84,6 +78,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  exit 1
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
@@ -108,18 +103,18 @@ mkdir -p ${DIR_SAVE}
 
 # load lookup table
 LUT_TSV=${DIR_CODE}/lut/lut-baw+remap.tsv
-while IFS=$',\r' read -r a b c d e f g h i j k; do
-  VALUE_BAW+=(${a})
-  VALUE_ICV+=(${b})
-  VALUE_CRB+=(${c})
-  VALUE_LOBES+=(${d})
-  VALUE_BG+=(${e})
-  VALUE_SCX+=(${f})
-  VALUE_MID+=(${g})
-  VALUE_CX+=(${h})
-  VALUE_NB+=(${i})
-  VALUE_HEMI+=(${j})
-  VALUE_TIS+=(${k})
+while IFS=$',\r' read -r -a temp; do
+  VALUE_BAW+=(${temp[0]})
+  VALUE_ICV+=(${temp[1]})
+  VALUE_CRB+=(${temp[2]})
+  VALUE_LOBES+=(${temp[3]})
+  VALUE_BG+=(${temp[4]})
+  VALUE_SCX+=(${temp[5]})
+  VALUE_MID+=(${temp[6]})
+  VALUE_CX+=(${temp[7]})
+  VALUE_NB+=(${temp[8]})
+  VALUE_HEMI+=(${temp[9]})
+  VALUE_TIS+=(${temp[10]})
 done < ${LUT_TSV}
 N=${#VALUE_BAW[@]}
 
