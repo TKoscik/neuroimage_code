@@ -1,6 +1,3 @@
-
-
-
 #!/bin/bash -e
 
 #===============================================================================
@@ -81,6 +78,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  exit 1
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
@@ -100,16 +98,23 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-
 #==============================================================================
 # AcqParams + All bvec, bval, index + Merge files for All_B0 and All_dwi
 #==============================================================================
 
 #remove old files
-rm ${DIR_SAVE}/All_dwisAcqParams.txt  > /dev/null 2>&1
-rm ${DIR_SAVE}/All.bvec  > /dev/null 2>&1
-rm ${DIR_SAVE}/All.bval  > /dev/null 2>&1
-rm ${DIR_SAVE}/All_index.txt  > /dev/null 2>&1
+if [[ -f ${DIR_SAVE}/All_dwisAcqParams.txt ]]; then
+  rm ${DIR_SAVE}/All_dwisAcqParams.txt
+fi
+if [[ -f ${DIR_SAVE}/All.bvec ]]; then
+  rm ${DIR_SAVE}/All.bvec
+fi
+if [[ -f ${DIR_SAVE}/All.bval ]]; then
+  rm ${DIR_SAVE}/All.bval
+fi
+if [[ -f ${DIR_SAVE}/All_index.txt ]]; then
+  rm ${DIR_SAVE}/All_index.txt
+fi
 
 unset ACQ_LINE INDX TOTAL_BVALS TOTAL_XVALS TOTAL_YVALS TOTAL_ZVALS ALL_DWI_NAMES B0s
 #set up variables
@@ -126,79 +131,72 @@ TOTAL_ZVALS=""
 
 touch ${DIR_SAVE}/All_dwisAcqParams.txt
 
-FLS_DWI=(`ls ${DIR_RAW}/*_dwi.nii.gz`)
-FLS_JSON=(`ls ${DIR_RAW}/*_dwi.json`)
-FLS_BVEC=(`ls ${DIR_RAW}/*_dwi.bvec`)
-FLS_BVAL=(`ls ${DIR_RAW}/*_dwi.bval`)
-# Gather information from all DWI files
-for (( i=0; i<${#FLS_DWI[@]}; i++)); do
-  unset NAME_BASE DTI_NAME
-  unset B0s NUM_B0s
-  unset PED_STRING PED
-  unset EES_STRING EES
-  unset ACQ_MPE_STRING ACQ_MPE
-  unset READOUT_TIME
-  unset BVALS XVALS YVALS ZVALS
-  
-  # Get file basename, without extension and modality
-  NAME_BASE=(`basename ${DWI_LS[${i}]}`)
+#loop through DWI files to pull out info
+for i in ${DIR_RAW}/*_dwi.nii.gz; do
+  unset DTI_NAME B0s NUM_B0s PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME NAME_BASE BVALS XVALS YVALS ZVALS PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME
+#pull the file name with and without file path
+  NAME_BASE=$( basename $i )
   NAME_BASE=${NAME_BASE::-11}
-  
-  B0s=($(cat ${FLS_BVAL[${i}]}))
+  DTI_NAME=${i::-11}
+
+  B0s=($(cat ${DTI_NAME}_dwi.bval))
   NUM_B0s=0
 
-  BVALS=($(cat ${FLS_BVAL[${i}]}))
-  for (( j=0; j<${#BVALS[@]}; j++ )); do
+  BVALS=($(cat ${DTI_NAME}_dwi.bval))
+  for j in "${BVALS[@]}"; do
     INDX="${INDX} ${ACQ_LINE}"
   done
-  XVALS=($(sed "1q;d" ${FLS_BVEC[${i}]}))
-  YVALS=($(sed "2q;d" ${FLS_BVEC[${i}]}))
-  ZVALS=($(sed "3q;d" ${FLS_BVEC[${i}]}))
+  XVALS=($(sed "1q;d" ${DTI_NAME}_dwi.bvec))
+  YVALS=($(sed "2q;d" ${DTI_NAME}_dwi.bvec))
+  ZVALS=($(sed "3q;d" ${DTI_NAME}_dwi.bvec))
   TOTAL_BVALS="${TOTAL_BVALS} ${BVALS[@]}"
   echo $TOTAL_BVALS
   TOTAL_XVALS="${TOTAL_XVALS} ${XVALS[@]}"
   TOTAL_YVALS="${TOTAL_YVALS} ${YVALS[@]}"
   TOTAL_ZVALS="${TOTAL_ZVALS} ${ZVALS[@]}"
 
-  SCANNER_TYPE=$(grep '"Manufacturer"' ${FLS_JSON[${i}]} | awk '{print $2}')
+  SCANNER_TYPE=$(grep '"Manufacturer"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   SCANNER_TYPE=${SCANNER_TYPE::-1}
-  SCANNER_LOC=$(grep '"InstitutionName"' ${FLS_JSON[${i}]} | awk '{print $2}')
+  SCANNER_LOC=$(grep '"InstitutionName"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   SCANNER_LOC=${SCANNER_LOC::-1}
 
-  PED_STRING=$(grep '"PhaseEncodingDirection"' ${FLS_JSON[${i}]} | awk '{print $2}')
+  PED_STRING=$(grep '"PhaseEncodingDirection"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   if [[ -z ${PED_STRING} ]]; then
-    PED_STRING=$(grep '"PhaseEncodingAxis"' ${FLS_JSON[${i}]} | awk '{print $2}')
+    PED_STRING=$(grep '"PhaseEncodingAxis"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   fi
   PED_STRING=${PED_STRING::-4}
-  if [[ -z ${PED_STRING} ]]; then
+  if [ -z $PED_STRING ]; then
     PED=1
   else
     PED=-1
   fi
 
-  EES_STRING=$(grep '"EffectiveEchoSpacing"' ${FLS_JSON[${i}]} | awk '{print $2}')
+  EES_STRING=$(grep '"EffectiveEchoSpacing"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   if [[ ${SCANNER_TYPE} == '"Philips"' ]]; then
-    EES_STRING=$(grep '"PhilipsScaleSlope"' ${FLS_JSON[${i}]} | awk '{print $2}')
+    EES_STRING=$(grep '"PhilipsScaleSlope"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   fi
   EES=${EES_STRING::-1}
   if [[ ${SCANNER_TYPE} == Philips ]]; then
     EES=$(echo "(${EES} / 10)" | bc -l)
   fi
 
-  ACQ_MPE_STRING=$(grep '"AcquisitionMatrixPE"' ${FLS_JSON[${i}]} | awk '{print $2}')
+  ACQ_MPE_STRING=$(grep '"AcquisitionMatrixPE"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   ACQ_MPE=${ACQ_MPE_STRING::-1}
   READOUT_TIME=$(echo "${EES} * ((${ACQ_MPE} / 2) - 1)" | bc -l)
 
   echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_SAVE}/All_dwisAcqParams.txt
   ACQ_LINE=$(echo "${ACQ_LINE} + 1" | bc -l)
 
-  touch ${DIR_SAVE}/${NAME_BASE}_B0sAcqParams.txt
+  touch ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt
   for j in "${B0s[@]}"; do
     k=$(echo "($j+0.5)/1" | bc)
     if [ $k -eq 0 ]; then
       echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt
     fi
   done
+  ALL_DWI_NAMES+=(${DIR_SAVE}/${NAME_BASE})
+  ALL_HOME_DWI_NAMES+=(${DTI_NAME})
+  ALL_SCRATCH_NAMES+=(${DIR_SCRATCH}/${NAME_BASE})
 done
 
 echo $INDX > ${DIR_SAVE}/All_index.txt
@@ -208,20 +206,43 @@ echo $TOTAL_YVALS > ${DIR_SCRATCH}/YVals.txt
 echo $TOTAL_ZVALS > ${DIR_SCRATCH}/ZVals.txt
 cat ${DIR_SCRATCH}/XVals.txt ${DIR_SCRATCH}/YVals.txt ${DIR_SCRATCH}/ZVals.txt >> ${DIR_SAVE}/All.bvec
 
+FIRST_NAME=${ALL_DWI_NAMES[0]}
+FIRST_NAME2=${ALL_HOME_DWI_NAMES[0]}
+FIRST_NAME3=${ALL_SCRATCH_NAMES[0]}
+
 unset TEMP_B0_FILES TEMP_B0_ACQ_FILES TEMP_DWI_FILES
-FLS_B0=(`ls ${DIR_SAVE}/*b0.nii.gz`)
-FLS_B0ACQ=(`ls ${DIR_SAVE}/*B0sACqParams.txt`)
+declare -a TEMP_B0_FILES
+declare -a TEMP_B0_ACQ_FILES
+declare -a TEMP_DWI_FILES
 
-fslmerge -t ${DIR_SAVE}/All_B0s.nii.gz ${FIRST_NAME}_b0.nii.gz ${FLS_B0[@]}
-fslmerge -t ${DIR_SAVE}/All_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${FLS_DWI[@]}
+for j in ${ALL_DWI_NAMES[@]}; do
+  if [ "${FIRST_NAME}" != "$j" ]; then
+    TEMP_B0_FILES+=(${j}_b0.nii.gz)
+  fi
+done
+for j in ${ALL_HOME_DWI_NAMES[@]}; do
+ if [ "${FIRST_NAME2}" != "$j" ]; then
+    TEMP_DWI_FILES+=(${j}_dwi.nii.gz)
+  fi
+done
+for j in ${ALL_SCRATCH_NAMES[@]}; do
+ if [ "${FIRST_NAME3}" != "$j" ]; then
+    TEMP_B0_ACQ_FILES+=(${j}_B0sAcqParams.txt)
+  fi
+done
 
-NAME_BASE=(`basename ${DWI_LS[0]}`)
-NAME_BASE=${NAME_BASE::-11}
-cat ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt ${FLS_B0ACQ[@]} >> ${DIR_SAVE}/All_B0sAcqParams.txt
+fslmerge -t ${DIR_SAVE}/All_B0s.nii.gz ${FIRST_NAME}_b0.nii.gz ${TEMP_B0_FILES[@]}
+fslmerge -t ${DIR_SAVE}/All_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FILES[@]}
+
+cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_SAVE}/All_B0sAcqParams.txt
+
+chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
+chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
 
 #------------------------------------------------------------------------------
 # End of Function
 #------------------------------------------------------------------------------
+
 # Change ownership and permissions
 chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
 chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1

@@ -86,9 +86,10 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${DIR_SAVE}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
+anyfile=(`ls ${DIR_SAVE}/*.nii.gz`)
+DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${anyfile[0]}`
+SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
+SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -104,13 +105,18 @@ mkdir -p ${DIR_SAVE}
 # Topup
 #==============================================================================
 
-mkdir -p ${DIR_SCRATCH}
-
-rm ${DIR_SAVE}/*brain.nii.gz  > /dev/null 2>&1
-rm ${DIR_SAVE}/*mask.nii.gz  > /dev/null 2>&1
-rm ${DIR_SAVE}/*hifi_b0*.nii.gz  > /dev/null 2>&1
-rm ${DIR_SAVE}/*eddy*  > /dev/null 2>&1
-rm ${DIR_SAVE}/*topup*  > /dev/null 2>&1
+if [[ -f ${DIR_SAVE}/*brain.nii.gz ]]; then
+  rm ${DIR_SAVE}/*brain.nii.gz
+fi
+if [[ -f ${DIR_SAVE}/*mask.nii.gz ]]; then
+  rm ${DIR_SAVE}/*mask.nii.gz
+fi
+TEMP=(`ls ${DIR_SAVE}/*hifi_b0*.nii.gz`)
+if [[ -n ${TEMP ]]; then rm ${TEMP[@]}; fi
+TEMP=(`ls ${DIR_SAVE}/*eddy*.nii.gz`)
+if [[ -n ${TEMP ]]; then rm ${TEMP[@]}; fi
+TEMP=(`ls ${DIR_SAVE}/*topup*.nii.gz`)
+if [[ -n ${TEMP ]]; then rm ${TEMP[@]}; fi
 
 topup \
   --imain=${DIR_SAVE}/All_B0s.nii.gz \
@@ -121,12 +127,10 @@ topup \
 
 fslmaths ${DIR_SAVE}/All_hifi_b0.nii.gz -Tmean ${DIR_SAVE}/All_hifi_b0_mean.nii.gz
 
-
 chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
 chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
 
 # Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
 if [[ "${KEEP}" == "true" ]]; then
   mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
