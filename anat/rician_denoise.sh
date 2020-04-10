@@ -46,7 +46,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+="$2" ; shift 2 ;;
+    --image) IMAGE+=$("$2") ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --model) MODEL="$2" ; shift 2 ;;
     --shrink) SHRINK="$2" ; shift 2 ;;
@@ -114,6 +114,8 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
+echo ${IMAGE[0]}
+echo ${IMAGE[@]}
 #===============================================================================
 # Rician Denoising
 #===============================================================================
