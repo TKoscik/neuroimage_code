@@ -74,7 +74,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --fixed-space <value>    "native" to keep base image spacing [default],'
+  echo '  --fixed <value>          "native" to keep base image spacing [default],'
   echo '                           "raw" to keep moving image spacing, or'
   echo '                           "MxNxO" to set desired spacing'
   echo '  --template <value>       name of template to use (if necessary),'
@@ -92,11 +92,11 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${MOVING}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${MOVING} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${MOVING} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${MOVING_IMAGE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${MOVING_IMAGE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${MOVING_IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING_IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
