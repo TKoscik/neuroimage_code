@@ -7,8 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvksl \
---long group:,prefix:,\
+OPTS=`getopt -o hvksl --long group:,prefix:,\
 fixed-image:,moving-image:,interpolation:,\
 do-syn,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
@@ -32,7 +31,6 @@ DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
 VERBOSE=0
 KEEP=false
 NO_LOG=false
