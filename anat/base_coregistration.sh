@@ -7,10 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvksl --long group:,prefix:,\
-fixed:,moving:,interpolation:,\
-dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hvksl --long group:,prefix:,fixed:,moving:,interpolation:,syn,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
