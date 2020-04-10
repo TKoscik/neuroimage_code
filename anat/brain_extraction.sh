@@ -45,8 +45,8 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+="$2" ; shift 2 ;;
-    --method) METHOD+="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --method) METHOD="$2" ; shift 2 ;;
     --suffix) SUFFIX="$2" ; shift 2 ;;
     --spatial-filter) SPATIAL_FILTER="$2" ; shift 2 ;;
     --filter_radius) FILTER_RADIUS="$2" ; shift 2 ;;
@@ -118,6 +118,8 @@ mkdir -p ${DIR_SAVE}
 #===============================================================================
 # Start of Function
 #===============================================================================
+IMAGE=(${IMAGE//,/ })
+METHOD=(${METHOD//,/ })
 NUM_METHOD=${#METHOD[@]}
 NUM_IMAGE=${#IMAGE[@]}
 for (( i=0; i<${NUM_METHOD}; i++ )); do
