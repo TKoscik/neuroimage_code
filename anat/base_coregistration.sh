@@ -24,7 +24,7 @@ FIXED_IMAGE=
 FIXED_SPACE=native
 MOVING_IMAGE=
 DO_SYN=false
-INTERPOLATION="BSpline[3]"
+INTERPOLATION=BSpline[3]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -92,11 +92,11 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${MOVING}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${MOVING} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${MOVING} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
