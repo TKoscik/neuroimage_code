@@ -133,7 +133,6 @@ else
   if [[  "${UNIT}" == "um" ]]; then
     TEMP_SPACE=`echo "${TEMP_SPACE}/1000" | bc -l | awk '{printf "%0.3f", $0}'` 
   fi
-  echo $TEMP_SPACE
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}_${space_temp}_${TARGET}.nii.gz \
     ${FIXED} \
@@ -167,7 +166,7 @@ antsApplyTransforms -d 3 \
 # move files to appropriate locations ------------------------------------------
 mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
   ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${TEMPLATE}+${SPACE}_xfm-rigid.mat
-mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid.nii.gz \
+mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid_${MOD}.nii.gz \
   ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_${MOD}.nii.gz
 
 #===============================================================================
