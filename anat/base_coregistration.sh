@@ -7,15 +7,10 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvksl --long group:,prefix:,fixed:,moving:,interpolation:,syn,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,help,verbose,keep,no-log -n 'parse-options' -- "$@"`
-echo $1
-echo $2
-echo $3
-echo $4
-echo $5
-echo $6
-echo $7
-
+OPTS=`getopt -o hvksl --long group:,prefix:,\
+fixed:,moving:,interpolation:,syn,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -29,7 +24,7 @@ FIXED_IMAGE=
 FIXED_SPACE=native
 MOVING_IMAGE=
 DO_SYN=false
-INTERPOLATION=BSpline[3]
+INTERPOLATION="BSpline[3]"
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
