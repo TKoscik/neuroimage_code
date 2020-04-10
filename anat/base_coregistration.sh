@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvksl --long group:,prefix:,fixed:,moving:,interpolation:,syn,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hvkl --long group:,prefix:,fixed:,moving:,interpolation:,syn,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -36,7 +36,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
-    -s | --syn) DO_SYN=true ; shift ;;
+    --syn) DO_SYN=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
