@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvksl --long group:,prefix:,\
-fixed:,moving:,interpolation:,syn,\
+fixed:,moving:,interpolation:,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
