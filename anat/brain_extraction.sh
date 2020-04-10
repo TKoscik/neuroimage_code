@@ -102,11 +102,14 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
+IMAGE=(${IMAGE//,/ })
+METHOD=(${METHOD//,/ })
+
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then 
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -118,8 +121,6 @@ mkdir -p ${DIR_SAVE}
 #===============================================================================
 # Start of Function
 #===============================================================================
-IMAGE=(${IMAGE//,/ })
-METHOD=(${METHOD//,/ })
 NUM_METHOD=${#METHOD[@]}
 NUM_IMAGE=${#IMAGE[@]}
 for (( i=0; i<${NUM_METHOD}; i++ )); do
