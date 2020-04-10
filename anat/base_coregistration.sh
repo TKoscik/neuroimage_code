@@ -127,7 +127,7 @@ else
   # set reference image to spacing provided
   SPACE=${FIXED_SPACE//mm/}
   SPACE=${SPACE//um/}
-  UNIT=${string:(-2)}
+  UNIT=${FIXED_SPACE:(-2)}
   if [[  "${UNIT}" == "um" ]]; then
     SPACE=`echo "${SPACE}/1000" | bc -l | awk '{printf "%0.3f", $0}'` 
   fi
