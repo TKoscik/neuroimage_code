@@ -99,7 +99,7 @@ DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
