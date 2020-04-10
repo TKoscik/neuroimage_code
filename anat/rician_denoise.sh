@@ -46,7 +46,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+=("$2") ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --model) MODEL="$2" ; shift 2 ;;
     --shrink) SHRINK="$2" ; shift 2 ;;
@@ -101,11 +101,11 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -114,32 +114,25 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-echo ${IMAGE[0]}
-echo ${IMAGE[@]}
 #===============================================================================
 # Rician Denoising
 #===============================================================================
-NUM_IMAGE=${#IMAGE[@]}
-for (( i=0; i<${NUM_IMAGE}; i++ )); do  
-  # gather names for output
-  MOD=(${IMAGE[${i}]})
-  MOD=(`basename "${MOD%.nii.gz}"`)
-  MOD=(${MOD##*_})
+# gather modailty for output
+MOD=(`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "modality"`)
 
-  # Denoise image
-  dn_fcn="DenoiseImage -d ${DIM}"
-  dn_fcn="${dn_fcn} -n ${MODEL}"
-  dn_fcn="${dn_fcn} -s ${SHRINK}"
-  dn_fcn="${dn_fcn} -p ${PATCH}"
-  dn_fcn="${dn_fcn} -r ${SEARCH}"
-  dn_fcn="${dn_fcn} -v ${VERBOSE}"
-  dn_fcn="${dn_fcn} -i ${IMAGE[${i}]}"
-  if [ -n "${MASK}" ]; then
-    dn_fcn="${dn_fcn} -x ${MASK}"
-  fi
-  dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]"
-  eval ${dn_fcn}
-done
+# Denoise image
+dn_fcn="DenoiseImage -d ${DIM}"
+dn_fcn="${dn_fcn} -n ${MODEL}"
+dn_fcn="${dn_fcn} -s ${SHRINK}"
+dn_fcn="${dn_fcn} -p ${PATCH}"
+dn_fcn="${dn_fcn} -r ${SEARCH}"
+dn_fcn="${dn_fcn} -v ${VERBOSE}"
+dn_fcn="${dn_fcn} -i ${IMAGE}"
+if [ -n "${MASK}" ]; then
+  dn_fcn="${dn_fcn} -x ${MASK}"
+fi
+dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz]"
+eval ${dn_fcn}
 
 mv ${DIR_SCRATCH}/${PREFIX}_prep-denoise* ${DIR_SAVE}/
 
