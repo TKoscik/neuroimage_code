@@ -8,8 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvksl --long group:,prefix:,\
-fixed:,moving:,interpolation:,\
-do-syn,\
+fixed:,moving:,interpolation:,do-syn,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -87,6 +86,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
