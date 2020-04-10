@@ -133,7 +133,6 @@ else
   if [[  "${UNIT}" == "um" ]]; then
     TEMP_SPACE=`echo "${TEMP_SPACE}/1000" | bc -l | awk '{printf "%0.3f", $0}'` 
   fi
-  echo $TEMP_SPACE
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}_${space_temp}_${TARGET}.nii.gz \
     ${FIXED} \
