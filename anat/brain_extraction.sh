@@ -185,7 +185,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     rm ${DIR_SCRATCH}/fsl*
     
     if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
-      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL`${SUFFIX}.nii.gz"
+      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
       sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
       sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
       sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
