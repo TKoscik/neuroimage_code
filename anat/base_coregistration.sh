@@ -152,7 +152,6 @@ if [[ "${DO_SYN}" == "true" ]]; then
   reg_fcn="${reg_fcn} -m MI[${FIXED_IMAGE},${MOVING_IMAGE},1,32,Regular,0.25]"
   reg_fcn="${reg_fcn} -c [500x200x100x50,1e-6,10] -f 8x4x2x1 -s 3x2x1x0vox"
 fi
-echo ${reg_fcn}
 eval ${reg_fcn}
 
 # Move transforms 
