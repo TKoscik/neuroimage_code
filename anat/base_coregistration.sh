@@ -144,7 +144,7 @@ reg_fcn="${reg_fcn} -r [${FIXED_IMAGE},${MOVING_IMAGE},1]"
 reg_fcn="${reg_fcn} -t Rigid[0.1]"
 reg_fcn="${reg_fcn} -m MI[${FIXED_IMAGE},${MOVING_IMAGE},1,32,Regular,0.25]"
 reg_fcn="${reg_fcn} -c [2000x2000x1000x1000,1e-6,10] -f 8x4x2x1 -s 3x2x1x0vox"
-reg_fcn="${reg_fcn} -t Affine"
+reg_fcn="${reg_fcn} -t Affine[0.1]"
 reg_fcn="${reg_fcn} -m MI[${FIXED_IMAGE},${MOVING_IMAGE},1,32,Regular,0.25]"
 reg_fcn="${reg_fcn} -c [2000x2000x1000x1000,1e-6,10] -f 8x4x2x1 -s 3x2x1x0vox"
 if [[ "${DO_SYN}" == "true" ]]; then
