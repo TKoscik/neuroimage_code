@@ -126,12 +126,18 @@ else
   DIR_TEMPLATE=${dir_temp[0]}
   space_temp=${DIR_TEMPLATE##*/}
   FIXED=${DIR_SCRATCH}/fixed_image.nii.gz
-  SPACE=${SPACE//mm/}
-  SPACE=${SPACE//um/}
+  TEMP_SPACE=${SPACE}
+  TEMP_SPACE=${TEMP_SPACE//mm/}
+  TEMP_SPACE=${TEMP_SPACE//um/}
+  UNIT=${SPACE:(-2)}
+  if [[  "${UNIT}" == "um" ]]; then
+    TEMP_SPACE=`echo "${TEMP_SPACE}/1000" | bc -l | awk '{printf "%0.3f", $0}'` 
+  fi
+  echo $TEMP_SPACE
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}_${space_temp}_${TARGET}.nii.gz \
     ${FIXED} \
-    ${SPACE}x${SPACE}x${SPACE} 0 0 6
+    ${TEMP_SPACE}x${TEMP_SPACE}x${TEMP_SPACE} 0 0 6
 fi
 
 # rigid registration -----------------------------------------------------------
