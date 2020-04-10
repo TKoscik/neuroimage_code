@@ -139,7 +139,7 @@ MOVING_MOD=`${DIR_CODE}/bids/get_field.sh -i ${MOVING_IMAGE} -f "modality"`
 reg_fcn="antsRegistration"
 reg_fcn="${reg_fcn} -d 3 --float 1 --verbose ${VERBOSE} -u 0 -z 1"
 reg_fcn="${reg_fcn} -n ${INTERPOLATION}"
-reg_fcn="${reg_fcn} -o [${DIR_SCRATCH}/xfm${i}_,${DIR_SAVE}/${PREFIX}_reg-${FIXED_MOD}+${FIXED_SPACE}_${MOVING_MOD}.nii.gz]"
+reg_fcn="${reg_fcn} -o [${DIR_SCRATCH}/xfm_,${DIR_SAVE}/${PREFIX}_reg-${FIXED_MOD}+${FIXED_SPACE}_${MOVING_MOD}.nii.gz]"
 reg_fcn="${reg_fcn} [${FIXED_IMAGE},${MOVING_IMAGE},1]"
 reg_fcn="${reg_fcn} -t Rigid[0.1]"
 reg_fcn="${reg_fcn} -m MI[${FIXED_IMAGE},${MOVING_IMAGE},1,32,Regular,0.25]"
@@ -152,6 +152,7 @@ if [[ "${DO_SYN}" == "true" ]]; then
   reg_fcn="${reg_fcn} -m MI[${FIXED_IMAGE},${MOVING_IMAGE},1,32,Regular,0.25]"
   reg_fcn="${reg_fcn} -c [500x200x100x50,1e-6,10] -f 8x4x2x1 -s 3x2x1x0vox"
 fi
+echo ${reg_fcn}
 eval ${reg_fcn}
 
 # Move transforms 
