@@ -8,10 +8,10 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvksl --long group:,prefix:,\
-fixed-image:,moving-image:,interpolation:,\
+fixed:,moving:,interpolation:,\
 do-syn,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
-help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -38,15 +38,14 @@ NO_LOG=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -s | --do-syn) DO_SYN=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --fixed-image) FIXED_IMAGE="$2" ; shift 2 ;;
-    --moving-image) MOVING_IMAGE="$2" ; shift 2 ;;
+    --fixed) FIXED_IMAGE="$2" ; shift 2 ;;
+    --moving) MOVING_IMAGE="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
