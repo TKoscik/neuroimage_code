@@ -247,7 +247,7 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       hdr_temp="${hdr_temp}${temp_label[${WHICH_LABEL[${j}]}]}"
     fi
   done
-  HEADER="${HEADER}\t${hdr_temp}"
+  HEADER="${HEADER},${hdr_temp}"
   
   # Check ROI for all zero
   MINMAX=(`fslstats ${roi_mask} -R`)
@@ -293,7 +293,7 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
       fi
     done
   fi
-  paste -d "\t" ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
+  paste -d "," ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
   mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
   rm ${DIR_SCRATCH}/temp.txt
 done
@@ -321,7 +321,7 @@ if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/summary
 fi
 mkdir -p ${DIR_SAVE}
-SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.tsv
+SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
 
 # Check if summary file exists and create if not
 HEADER="participant_id\tsession_id\tsummary_date\tmeasure${HEADER}"
