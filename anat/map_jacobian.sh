@@ -18,6 +18,18 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
+# actions on exit, e.g., cleaning scratch on error ----------------------------
+function egress {
+  if [[ -d ${DIR_SCRATCH} ]]; then
+    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+      rm -R ${DIR_SCRATCH}/*
+    fi
+    rmdir ${DIR_SCRATCH}
+  fi
+}
+trap egress EXIT
+
+# Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
@@ -156,3 +168,6 @@ if [[ "${NO_LOG}" == "false" ]]; then
   LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
+
+exit 0
+
