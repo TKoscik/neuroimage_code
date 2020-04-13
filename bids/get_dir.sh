@@ -40,6 +40,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -i | --input             file path to find BIDs Project directory'
   echo ''
+  exit 0
 fi
 
 #==============================================================================

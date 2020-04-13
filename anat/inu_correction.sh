@@ -124,6 +124,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                       default: /Shared/pinc/sharedopt/apps/sourcefiles'
   echo ''
+  exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------

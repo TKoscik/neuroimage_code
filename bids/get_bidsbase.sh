@@ -45,6 +45,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -i | --input             BIDs compliant filepath'
   echo '  -s | --strip-mod         logical to strip modality from end'
   echo ''
+  exit 0
 fi
 
 #==============================================================================

@@ -69,6 +69,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-dicomsource <value> directory where dcm2niix source files are located, default: /Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20180622'
   echo '  --save-loc                whether to save localizer scans, default: false'
   echo ''
+  exit 0
 fi
 
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)

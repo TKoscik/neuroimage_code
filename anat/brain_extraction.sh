@@ -109,6 +109,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
