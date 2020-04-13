@@ -235,43 +235,51 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
     fi
   done
   HEADER="${HEADER}\t${hdr_temp}"
-
-  # use mask to calculate stats for label set
-  for (( k=0; k<${NUM_STATS}; k++ )); do
-    if [[ "${STATS[${k}],,}" == "voxels" ]]; then
-      temp=(`fslstats ${roi_mask} -k ${roi_mask} -v`)
-      echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "volume" ]]; then
-      volume=(`fslstats ${roi_mask} -k ${roi_mask} -v`)
-      echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "mean" ]]; then
-      fslstats ${VALUE} -k ${roi_mask} -m >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "std" ]]; then
-      fslstats ${VALUE} -k ${roi_mask} -s >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "cog" ]]; then
-      temp=(`fslstats ${VALUE} -k ${roi_mask} -c`)
-      echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
-    fi
-    last_char=${STATS[${k}]: -1}
-    if [[ "${STATS[${k}]: -1}" == "%"  ]]; then
-      fslstats ${VALUE} -k ${roi_mask} -p ${STATS[${k}]::-1} >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "min" ]]; then
-      temp=(`fslstats ${VALUE} -k ${roi_mask} -R`)
-      echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "max" ]]; then
-      temp=(`fslstats ${VALUE} -k ${roi_mask} -R`)
-      echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
-    fi
-    if [[ "${STATS[${k}],,}" == "entropy" ]]; then
-      fslstats ${VALUE} -k ${roi_mask} -e >> ${DIR_SCRATCH}/temp.txt
-    fi
-  done
+  
+  # Check ROI for all zero
+  MINMAX=(`fslstats ${roi_mask} -R`)
+  if [[ "${MINMAX[1]}" == "0.000000" ]]; then
+    for (( k=0; k<${NUM_STATS}; k++ )); do
+      echo "NA" >> ${DIR_SCRATCH}/temp.txt
+    done
+  else
+    # use mask to calculate stats for label set
+    for (( k=0; k<${NUM_STATS}; k++ )); do
+      if [[ "${STATS[${k}],,}" == "voxels" ]]; then
+        temp=(`fslstats ${roi_mask} -k ${roi_mask} -v`)
+        echo ${volume[0]} >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "volume" ]]; then
+        volume=(`fslstats ${roi_mask} -k ${roi_mask} -v`)
+        echo ${volume[1]} >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "mean" ]]; then
+        fslstats ${VALUE} -k ${roi_mask} -m >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "std" ]]; then
+        fslstats ${VALUE} -k ${roi_mask} -s >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "cog" ]]; then
+        temp=(`fslstats ${VALUE} -k ${roi_mask} -c`)
+        echo "(${temp[0]} ${temp[1]} ${temp[2]})" >> ${DIR_SCRATCH}/temp.txt
+      fi
+      last_char=${STATS[${k}]: -1}
+      if [[ "${STATS[${k}]: -1}" == "%"  ]]; then
+        fslstats ${VALUE} -k ${roi_mask} -p ${STATS[${k}]::-1} >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "min" ]]; then
+        temp=(`fslstats ${VALUE} -k ${roi_mask} -R`)
+        echo ${temp[0]} >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "max" ]]; then
+        temp=(`fslstats ${VALUE} -k ${roi_mask} -R`)
+        echo ${temp[1]} >> ${DIR_SCRATCH}/temp.txt
+      fi
+      if [[ "${STATS[${k}],,}" == "entropy" ]]; then
+        fslstats ${VALUE} -k ${roi_mask} -e >> ${DIR_SCRATCH}/temp.txt
+      fi
+    done
+  fi
   paste -d "\t" ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
   mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
   rm ${DIR_SCRATCH}/temp.txt
