@@ -7,35 +7,43 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -hvkl --long group:,prefix:,\
+OPTS=`getopt -hl --long group:,prefix:,\
 ts-bold:,mask-brain:,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
-keep,help,verbose -n 'parse-options' -- "$@"`
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+help,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
 eval set -- "$OPTS"
 
-ATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+# actions on exit, e.g., cleaning scratch on error ----------------------------
+function egress {
+  if [[ -d ${DIR_SCRATCH} ]]; then
+    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+      rm -R ${DIR_SCRATCH}/*
+    fi
+    rmdir ${DIR_SCRATCH}
+  fi
+}
+trap egress EXIT
+
+# Set default values for function ---------------------------------------------
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 TS_BOLD=
 MASK_BRAIN=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-VERBOSE=0
-KEEP=false
 NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
@@ -43,23 +51,53 @@ while true; do
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
 done
 
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  FUNC_NAME=(`basename "$0"`)
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo 'Author: Timothy R. Koscik, PhD'
+  echo 'Date:   2020-03-27'
+  echo '------------------------------------------------------------------------'
+  echo "Usage: ${FUNC_NAME}"
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --group <value>          group permissions for project,'
+  echo '                           e.g., Research-kosciklab'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --ts-bold <value>        Full path to single, run timeseries'
+  echo '  --mask-brain <value>     full pathto brain mask'
+  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
+  echo '  --dir-template <value>   directory where INC templates are stored,'
+  echo '                           default: ${DIR_TEMPLATE}'
+  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
+  echo '                           default: ${DIR_PINCSOURCE}'
+  echo ''
+  exit 0
+fi
+
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${TS_BOLD}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-TASK=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-RUN=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
+TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
+RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -83,12 +121,11 @@ mkdir -p ${DIR_REGRESSORS}
 mv ${DIR_SCRATCH}/${PREFIX}_global-temporal.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-temporal.1D ${DIR_REGRESSORS}/
 
-rm ${DIR_SCRATCH}/*
-rmdir ${DIR_SCRATCH}
-
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
   LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
+
+exit 0
 
