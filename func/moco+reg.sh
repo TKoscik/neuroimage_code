@@ -9,7 +9,7 @@
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long group:,prefix:,\
 ts-bold:,target:,template:,space:,\
-dir-save:,dir-scratch:,dir-nimgcore:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -17,6 +17,18 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
+# actions on exit, e.g., cleaning scratch on error ----------------------------
+function egress {
+  if [[ -d ${DIR_SCRATCH} ]]; then
+    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+      rm -R ${DIR_SCRATCH}/*
+    fi
+    rmdir ${DIR_SCRATCH}
+  fi
+}
+trap egress EXIT
+
+# Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
@@ -26,7 +38,8 @@ TEMPLATE=
 SPACE=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
+DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
@@ -47,7 +60,8 @@ while true; do
     --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
+    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -60,8 +74,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: <<author names>>'
-  echo 'Date:   <<date of authorship>>'
+  echo 'Author: Timothy R. Koscik, PhD'
+  echo 'Date:   2020-03-27'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
@@ -78,9 +92,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
+  echo '                           default: ${DIR_CODE}'
+  echo '  --dir-template <value>   directory where INC templates are stored,'
+  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -89,13 +104,13 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${TS_BOLD}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-TASK=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-RUN=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
+TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
+RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_NIMGCORE}/code/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -197,14 +212,14 @@ antsApplyTransforms -d 3 \
   -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   -t ${XFM_NORM} \
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz \
-  -r ${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+  -r ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
 # apply to brain mask as well
 antsApplyTransforms -d 3 -n NearestNeighbor\
   -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
   -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
   -t ${XFM_NORM} \
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz \
-  -r ${DIR_NIMGCORE}/templates_human/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+  -r ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
 
 # redo motion correction to normalized mean bold ------------------------------
 antsMotionCorr \
@@ -237,23 +252,26 @@ mkdir -p ${DIR_PROJECT}/derivatives/func/mask
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
   ${DIR_PROJECT}/derivatives/func/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
-  ${DIR_ROJECT}/derivatives/func/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
+  ${DIR_PROJECT}/derivatives/func/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
 
 mkdir -p ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_bold.nii.gz
+  ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
   
 if [[ "${KEEP}" == "true" ]]; then
   mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}/
 fi
 
-# clean up scratch
-rm ${DIR_SCRATCH}/*
-rmdir ${DIR_SCRATCH}
+#===============================================================================
+# End of function
+#===============================================================================
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
   LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
+
+exit 0
+

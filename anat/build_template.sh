@@ -18,6 +18,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
+# Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=Research-INC_img_core
 PREFIX=
@@ -131,6 +132,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------

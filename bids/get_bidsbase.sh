@@ -16,7 +16,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+# Set default values for function ---------------------------------------------
 INPUT=
 STRIP_MOD=FALSE
 HELP=false
@@ -45,6 +45,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -i | --input             BIDs compliant filepath'
   echo '  -s | --strip-mod         logical to strip modality from end'
   echo ''
+  exit 0
 fi
 
 #==============================================================================
@@ -66,3 +67,5 @@ echo ${OUTPUT[0]}
 #==============================================================================
 # End of function
 #==============================================================================
+exit 0
+

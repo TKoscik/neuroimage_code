@@ -15,7 +15,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+# Set default values for function ---------------------------------------------
 INPUT=
 FIELD=
 HELP=false
@@ -50,6 +50,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '    [*mod refers to "mod" as a flag, not the mdality without a flag at'
   echo '     the end of the filename]'
   echo ''
+  exit 0
 fi
 
 #==============================================================================
@@ -74,3 +75,5 @@ echo ${OUTPUT[0]}
 #==============================================================================
 # End of function
 #==============================================================================
+exit 0
+

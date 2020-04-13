@@ -14,7 +14,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+# Set default values for function ---------------------------------------------
 INPUT=
 HELP=false
 
@@ -40,6 +40,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -i | --input             file path to find BIDs Project directory'
   echo ''
+  exit 0
 fi
 
 #==============================================================================
@@ -62,3 +63,5 @@ echo ${PROJECT}
 #==============================================================================
 # End of function
 #==============================================================================
+exit 0
+
