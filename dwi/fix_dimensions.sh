@@ -16,6 +16,18 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
+# actions on exit, e.g., cleaning scratch on error ----------------------------
+function egress {
+  if [[ -d ${DIR_SCRATCH} ]]; then
+    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+      rm -R ${DIR_SCRATCH}/*
+    fi
+    rmdir ${DIR_SCRATCH}
+  fi
+}
+trap egress EXIT
+
+# Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
@@ -103,12 +115,10 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-
 #==============================================================================
 # Check and Fix Odd Dimensions
 #==============================================================================
 for i in ${DIR_RAW}/*_dwi.nii.gz; do
-
   IFS=x read -r -a DIM_TEMP <<< $(PrintHeader ${i} 2)
   DIMCHK=0
 
@@ -125,18 +135,17 @@ for i in ${DIR_RAW}/*_dwi.nii.gz; do
   done
 done
 
+#==============================================================================
+# End of function
+#==============================================================================
+
 chgrp -R ${GROUP} ${DIR_RAW} > /dev/null 2>&1
 chmod -R g+rw ${DIR_RAW} > /dev/null 2>&1
 
 # Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
 if [[ "${KEEP}" == "true" ]]; then
   mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
-  rmdir ${DIR_SCRATCH}
-else
-  rm ${DIR_SCRATCH}/*  > /dev/null 2>&1
-  rmdir ${DIR_SCRATCH}
 fi
 
 # Write log entry on conclusion ------------------------------------------------
@@ -145,6 +154,5 @@ if [[ "${NO_LOG}" == "false" ]]; then
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 
-
-
+exit 0
 
