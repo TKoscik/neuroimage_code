@@ -80,7 +80,7 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-if [[ "${ERROR}" == "true" ]];
+if [[ "${ERROR}" == "true" ]]; then
  exit 1
 fi
 
