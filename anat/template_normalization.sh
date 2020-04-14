@@ -6,32 +6,55 @@
 # Date: 2020-02-23
 # Software: ANTs
 #===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+DEBUG=false
+NO_LOG=false
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v DIR_PROJECT ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
+  fi
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,\
+OPTS=`getopt -o hdvl --long group:,prefix:,\
 image:,mask:,mask-dil:,orig-space:,template:,space:,\
 affine-only,hardcore,stack-xfm,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+help,debug,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
-function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
-    fi
-    rmdir ${DIR_SCRATCH}
-  fi
-}
-trap egress EXIT
-
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 IMAGE=
@@ -44,22 +67,22 @@ AFFINE_ONLY=false
 HARDCORE=false
 STACK_XFM=false
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
-NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --image) IMAGE+="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --mask-dilation) MASK_DIL="$2" ; shift 2 ;;
     --orig-space) ORIG_SPACE="$2" ; shift 2 ;;
@@ -88,13 +111,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --image <value>          full path to image to align'
+  echo '  --image <value>          full path to image(s) to align.'
+  echo '                           Input images as commaseparated list,'
+  echo '                           must be coregistered'
   echo '  --mask <value>           full path to fixed image mask, or comma-'
   echo '                           separated fixed and moving masks,'
   echo '                           e.g., [fixed_mask.nii.gz,moving-mask.nii.gz]'
@@ -123,17 +149,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                       default: /Shared/pinc/sharedopt/apps/sourcefiles'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
-
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
 DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
@@ -143,6 +168,7 @@ mkdir -p ${DIR_XFM}
 #===============================================================================
 # Start of Function
 #===============================================================================
+IMAGE=(${IMAGE//,/ })
 NUM_IMAGE=${#IMAGE[@]}
 
 # get and set modalities for output and fixed image targets
@@ -169,11 +195,11 @@ mkdir -p ${DIR_SAVE}
 
 # dilate mask if requested
 if [ -n ${MASK} ]; then
-if [[ "${MASK_DIL}" > 0 ]]; then
-  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
-    MD ${MASK} ${MASK_DIL}
-  MASK=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
-fi
+  if [[ "${MASK_DIL}" > 0 ]]; then
+    ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
+      MD ${MASK} ${MASK_DIL}
+    MASK=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
+  fi
 fi
 
 # register to template
@@ -269,19 +295,18 @@ done
 
 # create and save stacked transforms
 if [[ "${AFFINE_ONLY}" == "false" ]]; then
-if [[ "${STACK_XFM}" == "true" ]]; then
-  antsApplyTransforms -d 3 \
-    -o [${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz,1] \
-    -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-    -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-    -r ${FIXED_IMAGE[0]}
-  
-  antsApplyTransforms -d 3 \
-    -o [${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-stack.nii.gz,1] \
-    -t ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-    -t [${DIR_SCRATCH}/xfm_0GenericAffine.mat,1] \
-    -r ${FIXED_IMAGE[0]}
-fi
+  if [[ "${STACK_XFM}" == "true" ]]; then
+    antsApplyTransforms -d 3 \
+      -o [${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz,1] \
+      -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+      -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+      -r ${FIXED_IMAGE[0]}
+    antsApplyTransforms -d 3 \
+      -o [${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-stack.nii.gz,1] \
+      -t ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+      -t [${DIR_SCRATCH}/xfm_0GenericAffine.mat,1] \
+      -r ${FIXED_IMAGE[0]}
+  fi
 fi
 
 # move transforms to appropriate location
@@ -304,11 +329,5 @@ mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
 #===============================================================================
 # End of Function
 #===============================================================================
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
-
 exit 0
 
