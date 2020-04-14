@@ -5,43 +5,45 @@
 # Authors: <<author names>>
 # Date: <<date>>
 #===============================================================================
-# Preamble----------------------------------------------------------------------
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
-SUCCESS=0
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+DEBUG=false
+NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
-  FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-  if [[ ! -f ${FCN_LOG} ]]; then
-    echo -e 'operator\tstart\tend\tsuccess' > ${FCN_LOG}
-  fi
-  LOG_STRING=`date +"${OPERATOR}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${SUCCESS}"`
-  echo -e ${LOG_STRING} >> ${FCN_LOG}
-
-  if [[ -v NO_LOG ]]; then
-    if [[ "${NO_LOG}" == "false" ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+  EXIT_CODE=$?
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    PROJECT_LOG=/Shared/inc_scratch/log/test_project.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
-  fi
-
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
+    if [[ ! -f ${PROJECT_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
     fi
-    rmdir ${DIR_SCRATCH}
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+  fi
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,\
+OPTS=`getopt -o hdcvkl --long group:,prefix:,\
 other-inputs:,template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -55,19 +57,19 @@ OTHER_INPUTS=
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
+DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 DRY_RUN=false
 VERBOSE=0
 KEEP=false
-NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -d | --debug) DEBUG=true ; shift ;;
     -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
@@ -95,6 +97,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -116,11 +119,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
@@ -151,9 +154,6 @@ if [[ "${KEEP}" == "true" ]]; then
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
 fi
 
-# Write log entry on conclusion ------------------------------------------------
-
-
-SUCCESS=1
+# Exit function ---------------------------------------------------------------
 exit 0
 

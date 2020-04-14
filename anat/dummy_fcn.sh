@@ -5,18 +5,17 @@
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-04-14
 #===============================================================================
-# Preamble----------------------------------------------------------------------
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 DEBUG=false
+NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     PROJECT_LOG=/Shared/inc_scratch/log/test_project.log
@@ -29,7 +28,6 @@ function egress {
     echo -e ${LOG_STRING} >> ${FCN_LOG}
     echo -e ${LOG_STRING} >> ${PROJECT_LOG}
   fi
-
   if [[ "${DEBUG}" == "false" ]]; then
     if [[ -d ${DIR_SCRATCH} ]]; then
       if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
