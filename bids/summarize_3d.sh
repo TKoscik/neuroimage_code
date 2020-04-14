@@ -5,6 +5,40 @@
 # Authors: Timothy R. Koscik. PhD
 # Date: 2020-03-09
 #===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+NO_LOG=false
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v DIR_PROJECT ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
+  fi
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvlsa --long group:,prefix:,\
@@ -17,19 +51,7 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
-function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
-    fi
-    rmdir ${DIR_SCRATCH}
-  fi
-}
-trap egress EXIT
-
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 LABEL=
 VALUE=NULL
@@ -37,12 +59,11 @@ STATS=
 DO_SUM=false
 NO_APPEND=false
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
-NO_LOG=false
 
 IFS=$' \t\n'
 while true; do
@@ -344,12 +365,5 @@ fi
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
-
 exit 0
 
