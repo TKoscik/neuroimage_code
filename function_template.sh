@@ -5,6 +5,37 @@
 # Authors: <<author names>>
 # Date: <<date>>
 #===============================================================================
+# Preamble----------------------------------------------------------------------
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+SUCCESS=0
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+  if [[ ! -f ${FCN_LOG} ]]; then
+    echo -e 'operator\tstart\tend\tsuccess' > ${FCN_LOG}
+  fi
+  LOG_STRING=`date +"${OPERATOR}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${SUCCESS}"`
+  echo -e ${LOG_STRING} >> ${FCN_LOG}
+
+  if [[ -v NO_LOG ]]; then
+    if [[ "${NO_LOG}" == "false" ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
+  fi
+
+  if [[ -d ${DIR_SCRATCH} ]]; then
+    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+      rm -R ${DIR_SCRATCH}/*
+    fi
+    rmdir ${DIR_SCRATCH}
+  fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvkl --long group:,prefix:,\
@@ -17,28 +48,16 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
-function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
-    fi
-    rmdir ${DIR_SCRATCH}
-  fi
-}
-trap egress EXIT
-
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 OTHER_INPUTS=
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
+DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 DRY_RUN=false
@@ -70,14 +89,11 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: <<author names>>'
-  echo 'Date:   <<date of authorship>>'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
@@ -104,7 +120,6 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
@@ -137,10 +152,8 @@ if [[ "${KEEP}" == "true" ]]; then
 fi
 
 # Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
 
+
+SUCCESS=1
 exit 0
 
