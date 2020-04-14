@@ -5,7 +5,7 @@
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-02-27
 #===============================================================================
-ROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
@@ -73,6 +73,7 @@ KEEP=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -d | --debug) DEBUG=true ; shift ;;
     -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
@@ -106,6 +107,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -131,12 +133,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
-
 IMAGE=(${IMAGE//,/ })
 METHOD=(${METHOD//,/ })
 
@@ -252,12 +253,5 @@ mv ${DIR_SCRATCH}/${PREFIX}_mask-brain* ${DIR_SAVE}
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
-
 exit 0
 
