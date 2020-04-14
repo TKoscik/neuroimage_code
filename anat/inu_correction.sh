@@ -206,7 +206,7 @@ fi
 
 if [[ "${METHOD,,}" == "n4" ]]; then
   NUM_IMAGE=${#IMAGE[@]}
-  for (( i=0; i<${NUM_IMAGE}; i++ )); then
+  for (( i=0; i<${NUM_IMAGE}; i++ )); do
     # gather modality for output
     MOD=(${IMAGE[${i}]})
     MOD=(`basename "${MOD%.nii.gz}"`)
