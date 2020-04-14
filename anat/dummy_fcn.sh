@@ -8,40 +8,41 @@
 # Preamble----------------------------------------------------------------------
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
-SUCCESS=0
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+DEBUG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
-  ERROR_CODE=$?
-  echo ${ERROR_CODE}
-  
-  FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-  if [[ ! -f ${FCN_LOG} ]]; then
-    echo -e 'operator\tstart\tend\tsuccess' > ${FCN_LOG}
-  fi
-  LOG_STRING=`date +"${OPERATOR}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${SUCCESS}"`
-  echo -e ${LOG_STRING} >> ${FCN_LOG}
+  EXIT_CODE=$?
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
 
-  if [[ -v NO_LOG ]]; then
-    if [[ "${NO_LOG}" == "false" ]]; then
-      PROJECT_LOG=/Shared/inc_scratch/log/test_project.log
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    PROJECT_LOG=/Shared/inc_scratch/log/test_project.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
+    if [[ ! -f ${PROJECT_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    echo -e ${LOG_STRING} >> ${PROJECT_LOG}
   fi
 
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
     fi
-    rmdir ${DIR_SCRATCH}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hel --long no-log -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hdle --long dir-scratch:,help,debug,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -57,8 +58,9 @@ DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -e) ERROR=true ; shift ;;
+    -d | --debug) DEBUG=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -e) ERROR=true ; shift ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -77,15 +79,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
+
+mkdir -p ${DIR_SCRATCH}
+
 if [[ "${ERROR}" == "true" ]]; then
- exit 1
+ exit 999
 fi
 
-if [[ -v temp ]];
-fi
-
-SUCCESS=1
 exit 0
+
