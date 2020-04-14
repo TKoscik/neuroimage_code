@@ -57,7 +57,7 @@ DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -e ERROR=true ; shift ;;
+    -e) ERROR=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
