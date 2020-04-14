@@ -84,5 +84,8 @@ if [[ "${ERROR}" == "true" ]]; then
  exit 1
 fi
 
+if [[ -v temp ]];
+fi
+
 SUCCESS=1
 exit 0
