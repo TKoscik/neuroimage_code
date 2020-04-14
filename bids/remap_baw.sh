@@ -198,9 +198,9 @@ for (( i=1; i<${N}; i++ )); do
       -add ${DIR_SCRATCH}/${PREFIX}_label-baw+hemi.nii.gz \
       ${DIR_SCRATCH}/${PREFIX}_label-baw+hemi.nii.gz
   fi
-  if [[ "${VALUE_TISSUE[${i}]}" != "0" ]]; then
+  if [[ "${VALUE_TIS[${i}]}" != "0" ]]; then
     fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
-      -mul ${VALUE_TISSUE[${i}]} \
+      -mul ${VALUE_TIS[${i}]} \
       -add ${DIR_SCRATCH}/${PREFIX}_label-baw+tissue.nii.gz \
       ${DIR_SCRATCH}/${PREFIX}_label-baw+tissue.nii.gz
   fi
