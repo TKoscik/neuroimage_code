@@ -296,6 +296,8 @@ for (( i=0; i<${NUM_PERM}; i++ )); do
   paste -d "," ${OUTPUT} ${DIR_SCRATCH}/temp.txt >> ${DIR_SCRATCH}/cat.txt
   mv ${DIR_SCRATCH}/cat.txt ${OUTPUT}
   rm ${DIR_SCRATCH}/temp.txt
+  rm ${roi_mask}
+  rm ${temp_mask}
 done
 
 # get label name, e.g., baw+basalGanglia+hemi+tissue
