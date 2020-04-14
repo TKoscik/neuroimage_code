@@ -115,7 +115,7 @@ mkdir -p ${DIR_SAVE}
 
 # load lookup table
 LUT_TSV=${DIR_CODE}/lut/lut-baw+remap.tsv
-while IFS=$',\r' read -r -a temp; do
+while IFS=$'\t\r' read -r -a temp; do
   VALUE_BAW+=(${temp[0]})
   VALUE_ICV+=(${temp[1]})
   VALUE_CRB+=(${temp[2]})
