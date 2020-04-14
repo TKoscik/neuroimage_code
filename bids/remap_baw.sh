@@ -145,34 +145,64 @@ cp ${DIR_SCRATCH}/${PREFIX}_label-baw+icv.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-
 for (( i=1; i<${N}; i++ )); do
   fslmaths ${BAW_LABEL} -thr ${VALUE_BAW[${i}]} -uthr ${VALUE_BAW[${i}]} -bin ${DIR_SCRATCH}/roi_temp.nii.gz
   if [[ "${VALUE_ICV[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_ICV[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+icv.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+icv.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_ICV[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+icv.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+icv.nii.gz
   fi
   if [[ "${VALUE_CRB[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_CRB[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+crb.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+crb.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_CRB[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+crb.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+crb.nii.gz
   fi
   if [[ "${VALUE_LOBES[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_LOBES[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+lobes.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+lobes.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_LOBES[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+lobes.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+lobes.nii.gz
   fi
   if [[ "${VALUE_BG[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_BG[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+basalGanglia.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+basalGanglia.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_BG[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+basalGanglia.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+basalGanglia.nii.gz
   fi
   if [[ "${VALUE_SCX[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_SCX[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+subcortical.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+subcortical.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_SCX[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+subcortical.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+subcortical.nii.gz
   fi
   if [[ "${VALUE_MID[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_MID[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+midline.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+midline.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_MID[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+midline.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+midline.nii.gz
   fi
   if [[ "${VALUE_CX[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_CX[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+cerebralCortex.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+cerebralCortex.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_CX[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+cerebralCortex.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+cerebralCortex.nii.gz
   fi
   if [[ "${VALUE_NB[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_NB[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+nonbrain.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+nonbrain.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_NB[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+nonbrain.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+nonbrain.nii.gz
   fi
   if [[ "${VALUE_HEMI[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_HEMI[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+hemi.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+hemi.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_HEMI[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+hemi.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+hemi.nii.gz
   fi
   if [[ "${VALUE_TISSUE[${i}]}" != "0" ]]; then
-    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz -mul ${VALUE_TISSUE[${i}]} -add ${DIR_SCRATCH}/${PREFIX}_label-baw+tissue.nii.gz ${DIR_SCRATCH}/${PREFIX}_label-baw+tissue.nii.gz
+    fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
+      -mul ${VALUE_TISSUE[${i}]} \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+tissue.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_label-baw+tissue.nii.gz
   fi
   rm ${DIR_SCRATCH}/roi_temp.nii.gz
 done
