@@ -203,7 +203,7 @@ for (( k=0; k<${NUM_STATS}; k ++ )); do
   echo ${DATE_WRITE} >> ${DIR_SCRATCH}/date.txt
   echo ${STATS[${k}]} >> ${DIR_SCRATCH}/stats.txt
 done
-paste -d "\t" ${DIR_SCRATCH}/sub.txt ${DIR_SCRATCH}/ses.txt ${DIR_SCRATCH}/date.txt ${DIR_SCRATCH}/stats.txt > ${OUTPUT}
+paste -d "," ${DIR_SCRATCH}/sub.txt ${DIR_SCRATCH}/ses.txt ${DIR_SCRATCH}/date.txt ${DIR_SCRATCH}/stats.txt > ${OUTPUT}
 
 # sub-parcellate each roi by included additional labels
 perm_fcn="echo "
@@ -347,7 +347,7 @@ mkdir -p ${DIR_SAVE}
 SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
 
 # Check if summary file exists and create if not
-HEADER="participant_id\tsession_id\tsummary_date\tmeasure${HEADER}"
+HEADER="participant_id,session_id,summary_date,measure${HEADER}"
 if [[ ! -f ${SUMMARY_FILE} ]]; then
   echo ${HEADER} >> ${SUMMARY_FILE}
 fi
