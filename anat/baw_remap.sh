@@ -178,7 +178,7 @@ for (( i=1; i<${N}; i++ )); do
   if [[ "${VALUE_NEW[${i}]}" != "0" ]]; then
     fslmaths ${DIR_SCRATCH}/roi_temp.nii.gz \
       -mul ${VALUE_NEW[${i}]} \
-      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+icv.nii.gz \
+      -add ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz \
       ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz
   fi
   rm ${DIR_SCRATCH}/roi_temp.nii.gz
