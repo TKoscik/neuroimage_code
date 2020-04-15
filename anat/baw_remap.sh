@@ -121,7 +121,6 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${BAW_LABEL}`
-echo ${DIR_PROJECT}
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "ses"`
 if [ -z "${PREFIX}" ]; then
@@ -169,7 +168,7 @@ while IFS=$'\t\r' read -r -a temp; do
   VALUE_ORIG+=(${temp[0]})
   VALUE_NEW+=(${temp[${WHICH_COL}]})
 done < ${LUT_TSV}
-N=${#VALUE_BAW[@]}
+N=${#VALUE_ORIG[@]}
 
 # initialize empty files
 fslmaths ${BAW_LABEL} -mul 0 ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz
@@ -183,6 +182,7 @@ for (( i=1; i<${N}; i++ )); do
       ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz
   fi
   rm ${DIR_SCRATCH}/roi_temp.nii.gz
+  echo $i
 done
 
 mv ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz ${DIR_SAVE}/
