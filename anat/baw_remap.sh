@@ -120,17 +120,15 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-echo 1
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${BAW_LABEL}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
-
-echo 2
+echo ${DIR_PROJECT}
 mkdir -p ${DIR_SCRATCH}
-echo 3
+
 #===============================================================================
 # Start of Function
 #===============================================================================
