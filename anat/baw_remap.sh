@@ -73,7 +73,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -b | --baw-label) BAW_LABEL="$2" ; shift 2 ;;
-    -w | --which-label) BAW_LABEL="$2" ; shift 2 ;;
+    -w | --which-label) WHICH_LABEL="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -102,7 +102,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           labels (dust cleaned version, renamed to fit'
   echo '                           in BIDS IA format and to work with our'
   echo '                           summarize_3d function)'
-  echo '  =w | --which-label       which remapping to do, e.g., renumbering for'
+  echo '  -w | --which-label       which remapping to do, e.g., renumbering for'
   echo '                           generating label sumamries'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
