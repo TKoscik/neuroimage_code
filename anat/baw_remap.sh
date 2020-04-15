@@ -135,22 +135,24 @@ if [[ "${WHICH_LABEL,,}" == "icv" ]]; then
   WHICH_COL=1
 elif  [[ "${WHICH_LABEL,,}" == "lobes" ]]; then
   WHICH_COL=2
-elif  [[ "${WHICH_LABEL,,}" == "basalGanglia" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "lobes" ]]; then
   WHICH_COL=3
-elif  [[ "${WHICH_LABEL,,}" == "subcortical" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "basalGanglia" ]]; then
   WHICH_COL=4
-elif  [[ "${WHICH_LABEL,,}" == "midline" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "subcortical" ]]; then
   WHICH_COL=5
-elif  [[ "${WHICH_LABEL,,}" == "cerebralCortex" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "midline" ]]; then
   WHICH_COL=6
-elif  [[ "${WHICH_LABEL,,}" == "nonbrain" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "cerebralCortex" ]]; then
   WHICH_COL=7
-elif  [[ "${WHICH_LABEL,,}" == "hemi" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "nonbrain" ]]; then
   WHICH_COL=8
-elif  [[ "${WHICH_LABEL,,}" == "tissue" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "hemi" ]]; then
   WHICH_COL=9
-elif  [[ "${WHICH_LABEL,,}" == "renum" ]]; then
+elif  [[ "${WHICH_LABEL,,}" == "tissue" ]]; then
   WHICH_COL=10
+elif  [[ "${WHICH_LABEL,,}" == "renum" ]]; then
+  WHICH_COL=11
 else
   echo "Invalid label set, options include:"
   echo "   icv, crb, lobes, basalGanglia, subcortical, midline, cerebralCortex, nonbrain, hemi, tissue, renum"
