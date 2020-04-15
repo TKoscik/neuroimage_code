@@ -184,7 +184,6 @@ for (( i=1; i<${N}; i++ )); do
       ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz
   fi
   rm ${DIR_SCRATCH}/roi_temp.nii.gz
-  echo $i
 done
 
 mv ${DIR_SCRATCH}/${PREFIX}_label-baw+${WHICH_LABEL}.nii.gz ${DIR_SAVE}/
