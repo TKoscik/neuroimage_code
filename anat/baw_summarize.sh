@@ -158,7 +158,7 @@ if [[ -z ${VALUE} ]]; then
 else
   afni_fcn="${afni_fcn} ${VALUE}"
 fi
-afni_fcn="${afni_fcn} > ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.txt"
+afni_fcn="${afni_fcn} > ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.tsv"
 eval ${afni_fcn}
 
 # Get voxel dimensions
@@ -203,7 +203,7 @@ if [[ ! -f ${SUMMARY_FILE} ]]; then
 fi
 
 # append to summary file or save output .txt if not
-OUTPUT=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary_processed.txt
+OUTPUT=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary_processed.tsv
 if [[ "${NO_APPEND}" == "false" ]]; then
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
