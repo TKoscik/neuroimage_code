@@ -61,6 +61,7 @@ df <- data.frame(participant_id = rep(unlist(strsplit(unlist(strsplit(input.tsv,
                  out.mx)
 
 # Save output to same folder as input, append "_processed" to filename
+print(paste0(file_path_sans_ext(input.tsv), "_processed.tsv"))
 write.table(df, file = paste0(file_path_sans_ext(input.tsv), "_processed.tsv"),
             append = FALSE, quote = FALSE, sep="\t", row.names = F, col.names = F)
 
