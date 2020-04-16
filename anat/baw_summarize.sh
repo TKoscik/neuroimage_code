@@ -181,6 +181,7 @@ if [ -z "${VALUE}" ]; then
   DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL}`
   PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${LABEL}`
   MOD=volume
+  echo ${DIR_PROJECT}
 else
   DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${VALUE}`
   PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${VALUE}`
