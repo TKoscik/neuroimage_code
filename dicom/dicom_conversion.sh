@@ -84,26 +84,10 @@ else
   unzip -q ${DICOM_ZIP} -d ${DIR_SCRATCH}/dicom/
 fi
 
-# Dump DICOM header info into folder -------------------------------------------
-source ${DIR_PINCSOURCE}/sourcefiles/gdcm_source.sh
-count=0
-find "${DIR_SCRATCH}/dicom" -type d | sort -t '\0' -n |
-while read d; do
-  unset files file1
-  files=(`ls "$d"`)
-  file1=${d}/${files[0]}
-  if [[ ! -d ${file1} ]]; then
-    if [[ ${file1} == *.dcm ]]; then
-      ((count=count+1))
-      gdcmdump ${file1} > ${DIR_SCRATCH}/nifti/dcmdump_${count}.txt
-    fi
-  fi
-done
-
 # Convert DICOM to NIFTI -------------------------------------------------------
 ${DIR_DICOMSOURCE}/dcm2niix \
   -b y -d ${DICOM_DEPTH} -z i -t y \
-  -f '%x_%n_%t_%s_%d' \
+  -f '%x__%n__%t__%s__%d' \
   -o ${DIR_SCRATCH}/nifti \
   ${DIR_SCRATCH}/dicom
 

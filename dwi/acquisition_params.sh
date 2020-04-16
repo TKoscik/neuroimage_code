@@ -248,8 +248,6 @@ fslmerge -t ${DIR_SAVE}/All_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FIL
 
 cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_SAVE}/All_B0sAcqParams.txt
 
-chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
-chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
 
 #------------------------------------------------------------------------------
 # End of Function

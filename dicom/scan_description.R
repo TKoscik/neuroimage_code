@@ -2,7 +2,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 nii.file <- args[1]
 json.file <- args[2]
-dcm.dump <- args[3]
+#dcm.dump <- args[3]
 ## Debug ----
 # nii.file <- c("/Shared/inc_scratch/scratch_2019-10-30T11.42.11-0500/nifti/sub-HD019_ses-64mlm01se_site-1+1+1_acq-3DASL+0_asl.nii")
 # json.file <- c("/Shared/inc_scratch/scratch_2019-10-30T11.42.11-0500/nifti/sub-HD019_ses-64mlm01se_site-1+1+1_acq-3DASL+0_asl.json")
@@ -13,8 +13,7 @@ library(tools)
 library(jsonlite)
 library(nifti.io)
 
-jsonf <- read_json(json.file)
-dcmf <- readLines(dcm.dump)
+jsonf <- read_json(json.file, simplifyVector = T)
 fname <- file_path_sans_ext(basename(nii.file))
 mod <- unlist(strsplit(unlist(strsplit(nii.file, "[.]"))[1], "_"))
 mod <- mod[length(mod)]
@@ -34,8 +33,11 @@ if ("Manufacturer" %in% json.names) {
 if ("ManufacturersModelName" %in% json.names) {
   model <- gsub("_", " ", jsonf$ManufacturersModelName)
 }
-rec.coil <- trimws(tolower(gsub("Ch", " channel",unlist(strsplit(unlist(strsplit(
-  dcmf[which(grepl("Receive Coil Name",dcmf))],"]"))[1],"[[]"))[2])),"right")
+if ("CoilString" %in% json.names) {
+  rec.coil <- jsonf$CoilString
+} else {
+  rec.coil <- "UNKNOWN"
+}
 if ("ScanningSequence" %in% json.names) {
   tmp <- unlist(strsplit(jsonf$ScanningSequence, "_"))
   for (j in 1:length(tmp)) {
@@ -58,7 +60,7 @@ if ("ImageOrientationPatientDICOM" %in% json.names) {
 }
 scan.matrix <- nii.dims(nii.file)[1:3]
 vxl.size <- unlist(nii.hdr(nii.file, "pixdim"))[2:4]
-fov <- as.numeric(unlist(strsplit(unlist(strsplit(dcmf[which(grepl("Acquisition Matrix",dcmf))]," "))[3],"[\\]")))[1:3] * vxl.size
+fov <- jsonf$AcquisitionMatrixPE * vxl.size
 fov <- unname(fov[fov != 0])
 if ("SpacingBetweenSlices" %in% json.names) {
   slice.spacing <- jsonf$SpacingBetweenSlices
