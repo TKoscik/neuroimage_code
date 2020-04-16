@@ -192,22 +192,20 @@ fi
 mkdir -p ${DIR_SAVE}
 LABEL_NAME=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "label"`)
 SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.tsv
-echo ${SUMMARY_FILE}
 
 # Check if summary file exists and create if not
 HEADER=$(head -n 1 ${LUT})
-HEADER=(${HEADER//value\t/})
-#HEADER=("${HEADER[@]:1}")
-#HEADER=${HEADER[@]// /\t}
+HEADER=(${HEADER///})
+HEADER=("${HEADER[@]:1}")
+HEADER=(${HEADER[@]// /\t})
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  echo "write header"
-  echo -e ${HEADER} >> ${SUMMARY_FILE}
+  echo ${HEADER} >> ${SUMMARY_FILE}
+  sed -i s/" "/"\t"/g ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not
 OUTPUT=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary_processed.tsv
 if [[ "${NO_APPEND}" == "false" ]]; then
-  echo "append ${OUTPUT}"
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
   echo ${HEADER} > ${DIR_SAVE}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
