@@ -199,7 +199,7 @@ HEADER=(${HEADER///})
 HEADER=("${HEADER[@]:1}")
 HEADER=(${HEADER[@]// /\t})
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  echo ${HEADER} >> ${SUMMARY_FILE}
+  echo ${HEADER[@]} >> ${SUMMARY_FILE}
   sed -i s/" "/"\t"/g ${SUMMARY_FILE}
 fi
 
