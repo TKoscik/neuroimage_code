@@ -181,7 +181,6 @@ if [ -z "${VALUE}" ]; then
   DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL}`
   PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${LABEL}`
   MOD=volume
-  echo ${DIR_PROJECT}
 else
   DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${VALUE}`
   PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${VALUE}`
@@ -193,6 +192,7 @@ fi
 mkdir -p ${DIR_SAVE}
 LABEL_NAME=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "label"`)
 SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
+echo ${SUMMARY_FILE}
 
 # Check if summary file exists and create if not
 HEADER=$(head -n 1 ${LUT})
@@ -200,12 +200,14 @@ HEADER=(${HEADER//\t/ })
 HEADER=("${HEADER[@]:1}")
 HEADER=${HEADER[@]// /\t}
 if [[ ! -f ${SUMMARY_FILE} ]]; then
+  echo "write header"
   echo -e ${HEADER} >> ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not
 OUTPUT=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary_processed.tsv
 if [[ "${NO_APPEND}" == "false" ]]; then
+  echo "append ${OUTPUT}"
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
   echo ${HEADER} > ${DIR_SAVE}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
