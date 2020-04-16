@@ -159,6 +159,7 @@ else
   afni_fcn="${afni_fcn} ${VALUE}"
 fi
 afni_fcn="${afni_fcn} > ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.txt"
+eval ${afni_fcn}
 
 # Get voxel dimensions
 IFS=x read -r -a pixdimTemp <<< $(PrintHeader ${LABEL} 1)
