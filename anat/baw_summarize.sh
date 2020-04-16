@@ -56,6 +56,8 @@ GROUP=
 PREFIX=
 LABEL=
 VALUE=
+STATS=volume
+LUT=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -68,8 +70,10 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -b | --label) LABEL="$2" ; shift 2 ;;
-    -w | --value) VALUE="$2" ; shift 2 ;;
+    --label) LABEL="$2" ; shift 2 ;;
+    --value) VALUE="$2" ; shift 2 ;;
+    --stats) STATS="$2" ; shift 2 ;;
+    --lut) LUT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -116,24 +120,85 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${BAW_LABEL}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${BAW_LABEL} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 mkdir -p ${DIR_SCRATCH}
 
+if [ -z "${LUT}" ]; then
+  LUT=${DIR_CODE}/lut/lut-baw+brain.tsv
+fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+STATS_LS=${STATS}
+STATS=(${STATS//,/ })
+
+# Generate stats using 3dROIstats in AFNI... it can't be beat for speed.
+afni_fcn="3dROIstats -mask ${LABEL}"
+for (( i=0; i<${#STATS[@]}; i++ )); do
+  if [[ "${STATS[${i}],,}" == "nzmean" ]]; then afni_fcn="${afni_fcn} -nzmean"; fi
+  if [[ "${STATS[${i}],,}" == "sigma" ]]; then afni_fcn="${afni_fcn} -sigma"; fi
+  if [[ "${STATS[${i}],,}" == "nzsigma" ]]; then afni_fcn="${afni_fcn} -nzsigma"; fi
+  if [[ "${STATS[${i}],,}" == "median" ]]; then afni_fcn="${afni_fcn} -median"; fi
+  if [[ "${STATS[${i}],,}" == "nzmedian" ]]; then afni_fcn="${afni_fcn} -nzmedian"; fi
+  if [[ "${STATS[${i}],,}" == "mode" ]]; then afni_fcn="${afni_fcn} -mode"; fi
+  if [[ "${STATS[${i}],,}" == "nzmode" ]]; then afni_fcn="${afni_fcn} -nzmode"; fi
+  if [[ "${STATS[${i}],,}" == "min" ]] | [[ "${STATS[${i}],,}" == "max" ]]; then afni_fcn="${afni_fcn} -minmax"; fi
+  if [[ "${STATS[${i}],,}" == "nzmin" ]] | [[ "${STATS[${i}],,}" == "nzmax" ]]; then afni_fcn="${afni_fcn} -nzminmax"; fi
+done
+afni_fcn="${afni_fcn} -nzvoxels"
 if [[ -z ${VALUE} ]]; then
-  3dROIstats -mask ${LABEL} -nzvoxels ${LABEL} > ${DIR_SCRATCH}/summary_temp.tsv
+  afni_fcn="${afni_fcn} ${LABEL}"
 else
-  3dROIstats -mask ${LABEL} -nzmean -nzsigma -nzmedian -nzvoxels ${VALUE} > ${DIR_SCRATCH}/summary_temp.tsv
+  afni_fcn="${afni_fcn} ${VALUE}"
+fi
+afni_fcn="${afni_fcn} > ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.txt"
+
+# Get voxel dimensions
+IFS=x read -r -a pixdimTemp <<< $(PrintHeader ${LABEL} 1)
+PIXDIM="${pixdimTemp[0]}x${pixdimTemp[1]}x${pixdimTemp[2]}"
+
+# Summarize stats according to look up table
+Rscript ${DIR_CODE}/anat/baw_summarize.R \
+  ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.txt \
+  ${STATS_LS} \
+  ${PIXDIM} \
+  ${LUT}
+
+# Setup save directories
+if [ -z "${VALUE}" ]; then
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL}`
+  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${LABEL}`
+  MOD=volume
+else
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${VALUE}`
+  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${VALUE}`
+  MOD=`${DIR_CODE}/bids/get_field.sh -i ${VALUE} -f "modality"`
+fi
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/summary
+fi
+mkdir -p ${DIR_SAVE}
+LABEL_NAME=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "label"`)
+SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
+
+# Check if summary file exists and create if not
+HEADER=$(head -n 1 ${LUT})
+HEADER=("${HEADER[@]:1}")
+if [[ ! -f ${SUMMARY_FILE} ]]; then
+  echo ${HEADER} >> ${SUMMARY_FILE}
 fi
 
-Rscript ${DIR_CODE}/anat/baw_summarize.R 
-# unzip LABEL file to scratch
-# unzip VALUES to scratch
-# run R function to summarize
+# append to summary file or save output .txt if not
+if [[ "${NO_APPEND}" == "false" ]]; then
+  cat ${OUTPUT} >> ${SUMMARY_FILE}
+else
+  DIR_SAVE_SUB=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
+  mkdir -p ${DIR_SAVE_SUB}
+  echo ${HEADER} > ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
+  echo ${OUTPUT} >> ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
+fi 
