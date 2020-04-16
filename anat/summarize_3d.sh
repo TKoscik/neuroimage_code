@@ -196,6 +196,7 @@ fi
 mkdir -p ${DIR_SAVE}
 LABEL_NAME=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "label"`)
 SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.tsv
+echo ${SUMMARY_FILE}
 
 # Check if summary file exists and create if not
 HEADER=$(head -n 1 ${LUT})
