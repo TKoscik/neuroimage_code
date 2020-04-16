@@ -196,9 +196,9 @@ echo ${SUMMARY_FILE}
 
 # Check if summary file exists and create if not
 HEADER=$(head -n 1 ${LUT})
-HEADER=(${HEADER//\t/ })
-HEADER=("${HEADER[@]:1}")
-HEADER=${HEADER[@]// /\t}
+HEADER=(${HEADER//value\t/})
+#HEADER=("${HEADER[@]:1}")
+#HEADER=${HEADER[@]// /\t}
 if [[ ! -f ${SUMMARY_FILE} ]]; then
   echo "write header"
   echo -e ${HEADER} >> ${SUMMARY_FILE}
