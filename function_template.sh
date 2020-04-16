@@ -15,6 +15,14 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
@@ -28,14 +36,6 @@ function egress {
         echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
       fi
       echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
-  fi
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
 }

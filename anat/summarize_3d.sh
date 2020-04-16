@@ -10,6 +10,7 @@ FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 NO_LOG=false
+DEBUG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -41,7 +42,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvla --long group:,prefix:,\
+OPTS=`getopt -o hdvla --long group:,prefix:,\
 label:,value:,stats:,lut:,no-append,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -69,6 +70,7 @@ VERBOSE=0
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -a | --no-append) NO_APPEND=true ; shift ;;
@@ -98,14 +100,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  -b | --label         full file path to Brainstools/BRAINSAutoworkup'
-  echo '                           labels (dust cleaned version, renamed to fit'
-  echo '                           in BIDS IA format and to work with our'
-  echo '                           summarize_3d function)'
-  echo '  -v | --value <value>          file path to NIfTI file containing the values'
+  echo '  --label <value>          full file path to  label file'
+  echo '  --value <value>          file path to NIfTI file containing the values'
   echo '                           to summarize, omit if only volumes are desired.'
+  echo '  --stats <value>          which stats to report, options are:'
+  echo '                           mean, nzmean, sigma, nzsigma, median, nzmedian'
+  echo '                           mode, nzmode, min, nzmin, max, nzmax, volume'
+  echo '  --lut <value>            full path to look up table for labels'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
@@ -122,9 +126,15 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${LABEL} -f "ses"`
+if [[ -z ${VALUE} ]]; then
+  TRG_FILE=${LABEL}
+else
+  TRG_FILE=${VALUE}
+fi
+
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TRG_FILE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TRG_FILE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TRG_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -153,11 +163,7 @@ for (( i=0; i<${#STATS[@]}; i++ )); do
   if [[ "${STATS[${i}],,}" == "nzmin" ]] | [[ "${STATS[${i}],,}" == "nzmax" ]]; then afni_fcn="${afni_fcn} -nzminmax"; fi
 done
 afni_fcn="${afni_fcn} -nzvoxels"
-if [[ -z ${VALUE} ]]; then
-  afni_fcn="${afni_fcn} ${LABEL}"
-else
-  afni_fcn="${afni_fcn} ${VALUE}"
-fi
+afni_fcn="${afni_fcn} ${TRG_FILE}"
 afni_fcn="${afni_fcn} > ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.tsv"
 eval ${afni_fcn}
 
@@ -177,13 +183,11 @@ Rscript ${DIR_CODE}/anat/baw_summarize.R \
   ${LUT}
 
 # Setup save directories
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TRG_FILE}`
+PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${TRG_FILE}`
 if [ -z "${VALUE}" ]; then
-  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${LABEL}`
-  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${LABEL}`
   MOD=volume
 else
-  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${VALUE}`
-  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${VALUE}`
   MOD=`${DIR_CODE}/bids/get_field.sh -i ${VALUE} -f "modality"`
 fi
 if [ -z "${DIR_SAVE}" ]; then
