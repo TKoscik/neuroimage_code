@@ -176,7 +176,7 @@ WHICH_SYS=`uname --nodename`
 if grep -q "argon" <<< "${WHICH_SYS,,}"; then
   module load R
 fi
-Rscript ${DIR_CODE}/anat/baw_summarize.R \
+Rscript ${DIR_CODE}/anat/summarize_3d.R \
   ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.tsv \
   ${STATS_LS} \
   ${PIXDIM} \
