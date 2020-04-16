@@ -41,8 +41,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvlbw --long group:,prefix:,\
-label:,value:,\
+OPTS=`getopt -o hvla --long group:,prefix:,\
+label:,value:,stats:,lut:,no-append,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -59,6 +59,7 @@ VALUE=
 STATS=volume
 LUT=
 DIR_SAVE=
+NO_APPEND=false
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -70,6 +71,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -a | --no-append) NO_APPEND=true ; shift ;;
     --label) LABEL="$2" ; shift 2 ;;
     --value) VALUE="$2" ; shift 2 ;;
     --stats) STATS="$2" ; shift 2 ;;
@@ -163,6 +165,10 @@ IFS=x read -r -a pixdimTemp <<< $(PrintHeader ${LABEL} 1)
 PIXDIM="${pixdimTemp[0]}x${pixdimTemp[1]}x${pixdimTemp[2]}"
 
 # Summarize stats according to look up table
+WHICH_SYS=`uname --nodename`
+if grep -q "argon" <<< "${WHICH_SYS,,}"; then
+  module load R
+fi
 Rscript ${DIR_CODE}/anat/baw_summarize.R \
   ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.txt \
   ${STATS_LS} \
@@ -188,17 +194,21 @@ SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.csv
 
 # Check if summary file exists and create if not
 HEADER=$(head -n 1 ${LUT})
+HEADER=(${HEADER//\t/ })
 HEADER=("${HEADER[@]:1}")
+HEADER=${HEADER[@]// /\t}
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  echo ${HEADER} >> ${SUMMARY_FILE}
+  echo -e ${HEADER} >> ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not
+OUTPUT=${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary_processed.txt
 if [[ "${NO_APPEND}" == "false" ]]; then
   cat ${OUTPUT} >> ${SUMMARY_FILE}
 else
-  DIR_SAVE_SUB=${DIR_PROJECT}/summary/${MOD}_label-${LABEL_NAME}
-  mkdir -p ${DIR_SAVE_SUB}
-  echo ${HEADER} > ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
-  echo ${OUTPUT} >> ${DIR_SAVE_SUB}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
+  echo ${HEADER} > ${DIR_SAVE}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
+  echo ${OUTPUT} >> ${DIR_SAVE}/sub-${SUBJECT}_${SESSION}_${MOD}_label-${LABEL_NAME}_${DATE_SUFFIX}.tsv
 fi 
+
+exit 0
+
