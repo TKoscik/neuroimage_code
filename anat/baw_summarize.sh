@@ -171,7 +171,7 @@ if grep -q "argon" <<< "${WHICH_SYS,,}"; then
   module load R
 fi
 Rscript ${DIR_CODE}/anat/baw_summarize.R \
-  ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.txt \
+  ${DIR_SCRATCH}/sub-${SUBJECT}_ses-${SESSION}_tempSummary.tsv \
   ${STATS_LS} \
   ${PIXDIM} \
   ${LUT}
