@@ -59,7 +59,7 @@ EMAIL=steven-j-cochran@uiowa.edu
 DICOM_ZIP=
 DICOM_DEPTH=5
 DONT_USE=loc,cal,orig
-DIR_SCRATCH=/Shared/inc_scratch//${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps
 DIR_DICOMSOURCE=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20180622
@@ -121,6 +121,7 @@ fi
 # Unzip DICOM to scratch -------------------------------------------------------
 mkdir -p ${DIR_SCRATCH}/sourcedata
 mkdir -p ${DIR_SCRATCH}/rawdata
+echo ${DIR_SCRATCH}
 
 if [[ "${VERBOSE}" == "true" ]]; then
   unzip ${DICOM_ZIP} -d ${DIR_SCRATCH}/sourcedata/
