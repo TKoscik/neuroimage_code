@@ -43,9 +43,9 @@ trap egress EXIT
 
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvk --long dir-project:,group:,email:,
-dicom-zip:,dicom-depth:,dont-use:,
-dir-scratch:,dir-code:,dir-pincsource:,dir-dicomsource:,
+OPTS=`getopt -o hvk --long dir-project:,group:,email:,\
+dicom-zip:,dicom-depth:,dont-use:,\
+dir-scratch:,dir-code:,dir-pincsource:,dir-dicomsource:,\
 help,verbose,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -53,14 +53,13 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 DIR_PROJECT=
 GROUP=
 EMAIL=steven-j-cochran@uiowa.edu
 DICOM_ZIP=
 DICOM_DEPTH=5
 DONT_USE=loc,cal,orig
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch//${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps
 DIR_DICOMSOURCE=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20180622
