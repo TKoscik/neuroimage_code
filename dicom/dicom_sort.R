@@ -41,13 +41,13 @@ participant <- data.frame(subject=character(1),
 subject <- unique(unlist(strsplit(df$source, split="__"))[2])
 subject <- gsub("[^[:alnum:] ]", "", subject)
 if (length(subject) != 1) {
-  warning(sprintf("inc_dcmSort WARNING: More than one unique subject identifier was found. Using %s", subject[1]))
+  warning(sprintf("dicom_sort WARNING: More than one unique subject identifier was found. Using %s", subject[1]))
 }
 participant$subject <- gsub(" ", "", subject[1])
 
 session <- unique(unlist(strsplit(df$source, split="__"))[3])
 if (length(session) != 1) {
-  warning(sprintf("inc_dcmSort WARNING: More than one unique session identifier was found. Using %s", session[1]))
+  warning(sprintf("dicom_sort WARNING: More than one unique session identifier was found. Using %s", session[1]))
 }
 participant$session <- gsub(" ", "", session[1])
 participant$session <- inc_ses_encode(as.numeric(participant$session))
