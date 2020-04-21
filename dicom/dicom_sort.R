@@ -1,14 +1,13 @@
 args <- commandArgs(trailingOnly = TRUE)
 
-researcher <- args[1]
-project <- args[2]
-dir.input <- args[3]
-dcm.zip <- args[4]
-dir.inc.root <- "/Shared/nopoulos/nimg_core"
+dir.project <- args[1]
+dir.input <- args[2]
+dcm.zip <- args[3]
+dir.inc.root <- "/Shared/inc_scratch/code"
 dont.use <- c("loc", "cal", "orig")
 dry.run <- FALSE
-if (length(args) > 4 ) {
-  for (i in seq(5, length(args), 2)) {
+if (length(args) > 3 ) {
+  for (i in seq(4, length(args), 2)) {
     if (args[i] == "dir.inc.root") {
       dir.inc.root <- args[i+1]
     } else if (args[i] == "dont.use") {
@@ -20,18 +19,9 @@ if (length(args) > 4 ) {
   }
 }
 
-#debug ----
-# researcher <- "/Shared/sjcochran_scratch"
-# project <- "dcmtest"
-# dir.input <- "/Shared/inc_scratch/scratch_20191108T083613-0600/nifti"
-# dir.inc.root <- "/Shared/nopoulos/nimg_core"
-# dont.use <- c("loc", "cal", "orig")
-# dry.run <- FALSE
-# ----
-
 library(jsonlite)
 library(tools)
-source(paste0(dir.inc.root, "/inc_ses_encode.R"))
+source(paste0(dir.inc.root, "/dicom/ses_encode.R"))
 
 # Locate files to convert -------------------------------------------------------
 fls <- basename(file_path_sans_ext(list.files(dir.input, pattern="json")))
@@ -66,7 +56,7 @@ participant$session <- inc_ses_encode(as.numeric(participant$session))
 # Set participant values -------------------------------------------------------
 prefix <- paste0("sub-", participant$subject,
                  "_ses-", participant$session)
-px.file <- paste0(researcher, "/", project, "/participants.tsv")
+px.file <- paste0(dir.project, "/participants.tsv")
 if (file.exists(px.file)) {
   tf <- read.csv(px.file, sep = "\t", stringsAsFactors = FALSE)
   tf <- rbind(tf, participant)
@@ -78,7 +68,7 @@ if (file.exists(px.file)) {
 
 
 # Generate new filenames
-desc.lut <- read.csv(paste0(dir.inc.root, "/series_description.lut"), sep="\t", stringsAsFactors = FALSE)
+desc.lut <- read.csv(paste0(dir.inc.root, "/lut/series_description.lut"), sep="\t", stringsAsFactors = FALSE)
 for (i in 1:n.files) {
   desc <- unlist(strsplit(df$source[i], split="__"))
   df$scan.num[i] <- as.numeric(unlist(strsplit(df$source[i], split="__"))[4])
@@ -204,7 +194,7 @@ if (dry.run) {
   # Write session.tsv
   session.tsv <- df[ , c("target", "destination", "mod", "use")]
   colnames(session.tsv)[1:2] <- c("filename", "type")
-  dir.session <- paste0(researcher, "/", project, "/nifti/sub-", participant$subject, "/ses-", participant$session)
+  dir.session <- paste0(dir.project, "/rawdata/sub-", participant$subject, "/ses-", participant$session)
   dir.create(dir.session, recursive = TRUE, showWarnings=FALSE)
   write.table(session.tsv, file=paste0(dir.session, "/session.tsv"), sep="\t",
               quote=FALSE, row.names=FALSE, col.names=TRUE)
@@ -233,7 +223,7 @@ if (dry.run) {
   }
   
   # Copy DICOM zip file ----------------------------------------------------------
-  dir.create(paste0(researcher, "/", project, "/dicom"), recursive=TRUE, showWarnings=FALSE)
-  file.copy(from=dcm.zip, to=paste0(researcher, "/", project, "/dicom/", prefix, "_DICOM.zip"))
+  dir.create(paste0(dir.project, "/sourcedata"), recursive=TRUE, showWarnings=FALSE)
+  file.copy(from=dcm.zip, to=paste0(dir.project, "/sourcedata/", prefix, "_DICOM.zip"))
 }
   

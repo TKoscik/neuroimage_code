@@ -2,12 +2,6 @@ args <- commandArgs(trailingOnly = TRUE)
 
 nii.file <- args[1]
 json.file <- args[2]
-#dcm.dump <- args[3]
-## Debug ----
-# nii.file <- c("/Shared/inc_scratch/scratch_2019-10-30T11.42.11-0500/nifti/sub-HD019_ses-64mlm01se_site-1+1+1_acq-3DASL+0_asl.nii")
-# json.file <- c("/Shared/inc_scratch/scratch_2019-10-30T11.42.11-0500/nifti/sub-HD019_ses-64mlm01se_site-1+1+1_acq-3DASL+0_asl.json")
-# dcm.dump <- c("/Shared/inc_scratch/scratch_2019-10-30T11.42.11-0500/nifti/sub-HD019_ses-64mlm01se_site-1+1+1_acq-3DASL+0_asl_dcmdump.txt")
-# ----
 
 library(tools)
 library(jsonlite)
