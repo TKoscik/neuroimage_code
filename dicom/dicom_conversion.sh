@@ -125,7 +125,6 @@ fi
 # Unzip DICOM to scratch -------------------------------------------------------
 mkdir -p ${DIR_SCRATCH}/sourcedata
 mkdir -p ${DIR_SCRATCH}/rawdata
-echo ${DIR_SCRATCH}
 
 if [[ "${VERBOSE}" == "true" ]]; then
   unzip ${DICOM_ZIP} -d ${DIR_SCRATCH}/sourcedata/
