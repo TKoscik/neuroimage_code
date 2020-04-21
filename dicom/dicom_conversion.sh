@@ -43,10 +43,10 @@ trap egress EXIT
 
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvk --long dir-project:,group:,email:,\
+OPTS=`getopt -o hdvkl --long dir-project:,group:,email:,\
 dicom-zip:,dicom-depth:,dont-use:,\
 dir-scratch:,dir-code:,dir-pincsource:,dir-dicomsource:,\
-help,verbose,keep -n 'parse-options' -- "$@"`
+help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -71,8 +71,10 @@ KEEP=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     --dir-project) PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --email) EMAIL="$2" ; shift 2 ;;
@@ -96,8 +98,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help               display command help'
+  echo '  -d | --debug              keep scratch folder for debugging'
   echo '  -v | --verbose            add verbose output to log file'
   echo '  -k | --keep               keep intermediates'
+  echo '  -l | --no-log             disable writing to output log'
   echo '  --researcher <value>      directory containing the project, e.g. /Shared/koscikt'
   echo '  --project <value>         name of the project folder, e.g., iowa_black'
   echo '  --group <value>           group permissions for project, e.g., Research-kosciklab'
