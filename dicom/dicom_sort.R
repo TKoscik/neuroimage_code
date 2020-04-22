@@ -33,7 +33,7 @@ df <- data.frame(source = fls,
                  scan.num = numeric(length(fls)), 
                  stringsAsFactors = FALSE)
 n.files <- nrow(df)
-
+print(fls)
 # Retreive identifiers ---------------------------------------------------------
 participant <- data.frame(subject=character(1),
                  session=character(1),
