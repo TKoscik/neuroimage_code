@@ -1,5 +1,5 @@
 args <- commandArgs(trailingOnly = TRUE)
-
+print(str(args))
 dir.project <- args[1]
 dir.input <- args[2]
 dcm.zip <- args[3]
