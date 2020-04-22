@@ -75,7 +75,7 @@ while true; do
     -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --dir-project) PROJECT="$2" ; shift 2 ;;
+    --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --email) EMAIL="$2" ; shift 2 ;;
     --dicom-zip) DICOM_ZIP="$2" ; shift 2 ;;
