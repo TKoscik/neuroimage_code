@@ -4,6 +4,7 @@ desc	dest	task	acq	ce	rec	dir	echo	recording	proc	mod
 3DTOF3SLABMTFSFA25	unkn	-	3DTOF3SLABMTFSFA25	-	-	-	-	-	-	unk
 3PlaneLocSSFSE	loc	-	3PlaneLocSSFSE	-	-	-	-	-	-	loc
 3PlaneLocSSFSEi00004	loc	-	3PlaneLocSSFSE	-	-	-	-	-	-	loc
+3PlaneLocSSFSEi00007	loc	-	3PlaneLocSSFSE	-	-	-	-	-	-	loc
 3PlaneLocFGRE	loc	-	3PlaneLocFGRE	-	-	-	-	-	-	loc
 3DSAGCUBET2	anat	-	sagCUBE	-	-	-	-	-	-	T2w
 7TOptFLAIR	anat	-	7TOpt	-	-	-	-	-	-	FLAIR
@@ -12,7 +13,7 @@ ASSETcalibration	cal	-	ASSETcalibration	-	-	-	-	-	-	loc
 AxDWI	dwi	-	b1000v6	-	-	-	-	-	-	dwi
 Axdix35	anat	-	Axdix35	-	-	-	-	-	-	dix
 AxSWAN	anat	-	AxSWAN	-	-	-	-	-	-	SWAN
-AxSWAN1mm*	anat	-	AxSWAN1mm*	-	-	-	-	-	-	SWAN
+AxSWAN1mm*	anat	-	AxSWAN1mm	-	-	-	-	-	-	SWAN
 AxSWANHighRes	anat	-	AxSWANHighRes	-	-	-	-	-	-	SWAN
 AxT2MAP	anat	-	AxT2MAP	-	-	-	-	-	-	ax
 AXT1SE	anat	-	AXSE	-	-	-	-	-	-	T1w

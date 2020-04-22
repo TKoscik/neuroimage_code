@@ -18,16 +18,6 @@ if (length(args) > 3 ) {
     }
   }
 }
-print("")
-print("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
-print("")
-print(dir.project)
-print(dir.input)
-print(dcm.zip)
-print(dir.inc.root)
-print(dont.use)
-print(dry.run)
-
 
 library(jsonlite)
 library(tools)
