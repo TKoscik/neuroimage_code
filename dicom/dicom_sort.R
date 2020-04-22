@@ -18,6 +18,15 @@ if (length(args) > 3 ) {
     }
   }
 }
+print("")
+print("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
+print()
+print(dir.project)
+print(dir.input)
+print(dcm.zip)
+print(dir.inc.root)
+print(dont.use)
+print(dry.run)
 
 library(jsonlite)
 library(tools)
@@ -33,7 +42,7 @@ df <- data.frame(source = fls,
                  scan.num = numeric(length(fls)), 
                  stringsAsFactors = FALSE)
 n.files <- nrow(df)
-print(fls)
+
 # Retreive identifiers ---------------------------------------------------------
 participant <- data.frame(subject=character(1),
                  session=character(1),
@@ -50,7 +59,7 @@ if (length(session) != 1) {
   warning(sprintf("dicom_sort WARNING: More than one unique session identifier was found. Using %s", session[1]))
 }
 participant$session <- gsub(" ", "", session[1])
-participant$session <- inc_ses_encode(as.numeric(participant$session))
+participant$session <- ses_encode(as.numeric(participant$session))
 
 
 # Set participant values -------------------------------------------------------
