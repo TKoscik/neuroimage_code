@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -hl --long group:,prefix:,\
+OPTS=`getopt -o hl --long group:,prefix:,\
 ts-bold:,mask-brain:,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,no-log -n 'parse-options' -- "$@"`
