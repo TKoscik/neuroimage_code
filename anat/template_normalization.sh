@@ -170,6 +170,8 @@ mkdir -p ${DIR_XFM}
 #===============================================================================
 IMAGE=(${IMAGE//,/ })
 NUM_IMAGE=${#IMAGE[@]}
+MASK=(${MASK//,/ })
+NUM_MASK=${#MASK[@]}
 
 # get and set modalities for output and fixed image targets
 DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}
@@ -196,9 +198,11 @@ mkdir -p ${DIR_SAVE}
 # dilate mask if requested
 if [ -n ${MASK} ]; then
   if [[ "${MASK_DIL}" > 0 ]]; then
-    ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
-      MD ${MASK} ${MASK_DIL}
-    MASK=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
+    for (( i=0; i<${NUM_MASK}; i++ )); do
+      ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
+        MD ${MASK[${i}]} ${MASK_DIL}
+      MASK[${i}]=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
+    done
   fi
 fi
 
@@ -228,7 +232,11 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,64,Regular,0.30]"
 done
 if [ -n ${MASK} ]; then
-  reg_fcn="${reg_fcn} -x ${MASK}"
+  if [[ "${NUM_MASK}" == "1" ]]; then
+    reg_fcn="${reg_fcn} -x ${MASK}"
+  else
+    reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
+  fi
 else
   reg_fcn="${reg_fcn} -x [NULL,NULL]"
 fi
@@ -242,7 +250,11 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
     if [ -n ${MASK} ]; then
-      reg_fcn="${reg_fcn} -x ${MASK}"
+      if [[ "${NUM_MASK}" == "1" ]]; then
+        reg_fcn="${reg_fcn} -x ${MASK}"
+      else
+        reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
+      fi
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
     fi
@@ -255,7 +267,11 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
     if [ -n ${MASK} ]; then
-      reg_fcn="${reg_fcn} -x ${MASK}"
+      if [[ "${NUM_MASK}" == "1" ]]; then
+        reg_fcn="${reg_fcn} -x ${MASK}"
+      else
+        reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
+      fi
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
     fi
@@ -267,7 +283,11 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       reg_fcn="${reg_fcn} -m CC[$${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,6]"
     done
     if [ -n ${MASK} ]; then
-      reg_fcn="${reg_fcn} -x ${MASK}"
+      if [[ "${NUM_MASK}" == "1" ]]; then
+        reg_fcn="${reg_fcn} -x ${MASK}"
+      else
+        reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
+      fi
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
     fi
