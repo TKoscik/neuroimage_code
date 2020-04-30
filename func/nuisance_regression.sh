@@ -37,6 +37,8 @@ MASK_BRAIN=
 PASS_LO=99999
 PASS_HI=0
 REGRESSOR=
+TEMPLATE=HCPICBM
+SPACE=1mm
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -57,6 +59,8 @@ while true; do
     --pass-lo) PASS_LO="$2" ; shift 2 ;;
     --pass-hi) PASS_HI="$2" ; shift 2 ;;
     --regressor) REGRESSOR="$2" ; shift 2 ;;
+    --template) TEMPLATE="$2" ; shift 2 ;;
+    --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -90,6 +94,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --pass-lo <value>        upper passband limit, default=99999'
   echo '  --pass-hi <value>        lower passband limit, default=0'
   echo '  --regressor <value>      comma separated list of regressors to use'
+  echo '  --template <value>       name of template to use, default=HCPICBM'
+  echo '  --space <value>          spacing of template to use, default=1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
