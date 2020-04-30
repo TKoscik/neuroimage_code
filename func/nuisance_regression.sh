@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -hvkl --long group:,prefix:,\
+OPTS=`getopt -o hvkl --long group:,prefix:,\
 ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,\
 dir-scratch:,dir-code:,dir-pincsource:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -113,7 +113,7 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/func/resid_${TEMPLATE}+${SPACE}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/func/resid_${TEMPLATE}+${SPACE}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

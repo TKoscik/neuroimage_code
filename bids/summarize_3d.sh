@@ -154,7 +154,7 @@ NUM_STATS=${#STATS[@]}
 # Load lookup table for labels
 for (( i=0; i<${NUM_SET}; i++ )); do
   LABEL_NAME+=(`${DIR_CODE}/bids/get_field.sh -i ${LABEL[${i}]} -f "label"`)
-  LUT=${DIR_CODE}/lut/lut-${LABEL_NAME[${i}]}.csv
+  LUT=${DIR_CODE}/lut/lut-${LABEL_NAME[${i}]}.tsv
   unset temp_value temp_label
   temp_value=""
   temp_label=""

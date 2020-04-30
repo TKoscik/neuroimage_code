@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-OPTS=`getopt -ovk --long group:,prefix:,\
+OPTS=`getopt -o hl --long group:,prefix:,\
 ts-bold:,label:,\
 dir-code:,dir-template:,dir-pincsource:,\
 help,no-log -n 'parse-options' -- "$@"`
