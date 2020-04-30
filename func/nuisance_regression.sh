@@ -122,7 +122,7 @@ mkdir -p ${DIR_SAVE}
 # partial out nuisance variance
 #==============================================================================
 TR=`PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1`
-REGRESSOR=(${REGRESSOR\\,\ })
+REGRESSOR=(${REGRESSOR//,/ })
 N_REG=${#REGRESSOR[@]}
 
 AFNI_CALL="3dTproject -input ${TS_BOLD}"
