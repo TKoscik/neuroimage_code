@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long group:,prefix:,\
+OPTS=`getopt -o hvkl --long group:,prefix:,template:,space:,\
 ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,\
 dir-scratch:,dir-code:,dir-pincsource:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -38,7 +38,7 @@ PASS_LO=99999
 PASS_HI=0
 REGRESSOR=
 TEMPLATE=HCPICBM
-SPACE=1mm
+SPACE=2mm
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -95,7 +95,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --pass-hi <value>        lower passband limit, default=0'
   echo '  --regressor <value>      comma separated list of regressors to use'
   echo '  --template <value>       name of template to use, default=HCPICBM'
-  echo '  --space <value>          spacing of template to use, default=1mm'
+  echo '  --space <value>          spacing of template to use, default=2mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
