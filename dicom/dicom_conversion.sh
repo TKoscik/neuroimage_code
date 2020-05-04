@@ -121,33 +121,64 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+# Determine if input is a zip file or a DICOM directory ------------------------
+# 0 for zip file - 1 for DICOM directory ---------------------------------------
+if [ -f "${DICOM_ZIP}" ]; then 
+  FILE_TYPE=0
+elif [ -d "${DICOM_ZIP}" ]; then
+  FILE_TYPE=1
+fi
 
 # Unzip DICOM to scratch -------------------------------------------------------
 mkdir -p ${DIR_SCRATCH}/sourcedata
 mkdir -p ${DIR_SCRATCH}/rawdata
 
-if [[ "${VERBOSE}" == "true" ]]; then
-  unzip ${DICOM_ZIP} -d ${DIR_SCRATCH}/sourcedata/
-else
-  unzip -q ${DICOM_ZIP} -d ${DIR_SCRATCH}/sourcedata/
+if [[ ${FILE_TYPE} == 0 ]]; then 
+  if [[ "${VERBOSE}" == "true" ]]; then
+    unzip ${DICOM_ZIP} -d ${DIR_SCRATCH}/sourcedata/
+  else
+    unzip -q ${DICOM_ZIP} -d ${DIR_SCRATCH}/sourcedata/
+  fi
+elif [[ ${FILE_TYPE} == 1 ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then
+    zip -r ${DIR_SCRATCH}/dicoms.zip ${DICOM_ZIP}
+  else
+    zip -r -q ${DIR_SCRATCH}/dicoms.zip ${DICOM_ZIP}
+  fi
 fi
 
 # Convert DICOM to NIFTI -------------------------------------------------------
-${DIR_DICOMSOURCE}/dcm2niix \
-  -b y -d ${DICOM_DEPTH} -z i -t y \
-  -f '%x__%n__%t__%s__%d' \
-  -o ${DIR_SCRATCH}/rawdata \
-  ${DIR_SCRATCH}/sourcedata
-
+if [[ ${FILE_TYPE} == 0 ]]; then 
+  ${DIR_DICOMSOURCE}/dcm2niix \
+    -b y -d ${DICOM_DEPTH} -z i -t y \
+    -f '%x__%n__%t__%s__%d' \
+    -o ${DIR_SCRATCH}/rawdata \
+    ${DIR_SCRATCH}/sourcedata
+elif [[ ${FILE_TYPE} == 1 ]]; then
+  ${DIR_DICOMSOURCE}/dcm2niix \
+    -b y -d ${DICOM_DEPTH} -z i -t y \
+    -f '%x__%n__%t__%s__%d' \
+    -o ${DIR_SCRATCH}/rawdata \
+    ${DICOM_ZIP}
+fi
 # Sort NIFTI files, giving them appropriate names ------------------------------
-Rscript ${DIR_CODE}/dicom/dicom_sort.R \
-  ${DIR_PROJECT} \
-  ${DIR_SCRATCH}/rawdata \
-  ${DICOM_ZIP} \
-  "dir.inc.root" ${DIR_CODE} \
-  "dont.use" ${DONT_USE} \
-  "dry.run" "FALSE"
-
+if [[ ${FILE_TYPE} == 0 ]]; then 
+  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
+    ${DIR_PROJECT} \
+    ${DIR_SCRATCH}/rawdata \
+    ${DICOM_ZIP} \
+    "dir.inc.root" ${DIR_CODE} \
+    "dont.use" ${DONT_USE} \
+    "dry.run" "FALSE"
+elif [[ ${FILE_TYPE} == 1 ]]; then
+  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
+    ${DIR_PROJECT} \
+    ${DIR_SCRATCH}/rawdata \
+    ${DIR_SCRATCH}/dicoms.zip \
+    "dir.inc.root" ${DIR_CODE} \
+    "dont.use" ${DONT_USE} \
+    "dry.run" "FALSE"
+fi
 # Extract all temporary nii.gz files -------------------------------------------
 gunzip ${DIR_SCRATCH}/rawdata/sub*.gz
 
