@@ -2,6 +2,26 @@
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
+#-------------------------------------------------------------------------------
+# This function performs BOLD timeseries motion correction and normalization to
+# an anatomical template in a single-interpolation. All registrations and motion
+# corrections are completed using ANTs. The processing steps in the procedure
+# are as follows:
+# 1) volumes in the BOLD timeseries (TS) are padded by 5 voxels on each side
+# 2) calculate mean BOLD TS, for an initial target for motion correction
+# 3) rigid-body (6 DF) motion correction, remake mean BOLD TS
+# 4) affine (12 DF) motion correction, remake mean BOLD TS
+# 5) generate brain mask using FSL's bet on mean BOLD TS
+# 6) register mean BOLD to participant's anatomical image (usually T1w), using
+#    rigid, affine, syn registrations. Collapse affine transformations and
+#    deformation matrix into a single deformation field.
+# 7) push mean BOLD TS and brain mask to template space using the registration
+#    to participant's anatomical and a transformation from their anatomical to
+#    template space that was generated during anatomical preprocessing
+#    (e.g., participant T1w -> template T1w)
+# 8) Redo motion correction from raw BOLD TS to the normalized mean BOLD TS,
+#    using rigid, affine, and SyN components
+# 9) Depad motion-corrected, normalized BOLD TS
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-27
 #===============================================================================
