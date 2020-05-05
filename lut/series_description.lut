@@ -436,13 +436,14 @@ T2MAPGREe4	anat	-	T2MAP	-	-	-	-	-	-	T2map
 T2MAPGREe5	anat	-	T2MAP	-	-	-	-	-	-	T2map
 PUCorCUBET2	anat	-	corCUBEpu	-	-	-	-	-	-	T2w
 CORFSPGRBRAVORUNTHISUNTILPROMOWORKS	anat	-	corSPGRBravo	-	-	-	-	-	-	T1w
-T2VAR155	anat	-	T2VAR155	-	-	-	-	-	-	T2w
-DTI30DIRECTIONS	dwi	-	DTI30DIRECTIONS	-	-	-	-	-	-	dwi
+T2VAR155    anat	-	T2VAR155	-	-	-	-	-	-	T2w
+DTI30DIRECTIONS dwi	-	DTI30DIRECTIONS	-	-	-	-	-	-	dwi
 SCCorCUBET2	anat	-	corCUBEsc	-	-	-	-	-	-	T2w
-
-
-
-
+localizer32chi00001 loc -   localizer32chi00001 -   -   -   -   -   -   loc
+fMRI3PA func    -   rest    -	-	-	-	-	-	-	bold
+fMRI4AP func    -   rest    -	-	-	-	-	-	-	bold
+fMRI1PA func    -   rest    -	-	-	-	-	-	-	bold
+fMRI2AP func    -   rest    -	-	-	-	-	-	-	bold
 
 
 
