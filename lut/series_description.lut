@@ -439,11 +439,27 @@ CORFSPGRBRAVORUNTHISUNTILPROMOWORKS	anat	-	corSPGRBravo	-	-	-	-	-	-	T1w
 T2VAR155    anat    -	T2VAR155	-	-	-	-	-	-	T2w
 DTI30DIRECTIONS dwi	-	DTI30DIRECTIONS	-	-	-	-	-	-	dwi
 SCCorCUBET2	anat	-	corCUBEsc	-	-	-	-	-	-	T2w
-localizer32chi00001 loc -   localizer32chi00001 -   -   -   -   -   -   loc
-fMRI3PA func    -   rest    -	-	-	-	-	-	-	bold
-fMRI4AP func    -   rest    -	-	-	-	-	-	-	bold
-fMRI1PA func    -   rest    -	-	-	-	-	-	-	bold
-fMRI2AP func    -   rest    -	-	-	-	-	-	-	bold
+localizer32chi00001	loc	-	localizer32chi00001	-	-	-	-	-	-	loc
+localizer32chi00002	loc	-	localizer32chi00002	-	-	-	-	-	-	loc
+localizer32chi00003	loc	-	localizer32chi00003	-	-	-	-	-	-	loc
+fMRI3PA	func	-	rest	-	-	-	-	-	-	bold
+fMRI4AP	func	-	rest	-	-	-	-	-	-	bold
+fMRI1PA	func	-	rest	-	-	-	-	-	-	bold
+fMRI2AP	func	-	rest	-	-	-	-	-	-	bold
+ABCDfMRIDistortionMapPA	fmap	-	ABCDfMRIDistortionMapPA	-	-	-	-	-	-	fieldmap
+ABCDfMRIDistortionMapAP	fmap	-	ABCDfMRIDistortionMapAP	-	-	-	-	-	-	fieldmap
+ABCDfMRIrestPA	func	-	rest	-	-	-	-	-	-	bold
+ABCDfMRIrestAP	func	-	rest	-	-	-	-	-	-	bold
+ABCDT1wMPRvNavsetter	loc	-	MPRvNav	-	-	-	-	-	-	T1w
+ABCDdMRIDistortionMapPA	fmap	-	b0FieldMap	-	-	-	-	-	-	dwi
+ABCDdMRIDistortionMapAP	fmap	-	b0FieldMap	-	-	-	-	-	-	dwi
+ABCDdMRI	dwi	-	ABCDdMRI	-	-	-	-	-	-	dwi
+T1wMPRvNav	anat	-	MPRvNav	-	-	-	-	-	-	T1w
+T1wMPR	anat	-	MPR	-	-	-	-	-	-	T1w
+dti32ch56dircmrrb5001k2k3k	dwi	-	multishell	-	-	-	-	-	-	dwi
+ABCDT1wMPRvNav	anat	-	ABCDMPRvNav	-	-	-	-	-	-	T1w
+ABCDT2wSPCvNavsetter	loc	-	ABCDT2wSPCvNavsetter	-	-	-	-	-	-	T2w
+ABCDT2wSPCvNav	anat	-	ABCDSPCvNav	-	-	-	-	-	-	T2w
 
 
 
