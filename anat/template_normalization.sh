@@ -44,7 +44,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hdvl --long group:,prefix:,\
-image:,mask:,mask-dil:,orig-space:,template:,space:,\
+image:,mask:,mask-dil:,template:,space:,\
 affine-only,hardcore,stack-xfm,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,debug,verbose,no-log -n 'parse-options' -- "$@"`
@@ -55,12 +55,11 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
+GROUP=Research-INC_img_core
 PREFIX=
 IMAGE=
 MASK=
 MASK_DIL=5
-#ORIG_SPACE=
 TEMPLATE=HCPICBM
 SPACE=1mm
 AFFINE_ONLY=false
@@ -85,7 +84,6 @@ while true; do
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --mask-dilation) MASK_DIL="$2" ; shift 2 ;;
-    --orig-space) ORIG_SPACE="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --affine-only) AFFINE_ONLY=true ; shift ;;
@@ -106,8 +104,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: <<author names>>'
-  echo 'Date:   <<date of authorship>>'
+  echo 'Author: Timothy R Koscik, PhD'
+  echo 'Date: 2020-02-03'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
@@ -115,13 +113,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
+  echo '                           default=Research-INC_img_core'
+  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image(s) to align.'
   echo '                           Input images as commaseparated list,'
   echo '                           must be coregistered'
-  echo '  --mask <value>           full path to fixed image mask'
+  echo '  --mask <value>           full path to moving image mask, fixed image is'
+  echo '                           assumed to exist with template'
   echo '  --mask-dilation <value>  Amount to dilate mask to avoid edge'
   echo '                           effects of registration'
   echo '  --template <value>       name of template to use (if necessary),'
