@@ -185,11 +185,9 @@ fi
 FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${IMAGE[0]}`
 TO=${TEMPLATE}+${SPACE}
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/reg_${TO}
-  echo "Creating Save Directory"
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_${TO}
 fi
 mkdir -p ${DIR_SAVE}
-echo ${DIR_SAVE}
 
 # dilate mask if requested
 if [ -n ${MASK} ]; then
