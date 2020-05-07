@@ -186,6 +186,7 @@ FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${IMAGE[0]}`
 TO=${TEMPLATE}+${SPACE}
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/reg_${TO}
+  echo "Creating Save Directory"
 fi
 mkdir -p ${DIR_SAVE}
 
