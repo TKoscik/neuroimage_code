@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Rigid Alignment of Images to Template
+# Image Normalization to Template
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-02-23
 # Software: ANTs
@@ -60,7 +60,7 @@ PREFIX=
 IMAGE=
 MASK=
 MASK_DIL=5
-ORIG_SPACE=
+#ORIG_SPACE=
 TEMPLATE=HCPICBM
 SPACE=1mm
 AFFINE_ONLY=false
@@ -121,12 +121,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --image <value>          full path to image(s) to align.'
   echo '                           Input images as commaseparated list,'
   echo '                           must be coregistered'
-  echo '  --mask <value>           full path to fixed image mask, or comma-'
-  echo '                           separated fixed and moving masks,'
-  echo '                           e.g., [fixed_mask.nii.gz,moving-mask.nii.gz]'
+  echo '  --mask <value>           full path to fixed image mask'
   echo '  --mask-dilation <value>  Amount to dilate mask to avoid edge'
   echo '                           effects of registration'
-  echo '  --orig-space <value>     label for original spacing, default=native'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
@@ -161,7 +158,7 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
-DIR_XFM=${RESEARCHER}/${PROJECT}/derivatives/xfm
+DIR_XFM=${DIR_PROJECT}/derivatives/xfm
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_XFM}
 
@@ -170,39 +167,40 @@ mkdir -p ${DIR_XFM}
 #===============================================================================
 IMAGE=(${IMAGE//,/ })
 NUM_IMAGE=${#IMAGE[@]}
-MASK=(${MASK//,/ })
-NUM_MASK=${#MASK[@]}
 
 # get and set modalities for output and fixed image targets
 DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}
-for (( i=0; i<${NUM_IMAGE}; i++ )); then
-  MOD+=(`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[${i}]} -f "modality"`)
-  if [[ "${MOD[${i}]}" == "T2w" ]]; then
+for (( i=0; i<${NUM_IMAGE}; i++ )); do
+  unset MOD
+  MOD=(`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[${i}]} -f "modality"`)
+  if [[ "${MOD}" == "T2w" ]]; then
     FIXED_IMAGE+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
   else
     FIXED_IMAGE+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
   fi
+done
+if [ -n ${MASK} ]; then
+  FIXED_MASK=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz
 fi
 
 # set output flags and create save directory as needed
-if [[ -z "${ORIG_SPACE}" ]]; then
-  ORIG_SPACE=`${DIR_CODE}/bids/get_space_label.sh -i ${IMAGE[0]}`
-fi
-FROM=${MOD[0]}+${ORIG_SPACE}
+FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${IMAGE[0]}`
 TO=${TEMPLATE}+${SPACE}
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/reg_to-${TO}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/reg_${TO}
 fi
 mkdir -p ${DIR_SAVE}
 
 # dilate mask if requested
 if [ -n ${MASK} ]; then
   if [[ "${MASK_DIL}" > 0 ]]; then
-    for (( i=0; i<${NUM_MASK}; i++ )); do
-      ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
-        MD ${MASK[${i}]} ${MASK_DIL}
-      MASK[${i}]=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
-    done
+    ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz \
+      MD ${MASK} ${MASK_DIL}
+    MASK=${DIR_SCRATCH}/${PREFIX}_mask-brain+dil${MASK_DIL}.nii.gz
+    
+    ImageMath 3 ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_mask-brain+dil${MASK_DIL}.nii.gz \
+      MD ${FIXED_MASK} ${MASK_DIL}
+    FIXED_MASK=${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_mask-brain+dil${MASK_DIL}.nii.gz
   fi
 fi
 
@@ -210,12 +208,14 @@ fi
 reg_fcn="antsRegistration"
 reg_fcn="${reg_fcn} -d 3 --float 1 --verbose ${VERBOSE} -u 1 -z 1"
 reg_fcn="${reg_fcn} -o ${DIR_SCRATCH}/xfm_"
-reg_fcn="${reg_fcn} -r [${FIXED_IMAGE[0],${IMAGE[0]},1]"
+reg_fcn="${reg_fcn} -r [${FIXED_IMAGE[0]},${IMAGE[0]},1]"
 reg_fcn="${reg_fcn} -t Rigid[0.2]"
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
   reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,32,Regular,0.25]"
+done
+if [ -n ${MASK} ]; then
+  reg_fcn="${reg_fcn} -x [NULL,NULL]"
 fi
-reg_fcn="${reg_fcn} -x [NULL,NULL]"
 reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
 reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -223,7 +223,9 @@ reg_fcn="${reg_fcn} -t Affine[0.5]"
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
   reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,32,Regular,0.25]"
 done
-reg_fcn="${reg_fcn} -x [NULL,NULL]"
+if [ -n ${MASK} ]; then
+  reg_fcn="${reg_fcn} -x [NULL,NULL]"
+fi
 reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
 reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -232,11 +234,7 @@ for (( i=0; i<${NUM_IMAGE}; i++ )); do
   reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,64,Regular,0.30]"
 done
 if [ -n ${MASK} ]; then
-  if [[ "${NUM_MASK}" == "1" ]]; then
-    reg_fcn="${reg_fcn} -x ${MASK}"
-  else
-    reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
-  fi
+  reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
 else
   reg_fcn="${reg_fcn} -x [NULL,NULL]"
 fi
@@ -250,16 +248,12 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
     if [ -n ${MASK} ]; then
-      if [[ "${NUM_MASK}" == "1" ]]; then
-        reg_fcn="${reg_fcn} -x ${MASK}"
-      else
-        reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
-      fi
+      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
     fi
     reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
-    reg_fcn="${reg_fcn} -f 8x8x4x2x1"
+    reg_fcn="${reg_fcn} -f 8x4x2x1"
     reg_fcn="${reg_fcn} -s 3x2x1x0vox"
   else
     reg_fcn="${reg_fcn} -t BsplineSyN[0.5,48,0]"
@@ -267,11 +261,7 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
     if [ -n ${MASK} ]; then
-      if [[ "${NUM_MASK}" == "1" ]]; then
-        reg_fcn="${reg_fcn} -x ${MASK}"
-      else
-        reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
-      fi
+      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
     fi
@@ -283,11 +273,7 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       reg_fcn="${reg_fcn} -m CC[$${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,6]"
     done
     if [ -n ${MASK} ]; then
-      if [[ "${NUM_MASK}" == "1" ]]; then
-        reg_fcn="${reg_fcn} -x ${MASK}"
-      else
-        reg_fcn="${reg_fcn} -x [${MASK[0]},${MASK[1]}]"
-      fi
+      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
     else
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
     fi
@@ -298,10 +284,11 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
 fi
 eval ${reg_fcn}
 
-
 # Apply registration to all modalities
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
-  OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD[${i}]}.nii.gz
+  unset MOD xfm_fcn
+  MOD=(`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[${i}]} -f "modality"`)
+  OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${IMAGE[${i}]}"
   xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
