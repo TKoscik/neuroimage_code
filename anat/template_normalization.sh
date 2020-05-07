@@ -189,6 +189,7 @@ if [ -z "${DIR_SAVE}" ]; then
   echo "Creating Save Directory"
 fi
 mkdir -p ${DIR_SAVE}
+echo ${DIR_SAVE}
 
 # dilate mask if requested
 if [ -n ${MASK} ]; then
