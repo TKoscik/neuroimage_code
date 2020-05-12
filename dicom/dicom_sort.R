@@ -39,8 +39,8 @@ participant <- data.frame(subject=character(1),
                  session=character(1),
                  stringsAsFactors = FALSE)
 subject <- unique(unlist(strsplit(df$source, split="__"))[2])
-subject <- gsub("[^[:alnum:] ]", "", subject)
 if (grepl("_", subject)) { subject <- unlist(strsplit(subject, "_"))[1] }
+subject <- gsub("[^[:alnum:] ]", "", subject)
 if (length(subject) != 1) {
   warning(sprintf("dicom_sort WARNING: More than one unique subject identifier was found. Using %s", subject[1]))
 }
