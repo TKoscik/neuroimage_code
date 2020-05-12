@@ -235,7 +235,7 @@ if [[ "${METHOD,,}" == "n4" ]]; then
   
   n4_fcn="N4BiasFieldCorrection"
   n4_fcn="${n4_fcn} -d ${DIM}"
-  n4_fcn="${n4_fcn} -i ${IMAGE[${i}]}"
+  n4_fcn="${n4_fcn} -i ${IMAGE[0]}"
   if [ -n "${MASK}" ]; then
     n4_fcn="${n4_fcn} -x ${MASK}"
   fi
@@ -255,6 +255,13 @@ if [[ "${METHOD,,}" == "n4" ]]; then
   if [[ "${KEEP}" == "true" ]]; then
     mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz ${DIR_SAVE}/
   fi
+fi
+
+if [[ "${METHOD,,}" == "t1wm" ]]; then
+  3dUnifize \
+    -prefix ${DIR_SCRATCH}/${PREFIX}_prep-bias+T1WM.nii.gz \
+    -input ${IMAGE[0]} \
+    -GM -Urad 30
 fi
 
 #===============================================================================
