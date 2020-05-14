@@ -185,13 +185,12 @@ gunzip ${DIR_SCRATCH}/rawdata/sub*.gz
 # Generate scan text descriptions ----------------------------------------------
 NII_LS=(`ls ${DIR_SCRATCH}/rawdata/sub*.nii`)
 JSON_LS=(`ls ${DIR_SCRATCH}/rawdata/sub*.json`)
-DCMDUMP_LS=(`ls ${DIR_SCRATCH}/rawdata/sub*_dcmdump.txt`)
 N_SCANS=${#NII_LS[@]}
 for (( i=0; i<${N_SCANS}; i++ )); do
   DESC_NAME=(${NII_LS[${i}]})
   DESC_NAME=(${DESC_NAME%.nii})
   echo ${DESC_NAME}
-  DESC_TEMP=`Rscript ${DIR_CODE}/dicom/scan_description.R ${NII_LS[${i}]} ${JSON_LS[${i}]} ${DCMDUMP_LS[${i}]}`
+  DESC_TEMP=`Rscript ${DIR_CODE}/dicom/scan_description.R ${NII_LS[${i}]} ${JSON_LS[${i}]}`
   echo ${DESC_TEMP} > ${DESC_NAME}_scanDescription.txt
 done
 
