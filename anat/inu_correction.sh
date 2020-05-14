@@ -259,7 +259,7 @@ fi
 
 if [[ "${METHOD,,}" == "t1wm" ]]; then
   3dUnifize \
-    -prefix ${DIR_SCRATCH}/${PREFIX}_prep-bias+T1WM.nii.gz \
+    -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM.nii.gz \
     -input ${IMAGE[0]} \
     -GM -Urad 30
 fi
