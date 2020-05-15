@@ -229,10 +229,10 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
   fi
 fi
 
+# gather modality for output
+MOD=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "modality"`
+
 if [[ "${METHOD,,}" == "n4" ]]; then
-  # gather modality for output
-  MOD=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "modality"`
-  
   n4_fcn="N4BiasFieldCorrection"
   n4_fcn="${n4_fcn} -d ${DIM}"
   n4_fcn="${n4_fcn} -i ${IMAGE[0]}"
@@ -259,7 +259,7 @@ fi
 
 if [[ "${METHOD,,}" == "t1wm" ]]; then
   3dUnifize \
-    -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM.nii.gz \
+    -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM_${MOD}.nii.gz \
     -input ${IMAGE[0]} \
     -GM -Urad 30
 fi
