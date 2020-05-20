@@ -42,7 +42,7 @@ function egress {
 trap egress EXIT
  
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hckl --long image:,mask:,\
+OPTS=`getopt -o hckl --long image:,mask:,name:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -55,6 +55,7 @@ eval set -- "$OPTS"
 IMAGE=
 MASK=
 DIR_SAVE=
+NAME=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
@@ -72,6 +73,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
+    --name) NAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -95,6 +97,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --image <value>          base image'
   echo '  --mask <value>           overlay image'
+  echo '  --name <value>           output name of the file'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
@@ -115,8 +118,9 @@ mkdir -p ${DIR_SAVE}
 # Start of Function
 #===============================================================================
  
-NAME=$( basename ${IMAGE} )
-NAME=${NAME::-7}
+#NAME=$( basename ${IMAGE} )
+#NAME=${NAME::-7}
+
 job=${DIR_SCRATCH}/3dPlot.py
 
 if [ -z "${MASK}" ]; then
