@@ -88,6 +88,7 @@ while true; do
     --space) SPACE="$2" ; shift 2 ;;
     --affine-only) AFFINE_ONLY=true ; shift ;;
     --hardcore) HARDCORE=true ; shift ;;
+    --stack-xfm) STACK_XFM=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
