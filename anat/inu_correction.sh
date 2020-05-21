@@ -212,13 +212,13 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
   fslmaths ${DIR_SCRATCH}/temp_t1mult2_brain_norm.nii.gz \
     -mas ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod_mask.nii.gz -dilall \
     ${DIR_SCRATCH}/temp_bias_raw.nii.gz -odt float
-  fslmaths ${DIR_SCRATCH}/temp_bias_raw.nii.gz -s ${smoothKernel} \
+  fslmaths ${DIR_SCRATCH}/temp_bias_raw.nii.gz -s ${SMOOTH_KERNEL} \
     ${DIR_SCRATCH}/biasT1T2_Field.nii.gz
 
   # Use bias field output to create corrected images
-  fslmaths ${T1_IMAGE} -div ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
+  fslmaths ${IMAGE[0]} -div ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
     ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz
-  fslmaths ${T2_IMAGE} -div ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
+  fslmaths ${IMAGE[1]} -div ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
     ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz
 
   # Move files to appropriate location
