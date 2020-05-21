@@ -157,7 +157,7 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
-DIR_XFM=${DIR_PROJECT}/derivatives/xfm
+DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_XFM}
 
