@@ -194,7 +194,7 @@ antsRegistration \
 # apply transform --------------------------------------------------------------
 antsApplyTransforms -d 3 \
   -i ${IMAGE} \
-  -o ${DIR_SCRATCH}/${PREFIX}_prep-rigid_${MOD}.nii.gz \
+  -o ${DIR_SCRATCH}/${PREFIX}_prep-rigid+${TEMPLATE}+${SPACE}_${MOD}.nii.gz \
   -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
   -n BSpline[3] \
   -r ${FIXED}
@@ -202,8 +202,8 @@ antsApplyTransforms -d 3 \
 # move files to appropriate locations ------------------------------------------
 mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
   ${DIR_XFM}/${PREFIX}_from-${MOD}+raw_to-${TEMPLATE}+${SPACE}_xfm-rigid.mat
-mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid_${MOD}.nii.gz \
-  ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_${MOD}.nii.gz
+mv ${DIR_SCRATCH}/${PREFIX}_prep-rigid+${TEMPLATE}+${SPACE}_${MOD}.nii.gz \
+  ${DIR_SAVE}/
 
 #===============================================================================
 # End of Function
