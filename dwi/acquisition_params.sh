@@ -118,6 +118,9 @@ mkdir -p ${DIR_SAVE}
 if [[ -f ${DIR_SAVE}/All_dwisAcqParams.txt ]]; then
   rm ${DIR_SAVE}/All_dwisAcqParams.txt
 fi
+if [[ -f ${DIR_SAVE}/All_B0sAcqParams.txt ]]; then
+  rm ${DIR_SAVE}/All_B0sAcqParams.txt
+fi
 if [[ -f ${DIR_SAVE}/All.bvec ]]; then
   rm ${DIR_SAVE}/All.bvec
 fi
