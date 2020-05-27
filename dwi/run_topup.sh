@@ -125,11 +125,11 @@ if [[ -f ${DIR_SAVE}/*mask.nii.gz ]]; then
   rm ${DIR_SAVE}/*mask.nii.gz
 fi
 TEMP=(`ls ${DIR_SAVE}/*hifi_b0*.nii.gz`)
-if [[ -n ${TEMP ]]; then rm ${TEMP[@]}; fi
+if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
 TEMP=(`ls ${DIR_SAVE}/*eddy*.nii.gz`)
-if [[ -n ${TEMP ]]; then rm ${TEMP[@]}; fi
+if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
 TEMP=(`ls ${DIR_SAVE}/*topup*.nii.gz`)
-if [[ -n ${TEMP ]]; then rm ${TEMP[@]}; fi
+if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
 
 topup \
   --imain=${DIR_SAVE}/All_B0s.nii.gz \
