@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
+OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,method:,\
 dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -22,6 +22,7 @@ PREFIX=
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
+METHOD=ANTs
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -42,6 +43,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --method) METHOD="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -72,6 +74,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
+  echo '  --method <value>         brain mask method, e.g., ANTs'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
@@ -140,7 +143,7 @@ mv ${DIR_SCRATCH}/dwi_to_nativeMask_temp_0GenericAffine.mat \
   ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-affineMask.mat
 
 antsApplyTransforms -d 3 \
-  -i ${DIR_ANAT_MASK}/${PREFIX}_mask-brain.nii.gz \
+  -i ${DIR_ANAT_MASK}/${PREFIX}_mask-brain+${METHOD}.nii.gz \
   -o ${DIR_SCRATCH}/DTI_undilatedMask.nii.gz \
   -t [${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-affineMask.mat,1] \
   -r ${DIR_SAVE}/All_hifi_b0_mean.nii.gz
