@@ -462,6 +462,17 @@ ABCDT2wSPCvNavsetter	loc	-	ABCDT2wSPCvNavsetter	-	-	-	-	-	-	T2w
 ABCDT2wSPCvNav	anat	-	ABCDSPCvNav	-	-	-	-	-	-	T2w
 CalDWIB0REVPEc48HAP	loc	-	DWIB0REVPEc48HAP	-	-	-	-	-	-	loc
 CalDWIB0REVPEcBODY	loc	-	DWIB0REVPEcBODY	-	-	-	-	-	-	loc
+CalDWIMultiBvaluec48HAP	loc	-	DWIMultiBvaluec48HAP	-	-	-	-	-	-	loc
+CalDWIMultiBvaluecBODY	loc	-	DWIMultiBvaluecBODY	-	-	-	-	-	-	loc
+
+
+
+
+
+
+
+
+
 
 
 
