@@ -227,6 +227,9 @@ antsApplyTransforms -d 3 \
 
 # Push mean bold to template --------------------------------------------------
 XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+
+### ADD in here what to do if stack is not found but components are
+
 antsApplyTransforms -d 3 \
   -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
   -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
