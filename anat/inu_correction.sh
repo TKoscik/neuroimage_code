@@ -46,7 +46,10 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hdvkl --long group:,prefix:,\
-dimension:,image:,method:,mask:,smooth-kernel:,weight:,shrink:,convergence,bspline:,hist-sharpen:,\
+dimension:,image:,method:,mask:,\
+smooth-kernel:,\
+weight:,shrink:,convergence,bspline:,hist-sharpen:,\
+no-gm,urad:,do-t2,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -68,6 +71,9 @@ SHRINK=4
 CONVERGENCE=[50x50x50x50,0.0]
 BSPLINE=[200,3]
 HIST_SHARPEN=[0.15,0.01,200]
+NO_GM=false
+URAD=30
+DO_T2=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -95,6 +101,9 @@ while true; do
     --convergence) CONVERGENCE="$2" ; shift 2 ;;
     --bspline) BSPLINE="$2" ; shift 2 ;;
     --hist-sharpen) HIST_SHARPEN="$2" ; shift 2 ;;
+    --no-gm) NO_GM=true; shift ;;
+    --urad) URAD="$2" ; shift 2 ;;
+    --do-t2) DO_T2=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -258,10 +267,17 @@ if [[ "${METHOD,,}" == "n4" ]]; then
 fi
 
 if [[ "${METHOD,,}" == "t1wm" ]]; then
-  3dUnifize \
-    -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM_${MOD}.nii.gz \
-    -input ${IMAGE[0]} \
-    -GM -Urad 30
+  t1wm_fcn="3dUnifize"
+  t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM_${MOD}.nii.gz"
+  t1wm_fcn="${t1wm_fcn} -input ${IMAGE[0]}"
+  if [[ "${NO_GM}" == "false" ]]; then
+    t1wm_fcn="${t1wm_fcn} -GM"
+  fi
+  t1wm_fcn="${t1wm_fcn} -Urad 30"
+  if [[ "${DO_T2}" == "true" ]]; then
+    t1wm_fcn="${t1wm_fcn} -T2"
+  fi
+  eval ${t1wm_fcn}
 fi
 
 #===============================================================================
