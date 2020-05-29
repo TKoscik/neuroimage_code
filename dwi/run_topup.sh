@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
-dir-scratch:,dir-nimgcore:,dir-pincsource:,dir-save:,\
+dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -31,11 +31,12 @@ trap egress EXIT
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
-TEMPLATE=HCPICBM
-SPACE=1mm
+B0=
+B0PARAMS=
+CONFIG=b02b0.cnf
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
+DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
 VERBOSE=0
@@ -56,7 +57,7 @@ while true; do
     --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -87,9 +88,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
+  echo '  --dir-code <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -100,9 +101,9 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 anyfile=(`ls ${DIR_SAVE}/*.nii.gz`)
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${anyfile[0]}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${anyfile[0]}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -118,27 +119,31 @@ mkdir -p ${DIR_SAVE}
 # Topup
 #==============================================================================
 
-if [[ -f ${DIR_SAVE}/*brain.nii.gz ]]; then
-  rm ${DIR_SAVE}/*brain.nii.gz
-fi
-if [[ -f ${DIR_SAVE}/*mask.nii.gz ]]; then
-  rm ${DIR_SAVE}/*mask.nii.gz
-fi
-TEMP=(`ls ${DIR_SAVE}/*hifi_b0*.nii.gz`)
-if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
-TEMP=(`ls ${DIR_SAVE}/*eddy*.nii.gz`)
-if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
-TEMP=(`ls ${DIR_SAVE}/*topup*.nii.gz`)
-if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
+#if [[ -f ${DIR_SAVE}/*brain.nii.gz ]]; then
+#  rm ${DIR_SAVE}/*brain.nii.gz
+#fi
+#if [[ -f ${DIR_SAVE}/*mask.nii.gz ]]; then
+#  rm ${DIR_SAVE}/*mask.nii.gz
+#fi
+#TEMP=(`ls ${DIR_SAVE}/*hifi_b0*.nii.gz`)
+#if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
+#TEMP=(`ls ${DIR_SAVE}/*eddy*.nii.gz`)
+#if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
+#TEMP=(`ls ${DIR_SAVE}/*topup*.nii.gz`)
+#if [[ -n ${TEMP} ]]; then rm ${TEMP[@]}; fi
 
 topup \
-  --imain=${DIR_SAVE}/All_B0s.nii.gz \
-  --datain=${DIR_SAVE}/All_B0sAcqParams.txt \
-  --config=b02b0.cnf \
-  --out=${DIR_SAVE}/topup_results \
-  --iout=${DIR_SAVE}/All_hifi_b0.nii.gz
+  --imain=${B0} \
+  --datain=${B0PARAMS} \
+  --config=${CONFIG} \
+  --out=${DIR_SCRATCH}/topup_results \
+  --iout=${DIR_SCRATCH}/All_hifi_b0.nii.gz
 
-fslmaths ${DIR_SAVE}/All_hifi_b0.nii.gz -Tmean ${DIR_SAVE}/All_hifi_b0_mean.nii.gz
+fslmaths ${DIR_SCRATCH}/All_hifi_b0.nii.gz -Tmean ${DIR_SCRATCH}/All_hifi_b0_mean.nii.gz
+
+mv ${DIR_SCRATCH}/All_hifi_b0.nii.gz ${DIR_SAVE}/All_hifi_b0.nii.gz
+mv ${DIR_SCRATCH}/All_hifi_b0_mean.nii.gz ${DIR_SAVE}/All_hifi_b0_mean.nii.gz
+mv ${DIR_SCRATCH}/topup_results ${DIR_SAVE}/topup_results
 
 chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
 chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
