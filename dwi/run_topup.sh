@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
+OPTS=`getopt -o hcvkl --long group:,prefix:,b0:,b0-params:,config:,\
 dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -32,7 +32,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 B0=
-B0PARAMS=
+B0_PARAMS=
 CONFIG=b02b0.cnf
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
@@ -53,8 +53,9 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --b0) B0="$2" ; shift 2 ;;
+    --b0-params) B0_PARAMS="$2" ; shift 2 ;;
+    --config) CONFIG="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -83,9 +84,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --b0 <value>             B0 file to use'
+  echo '  --b0-params              B0 parameter file to use'
+  echo '  --config <value>         configuration file to use, default, b02b0.cnf'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>   top level directory where INC tools,'
@@ -101,7 +102,7 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 anyfile=(`ls ${DIR_SAVE}/*.nii.gz`)
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${anyfile[0]}`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${B0}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
@@ -134,7 +135,7 @@ mkdir -p ${DIR_SAVE}
 
 topup \
   --imain=${B0} \
-  --datain=${B0PARAMS} \
+  --datain=${B0_PARAMS} \
   --config=${CONFIG} \
   --out=${DIR_SCRATCH}/topup_results \
   --iout=${DIR_SCRATCH}/All_hifi_b0.nii.gz
