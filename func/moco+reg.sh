@@ -147,6 +147,8 @@ mkdir -p ${DIR_SAVE}
 NUM_TR=`PrintHeader ${TS_BOLD} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1`
 TR=`PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1`
 
+### put check in here for 4d file.
+
 # Motion correction -----------------------------------------------------------
 # pad image
 fslsplit ${TS_BOLD} ${DIR_SCRATCH}/vol -t
