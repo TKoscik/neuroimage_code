@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,b0:,b0-params:,config:,\
+OPTS=`getopt -o hcvkl --long group:,prefix:,bzero:,bzero-params:,config:,\
 dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -53,8 +53,8 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --b0) B0="$2" ; shift 2 ;;
-    --b0-params) B0_PARAMS="$2" ; shift 2 ;;
+    --bzero) B0="$2" ; shift 2 ;;
+    --bzero-params) B0_PARAMS="$2" ; shift 2 ;;
     --config) CONFIG="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
