@@ -144,7 +144,7 @@ fslmaths ${DIR_SCRATCH}/All_hifi_b0.nii.gz -Tmean ${DIR_SCRATCH}/All_hifi_b0_mea
 
 mv ${DIR_SCRATCH}/All_hifi_b0.nii.gz ${DIR_SAVE}/All_hifi_b0.nii.gz
 mv ${DIR_SCRATCH}/All_hifi_b0_mean.nii.gz ${DIR_SAVE}/All_hifi_b0_mean.nii.gz
-mv ${DIR_SCRATCH}/topup_results* ${DIR_SAVE}
+mv ${DIR_SCRATCH}/topup_results* ${DIR_SAVE} 
 
 chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
 chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
