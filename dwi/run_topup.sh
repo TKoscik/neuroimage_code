@@ -101,7 +101,7 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-anyfile=(`ls ${DIR_SAVE}/*.nii.gz`)
+anyfile=(`ls ${DIR_SAVE}/sub*.nii.gz`)
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${B0}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`

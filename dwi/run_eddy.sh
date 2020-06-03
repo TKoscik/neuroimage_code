@@ -94,7 +94,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: ${DIR_NIMGCORE}'
   echo '  --dir-code <value>       top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
+  echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -104,9 +104,10 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/code/bids/get_dir.sh -i ${DIR_SAVE}`
-SUBJECT=`${DIR_CODE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
-SESSION=`${DIR_CODE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${DIR_SAVE}`
+anyfile=(`ls ${DIR_SAVE}/sub*.nii.gz`)
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi

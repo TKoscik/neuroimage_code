@@ -129,8 +129,9 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${B0_MEAN}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
+anyfile=(`ls ${DIR_SAVE}/sub*.nii.gz`)
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
