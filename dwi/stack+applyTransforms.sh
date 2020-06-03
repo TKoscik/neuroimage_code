@@ -122,7 +122,7 @@ unset xfm
 REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${SPACE}_${TEMPLATE}_T1w.nii.gz
 antsApplyTransforms -d 3 \
   -o [${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz,1] \
-  -t ${DIR_XFM}/${PREFIX}_from-T1w+rigid_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -t ${DIR_XFM}/${PREFIX}_from-native_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-syn.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-affine.mat \
   -r ${REF_IMAGE}
