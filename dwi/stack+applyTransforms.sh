@@ -108,8 +108,8 @@ mkdir -p ${DIR_SAVE}
 
 DIR_TENSOR=${DIR_PROJECT}/derivatives/dwi/tensor/sub-${SUBJECT}/ses-${SESSION}
 DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
-DIR_TEMPLATE=${DIR_CODE}/templates_human
-DIR_TEMPLATE_SCALARS=${DIR_PROJECT}/derivatives/dwi/scalars_${SPACE}_${TEMPLATE}
+DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
+DIR_TEMPLATE_SCALARS=${DIR_PROJECT}/derivatives/dwi/scalars_${TEMPLATE}_${SPACE}
 
 mkdir -p ${DIR_TEMPLATE_SCALARS}/FA
 mkdir -p ${DIR_TEMPLATE_SCALARS}/MD
@@ -118,11 +118,11 @@ mkdir -p ${DIR_TEMPLATE_SCALARS}/RD
 mkdir -p ${DIR_TEMPLATE_SCALARS}/S0
 
 unset xfm
-#rm ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz   > /dev/null 2>&1
-REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${SPACE}_${TEMPLATE}_T1w.nii.gz
+#rm ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz   > /dev/null 2>&1
+REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${TEMPLATE}_${SPACE}}_T1w.nii.gz
 antsApplyTransforms -d 3 \
-  -o [${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz,1] \
-  -t ${DIR_XFM}/${PREFIX}_from-native_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -o [${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz,1] \
+  -t ${DIR_XFM}/${PREFIX}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-syn.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-affine.mat \
   -r ${REF_IMAGE}
@@ -130,32 +130,32 @@ antsApplyTransforms -d 3 \
 
 
 unset xfm
-xfm[0]=${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz
-REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${SPACE}_${TEMPLATE}_T1w.nii.gz
+xfm[0]=${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz
+REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_FA.nii.gz \
-  -o ${DIR_TEMPLATE_SCALARS}/FA/${PREFIX}_reg-${SPACE}+${TEMPLATE}_FA.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -o ${DIR_TEMPLATE_SCALARS}/FA/${PREFIX}_reg-${TEMPLATE}+${SPACE}_FA.nii.gz \
+  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
   -r ${REF_IMAGE}
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_MD.nii.gz \
-  -o ${DIR_TEMPLATE_SCALARS}/MD/${PREFIX}_reg-${SPACE}+${TEMPLATE}_MD.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -o ${DIR_TEMPLATE_SCALARS}/MD/${PREFIX}_reg-${TEMPLATE}+${SPACE}_MD.nii.gz \
+  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
   -r ${REF_IMAGE}
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_L1.nii.gz \
-  -o ${DIR_TEMPLATE_SCALARS}/AD/${PREFIX}_reg-${SPACE}+${TEMPLATE}_AD.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -o ${DIR_TEMPLATE_SCALARS}/AD/${PREFIX}_reg-${TEMPLATE}+${SPACE}_AD.nii.gz \
+  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
   -r ${REF_IMAGE}
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_RD.nii.gz \
-  -o ${DIR_TEMPLATE_SCALARS}/RD/${PREFIX}_reg-${SPACE}+${TEMPLATE}_RD.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -o ${DIR_TEMPLATE_SCALARS}/RD/${PREFIX}_reg-${TEMPLATE}+${SPACE}_RD.nii.gz \
+  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
   -r ${REF_IMAGE}
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_S0.nii.gz \
-  -o ${DIR_TEMPLATE_SCALARS}/S0/${PREFIX}_reg-${SPACE}+${TEMPLATE}_S0.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${SPACE}+${TEMPLATE}_xfm-stack.nii.gz \
+  -o ${DIR_TEMPLATE_SCALARS}/S0/${PREFIX}_reg-${TEMPLATE}+${SPACE}_S0.nii.gz \
+  -t ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
   -r ${REF_IMAGE}
 
 
