@@ -8,7 +8,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
-dir-scratch:,dir-nimgcore:,dir-pincsource:,dir-save:,\
+dir-scratch:,dir-code:,dir-nimgcore:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -35,6 +35,7 @@ TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_CODE=/Shared/inc_scratch/code
 DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
@@ -58,6 +59,7 @@ while true; do
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -90,6 +92,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-nimgcore <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
   echo '                           default: ${DIR_NIMGCORE}'
+  echo '  --dir-code <value>       top level directory where INC tools,'
+  echo '                           templates, etc. are stored,'
+  echo '                           default: ${DIR_NIMGCORE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -99,9 +104,9 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${DIR_SAVE}`
-SUBJECT=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
-SESSION=`${DIR_NIMGCORE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/code/bids/get_dir.sh -i ${DIR_SAVE}`
+SUBJECT=`${DIR_CODE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
+SESSION=`${DIR_CODE}/code/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -117,7 +122,7 @@ mkdir -p ${DIR_SAVE}
 # Eddy Correction
 #==============================================================================
 
-DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+#DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
 DIR_CORRECTED=${DIR_PROJECT}/derivatives/dwi/corrected
 
 mkdir -p ${DIR_CORRECTED}

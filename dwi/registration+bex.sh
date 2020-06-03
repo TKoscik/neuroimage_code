@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,method:,\
+OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,method:,b0-mean\
 dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -19,6 +19,7 @@ eval set -- "$OPTS"
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
+B0_MEAN=
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
@@ -41,6 +42,7 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
+    --b0-mean) B0_MEAN="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --method) METHOD="$2" ; shift 2 ;;
@@ -71,6 +73,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
+  echo '  --b0-mean <value>        topup B0 mean file'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
@@ -90,7 +93,7 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${DIR_SAVE}`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${B0_MEAN}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${DIR_SAVE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${DIR_SAVE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
@@ -118,7 +121,7 @@ rm ${DIR_SAVE}/*.mat  > /dev/null 2>&1
 rm ${DIR_SAVE}/*prep-rigid*  > /dev/null 2>&1
 
 FIXED_IMAGE=${DIR_ANAT_NATIVE}/${PREFIX}_T2w.nii.gz
-MOVING_IMAGE=${DIR_SAVE}/All_hifi_b0_mean.nii.gz
+MOVING_IMAGE=${B0_MEAN}
 antsRegistration \
   -d 3 \
   --float 1 \
