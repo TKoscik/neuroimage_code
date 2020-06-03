@@ -43,7 +43,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,method:,b0-mean\
+OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,method:,b0-mean:,\
 dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
