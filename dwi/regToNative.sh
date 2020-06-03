@@ -225,7 +225,7 @@ mv ${DIR_SCRATCH}/dwi_to_native_temp_1Warp.nii.gz \
 mv ${DIR_SCRATCH}/dwi_to_native_temp_1InverseWarp.nii.gz \
   ${DIR_XFM}/${PREFIX}_from-T2w+rigid_to-dwi+b0_xfm-syn.nii.gz
 
-FIXED_IMAGE=${DIR_ANAT_NATIVE}/${PREFIX}_T2w_brain.nii.gz
+FIXED_IMAGE=${DIR_ANAT_NATIVE}/${PREFIX}_T2w.nii.gz
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_FA.nii.gz \
   -o ${DIR_NATIVE_SCALARS}/FA/${PREFIX}_reg-T2w+rigid_FA.nii.gz \
