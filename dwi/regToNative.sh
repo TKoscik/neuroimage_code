@@ -130,8 +130,8 @@ mkdir -p ${DIR_NATIVE_SCALARS}/FA
 mkdir -p ${DIR_NATIVE_SCALARS}/MD
 mkdir -p ${DIR_NATIVE_SCALARS}/AD
 
-rm ${DIR_SAVE}/*.mat ${DIR_SAVE}/dwi_to_native_temp_1Warp.nii.gz ${DIR_SAVE}/dwi_to_native_temp_1InverseWarp.nii.gz  > /dev/null 2>&1
-rm ${DIR_XFM}/${PREFIX}_from-T2w+rigid_to-dwi+b0_xfm-syn.nii.gz ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-syn.nii.gz ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-affine.mat  > /dev/null 2>&1
+#rm ${DIR_SAVE}/*.mat ${DIR_SAVE}/dwi_to_native_temp_1Warp.nii.gz ${DIR_SAVE}/dwi_to_native_temp_1InverseWarp.nii.gz  > /dev/null 2>&1
+#rm ${DIR_XFM}/${PREFIX}_from-T2w+rigid_to-dwi+b0_xfm-syn.nii.gz ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-syn.nii.gz ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-T2w+rigid_xfm-affine.mat  > /dev/null 2>&1
 
 antsApplyTransforms -d 3 \
   -i ${DIR_SAVE}/DTI_mask.nii.gz \
@@ -149,7 +149,7 @@ antsRegistration \
   -d 3 \
   -x [${DIR_SAVE}/${PREFIX}_mask-brain_native.nii.gz,${DIR_SAVE}/DTI_undilatedMask.nii.gz] \
   --float 1 \
-  --verbose 1 \
+  --verbose ${VERBOSE} \
   -u 1 \
   -w [0.01,0.99] \
   -z 1 \
@@ -190,7 +190,7 @@ antsRegistration \
   -d 3 \
   -x [${DIR_SAVE}/${PREFIX}_mask-brain_native.nii.gz,${DIR_SAVE}/DTI_undilatedMask.nii.gz] \
   --float 1 \
-  --verbose 1 \
+  --verbose ${VERBOSE} \
   -u 1 \
   -w [0.01,0.99] \
   -z 1 \

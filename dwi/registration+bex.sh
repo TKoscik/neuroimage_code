@@ -153,15 +153,15 @@ DIR_ANAT_NATIVE=${DIR_PROJECT}/derivatives/anat/native
 
 mkdir -p ${DIR_XFM}
 
-rm ${DIR_SAVE}/*.mat  > /dev/null 2>&1
-rm ${DIR_SAVE}/*prep-rigid*  > /dev/null 2>&1
+#rm ${DIR_SAVE}/*.mat  > /dev/null 2>&1
+#rm ${DIR_SAVE}/*prep-rigid*  > /dev/null 2>&1
 
 FIXED_IMAGE=${DIR_ANAT_NATIVE}/${PREFIX}_T2w.nii.gz
 MOVING_IMAGE=${B0_MEAN}
 antsRegistration \
   -d 3 \
   --float 1 \
-  --verbose 1 \
+  --verbose ${VERBOSE} \
   -u 1 \
   -w [0.01,0.99] \
   -z 1 \
