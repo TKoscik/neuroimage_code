@@ -189,6 +189,7 @@ antsApplyTransforms -d 3 \
 
 ImageMath 3 ${DIR_SAVE}/DTI_mask.nii.gz MD ${DIR_SCRATCH}/DTI_undilatedMask.nii.gz 5
 
+cp ${DIR_SCRATCH}/DTI_undilatedMask.nii.gz ${DIR_SAVE}/DTI_undilatedMask.nii.gz
 
 chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
 chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
