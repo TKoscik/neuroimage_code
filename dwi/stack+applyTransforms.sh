@@ -119,7 +119,7 @@ mkdir -p ${DIR_TEMPLATE_SCALARS}/S0
 
 unset xfm
 #rm ${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz   > /dev/null 2>&1
-REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+REF_IMAGE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
 antsApplyTransforms -d 3 \
   -o [${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz,1] \
   -t ${DIR_XFM}/${PREFIX}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz \
@@ -131,7 +131,7 @@ antsApplyTransforms -d 3 \
 
 unset xfm
 xfm[0]=${DIR_XFM}/${PREFIX}_from-dwi+b0_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz
-REF_IMAGE=${DIR_TEMPLATE}/${SPACE}/${TEMPLATE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+REF_IMAGE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
 antsApplyTransforms -d 3 \
   -i ${DIR_TENSOR}/All_Scalar_FA.nii.gz \
   -o ${DIR_TEMPLATE_SCALARS}/FA/${PREFIX}_reg-${TEMPLATE}+${SPACE}_FA.nii.gz \
