@@ -19,7 +19,7 @@ if (length(args) > 4 ) {
 ## ----
 
 library(tools)
-source(paste0(dir.inc.root, "/dicom/inc_ses_decode.R"))
+source(paste0(dir.inc.root, "/dicom/ses_decode.R"))
 
 fls <- list.files(dir.input, pattern="sub-")
 fls <- fls[grepl(fls, pattern="nii")]
