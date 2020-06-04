@@ -25,7 +25,6 @@ fls <- list.files(dir.input, pattern="sub-")
 fls <- fls[grepl(fls, pattern="nii")]
 subject <- unlist(strsplit(unlist(strsplit(fls[1], split="-"))[2], split="_"))[1]
 session <- unlist(strsplit(unlist(strsplit(fls[1], split="-"))[3], split="_"))[1]
-site <- unlist(strsplit(unlist(strsplit(fls[1], split="-"))[4], split="_"))[1]
 dot <- ses_decode(session)
 dot <- sprintf("%s-%s-%sT%s:%s:%s", substr(dot,1,4), substr(dot,5,6), 
                substr(dot,7,8), substr(dot,9,10), substr(dot,11,12), substr(dot,13,14))
@@ -45,13 +44,13 @@ fls <- fls[order(mod)]
 mod <- mod[order(mod)]
 
 # save.dir <- paste0(researcher, "/", project, "/qc/dicom_conversion")
-prefix <- paste0("sub-", subject, "_ses-", session, "_site-", site)
+prefix <- paste0("sub-", subject, "_ses-", session)
 # dir.create(save.dir, recursive = TRUE, showWarnings = FALSE)
 rmd.file <- paste0(dir.input, "/", prefix, "_qc-dcmConversion.Rmd")
 rmd.fid <- file(rmd.file, "w")
 
 # Save subject info for email message
-xf <- data.frame(subject, session, site, dot)
+xf <- data.frame(subject, session, dot)
 write.table(xf, paste0(dir.input, "/", prefix, "_subject-info.tsv"), sep="\t",
             quote=FALSE, row.names=FALSE, col.names=TRUE)
 
