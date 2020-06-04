@@ -195,7 +195,7 @@ for (( i=0; i<${N_SCANS}; i++ )); do
 done
 
 # Generate DICOM Conversion QC Report ------------------------------------------
-Rscript ${DIR_CODE}/dicom/qc_dicom_conversion.R ${DIR_PROJECT} ${DIR_SCRATCH}/rawdata
+Rscript ${DIR_CODE}/qc/qc_dicom_conversion.R ${DIR_PROJECT} ${DIR_SCRATCH}/rawdata
 
 # send email -------------------------------------------------------------------
 # Gather subject info for email text
