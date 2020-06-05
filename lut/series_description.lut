@@ -209,6 +209,7 @@ T2STARMAP	anat	-	T2STARMAP	-	-	-	-	-	-	T2star
 T2TSECOR	anat	-	T2TSECOR	-	-	-	-	-	-	T2w
 T2TSECORFC	anat	-	T2TSECORFC	-	-	-	-	-	-	T2w
 T2VAR155B15VERSION	anat	-	T2VAR155B15VERSION	-	-	-	-	-	-	T2w
+T2VAR155B15VERSIONS3ND	anat	-	T2VAR155B15VERSION	-	-	-	-	-	-	T2w
 TIMINGTASKRun1	func	Timing-Run1	-	-	-	-	-	-	-	bold
 TIMINGTASKRun2	func	Timing-Run2	-	-	-	-	-	-	-	bold
 TIMINGTASKRun3	func	Timing-Run3	-	-	-	-	-	-	-	bold
