@@ -173,17 +173,17 @@ FIB_FILE=(`ls ${DIR_SCRATCH}/${PREFIX}*fib.gz`)
 #http://dsi-studio.labsolver.org/Manual/command-line-for-dsi-studio
 
 #Fiber tracking
-${DSI_STUDIO} --action=trk \
---source=${FIB_FILE} \
---connectivity=HCP-MMP \
---output=${DIR_SCRATCH}/${PREFIX}_track.trk.gz
+#${DSI_STUDIO} --action=trk \
+#--source=${FIB_FILE} \
+#--connectivity=HCP-MMP \
+#--output=${DIR_SCRATCH}/${PREFIX}_track.trk.gz
 
 #Move files to save directory
 mv ${FIB_FILE} ${DIR_SAVE}/${PREFIX}.fib.gz
 mkdir -p ${DIR_PROJECT}/qc/src_reports
 mv ${DIR_SCRATCH}/src_report.txt ${DIR_PROJECT}/qc/src_reports/${PREFIX}_src_report.txt
-mv ${DIR_SCRATCH}/${PREFIX}_track* ${DIR_SAVE}
-mv ${DIR_SCRATCH}/*mapping.gz ${DIR_SAVE}
+#mv ${DIR_SCRATCH}/${PREFIX}_track* ${DIR_SAVE}
+#mv ${DIR_SCRATCH}/*mapping.gz ${DIR_SAVE}
 
 
 #===============================================================================
