@@ -6,6 +6,8 @@ dcm.zip <- args[3]
 dir.inc.root <- "/Shared/inc_scratch/code"
 dont.use <- c("loc", "cal", "orig")
 dry.run <- FALSE
+subject.id <- NULL
+session.id <- NULL
 if (length(args) > 3 ) {
   for (i in seq(4, length(args), 2)) {
     if (args[i] == "dir.inc.root") {
@@ -15,6 +17,10 @@ if (length(args) > 3 ) {
       dont.use <- unlist(strsplit(dont.use, "[,]"))
     } else if (args[i] == "dry.run") {
       dry.run <- as.logical(args[i+1])
+    } else if (args[i] == "subject") {
+      subject.id <- args[i+1]
+    } else if (args[i] == "session") {
+      session.id <- args[i+1]
     }
   }
 }
@@ -35,24 +41,31 @@ df <- data.frame(source = fls,
 n.files <- nrow(df)
 
 # Retreive identifiers ---------------------------------------------------------
-participant <- data.frame(subject=character(1),
-                 session=character(1),
-                 stringsAsFactors = FALSE)
-subject <- unique(unlist(strsplit(df$source, split="__"))[2])
-if (grepl("_", subject)) { subject <- unlist(strsplit(subject, "_"))[1] }
-subject <- gsub("[^[:alnum:] ]", "", subject)
-if (length(subject) != 1) {
-  warning(sprintf("dicom_sort WARNING: More than one unique subject identifier was found. Using %s", subject[1]))
+if (is.null(subject.id)) {}
+  participant <- data.frame(subject=character(1),
+                   session=character(1),
+                   stringsAsFactors = FALSE)
+  subject <- unique(unlist(strsplit(df$source, split="__"))[2])
+  if (grepl("_", subject)) { subject <- unlist(strsplit(subject, "_"))[1] }
+  subject <- gsub("[^[:alnum:] ]", "", subject)
+  if (length(subject) != 1) {
+    warning(sprintf("dicom_sort WARNING: More than one unique subject identifier was found. Using %s", subject[1]))
+  }
+  participant$subject <- gsub(" ", "", subject[1])
+} else {
+  participant$subject <- subject.id
 }
-participant$subject <- gsub(" ", "", subject[1])
 
-session <- unique(unlist(strsplit(df$source, split="__"))[3])
-if (length(session) != 1) {
-  warning(sprintf("dicom_sort WARNING: More than one unique session identifier was found. Using %s", session[1]))
+if (is.null(session.id)) {}
+  session <- unique(unlist(strsplit(df$source, split="__"))[3])
+  if (length(session) != 1) {
+    warning(sprintf("dicom_sort WARNING: More than one unique session identifier was found. Using %s", session[1]))
+  }
+  participant$session <- gsub(" ", "", session[1])
+  participant$session <- ses_encode(as.numeric(participant$session))
+else {
+  participant$session <- session.id
 }
-participant$session <- gsub(" ", "", session[1])
-participant$session <- ses_encode(as.numeric(participant$session))
-
 
 # Set participant values -------------------------------------------------------
 prefix <- paste0("sub-", participant$subject,
