@@ -43,7 +43,7 @@ trap egress EXIT
 
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvkl --long dir-project:,group:,email:,\
+OPTS=`getopt -o hdvkl --long dir-project:,group:,email:,subject:,session:,\
 dicom-zip:,dicom-depth:,dont-use:,\
 dir-scratch:,dir-code:,dir-pincsource:,dir-dicomsource:,\
 help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
@@ -56,6 +56,8 @@ eval set -- "$OPTS"
 DIR_PROJECT=
 GROUP=
 EMAIL=steven-j-cochran@uiowa.edu
+SUBJECT=
+SESSION=
 DICOM_ZIP=
 DICOM_DEPTH=5
 DONT_USE=loc,cal,orig
@@ -78,6 +80,8 @@ while true; do
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     --group) GROUP="$2" ; shift 2 ;;
     --email) EMAIL="$2" ; shift 2 ;;
+    --subject) SUBJECT="$2" ; shift 2 ;;
+    --session) SESSION="$2" ; shift 2 ;;
     --dicom-zip) DICOM_ZIP="$2" ; shift 2 ;;
     --dicom-depth) DICOM_DEPTH="$2" ; shift 2 ;;
     --dont-use) DONT_USE="$2" ; shift 2 ;;
@@ -161,24 +165,43 @@ elif [[ ${FILE_TYPE} == 1 ]]; then
     -o ${DIR_SCRATCH}/rawdata \
     ${DICOM_ZIP}
 fi
+
 # Sort NIFTI files, giving them appropriate names ------------------------------
-if [[ ${FILE_TYPE} == 0 ]]; then 
-  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
-    ${DIR_PROJECT} \
-    ${DIR_SCRATCH}/rawdata \
-    ${DICOM_ZIP} \
-    "dir.inc.root" ${DIR_CODE} \
-    "dont.use" ${DONT_USE} \
-    "dry.run" "FALSE"
-elif [[ ${FILE_TYPE} == 1 ]]; then
-  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
-    ${DIR_PROJECT} \
-    ${DIR_SCRATCH}/rawdata \
-    ${DIR_SCRATCH}/dicoms.zip \
-    "dir.inc.root" ${DIR_CODE} \
-    "dont.use" ${DONT_USE} \
-    "dry.run" "FALSE"
+dcmsort_r_fcn="Rscript ${DIR_CODE}/dicom/dicom_sort.R"
+dcmsort_r_fcn="${dcmsort_r_fcn} ${DIR_PROJECT}"
+dcmsort_r_fcn="${dcmsort_r_fcn} ${DIR_SCRATCH}/rawdata"
+if [[ ${FILE_TYPE} == 0 ]]; then
+  dcmsort_r_fcn="${dcmsort_r_fcn}  ${DICOM_ZIP}"
+else
+  dcmsort_r_fcn="${dcmsort_r_fcn} ${DIR_SCRATCH}/dicoms.zip"
 fi
+dcmsort_r_fcn=${dcmsort_r_fcn}' "dir.inc.root" '${DIR_CODE}
+dcmsort_r_fcn=${dcmsort_r_fcn}' "dont.use" '${DONT_USE}
+if [ -n ${SUBJECT} ]; then
+  dcmsort_r_fcn=${dcmsort_r_fcn}' "subject" '${SUBJECT}
+fi
+if [ -n ${SESSION} ]; then
+  dcmsort_r_fcn=${dcmsort_r_fcn}' "session" '${SESSION}
+fi
+eval ${dcmsort_r_fcn}
+
+#if [[ ${FILE_TYPE} == 0 ]]; then 
+#  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
+#    ${DIR_PROJECT} \
+#    ${DIR_SCRATCH}/rawdata \
+#    ${DICOM_ZIP} \
+#    "dir.inc.root" ${DIR_CODE} \
+#    "dont.use" ${DONT_USE} \
+#    "dry.run" "FALSE"
+#elif [[ ${FILE_TYPE} == 1 ]]; then
+#  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
+#    ${DIR_PROJECT} \
+#    ${DIR_SCRATCH}/rawdata \
+#    ${DIR_SCRATCH}/dicoms.zip \
+#    "dir.inc.root" ${DIR_CODE} \
+#    "dont.use" ${DONT_USE} \
+#    "dry.run" "FALSE"
+#fi
 # Extract all temporary nii.gz files -------------------------------------------
 gunzip ${DIR_SCRATCH}/rawdata/sub*.gz
 
