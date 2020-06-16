@@ -120,7 +120,7 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/B0+mean
-mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_PROJECT}/derivatives/dwi/B0+mean
+mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_PROJECT}/derivatives/dwi/B0+mean/
 
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/mask
 mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIR_PROJECT}/derivatives/dwi/mask
