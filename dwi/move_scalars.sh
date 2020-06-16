@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Run Eddy correction
-# Authors: Josh Cochran & Timothy R. Koscik, PhD
-# Date: 3/30/2020, 2020-06-15
+# Function Description
+# Authors: <<author names>>
+# Date: <<date>>
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -15,6 +15,14 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
@@ -34,10 +42,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,
-dir-dwi:,brain-mask:,\
-dir-code:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hvkl --long group:,prefix:,\
+dir-dwi:,dir-project:,\
+help,verbose,no-log,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -45,99 +52,108 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 DIR_DWI=
-BRAIN_MASK=
-DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
-VERBOSE=0
+DIR_PROJECT=
 HELP=false
-NO_LOG=false
+VERBOSE=0
+KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
-    --brain-mask) BRAIN_MASK="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
+    --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
 done
 
-# Usage Help ------------------------------------------------------------------
+# Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Josh Cochran & Timothy R. Koscik, PhD'
-  echo 'Date:   3/30/2020 - 2020-06-15'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -d | --debug             keep scratch folder for debugging'
+  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
+  echo '  --other-inputs <value>   other inputs necessary for function'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
-  echo '  --dir-code <value>       top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
+  echo '  --dir-template <value>   directory where INC templates are stored,'
+  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
-# Set up BIDs compliant variables and workspace --------------------------------
-anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
+#===============================================================================
+# Start of Function
+#===============================================================================
+anyfile=`ls ${DIR_DWI}sub-*.nii.gz`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
-#==============================================================================
-# Eddy Correction
-#==============================================================================
-if [ -z ${B0_MASK} ]; then
-  MASK_LS=`ls ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil*.nii.gz`
-  BRAIN_MASK=${MASK_LS[0]}
+mkdir -p ${DIR_PROJECT}/derivatives/dwi/B0+mean
+mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_PROJECT}/derivatives/dwi/B0+mean
+
+mkdir -p ${DIR_PROJECT}/derivatives/dwi/mask
+mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIR_PROJECT}/derivatives/dwi/mask
+
+mkdir -p ${DIR_PROJECT}/derivatives/xfm
+mv ${DIR_DWI}/*xfm* ${DIR_PROJECT}/derivatives/xfm/
+
+mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_raw
+mv ${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz ${DIR_PROJECT}/derivatives/dwi/corrected_raw/${PREFIX}_dwi.nii.gz
+
+corrected_list=(`ls ${DIR_DWI}/${PREFIX}_reg*`)
+for (( i=0; i<${#corrected_list[@]}; i++ )); do
+  SPACE=`${DIR_CODE}/bids/get_field.sh -i ${corrected_list[${i}]} -f reg`
+  mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}
+  mv ${corrected_list[${i}]} ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}/
+done
+
+rsync -r ${DIR_DWI}/scalars* ${DIR_PROJECT}/derivatives/dwi/
+
+if [[ "${KEEP}" == "true" ]]; then
+  mkdir -p ${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_DWI}/* ${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}/
+else
+  if [[ "$(ls -A ${DIR_DWI})" ]]; then
+    rm -R ${DIR_DWI}/*
+  fi
+  rmdir ${DIR_DWI}
 fi
-# Run Eddy
-eddy_openmp \
-  --data_is_shelled \
-  --imain=${DIR_DWI}/${PREFIX}_dwis.nii.gz \
-  --mask=${BRAIN_MASK} \
-  --acqp=${DIR_DWI}/${PREFIX}_dwisAcqParams.txt \
-  --index=${DIR_DWI}/${PREFIX}_index.txt \
-  --bvecs=${DIR_DWI}/${PREFIX}.bvec \
-  --bvals=${DIR_DWI}/${PREFIX}.bval \
-  --topup=${DIR_DWI}/topup_results \
-  --out=${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz
 
-#==============================================================================
+#===============================================================================
 # End of Function
-#==============================================================================
+#===============================================================================
 
+# Exit function ---------------------------------------------------------------
 exit 0
 

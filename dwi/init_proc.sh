@@ -1,9 +1,11 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: Timothy R. Koscik, PhD
-# Date: 2020-06-15
+# Initialize Diffusion Preprocessing
+# - select dwi files to process together
+# - setup working directory, persistent across sections
+# Authors: Timothy R. Koscik
+# Date: 2020-06-16
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -34,10 +36,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,\
-b0-image:,dil:,\
-dir-code:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hl --long group:,prefix:,\
+dwi-list:,dir-prep:,\
+help,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -47,24 +48,19 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 GROUP=
 PREFIX=
-B0_IMAGE=
-DIL=5
-DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
+DWI_LIST=
+DIR_PREP=
 HELP=false
 VERBOSE=0
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --b0-image) B0_IMAGE="$2" ; shift 2 ;;
-    --dil) DIL="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
+    --dwi-list) DWI_LIST="$2" ; shift 2 ;;
+    --dir-prep) DIR_PREP="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -78,42 +74,43 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
+  echo '  --dwi-list <value>       Comma-separated list of DWI files to process'
+  echo '                           together'
+  echo '  --dir-prep <value>       directory to copy dwi files for processing'
+  echo '                           will be persistent after function'
   echo ''
   NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${B0_IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${B0_IMAGE} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+if [ -z "${DIR_PREP}" ]; then
+  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${INPUT_FILE}`
+  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
+  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+  DIR_PREP=/Shared/inc_scratch/${PROJECT}_sub-${SUBJECT}_ses-${SESSION}_DWIprep_${DATE_SUFFIX}
 fi
+mkdir -p ${DIR_PREP}
 
 #===============================================================================
 # Start of Function
 #===============================================================================
-DIR_DWI=$(dirname "${B0_IMAGE}")
-bet ${B0_IMAGE} ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz -m -n
-ImageMath 3 ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil${DIL}.nii.gz MD ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIL}
+DWI_LIST=${DWI_LIST//,/ }
+N_DWI=${#DWI_LIST[@]}
+for (( i=0; i<${N_DWI}; i++ )); do
+  DWI=${DWI_LIST[${i}]}
+  NAME_BASE=${DWI::-11}
+  cp ${DWI} ${DIR_PREP}/
+  cp ${NAME_BASE}.json ${DIR_PREP}/
+  cp ${NAME_BASE}.bval ${DIR_PREP}/
+  cp ${NAME_BASE}.bvec ${DIR_PREP}/
+done
+echo ${DIR_PREP}
 #===============================================================================
 # End of Function
 #===============================================================================

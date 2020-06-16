@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Run Eddy correction
-# Authors: Josh Cochran & Timothy R. Koscik, PhD
-# Date: 3/30/2020, 2020-06-15
+# Function Description
+# Authors: <<author names>>
+# Date: <<date>>
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -34,8 +34,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,
-dir-dwi:,brain-mask:,\
+OPTS=`getopt -o hdcvkl --long group:,prefix:,\
+dir-dwi:,scalars:,xfms:,ref-image:,\
 dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -45,16 +45,16 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 DIR_DWI=
-BRAIN_MASK=
+SCALARS=fa,md,ad,rd
+XFMS=
+REF_IMAGE=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
-VERBOSE=0
 HELP=false
-NO_LOG=false
+VERBOSE=0
 
 while true; do
   case "$1" in
@@ -64,9 +64,10 @@ while true; do
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
-    --brain-mask) BRAIN_MASK="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) SCRATCH="$2" ; shift 2 ;;
+    --scalars) SCALARS="$2" ; shift 2 ;;
+    --xfms) XFMS="$2" ; shift 2 ;;
+    --ref-image) REF_IMAGE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -74,70 +75,100 @@ while true; do
   esac
 done
 
-# Usage Help ------------------------------------------------------------------
+# Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Josh Cochran & Timothy R. Koscik, PhD'
-  echo 'Date:   3/30/2020 - 2020-06-15'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -d | --debug             keep scratch folder for debugging'
+  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
+  echo '  --other-inputs <value>   other inputs necessary for function'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-nimgcore <value>   top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_NIMGCORE}'
-  echo '  --dir-code <value>       top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
+  echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
+  echo '  --dir-template <value>   directory where INC templates are stored,'
+  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
+anyfile=`ls ${DIR_DWI}sub-*.nii.gz`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
-#==============================================================================
-# Eddy Correction
-#==============================================================================
-if [ -z ${B0_MASK} ]; then
-  MASK_LS=`ls ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil*.nii.gz`
-  BRAIN_MASK=${MASK_LS[0]}
-fi
-# Run Eddy
-eddy_openmp \
-  --data_is_shelled \
-  --imain=${DIR_DWI}/${PREFIX}_dwis.nii.gz \
-  --mask=${BRAIN_MASK} \
-  --acqp=${DIR_DWI}/${PREFIX}_dwisAcqParams.txt \
-  --index=${DIR_DWI}/${PREFIX}_index.txt \
-  --bvecs=${DIR_DWI}/${PREFIX}.bvec \
-  --bvals=${DIR_DWI}/${PREFIX}.bval \
-  --topup=${DIR_DWI}/topup_results \
-  --out=${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz
+#===============================================================================
+# Start of Function
+#===============================================================================
+XFM_LIST=(${XFMS//,/ })
+N_XFM=${#XFM[@]}
+SCALAR_LIST=(${SCALARS//,/ })
+N_SCALAR=${#SCALAR_LIST[@]}
 
-#==============================================================================
+SPACE=`${DIR_CODE}/bids/get_field.sh -i ${XFM_LIST[0]} -f to`
+mkdir -p ${DIR_DWI}/scalar_${SPACE}
+
+for (( i=0; i<${N_SCALAR}; i++ )); then
+  xfm_fcn="antsApplyTransforms -d 3"
+  if [[ "${SCALAR_LIST[${i}],,}" == "fa" ]]; then
+    mkdir -p ${DIR_DWI}/scalar_${SPACE}/FA
+    xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_FA.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_FA.nii.gz"
+  fi
+  if [[ "${SCALAR_LIST[${i}],,}" == "md" ]]; then
+    mkdir -p ${DIR_DWI}/scalar_${SPACE}/MD
+    xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_MD.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_MD.nii.gz"
+  fi
+  if [[ "${SCALAR_LIST[${i}],,}" == "ad" ]]; then
+    mkdir -p ${DIR_DWI}/scalar_${SPACE}/AD
+    xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_L1.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_AD.nii.gz"
+  fi
+  if [[ "${SCALAR_LIST[${i}],,}" == "rd" ]]; then
+    mkdir -p ${DIR_DWI}/scalar_${SPACE}/RD
+    fslmaths ${DIR_DWI}/tensor/${PREFIX}_Scalar_L2.nii.gz \
+      -add ${DIR_DWI}/tensor/${PREFIX}_Scalar_L3.nii.gz -div 2 \
+      ${DIR_DWI}/tensor/${PREFIX}_Scalar_RD.nii.gz
+    xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_RD.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_RD.nii.gz"
+  fi
+  if [[ "${SCALAR_LIST[${i}],,}" == "s0" ]]; then
+    mkdir -p ${DIR_DWI}/scalar_${SPACE}/S0
+    xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_S0.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_S0.nii.gz"
+  fi
+  for (( j=0; j<${N_XFM}; j++ )); do
+    xfm_fcn="${xfm_fcn} -t ${XFM_LIST[${j}]}"
+  done
+  xfm_fcn="${xfm_fcn} -r ${REF_IMAGE}"
+  eval ${xfm_fcn}
+done
+
+#===============================================================================
 # End of Function
-#==============================================================================
+#===============================================================================
 
+# Exit function ---------------------------------------------------------------
 exit 0
 

@@ -15,14 +15,6 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
-    fi
-  fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
@@ -43,8 +35,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hcvkl --long group:,prefix:,\
-dwi:,\
-dir-raw:,dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
+dir-dwi:,\
+dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -56,9 +48,7 @@ eval set -- "$OPTS"
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
-DIR_RAW=
-DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_DWI=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
@@ -76,11 +66,7 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
-    --dir-raw) DIR_RAW="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) SCRATCH="$2" ; shift 2 ;;
+    --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -119,72 +105,39 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
-# Set up BIDs compliant variables and workspace --------------------------------
-DWI=(${DWI//,/ })
-N_DWI=${#DWI[@]}
-
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${DWI[0]}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${DWI[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${DWI[0]} -f "ses"`
+anyfile=`ls ${DIR_DWI}sub-*.nii.gz`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
-
 #==============================================================================
 # B0 extracter
 #==============================================================================
-
+DWI=`ls ${DIR_DWI}/*_dwi.nii.gz`
+N_DWI=${#DWI[@]}
 for (( i=0; i<${N_DWI}; i++ )); do
-  NAME_BASE=`${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI[${i}]}`
   NAME_DTI=${DWI::-11}
   B0s=($(cat ${NAME_DTI}_dwi.bval))
-  mkdir ${DIR_SCRATCH}/split
-
-  fslsplit ${DWI[${i}]} ${DIR_SCRATCH}/split/${NAME_BASE}-split-0000 -t
+  mkdir ${DIR_DWI}/split
+  fslsplit ${DWI[${i}]} ${DIR_DWI}/split/${PREFIX}-split-0000 -t
   for j in ${!B0s[@]}; do 
     k=$(echo "(${B0s[${j}]}/10)" | bc)
     if [ ${k} -ne 0 ]; then
-      rm ${DIR_SCRATCH}/split/${NAME_BASE}-split-*000${j}.nii.gz
+      rm ${DIR_DWI}/split/${PREFIX}-split-*000${j}.nii.gz
     fi
   done
-  fslmerge -t ${DIR_SAVE}/${NAME_BASE}_b0 ${DIR_SCRATCH}/split/${NAME_BASE}*
-  rm -r ${DIR_SCRATCH}/split
+  fslmerge -t ${DIR_DWI}/${PREFIX}_B0+raw.nii.gz ${DIR_DWI}/split/${PREFIX}*
+  rm -r ${DIR_DWI}/split
 done
-
-#for i in ${DIR_RAW}/*_dwi.nii.gz; do
-#  NAMEBASE=$( basename $i )
-#  NAMEBASE=${NAMEBASE::-11}
-#  DTINAME=${i::-11}
-#  B0s=($(cat ${DTINAME}_dwi.bval))
-#  mkdir ${DIR_SCRATCH}/split
-#
-#  fslsplit ${i} ${DIR_SCRATCH}/split/${NAMEBASE}-split-0000 -t
-#
-#  for j in ${!B0s[@]}; do 
-#    k=$(echo "(${B0s[${j}]}/10)" | bc)
-#    if [ ${k} -ne 0 ]; then
-#      rm ${DIR_SCRATCH}/split/${NAMEBASE}-split-*000${j}.nii.gz
-#    fi
-#  done
-#
-#  fslmerge -t ${DIR_SAVE}/${NAMEBASE}_b0 ${DIR_SCRATCH}/split/${NAMEBASE}*
-#
-#  rm -r ${DIR_SCRATCH}/split
-#done
-
 
 #===============================================================================
 # End of function
 #===============================================================================
-
 exit 0
 

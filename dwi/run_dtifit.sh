@@ -15,14 +15,6 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
-    fi
-  fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
@@ -43,9 +35,9 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hdcvkl --long group:,prefix:,\
-other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
+dir-dwi:,smoothing:,\
+dir-code:,dir-pincsource:,\
+help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -55,36 +47,22 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 GROUP=
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
-DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_DWI=
+SMOOTHING=
 DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
 VERBOSE=0
-KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -126,35 +104,41 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
-
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 
 #===============================================================================
 # Start of Function
 #===============================================================================
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+mkdir ${DIR_DWI}/tensor
+
+if [ "${SMOOTHING}" != 0 ]; then
+  fslmaths ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy.nii.gz -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
+fi
+
+if [ "${SMOOTHING}" != 0 ]; then
+  dtifit \
+    -k ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz \
+    -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
+    -r ${DIR_DWI}/${PREFIX}.bvec \
+    -b ${DIR_DWI}/${PREFIX}.bval \
+    -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz 
+else
+  dtifit \
+    -k ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy.nii.gz \
+    -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
+    -r ${DIR_DWI}/${PREFIX}.bvec \
+    -b ${DIR_DWI}/${PREFIX}.bval \
+    -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
+fi
+
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
-if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
-fi
 
 # Exit function ---------------------------------------------------------------
 exit 0

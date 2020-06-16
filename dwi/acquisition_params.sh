@@ -15,14 +15,6 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
-    fi
-  fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
@@ -43,7 +35,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long group:,prefix:,\
-dir-raw:,dir-scratch:,dir-code:,dir-pincsource:,dir-save:,\
+dir-dwi:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -55,9 +47,7 @@ eval set -- "$OPTS"
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
-DIR_RAW=
-DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_DWI=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 VERBOSE=0
@@ -71,11 +61,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
-    --dir-raw) DIR_RAW="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) SCRATCH="$2" ; shift 2 ;;
+    --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -105,52 +91,43 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>   top level directory where INC tools,'
   echo '                           templates, etc. are stored,'
   echo '                           default: ${DIR_CODE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-anyfile=(`ls ${DIR_RAW}/sub*.nii.gz`)
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${anyfile[0]}`
+anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
-
 #==============================================================================
 # AcqParams + All bvec, bval, index + Merge files for All_B0 and All_dwi
 #==============================================================================
 
 #remove old files
-if [[ -f ${DIR_SAVE}/All_dwisAcqParams.txt ]]; then
-  rm ${DIR_SAVE}/All_dwisAcqParams.txt
+if [[ -f ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt ]]; then
+  rm ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt
 fi
-if [[ -f ${DIR_SAVE}/All_B0sAcqParams.txt ]]; then
-  rm ${DIR_SAVE}/All_B0sAcqParams.txt
+if [[ -f ${DIR_DWI}/${PREFIX}_B0sAcqParams.txt ]]; then
+  rm ${DIR_DWI}/${PREFIX}_B0sAcqParams.txt
 fi
-if [[ -f ${DIR_SAVE}/All.bvec ]]; then
-  rm ${DIR_SAVE}/All.bvec
+if [[ -f ${DIR_DWI}/${PREFIX}.bvec ]]; then
+  rm ${DIR_DWI}/${PREFIX}.bvec
 fi
-if [[ -f ${DIR_SAVE}/All.bval ]]; then
-  rm ${DIR_SAVE}/All.bval
+if [[ -f ${DIR_DWI}/${PREFIX}.bval ]]; then
+  rm ${DIR_DWI}/${PREFIX}.bval
 fi
-if [[ -f ${DIR_SAVE}/All_index.txt ]]; then
-  rm ${DIR_SAVE}/All_index.txt
+if [[ -f ${DIR_DWI}/${PREFIX}_index.txt ]]; then
+  rm ${DIR_DWI}/${PREFIX}_index.txt
 fi
 
 unset ACQ_LINE INDX TOTAL_BVALS TOTAL_XVALS TOTAL_YVALS TOTAL_ZVALS ALL_DWI_NAMES B0s
@@ -166,10 +143,10 @@ TOTAL_XVALS=""
 TOTAL_YVALS=""
 TOTAL_ZVALS=""
 
-touch ${DIR_SAVE}/All_dwisAcqParams.txt
+touch ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt
 
 #loop through DWI files to pull out info
-for i in ${DIR_RAW}/*_dwi.nii.gz; do
+for i in ${DIR_DWI}/*_dwi.nii.gz; do
   unset DTI_NAME B0s NUM_B0s PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME NAME_BASE BVALS XVALS YVALS ZVALS PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME
 #pull the file name with and without file path
   NAME_BASE=$( basename $i )
@@ -221,27 +198,27 @@ for i in ${DIR_RAW}/*_dwi.nii.gz; do
   ACQ_MPE=${ACQ_MPE_STRING::-1}
   READOUT_TIME=$(echo "${EES} * ((${ACQ_MPE} / 2) - 1)" | bc -l)
 
-  echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_SAVE}/All_dwisAcqParams.txt
+  echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt
   ACQ_LINE=$(echo "${ACQ_LINE} + 1" | bc -l)
 
-  touch ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt
+  touch ${DIR_DWI}/${NAME_BASE}_B0sAcqParams.txt
   for j in "${B0s[@]}"; do
     k=$(echo "($j+0.5)/1" | bc)
     if [ $k -eq 0 ]; then
-      echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_SCRATCH}/${NAME_BASE}_B0sAcqParams.txt
+      echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_DWI}/${NAME_BASE}_B0sAcqParams.txt
     fi
   done
-  ALL_DWI_NAMES+=(${DIR_SAVE}/${NAME_BASE})
+  ALL_DWI_NAMES+=(${DIR_DWI}/${NAME_BASE})
   ALL_HOME_DWI_NAMES+=(${DTI_NAME})
-  ALL_SCRATCH_NAMES+=(${DIR_SCRATCH}/${NAME_BASE})
+  ALL_SCRATCH_NAMES+=(${DIR_DWI}/${NAME_BASE})
 done
 
-echo $INDX > ${DIR_SAVE}/All_index.txt
-echo $TOTAL_BVALS > ${DIR_SAVE}/All.bval
-echo $TOTAL_XVALS > ${DIR_SCRATCH}/XVals.txt
-echo $TOTAL_YVALS > ${DIR_SCRATCH}/YVals.txt
-echo $TOTAL_ZVALS > ${DIR_SCRATCH}/ZVals.txt
-cat ${DIR_SCRATCH}/XVals.txt ${DIR_SCRATCH}/YVals.txt ${DIR_SCRATCH}/ZVals.txt >> ${DIR_SAVE}/All.bvec
+echo $INDX > ${DIR_DWI}/${PREFIX}_index.txt
+echo $TOTAL_BVALS > ${DIR_DWI}/${PREFIX}.bval
+echo $TOTAL_XVALS > ${DIR_DWI}/XVals.txt
+echo $TOTAL_YVALS > ${DIR_DWI}/YVals.txt
+echo $TOTAL_ZVALS > ${DIR_DWI}/ZVals.txt
+cat ${DIR_DWI}/XVals.txt ${DIR_DWI}/YVals.txt ${DIR_DWI}/ZVals.txt >> ${DIR_DWI}/${PREFIX}.bvec
 
 FIRST_NAME=${ALL_DWI_NAMES[0]}
 FIRST_NAME2=${ALL_HOME_DWI_NAMES[0]}
@@ -268,10 +245,10 @@ for j in ${ALL_SCRATCH_NAMES[@]}; do
   fi
 done
 
-fslmerge -t ${DIR_SAVE}/All_B0s.nii.gz ${FIRST_NAME}_b0.nii.gz ${TEMP_B0_FILES[@]}
-fslmerge -t ${DIR_SAVE}/All_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FILES[@]}
+fslmerge -t ${DIR_DWI}/${PREFIX}_B0s.nii.gz ${FIRST_NAME}_b0.nii.gz ${TEMP_B0_FILES[@]}
+fslmerge -t ${DIR_DWI}/${PREFIX}_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FILES[@]}
 
-cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_SAVE}/All_B0sAcqParams.txt
+cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_DWI}/${PREFIX}_B0sAcqParams.txt
 
 
 #------------------------------------------------------------------------------

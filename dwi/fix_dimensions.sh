@@ -15,14 +15,6 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
-    fi
-  fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
@@ -43,7 +35,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hl --long group:,prefix:,\
-dwi:,
+dir-dwi:,
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -56,7 +48,7 @@ eval set -- "$OPTS"
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
-DWI=
+DIR_DWI=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -111,39 +103,37 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${DWI}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${DWI} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${DWI} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI}`
-fi
+DWI_LIST=`ls ${DIR_DWI}/*_dwi.nii.gz`
+N_DWI=${#DWI_LIST[@]}
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${DIR_DWI}
 fi
-mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 #==============================================================================
 # Check and Fix Odd Dimensions
 #==============================================================================
-cp ${DWI} ${DIR_SCRATCH}/temp.nii.gz
-IFS=x read -r -a DIM_TEMP <<< $(PrintHeader ${DIR_SCRATCH}/temp.nii.gz 2)
-DIMCHK=0
-for j in {0..2}; do
-  if [ $((${DIM_TEMP[${j}]}%2)) -eq 1 ]; then
-    DIM_TEMP[${j}]=$((${DIM_TEMP[${j}]}-1))
-    DIMCHK=1
-  fi
+for (( i=0; i<${N_DWI}; i++ )); do
+  DWI=${DWI_LIST[${i}]}
+  NAME_BASE=`${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI}`
+  IFS=x read -r -a DIM_TEMP <<< $(PrintHeader ${DWI} 2)
+  DIMCHK=0
+  for j in {0..2}; do
+    if [ $((${DIM_TEMP[${j}]}%2)) -eq 1 ]; then
+      DIM_TEMP[${j}]=$((${DIM_TEMP[${j}]}-1))
+      DIMCHK=1
+    fi
+  done
   if [ ${DIMCHK} -eq 1 ]; then
-    fslroi ${DIR_SCRATCH}/temp.nii.gz ${DIR_SCRATCH}/temp.nii.gz 0 ${DIM_TEMP[0]} 0 ${DIM_TEMP[1]} 0 ${DIM_TEMP[2]}
+    fslroi ${DWI} ${DIR_SAVE}/${NAME_BASE}.nii.gz 0 ${DIM_TEMP[0]} 0 ${DIM_TEMP[1]} 0 ${DIM_TEMP[2]}
   fi
 done
-mv ${DIR_SCRATCH}/temp.nii.gz ${DIR_SAVE}/${PREFIX}.nii.gz
 
 #==============================================================================
 # End of function
