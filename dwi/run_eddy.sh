@@ -2,13 +2,49 @@
 
 #===============================================================================
 # Run Eddy correction
-# Authors: Josh Cochran
-# Date: 3/30/2020
+# Authors: Josh Cochran & Timothy R. Koscik, PhD
+# Date: 3/30/2020, 2020-06-15
 #===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+DEBUG=false
+NO_LOG=false
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v DIR_PROJECT ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
+  fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,template:,space:,\
-dir-scratch:,dir-code:,dir-nimgcore:,dir-pincsource:,dir-save:,\
+OPTS=`getopt -o hvl --long group:,prefix:,
+dir-topup:,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -16,50 +52,31 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
-function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
-    fi
-    rmdir ${DIR_SCRATCH}
-  fi
-}
-trap egress EXIT
-
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
-TEMPLATE=HCPICBM
-SPACE=1mm
+DIR_TOPUP=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
-DIR_NIMGCORE=/Shared/nopoulos/nimg_core
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
-KEEP=false
 VERBOSE=0
 HELP=false
-DRY_RUN=false
 NO_LOG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --dir-topup) DIR_TOPUP="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-nimgcore) DIR_NIMGCORE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
+    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -71,14 +88,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Josh Cochran'
-  echo 'Date:   3/30/2020'
+  echo 'Author: Josh Cochran & Timothy R. Koscik, PhD'
+  echo 'Date:   3/30/2020 - 2020-06-15'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
@@ -104,8 +119,8 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${DIR_SAVE}`
-anyfile=(`ls ${DIR_SAVE}/sub*.nii.gz`)
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${DIR_TOPUP}`
+anyfile=(`ls ${DIR_TOPUP}/sub*.nii.gz`)
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
@@ -113,51 +128,36 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/corrected
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
-
 
 #==============================================================================
 # Eddy Correction
 #==============================================================================
 
-#DIR_SAVE=${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
-DIR_CORRECTED=${DIR_PROJECT}/derivatives/dwi/corrected
+# make temporary brain mask
+bet ${DIR_TOPUP}/All_hifi_b0_mean.nii.gz ${DIR_SCRATCH}/b0_mask-brain.nii.gz -m -n
+ImageMath 3 ${DIR_SCRATCH}/b0_mask-brain.nii.gz MD ${DIR_SCRATCH}/b0_mask-brain.nii.gz 5
 
-mkdir -p ${DIR_CORRECTED}
-
+# Run Eddy
 eddy_openmp \
   --data_is_shelled \
-  --imain=${DIR_SAVE}/All_dwis.nii.gz \
-  --mask=${DIR_SAVE}/DTI_mask.nii.gz \
-  --acqp=${DIR_SAVE}/All_dwisAcqParams.txt \
-  --index=${DIR_SAVE}/All_index.txt \
-  --bvecs=${DIR_SAVE}/All.bvec \
-  --bvals=${DIR_SAVE}/All.bval \
-  --topup=${DIR_SAVE}/topup_results \
-  --out=${DIR_SAVE}/All_dwi_hifi_eddy.nii.gz
+  --imain=${DIR_TOPUP}/All_dwis.nii.gz \
+  --mask=${DIR_SCRATCH}/b0_mask-brain.nii.gz \
+  --acqp=${DIR_TOPUP}/All_dwisAcqParams.txt \
+  --index=${DIR_TOPUP}/All_index.txt \
+  --bvecs=${DIR_TOPUP}/All.bvec \
+  --bvals=${DIR_TOPUP}/All.bval \
+  --topup=${DIR_TOPUP}/topup_results \
+  --out=${DIR_SCRATCH}/All_dwi_hifi_eddy.nii.gz
 
-cp ${DIR_SAVE}/All_dwi_hifi_eddy.nii.gz ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz
-
-
-chgrp -R ${GROUP} ${DIR_SAVE} > /dev/null 2>&1
-chmod -R g+rw ${DIR_SAVE} > /dev/null 2>&1
-chgrp ${GROUP} ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz > /dev/null 2>&1
-chmod g+rw ${DIR_CORRECTED}/${PREFIX}_dwi.nii.gz > /dev/null 2>&1
+mv ${DIR_SCRATCH}/All_dwi_hifi_eddy.nii.gz ${DIR_SAVE}/${PREFIX}_dwi.nii.gz
 
 # Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
-fi
-
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+  mv ${DIR_SCRATCH}/* ${DIR_TOPUP}/
 fi
 
 exit 0

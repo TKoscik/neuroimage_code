@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Coregistration of B0 to Base Image
+# Function Description
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-06-15
 #===============================================================================
@@ -42,9 +42,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,\
-b0-image:,fixed:,fixed-mask:,init-xfm:,\
-dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+OPTS=`getopt -o hdcvkl --long group:,prefix:,\
+B0_IMAGE:,\
+dir-save:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -56,11 +56,7 @@ eval set -- "$OPTS"
 GROUP=
 PREFIX=
 B0_IMAGE=
-FIXED=
-FIXED_MASK=
-INIT_XFM=
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
@@ -73,14 +69,9 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --b0-image) OTHER_INPUTS="$2" ; shift 2 ;;
-    --fixed) TEMPLATE="$2" ; shift 2 ;;
-    --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
-    --init-xfm) INIT_XFM="$2" ; shift 2 ;;
+    --b0-image) B0_IMAGE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -95,10 +86,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -d | --debug             keep scratch folder for debugging'
-  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
@@ -122,7 +110,8 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${B0_IMAGE}`
+
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
@@ -132,54 +121,25 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
-DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
-mkdir -p ${DIR_XFM}
 
 #===============================================================================
 # Start of Function
 #===============================================================================
-
-# make temporary moving brain mask
-bet ${B0_IMAGE} ${DIR_SCRATCH}/moving_mask-brain.nii.gz -m -n
-
-antsRegistration \
-  -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE} \
-  -o ${DIR_SCRATCH}/${PREFIX}_xfm_ \
-  -r ${INIT_XFM} \
-  -t Rigid[0.25] \
-  -m Mattes[${FIXED},${B0_IMAGE},1,32,Regular,0.2] \
-  -c [1200x1200x100,1e-6,5] -f 4x2x1 -s 2x1x0vox \
-  -x [${FIXED_MASK},${DIR_SCRATCH}/moving_mask-brain.nii.gz] \
-  -t Affine[0.25] \
-  -m Mattes[${FIXED},${B0_IMAGE},1,32,Regular,0.2] \
-  -c [200x20,1e-6,5] -f 2x1 -s 1x0vox \
-  -x [${FIXED_MASK},${DIR_SCRATCH}/moving_mask-brain.nii.gz] \
-  -t SyN[0.2,3,0] \
-  -m Mattes[${FIXED},${B0_IMAGE},1,32] \
-  -c [40x20x0,1e-7,8] -f 4x2x1 -s 2x1x0vox \
-  -x [${FIXED_MASK},${DIR_SCRATCH}/moving_mask-brain.nii.gz]  
-
-TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED}`
-mv ${DIR_SCRATCH}/${PREFIX}_xfm_0GenericAffine.mat ${DIR_XFM}/${PREFIX}_from-B0+raw_to-${TO}_xfm-affine.mat
-mv ${DIR_SCRATCH}/${PREFIX}_xfm_1Warp.nii.gz ${DIR_XFM}/${PREFIX}_from-B0+raw_to-${TO}_xfm-syn.nii.gz
-mv ${DIR_SCRATCH}/${PREFIX}_xfm_1InverseWarp.nii.gz ${DIR_XFM}/${PREFIX}_from-${TO}_from-B0+raw_xfm-syn.nii.gz
-
-antsApplyTransforms -d 3 \
-  -o [${DIR_XFM}/${PREFIX}_from-B0+raw_to-${TO}_xfm-stack.nii.gz,1] \
-  -t ${DIR_XFM}/${PREFIX}_from-B0+raw_to-${TO}_xfm-syn.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-B0+raw_to-${TO}_xfm-affine.mat \
-  -r ${FIXED}
-antsApplyTransforms -d 3 \
-  -o [${DIR_XFM}/${PREFIX}_from-${TO}_from-B0+raw_xfm-stack.nii.gz,1] \
-  -t [${DIR_XFM}/${PREFIX}_from-B0+raw_to-${TO}_xfm-affine.mat,1] \
-  -t ${DIR_XFM}/${PREFIX}_from-${TO}_from-B0+raw_xfm-syn.nii.gz \
-  -r ${B0_IMAGE}
-
+# <<body of function here>>
+# insert comments for important chunks
+# move files to appropriate locations
 #===============================================================================
 # End of Function
 #===============================================================================
+
+# Clean workspace --------------------------------------------------------------
+# edit directory for appropriate modality prep folder
+if [[ "${KEEP}" == "true" ]]; then
+  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
+fi
 
 # Exit function ---------------------------------------------------------------
 exit 0
