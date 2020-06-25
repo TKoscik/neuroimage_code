@@ -41,10 +41,10 @@ df <- data.frame(source = fls,
 n.files <- nrow(df)
 
 # Retreive identifiers ---------------------------------------------------------
-if (is.null(subject.id)) {
-  participant <- data.frame(subject=character(1),
+participant <- data.frame(subject=character(1),
                    session=character(1),
                    stringsAsFactors = FALSE)
+if (is.null(subject.id)) {
   subject <- unique(unlist(strsplit(df$source, split="__"))[2])
   if (grepl("_", subject)) { subject <- unlist(strsplit(subject, "_"))[1] }
   subject <- gsub("[^[:alnum:] ]", "", subject)
