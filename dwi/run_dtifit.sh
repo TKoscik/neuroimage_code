@@ -35,7 +35,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hdcvkl --long group:,prefix:,\
-dir-dwi:,smoothing:,\
+dir-dwi:,image:,\
 dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -47,8 +47,8 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 GROUP=
 PREFIX=
+IMAGE=
 DIR_DWI=
-SMOOTHING=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
@@ -61,6 +61,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -104,9 +105,8 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -116,25 +116,14 @@ fi
 #===============================================================================
 mkdir ${DIR_DWI}/tensor
 
-if [ "${SMOOTHING}" != 0 ]; then
-  fslmaths ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy.nii.gz -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
-fi
 
-if [ "${SMOOTHING}" != 0 ]; then
   dtifit \
-    -k ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz \
-    -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
-    -r ${DIR_DWI}/${PREFIX}.bvec \
-    -b ${DIR_DWI}/${PREFIX}.bval \
-    -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz 
-else
-  dtifit \
-    -k ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy.nii.gz \
+    -k ${IMAGE} \
     -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
     -r ${DIR_DWI}/${PREFIX}.bvec \
     -b ${DIR_DWI}/${PREFIX}.bval \
     -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
-fi
+
 
 #===============================================================================
 # End of Function
