@@ -220,6 +220,10 @@ done
 # Generate DICOM Conversion QC Report ------------------------------------------
 Rscript ${DIR_CODE}/qc/qc_dicom_conversion.R ${DIR_PROJECT} ${DIR_SCRATCH}/rawdata
 
+# Move QC report output --------------------------------------------------------
+mkdir -p ${DIR_PROJECT}/qc/dcmConversion
+cp ${DIR_SCRATCH}/rawdata/*dcmConversion.html ${DIR_PROJECT}/qc/dcmConversion/
+
 # send email -------------------------------------------------------------------
 # Gather subject info for email text
 info_tsv=`ls ${DIR_SCRATCH}/rawdata/*subject-info.tsv`
@@ -258,9 +262,6 @@ Date of Scan: ${dot[1]}
 -a ${ATTACHMENT} \
 ${EMAIL}
 
-# Move QC report output --------------------------------------------------------
-mkdir -p ${DIR_PROJECT}/qc/dcmConversion
-mv ${DIR_SCRATCH}/rawdata/*dcmConversion.html ${DIR_PROJECT}/qc/dcmConversion/
 
 # Change ownership and permissions ---------------------------------------------
 chgrp ${GROUP} ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
