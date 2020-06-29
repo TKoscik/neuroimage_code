@@ -177,10 +177,10 @@ else
 fi
 dcmsort_r_fcn=${dcmsort_r_fcn}' "dir.inc.root" '${DIR_CODE}
 dcmsort_r_fcn=${dcmsort_r_fcn}' "dont.use" '${DONT_USE}
-if [ -n ${SUBJECT} ]; then
+if [ ! -z ${SUBJECT} ]; then
   dcmsort_r_fcn=${dcmsort_r_fcn}' "subject" '${SUBJECT}
 fi
-if [ -n ${SESSION} ]; then
+if [ ! -z ${SESSION} ]; then
   dcmsort_r_fcn=${dcmsort_r_fcn}' "session" '${SESSION}
 fi
 eval ${dcmsort_r_fcn}
