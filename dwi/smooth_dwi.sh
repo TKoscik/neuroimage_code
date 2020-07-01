@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Smooth DWI image
+# Authors: Josh Cochran
+# Date: 7/1/2020
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -44,7 +44,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long group:,prefix:,\
 image:,smoothing:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
+dir-dwi:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -57,7 +57,7 @@ GROUP=
 PREFIX=
 IMAGE=
 SMOOTHING=
-DIR_SAVE=
+DIR_DWI=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
@@ -79,7 +79,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --smoothing) SMOOTHING="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-dwi) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
@@ -108,7 +108,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          image to be smoothed'
   echo '  --smoothing <value>      size of the smoothing kernal'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-dwi <value>        dwi working directory'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
@@ -129,19 +129,12 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 
 #===============================================================================
 # Start of Function
 #===============================================================================
 
-fslmaths ${IMAGE} -s ${SMOOTHING} ${DIR_SCRATCH}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
-
-mv ${DIR_SCRATCH}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz ${DIR_SAVE}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
+fslmaths ${IMAGE} -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
 
 #===============================================================================
 # End of Function
