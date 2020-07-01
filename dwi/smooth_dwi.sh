@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Smooth DWI image
+# Authors: Josh Cochran
+# Date: 7/1/2020
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -43,8 +43,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long group:,prefix:,\
-other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
+image:,smoothing:,\
+dir-dwi:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -55,10 +55,9 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 GROUP=
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
-DIR_SAVE=
+IMAGE=
+SMOOTHING=
+DIR_DWI=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
@@ -78,10 +77,9 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --smoothing) SMOOTHING="$2" ; shift 2 ;;
+    --dir-dwi) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
@@ -108,11 +106,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --image <value>          image to be smoothed'
+  echo '  --smoothing <value>      size of the smoothing kernal'
+  echo '  --dir-dwi <value>        dwi working directory'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
@@ -126,25 +122,20 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 
 #===============================================================================
 # Start of Function
 #===============================================================================
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+
+fslmaths ${IMAGE} -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi+corrected_smoothed.nii.gz
+
 #===============================================================================
 # End of Function
 #===============================================================================

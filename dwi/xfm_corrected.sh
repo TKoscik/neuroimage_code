@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Apply transforms to corrected image
+# Authors: Josh Cochran
+# Date: 7/1/2020
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)

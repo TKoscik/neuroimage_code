@@ -2,8 +2,8 @@
 
 #===============================================================================
 # Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Authors: Josh Cochran
+# Date: 7/1/2020
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -35,7 +35,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hdcvkl --long group:,prefix:,\
-dir-dwi:,smoothing:,\
+dir-dwi:,image:,\
 dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -47,8 +47,8 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 GROUP=
 PREFIX=
+IMAGE=
 DIR_DWI=
-SMOOTHING=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
@@ -61,6 +61,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -77,25 +78,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -d | --debug             keep scratch folder for debugging'
-  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --image <value>          eddy corrected image'
+  echo '  --dir-dwi <value>        working dwi directory'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
@@ -104,9 +96,8 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -116,25 +107,14 @@ fi
 #===============================================================================
 mkdir ${DIR_DWI}/tensor
 
-if [ "${SMOOTHING}" != 0 ]; then
-  fslmaths ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy.nii.gz -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
-fi
 
-if [ "${SMOOTHING}" != 0 ]; then
   dtifit \
-    -k ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz \
-    -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
-    -r ${DIR_DWI}/${PREFIX}.bvec \
-    -b ${DIR_DWI}/${PREFIX}.bval \
-    -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz 
-else
-  dtifit \
-    -k ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy.nii.gz \
+    -k ${IMAGE} \
     -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
     -r ${DIR_DWI}/${PREFIX}.bvec \
     -b ${DIR_DWI}/${PREFIX}.bval \
     -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
-fi
+
 
 #===============================================================================
 # End of Function
