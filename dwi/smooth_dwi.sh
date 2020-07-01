@@ -134,7 +134,7 @@ fi
 # Start of Function
 #===============================================================================
 
-fslmaths ${IMAGE} -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi_hifi_eddy_smoothed.nii.gz
+fslmaths ${IMAGE} -s ${SMOOTHING} ${DIR_DWI}/${PREFIX}_dwi+corrected_smoothed.nii.gz
 
 #===============================================================================
 # End of Function
