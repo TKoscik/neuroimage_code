@@ -104,7 +104,7 @@ DWI_LIST=${DWI_LIST//,/ }
 N_DWI=${#DWI_LIST[@]}
 for (( i=0; i<${N_DWI}; i++ )); do
   DWI=${DWI_LIST[${i}]}
-  NAME_BASE=${DWI::-11}
+  NAME_BASE=${DWI::-7}
   cp ${DWI} ${DIR_PREP}/
   cp ${NAME_BASE}.json ${DIR_PREP}/
   cp ${NAME_BASE}.bval ${DIR_PREP}/
