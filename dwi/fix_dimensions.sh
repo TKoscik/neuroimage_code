@@ -121,6 +121,7 @@ mkdir -p ${DIR_SAVE}
 for (( i=0; i<${N_DWI}; i++ )); do
   DWI=${DWI_LIST[${i}]}
   NAME_BASE=`${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI}`
+  unset DIM_TEMP
   DIM_TEMP=`PrintHeader ${DWI} 2`
   DIM_TEMP=(${DIM_TEMP//x/ })
   DIMCHK=0
