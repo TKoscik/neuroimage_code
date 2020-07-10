@@ -123,7 +123,7 @@ N_SCALAR=${#SCALAR_LIST[@]}
 SPACE=`${DIR_CODE}/bids/get_field.sh -i ${XFM_LIST[0]} -f to`
 mkdir -p ${DIR_DWI}/scalar_${SPACE}
 
-for (( i=0; i<${N_SCALAR}; i++ )); then
+for (( i=0; i<${N_SCALAR}; i++ )); do
   xfm_fcn="antsApplyTransforms -d 3"
   if [[ "${SCALAR_LIST[${i}],,}" == "fa" ]]; then
     mkdir -p ${DIR_DWI}/scalar_${SPACE}/FA
