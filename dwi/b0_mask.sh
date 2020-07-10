@@ -108,6 +108,7 @@ fi
 #===============================================================================
 DIR_DWI=$(dirname "${B0_IMAGE}")
 bet ${B0_IMAGE} ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz -m -n
+mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain_mask.nii.gz ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
 ImageMath 3 ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil${DIL}.nii.gz MD ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIL}
 #===============================================================================
 # End of Function
