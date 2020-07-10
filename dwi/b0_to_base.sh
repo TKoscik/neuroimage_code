@@ -118,7 +118,7 @@ DIR_SAVE=$(dirname "${B0_IMAGE}")
 #===============================================================================
 antsRegistration \
   -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE} \
-  -o ${DIR_SCRATCH}/${PREFIX}_xfm_ \
+  -o ${DIR_SAVE}/${PREFIX}_xfm_ \
   -r ${INIT_XFM} \
   -t Rigid[0.25] \
   -m Mattes[${FIXED},${B0_IMAGE},1,32,Regular,0.2] \
