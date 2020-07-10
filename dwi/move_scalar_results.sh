@@ -100,7 +100,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-anyfile=`ls ${DIR_DWI}sub-*.nii.gz`
+anyfile=`ls ${DIR_DWI}/sub-*.nii.gz`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
