@@ -30,7 +30,7 @@ function egress {
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
     echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v DIR_PROJECT ]]; then
+    if [[ -v ${DIR_PROJECT} ]]; then
       PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
       if [[ ! -f ${PROJECT_LOG} ]]; then
         echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
