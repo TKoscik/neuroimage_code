@@ -115,8 +115,8 @@ mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_PROJECT}/derivatives/dwi/B0+mean/
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/mask
 mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIR_PROJECT}/derivatives/dwi/mask
 
-mkdir -p ${DIR_PROJECT}/derivatives/xfm
-mv ${DIR_DWI}/*xfm* ${DIR_PROJECT}/derivatives/xfm/
+mkdir -p ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION
+mv ${DIR_DWI}/*xfm* ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_raw
 mv ${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz ${DIR_PROJECT}/derivatives/dwi/corrected_raw/${PREFIX}_dwi.nii.gz
@@ -127,6 +127,8 @@ for (( i=0; i<${#corrected_list[@]}; i++ )); do
   mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}
   mv ${corrected_list[${i}]} ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}/
 done
+
+rsync -r ${DIR_DWI}/scalar* ${DIR_PROJECT}/derivatives/dwi/
 
 rsync -r ${DIR_DWI}/tensor* ${DIR_PROJECT}/derivatives/dwi/
 
