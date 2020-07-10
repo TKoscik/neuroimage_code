@@ -127,7 +127,7 @@ for (( i=0; i<${N_DWI}; i++ )); do
       rm ${DIR_DWI}/split/${PREFIX}-split-*000${j}.nii.gz
     fi
   done
-  fslmerge -t ${DIR_DWI}/${NAME_DTI}_B0+raw.nii.gz ${DIR_DWI}/split/${PREFIX}*
+  fslmerge -t ${NAME_DTI}_dwi_B0+raw.nii.gz ${DIR_DWI}/split/${PREFIX}*
   rm -r ${DIR_DWI}/split
 done
 
