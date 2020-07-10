@@ -43,7 +43,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long group:,prefix:,\
-dir-dwi:,dir-project:,\
+dir-dwi:,dir-project:,dir-code:,\
 help,verbose,no-log,keep -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -56,6 +56,7 @@ GROUP=
 PREFIX=
 DIR_DWI=
 DIR_PROJECT=
+DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -70,6 +71,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
