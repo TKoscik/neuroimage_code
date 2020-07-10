@@ -121,6 +121,10 @@ mv ${DIR_DWI}/*xfm* ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_raw
 mv ${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz ${DIR_PROJECT}/derivatives/dwi/corrected_raw/${PREFIX}_dwi.nii.gz
 
+mkdir -p ${DIR_PROJECT}/derivatives/dwi/bvec+bval
+mv ${DIR_DWI}/${PREFIX}.bvec ${DIR_PROJECT}/derivatives/dwi/bvec+bval
+mv ${DIR_DWI}/${PREFIX}.bval ${DIR_PROJECT}/derivatives/dwi/bvec+bval
+
 corrected_list=(`ls ${DIR_DWI}/${PREFIX}_reg*`)
 for (( i=0; i<${#corrected_list[@]}; i++ )); do
   SPACE=`${DIR_CODE}/bids/get_field.sh -i ${corrected_list[${i}]} -f reg`
