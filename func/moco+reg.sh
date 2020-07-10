@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -x
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -24,6 +24,11 @@
 # 9) Depad motion-corrected, normalized BOLD TS
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-27
+# ------------------------------------------------------------------------------
+# UPDATED BY L. HOPKINS 2020-07-02
+# 10) Added 4D file check
+# TODO: Stack check
+#        Add QC function or source QC script 
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
@@ -56,13 +61,15 @@ TS_BOLD=
 TARGET=T1w
 TEMPLATE=
 SPACE=
-DIR_SAVE=
+DIR_SAVE=/Shared/inc_scratch/hopkins_scratch
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+#For testing below
+#DIR_SCRATCH=/Shared/inc_scratch/scratch_20200704T155704922622532/
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-VERBOSE=0
+VERBOSE=1
 KEEP=false
 NO_LOG=false
 
@@ -148,6 +155,12 @@ NUM_TR=`PrintHeader ${TS_BOLD} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1
 TR=`PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1`
 
 ### put check in here for 4d file.
+### L. Hopkins 7/2/2020
+if [ ${NUM_TR} == 1 ]; then
+    echo "Input file is not a 4D file. Aborting."
+    exit
+fi
+read -p "Press [Enter] key to continue debugging..."
 
 # Motion correction -----------------------------------------------------------
 # pad image
@@ -231,6 +244,12 @@ antsApplyTransforms -d 3 \
 XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
 
 ### ADD in here what to do if stack is not found but components are
+### L. Hopkins 7/2/2020 -- still editing
+#if [ `ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz` 1> /dev/null 2>&1 ]; then
+#    echo "Stack exists - applying transforms mean BOLD to template"
+#else
+#    echo "files do not exist"
+#fi
 
 antsApplyTransforms -d 3 \
   -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
@@ -291,6 +310,12 @@ fi
 #===============================================================================
 # End of function
 #===============================================================================
+
+###ADD QC function - mriqc
+if [ ! command -v pip &> /dev/null ]; then
+    echo "pip could not be found"
+    exit
+fi
 
 # Write log entry on conclusion ------------------------------------------------
 if [[ "${NO_LOG}" == "false" ]]; then
