@@ -107,7 +107,7 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DWI_LIST=`ls ${DIR_DWI}/*_dwi.nii.gz`
+DWI_LIST=(`ls ${DIR_DWI}/*_dwi.nii.gz`)
 N_DWI=${#DWI_LIST[@]}
 
 if [ -z "${DIR_SAVE}" ]; then
