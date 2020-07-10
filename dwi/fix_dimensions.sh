@@ -125,6 +125,7 @@ for (( i=0; i<${N_DWI}; i++ )); do
   #IFS=x read -r -a DIM_TEMP <<< $(PrintHeader ${DWI} 2)
   PrintHeader -h
   DIM_TEMP=`PrintHeader ${DWI} 2`
+  echo ${DIM_TEMP[@]}
   DIM_TEMP=(${DIM_TEMP//x/ })
   echo ${DIM_TEMP[@]}
   DIMCHK=0
