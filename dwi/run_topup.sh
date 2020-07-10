@@ -115,11 +115,11 @@ fi
 # Topup
 #==============================================================================
 topup \
-  --imain=${DIR_DWI}/${PREFIX}_B0s.nii.gz \
+  --imain=${DIR_DWI}/${PREFIX}_B0s+raw.nii.gz \
   --datain=${DIR_DWI}/${PREFIX}_B0sAcqParams.txt \
   --config=${CONFIG} \
   --out=${DIR_DWI}/topup_results \
-  --iout=${DIR_DWI}/${PREFIX}_hifi_B0.nii.gz
+  --iout=${DIR_DWI}/${PREFIX}_B0.nii.gz
 
 fslmaths ${DIR_DWI}/${PREFIX}_B0.nii.gz -Tmean ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz
 
