@@ -35,7 +35,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long group:,prefix:,\
-b0-image:,bo-mask:,fixed:,fixed-mask:,init-xfm:,\
+b0-image:,b0-mask:,fixed:,fixed-mask:,init-xfm:,\
 dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
