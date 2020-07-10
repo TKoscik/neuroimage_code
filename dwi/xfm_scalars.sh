@@ -128,17 +128,17 @@ for (( i=0; i<${N_SCALAR}; i++ )); do
   if [[ "${SCALAR_LIST[${i}],,}" == "fa" ]]; then
     mkdir -p ${DIR_DWI}/scalar_${SPACE}/FA
     xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_FA.nii.gz"
-    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_FA.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/FA/${PREFIX}_Scalar_FA.nii.gz"
   fi
   if [[ "${SCALAR_LIST[${i}],,}" == "md" ]]; then
     mkdir -p ${DIR_DWI}/scalar_${SPACE}/MD
     xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_MD.nii.gz"
-    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_MD.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/MD/${PREFIX}_Scalar_MD.nii.gz"
   fi
   if [[ "${SCALAR_LIST[${i}],,}" == "ad" ]]; then
     mkdir -p ${DIR_DWI}/scalar_${SPACE}/AD
     xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_L1.nii.gz"
-    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_AD.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/AD/${PREFIX}_Scalar_AD.nii.gz"
   fi
   if [[ "${SCALAR_LIST[${i}],,}" == "rd" ]]; then
     mkdir -p ${DIR_DWI}/scalar_${SPACE}/RD
@@ -146,12 +146,12 @@ for (( i=0; i<${N_SCALAR}; i++ )); do
       -add ${DIR_DWI}/tensor/${PREFIX}_Scalar_L3.nii.gz -div 2 \
       ${DIR_DWI}/tensor/${PREFIX}_Scalar_RD.nii.gz
     xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_RD.nii.gz"
-    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_RD.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/RD/${PREFIX}_Scalar_RD.nii.gz"
   fi
   if [[ "${SCALAR_LIST[${i}],,}" == "s0" ]]; then
     mkdir -p ${DIR_DWI}/scalar_${SPACE}/S0
     xfm_fcn="${xfm_fcn} -i ${DIR_DWI}/tensor/${PREFIX}_Scalar_S0.nii.gz"
-    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/${PREFIX}_Scalar_S0.nii.gz"
+    xfm_fcn="${xfm_fcn} -o ${DIR_DWI}/scalar_${SPACE}/S0/${PREFIX}_Scalar_S0.nii.gz"
   fi
   for (( j=0; j<${N_XFM}; j++ )); do
     xfm_fcn="${xfm_fcn} -t ${XFM_LIST[${j}]}"
