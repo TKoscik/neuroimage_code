@@ -120,14 +120,9 @@ mkdir -p ${DIR_SAVE}
 #==============================================================================
 for (( i=0; i<${N_DWI}; i++ )); do
   DWI=${DWI_LIST[${i}]}
-  echo ${DWI}
   NAME_BASE=`${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI}`
-  #IFS=x read -r -a DIM_TEMP <<< $(PrintHeader ${DWI} 2)
-  PrintHeader -h
   DIM_TEMP=`PrintHeader ${DWI} 2`
-  echo ${DIM_TEMP[@]}
   DIM_TEMP=(${DIM_TEMP//x/ })
-  echo ${DIM_TEMP[@]}
   DIMCHK=0
   for j in {0..2}; do
     if [ $((${DIM_TEMP[${j}]}%2)) -eq 1 ]; then
