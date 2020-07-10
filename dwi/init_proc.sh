@@ -37,7 +37,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hl --long group:,prefix:,\
-dwi-list:,dir-prep:,\
+dwi-list:,dir-prep:,dir-code:,\
 help,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -50,6 +50,7 @@ GROUP=
 PREFIX=
 DWI_LIST=
 DIR_PREP=
+DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -61,6 +62,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dwi-list) DWI_LIST="$2" ; shift 2 ;;
     --dir-prep) DIR_PREP="$2" ; shift 2 ;;
+    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
