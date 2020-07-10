@@ -117,7 +117,7 @@ fi
 DWI=(`ls ${DIR_DWI}/*_dwi.nii.gz`)
 N_DWI=${#DWI[@]}
 for (( i=0; i<${N_DWI}; i++ )); do
-  NAME_DTI=${DWI::-11}
+  NAME_DTI=${DWI[${i}]::-11}
   B0s=($(cat ${NAME_DTI}_dwi.bval))
   mkdir ${DIR_DWI}/split
   fslsplit ${DWI[${i}]} ${DIR_DWI}/split/${PREFIX}-split-0000 -t
