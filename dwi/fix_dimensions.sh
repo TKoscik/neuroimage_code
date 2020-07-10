@@ -123,6 +123,7 @@ for (( i=0; i<${N_DWI}; i++ )); do
   NAME_BASE=`${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI}`
   IFS=x read -r -a DIM_TEMP <<< $(PrintHeader ${DWI} 2)
   DIMCHK=0
+  echo ${DIM_TEMP[@]}
   for j in {0..2}; do
     if [ $((${DIM_TEMP[${j}]}%2)) -eq 1 ]; then
       DIM_TEMP[${j}]=$((${DIM_TEMP[${j}]}-1))
