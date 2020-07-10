@@ -128,7 +128,7 @@ for (( i=0; i<${#corrected_list[@]}; i++ )); do
   mv ${corrected_list[${i}]} ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}/
 done
 
-rsync -r ${DIR_DWI}/scalars* ${DIR_PROJECT}/derivatives/dwi/
+rsync -r ${DIR_DWI}/tensor* ${DIR_PROJECT}/derivatives/dwi/
 
 if [[ "${KEEP}" == "true" ]]; then
   mkdir -p ${DIR_PROJECT}/derivatives/dwi/prep/sub-${SUBJECT}/ses-${SESSION}
