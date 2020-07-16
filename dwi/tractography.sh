@@ -175,7 +175,7 @@ FIB_FILE=(`ls ${DIR_SCRATCH}/${PREFIX}*fib.gz`)
 #Fiber tracking
 ${DSI_STUDIO} --action=trk \
 --source=${FIB_FILE} \
---connectivity=HCP-MMP \
+--connectivity=P56_annotation \
 --fa_threshold=0.2 \
 --output=${DIR_SCRATCH}/${PREFIX}_wb-track.trk.gz
 
