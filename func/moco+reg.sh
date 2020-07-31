@@ -189,7 +189,7 @@ antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NUM_TR} -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
   -t Rigid[0.1] -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
-  -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1  
+  -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
 
 cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
 cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
@@ -248,7 +248,7 @@ antsRegistration \
   -m Mattes[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32] \
   -c [40x20x0,1e-7,8] -f 4x2x1 -s 2x1x0vox \
   -x [${T1_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]
-  
+
 # collapse transforms to deformation field
 antsApplyTransforms -d 3 \
   -o [${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz,1] \
@@ -327,7 +327,7 @@ mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
 mkdir -p ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
   ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
-  
+
 if [[ "${KEEP}" == "true" ]]; then
   if [ "${IS_SES}" = true ]; then
     mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
@@ -355,4 +355,3 @@ if [[ "${NO_LOG}" == "false" ]]; then
 fi
 
 exit 0
-
