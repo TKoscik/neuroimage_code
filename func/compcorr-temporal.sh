@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long group:,prefix:,\
+OPTS=`getopt -o hl --long group:,prefix:,is_ses:,\
 ts-bold:,mask-brain:,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,no-log -n 'parse-options' -- "$@"`
@@ -40,6 +40,7 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 NO_LOG=false
+IS_SES=true
 
 while true; do
   case "$1" in
@@ -49,6 +50,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
+    --is_ses) IS_SES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -72,10 +74,14 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
+  echo '  --is_ses <boolean>       is there a session variable?'
+  echo '                           options: true/false'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
   echo '  --mask-brain <value>     full pathto brain mask'
+  echo '  --is_ses <boolean>       is there a session folder,'
+  echo '                           default: true'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
@@ -115,8 +121,13 @@ cat ${DIR_SCRATCH}/${PREFIX}_tcompcorr_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}
 cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global-temporal.1D
 cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_compcorr-temporal.1D
 
-DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
-mkdir -p ${DIR_REGRESSORS}
+if [ "${IS_SES}" = true ]; then
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
+  mkdir -p ${DIR_REGRESSORS}
+else
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}
+  mkdir -p ${DIR_REGRESSORS}
+fi
 
 mv ${DIR_SCRATCH}/${PREFIX}_global-temporal.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-temporal.1D ${DIR_REGRESSORS}/
