@@ -478,6 +478,7 @@ QSMe5	qsm	-	QSM	-	-	-	echo-5	-	-	QSM
 QSMe6	qsm	-	QSM	-	-	-	echo-6	-	-	QSM
 QSMe7	qsm	-	QSM	-	-	-	echo-7	-	-	QSM
 QSMe8	qsm	-	QSM	-	-	-	echo-8	-	-	QSM
+QSMe9	qsm	-	QSM	-	-	-	echo-9	-	-	QSM
 Cal32ChHeadc32ChHead	cal	-	Cal32ChHeadc32ChHead	-	-	-	-	-	-	cal
 Cal32ChHeadcBODY	cal	-	Cal32ChHeadcBODY	-	-	-	-	-	-	cal
 fMRIMB4t6687	func	-	rest	-	-	-	-	-	-	bold
