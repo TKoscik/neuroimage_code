@@ -7,7 +7,7 @@ verDate=7/16/20
 
 ####################
 
-# A script that will regress nuisance parameters from functional (task or rest) EPI data.
+# A script that will regress nuisance parameters from functional (task or rest) EPI data.  
 # Initially made for motion derivatives/quadratics but other stuff got added
 #  1) Friston24 (motion parameters + quadratics & derivatives)
 #  2) TBD but may include framewise displacement etc.
@@ -147,7 +147,7 @@ fi
 if [ -z "${SESSION}" ]; then
   subject_log=${DIR_PROJECT}/log/sub-${SUBJECT}.log
 else
-  subject_log=${DIR_PROJECT}/log/sub-${subject}_ses-${session}.log
+  subject_log=${DIR_PROJECT}/log/sub-${SUBJECT}_ses-${SESSION}.log
 fi
 ##################################### logging ###########################################################
 echo '#--------------------------------------------------------------------------------' >> ${subject_log}
@@ -161,72 +161,7 @@ echo "owner: ${userID}" >> ${subject_log} >> ${subject_log}
 date +"start:%Y-%m-%dT%H:%M:%S%z" >> ${subject_log} >> ${subject_log}
 #########################################################################################################
 
-#Data dependencies:
- #Important directories
- FUNC_DIR=${DIR_PROJECT}/derivatives/func
- ANAT_DIR=${DIR_PROJECT}/derivatives/anat
- FUNC_PREP_DIR=${FUNC_DIR}/prep
- #EPI data
-  #Motion Parameter directory
-  if [ "${IS_SES}" = true ]; then
-    parDir=${FUNC_PREP_DIR}/sub-${subject}/ses-${session}
-  else
-    parDir=${FUNC_PREP_DIR}/sub-${subject}
-  fi
- #EPI Mask directory
- maskDir=${FUNC_DIR}/mask
-#Round up some information about the input EPI
-epiBase=`basename $epi | awk -F"." '{print $1}'`
-epiPath=`dirname $epi`
-numVols=`$ANTSPATH/PrintHeader $epi 2 | awk -F"x" '{print $NF}'`
-trVal=`$ANTSPATH/PrintHeader $epi 1 | awk -F"x" '{print $NF}'`
-if [[ ${TR} == "" ]]; then
-  TR=${trVal}
-else
-  TR=${TR}
-fi
-
-#Motion parameters (all mm) for input EPI
-epiPar=${parDir}/${epiBase}_mcImg_mm.par
-
-#Mask for EPI
-epiMask=${maskDir}/${epiBase}_mask.nii.gz
-
-#Make 4dfp style motion parameter and derivative regressors for timeseries (quadratic and derivatives)
-#Take the backwards temporal derivative in column $i of input $2 and output it as $3
-#Vectorized Matlab: d=[zeros(1,size(a,2));(a(2:end,:)-a(1:end-1,:))];
-#Bash version of above algorithm
-if [[ ! -d ${regressionDir}/friston24 ]]; then
-  mkdir -p ${regressionDir}/friston24
-fi
-
-#Reformat input to be space delimited (will be merged with quadratics, derivatives)
-cat ${epiPar} | sed s/"  "/" "/g > ${regressionDir}/friston24/${epiBase}_Friston24.par
-
-
-
-#Loop through the 6 motion parameters (mm)
-  i=1
-  while [[ ${i} -le 6 ]] ; do
-    deriveBackwards ${i} ${epiPar} ${regressionDir}/friston24
-    let i=i+1
-  done
-
-  #Push together the original file and subsequent derivatives/quadratics into one file
-  paste -d " " ${regressionDir}/friston24/${epiBase}_Friston24.par ${regressionDir}/friston24/_tmp3 ${regressionDir}/friston24/_tmp1 \
-  ${regressionDir}/friston24/_tmp2 > ${regressionDir}/friston24/${epiBase}_Friston24.par_
-  mv ${regressionDir}/friston24/${epiBase}_Friston24.par_ ${regressionDir}/friston24/${epiBase}_Friston24.par
-
-  #Clean up the last of the temporary files
-  rm ${regressionDir}/friston24/_tmp*
-
-  #The last of the formatting (6 decimal places, nice columns)
-  cat ${regressionDir}/friston24/${epiBase}_Friston24.par | awk '{for(i=1;i<=NF;i++)printf("%10.6f ",$i);printf("\n")}' \
-  > ${regressionDir}/friston24/${epiBase}_Friston24.par_
-  mv ${regressionDir}/friston24/${epiBase}_Friston24.par_ ${regressionDir}/friston24/${epiBase}_Friston24.par
-
-
-
+###==================================the actual derivation function==================================###
 #Calculate quadradics and derivatives of an input set of regressors (e.g. mcImg.par) -- Take from HCP pipeline and altered
 deriveBackwards()
 {
@@ -239,6 +174,7 @@ deriveBackwards()
   Length=`echo ${Var} | wc -w`
   #TCS becomes an array of the values from column $i in $in (derived from $Var)
   TCS=($Var)
+  echo $TCS
 
   #Cycle through our array of values from column $i
   j=0
@@ -297,6 +233,74 @@ deriveBackwards()
       rm ${outDir}/tmp1 ${outDir}/tmp2 ${outDir}/tmp3
     fi
 }
+
+#Data dependencies:
+ #Important directories
+ FUNC_DIR=${DIR_PROJECT}/derivatives/func
+ ANAT_DIR=${DIR_PROJECT}/derivatives/anat
+ FUNC_PREP_DIR=${FUNC_DIR}/prep
+ REGRESSION_TOP=${FUNC_DIR}/regressors
+ #EPI data
+  #Motion Parameter directory
+  if [ "${IS_SES}" = true ]; then
+    #parDir=${FUNC_PREP_DIR}/sub-${SUBJECT}/ses-${SESSION}
+    parDir=${REGRESSION_TOP}/sub-${SUBJECT}/ses-${SESSION}
+  else 
+    #parDir=${FUNC_PREP_DIR}/sub-${SUBJECT}
+    parDir=${REGRESSION_TOP}/sub-${SUBJECT}
+  fi
+  
+ #EPI Mask directory
+ maskDir=${FUNC_DIR}/mask
+#Round up some information about the input EPI
+epiBase=`basename ${TS_BOLD} | awk -F"." '{print $1}'`
+epiPath=`dirname ${TS_BOLD}`
+numVols=`$ANTSPATH/PrintHeader ${TS_BOLD} 2 | awk -F"x" '{print $NF}'`
+trVal=`$ANTSPATH/PrintHeader ${TS_BOLD} 1 | awk -F"x" '{print $NF}'`
+if [[ ${TR} == "" ]]; then
+  TR=${trVal}
+else
+  TR=${TR}
+fi
+
+#Motion parameters (all mm) for input EPI
+epiPar=${parDir}/${PREFIX}_moco+6.1D
+
+#Mask for EPI
+epiMask=${maskDir}/${epiBase}_mask.nii.gz
+
+#Make 4dfp style motion parameter and derivative regressors for timeseries (quadratic and derivatives)
+#Take the backwards temporal derivative in column $i of input $2 and output it as $3
+#Vectorized Matlab: d=[zeros(1,size(a,2));(a(2:end,:)-a(1:end-1,:))];
+#Bash version of above algorithm
+if [[ ! -d ${parDir}/friston24 ]]; then
+  mkdir -p ${parDir}/friston24
+fi
+
+#Reformat input to be space delimited (will be merged with quadratics, derivatives)
+cat ${epiPar} | sed s/"  "/" "/g > ${parDir}/friston24/${epiBase}_Friston24.par
+read -p "Press [Enter] key to continue debugging..."
+#Loop through the 6 motion parameters (mm)
+  i=1
+  while [[ ${i} -le 6 ]] ; do
+    deriveBackwards ${i} ${epiPar} ${parDir}/friston24
+    let i=i+1
+  done
+read -p "Press [Enter] key to continue debugging..."
+
+
+  #Push together the original file and subsequent derivatives/quadratics into one file
+  paste -d " " ${regressionDir}/friston24/${epiBase}_Friston24.par ${regressionDir}/friston24/_tmp3 ${regressionDir}/friston24/_tmp1 \
+  ${regressionDir}/friston24/_tmp2 > ${regressionDir}/friston24/${epiBase}_Friston24.par_
+  mv ${regressionDir}/friston24/${epiBase}_Friston24.par_ ${regressionDir}/friston24/${epiBase}_Friston24.par
+
+  #Clean up the last of the temporary files
+  rm ${regressionDir}/friston24/_tmp*
+
+  #The last of the formatting (6 decimal places, nice columns)
+  cat ${regressionDir}/friston24/${epiBase}_Friston24.par | awk '{for(i=1;i<=NF;i++)printf("%10.6f ",$i);printf("\n")}' \
+  > ${regressionDir}/friston24/${epiBase}_Friston24.par_
+  mv ${regressionDir}/friston24/${epiBase}_Friston24.par_ ${regressionDir}/friston24/${epiBase}_Friston24.par
 
 
 #End logging
