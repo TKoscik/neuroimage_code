@@ -118,9 +118,9 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${T1}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${T1} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${T1} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
