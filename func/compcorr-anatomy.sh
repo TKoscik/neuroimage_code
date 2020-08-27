@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 #!/bin/bash
-=======
-#!/bin/bash -ex
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
 
 #===============================================================================
 # Functional Timeseries - Anatomical CompCorr
