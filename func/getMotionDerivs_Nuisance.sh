@@ -17,13 +17,7 @@ verDate=7/16/20
 #########################################################################################################
 
 scriptName="getMotionDerivs_Nuisance.sh"
-nimg_scriptDir=/Shared/nopoulos/nimg_core
-atlasDir=${nimg_scriptDir}/templates_human
 userID=`whoami`
-
-## NOTE: This is an old source script
-## TBD: Remake more updated source script
-source ${nimg_scriptDir}/sourcePack.sh
 
 #Source versions of programs used:
 VER_afni=${VER_afni}
@@ -32,27 +26,44 @@ VER_fsl=${VER_fsl}
 VER_matlab=${VER_matlab}
 source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
 
-# # Parse inputs -----------------------------------------------------------------
-# OPTS=`getopt -o hl --long group:,prefix:,is_ses:,\
-# ts-bold:,label-tissue:,value-csf:,value-wm:,\
-# dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
-# help,verbose,no-log -n 'parse-options' -- "$@"`
-# if [ $? != 0 ]; then
-#   echo "Failed parsing options" >&2
-#   exit 1
-# fi
-# eval set -- "$OPTS"
+# Parse inputs -----------------------------------------------------------------
+OPTS=`getopt -o hl --long group:,prefix:,is_ses:,mask-brain:,\
+ts-bold:,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+help,verbose,no-log -n 'parse-options' -- "$@"`
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
 
-# # actions on exit, e.g., cleaning scratch on error ----------------------------
-# function egress {
-#   if [[ -d ${DIR_SCRATCH} ]]; then
-#     if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-#       rm -R ${DIR_SCRATCH}/*
-#     fi
-#     rmdir ${DIR_SCRATCH}
-#   fi
-# }
-# trap egress EXIT
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v ${DIR_PROJECT} ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
+  fi
+}
+trap egress EXIT
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -63,6 +74,7 @@ LABEL_TISSUE=
 VALUE_CSF=1
 VALUE_WM=3
 DIR_SAVE=
+MASK_BRAIN=
 DIR_SCRATCH=/Shared/inc_scratch/${userID}_scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_FUNC_CODE=${DIR_CODE}/func
@@ -79,10 +91,8 @@ while true; do
     --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
-    --label-tissue) LABEL_TISSUE="$2" ; shift 2 ;;
-    --value-csf) VALUE_CSF="$2" ; shift 2 ;;
-    --value-wm) VALUE_WM="$2" ; shift 2 ;;
     --is_ses) IS_SES="$2" ; shift 2 ;;
+    --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -109,9 +119,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
-  echo '  --label-tissue <value>   Full path to file containing tissue type labels'
-  echo '  --value-csf <value>      numeric value indicating CSF in label file, default=1'
-  echo '  --value-wm <value>       numeric value indicating WM in label file, default=3'
   echo '  --is_ses <boolean>       is there a session folder,'
   echo '                           default: true'
   echo '  --dir-save <value>       directory to save output, default varies by function'
@@ -121,6 +128,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
@@ -136,103 +144,23 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
-#Begin Logging
-if [[ ! -d ${DIR_PROJECT}/log ]]; then
-  mkdir -p ${DIR_PROJECT}/log
-fi
-
-# if [ -z "${DIR_SAVE}" ]; then
-#   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-# fi
-if [ -z "${SESSION}" ]; then
-  subject_log=${DIR_PROJECT}/log/sub-${SUBJECT}.log
-else
-  subject_log=${DIR_PROJECT}/log/sub-${subject}_ses-${session}.log
-fi
-##################################### logging ###########################################################
-echo '#--------------------------------------------------------------------------------' >> ${subject_log}
-echo "getMotionDerivs_Nuisance.sh" >> ${subject_log}
-echo "script:${DIR_FUNC_CODE}/${scriptName}" >> ${subject_log}
-echo "software:AFNI,version:${VER_afni}" >> ${subject_log}
-echo "software:ANTs,version:${VER_ants}" >> ${subject_log}
-echo "software:FSL,version:${VER_fsl}" >> ${subject_log}
-echo "software:matlab,version:${VER_matlab}" >> ${subject_log}
-echo "owner: ${userID}" >> ${subject_log} >> ${subject_log}
-date +"start:%Y-%m-%dT%H:%M:%S%z" >> ${subject_log} >> ${subject_log}
-#########################################################################################################
-
-#Data dependencies:
- #Important directories
- FUNC_DIR=${DIR_PROJECT}/derivatives/func
- ANAT_DIR=${DIR_PROJECT}/derivatives/anat
- FUNC_PREP_DIR=${FUNC_DIR}/prep
- #EPI data
-  #Motion Parameter directory
+if [ -z "${DIR_SAVE}" ]; then
   if [ "${IS_SES}" = true ]; then
-    parDir=${FUNC_PREP_DIR}/sub-${subject}/ses-${session}
+    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
   else
-    parDir=${FUNC_PREP_DIR}/sub-${subject}
+    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
   fi
- #EPI Mask directory
- maskDir=${FUNC_DIR}/mask
-#Round up some information about the input EPI
-epiBase=`basename $epi | awk -F"." '{print $1}'`
-epiPath=`dirname $epi`
-numVols=`$ANTSPATH/PrintHeader $epi 2 | awk -F"x" '{print $NF}'`
-trVal=`$ANTSPATH/PrintHeader $epi 1 | awk -F"x" '{print $NF}'`
-if [[ ${TR} == "" ]]; then
-  TR=${trVal}
-else
-  TR=${TR}
 fi
 
-#Motion parameters (all mm) for input EPI
-epiPar=${parDir}/${epiBase}_mcImg_mm.par
-
-#Mask for EPI
-epiMask=${maskDir}/${epiBase}_mask.nii.gz
-
-#Make 4dfp style motion parameter and derivative regressors for timeseries (quadratic and derivatives)
-#Take the backwards temporal derivative in column $i of input $2 and output it as $3
-#Vectorized Matlab: d=[zeros(1,size(a,2));(a(2:end,:)-a(1:end-1,:))];
-#Bash version of above algorithm
-if [[ ! -d ${regressionDir}/friston24 ]]; then
-  mkdir -p ${regressionDir}/friston24
-fi
-
-#Reformat input to be space delimited (will be merged with quadratics, derivatives)
-cat ${epiPar} | sed s/"  "/" "/g > ${regressionDir}/friston24/${epiBase}_Friston24.par
-
-
-
-#Loop through the 6 motion parameters (mm)
-  i=1
-  while [[ ${i} -le 6 ]] ; do
-    deriveBackwards ${i} ${epiPar} ${regressionDir}/friston24
-    let i=i+1
-  done
-
-  #Push together the original file and subsequent derivatives/quadratics into one file
-  paste -d " " ${regressionDir}/friston24/${epiBase}_Friston24.par ${regressionDir}/friston24/_tmp3 ${regressionDir}/friston24/_tmp1 \
-  ${regressionDir}/friston24/_tmp2 > ${regressionDir}/friston24/${epiBase}_Friston24.par_
-  mv ${regressionDir}/friston24/${epiBase}_Friston24.par_ ${regressionDir}/friston24/${epiBase}_Friston24.par
-
-  #Clean up the last of the temporary files
-  rm ${regressionDir}/friston24/_tmp*
-
-  #The last of the formatting (6 decimal places, nice columns)
-  cat ${regressionDir}/friston24/${epiBase}_Friston24.par | awk '{for(i=1;i<=NF;i++)printf("%10.6f ",$i);printf("\n")}' \
-  > ${regressionDir}/friston24/${epiBase}_Friston24.par_
-  mv ${regressionDir}/friston24/${epiBase}_Friston24.par_ ${regressionDir}/friston24/${epiBase}_Friston24.par
-
-
-
+###==================================the actual derivation function==================================###
 #Calculate quadradics and derivatives of an input set of regressors (e.g. mcImg.par) -- Take from HCP pipeline and altered
 deriveBackwards()
 {
   i=$1
   in=$2
   outDir=$3
+
+read -p "Press [Enter] key to continue debugging..."
 
   #Var becomes a string of values from column $i in $in. Single space separated
   Var=`cat ${in} | sed s/"  "/" "/g | cut -d " " -f ${i}`
@@ -293,19 +221,104 @@ deriveBackwards()
       mv ${outDir}/_tmp2b ${outDir}/_tmp2
       paste -d " " ${outDir}/_tmp3 ${outDir}/tmp3  > ${outDir}/_tmp3b
       mv ${outDir}/_tmp3b ${outDir}/_tmp3
-      #Clean up temporary files
-      rm ${outDir}/tmp1 ${outDir}/tmp2 ${outDir}/tmp3
+      #Don't delete temp files like Tim asked - save all separately so people can use whatever they want in Tproject
+      #rm ${outDir}/tmp1 ${outDir}/tmp2 ${outDir}/tmp3
+      mv ${outDir}/tmp1 ${parDir}/backwards_derivative.par; mv ${outDir}/tmp2 ${parDir}/backwards_derivative_quadratic.par; mv ${outDir}/tmp3 ${parDir}/quadratic.par
     fi
 }
 
+#Data dependencies:
+ #Important directories
+ FUNC_DIR=${DIR_PROJECT}/derivatives/func
+ ANAT_DIR=${DIR_PROJECT}/derivatives/anat
+ FUNC_PREP_DIR=${FUNC_DIR}/prep
+ REGRESSION_TOP=${FUNC_DIR}/regressors
+ #EPI data
+  #Motion Parameter directory
+  if [ "${IS_SES}" = true ]; then
+    parDir=${REGRESSION_TOP}/sub-${SUBJECT}/ses-${SESSION}
+  else
+    parDir=${REGRESSION_TOP}/sub-${SUBJECT}
+  fi
+
+ #EPI Mask directory
+ maskDir=${FUNC_DIR}/mask
+#Round up some information about the input EPI
+epiBase=`basename ${TS_BOLD} | awk -F"." '{print $1}'`
+epiPath=`dirname ${TS_BOLD}`
+numVols=`$ANTSPATH/PrintHeader ${TS_BOLD} 2 | awk -F"x" '{print $NF}'`
+trVal=`$ANTSPATH/PrintHeader ${TS_BOLD} 1 | awk -F"x" '{print $NF}'`
+if [[ ${TR} == "" ]]; then
+  TR=${trVal}
+else
+  TR=${TR}
+fi
+
+#Motion parameters (all mm) for input EPI
+epiPar=${parDir}/${PREFIX}_moco+6.1D
+
+#Mask for EPI
+if [ -z "${MASK_BRAIN}" ]; then
+  epiMask=${maskDir}/${epiBase}_mask.nii.gz
+else
+  epiMask=${MASK_BRAIN}
+fi
+
+#Make 4dfp style motion parameter and derivative regressors for timeseries (quadratic and derivatives)
+#Take the backwards temporal derivative in column $i of input $2 and output it as $3
+#Vectorized Matlab: d=[zeros(1,size(a,2));(a(2:end,:)-a(1:end-1,:))];
+#Bash version of above algorithm
+if [[ ! -d ${parDir}/friston24 ]]; then
+  mkdir -p ${parDir}/friston24
+fi
+
+#Reformat motion param file from comma-delim to space-delim otherwise fx won't add
+tr "," " " < $epiPar > ${parDir}/friston24/epiPar_space_tmp.1D
+#epiPar_space=`less -S ${parDir}/friston24/epiPar_space_tmp.1D`
+epiPar_space=${parDir}/friston24/epiPar_space_tmp.1D
+
+#Reformat input to be space delimited (will be merged with quadratics, derivatives)
+cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
+
+read -p "Press [Enter] key to continue debugging..."
+
+#Loop through the 6 motion parameters (mm)
+  i=1
+  while [[ ${i} -le 6 ]] ; do
+    #deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
+    deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
+    let i=i+1
+  done
+
+
+  #Push together the original file and subsequent derivatives/quadratics into one file
+  paste -d " " ${parDir}/friston24/${epiBase}_Friston24.par ${parDir}/friston24/_tmp3 ${parDir}/friston24/_tmp1 \
+  ${parDir}/friston24/_tmp2 > ${parDir}/friston24/${epiBase}_Friston24.par_
+  mv ${parDir}/friston24/${epiBase}_Friston24.par_ ${parDir}/friston24/${epiBase}_Friston24.par
+
+  #Clean up the last of the temporary files
+  rm ${parDir}/friston24/_tmp*
+
+  #The last of the formatting (6 decimal places, nice columns)
+  cat ${parDir}/friston24/${epiBase}_Friston24.par | awk '{for(i=1;i<=NF;i++)printf("%10.6f ",$i);printf("\n")}' \
+  > ${parDir}/friston24/${epiBase}_Friston24.par_
+  mv ${parDir}/friston24/${epiBase}_Friston24.par_ ${parDir}/${epiBase}__moco+derivs+quadratic.par
+
+  ##=============================Edit for big data=============================##
+  # In the next script - nuisance_regression - it needs to ge passed a comma-separated list of regressors for 3dTproject
+  # So I'm just gonna make that here since all the regressors have been calculated by this point
+  #paste -d ',' ${parDir}/${epiBase}__moco+derivs+quadratic.par ${parDir}/${PREFIX}_global-anatomy.1D ${parDir}/${PREFIX}_compcorr-anatomy.1D \
+  #${parDir}/${PREFIX}_compcorr-temporal.1D > ${parDir}/${PREFIX}_all_regressors.par
+  #regressor_array=${parDir}/${epiBase}__moco+derivs+quadratic.par,${parDir}/${PREFIX}_global-anatomy.1D,${parDir}/${PREFIX}_compcorr-anatomy.1D,${parDir}/${PREFIX}_compcorr-temporal.1D
 
 #End logging
-chgrp -R ${group} ${regressionDir} > /dev/null 2>&1
-chmod -R g+rw ${regressionDir} > /dev/null 2>&1
-chgrp -R ${group} ${residualDir} > /dev/null 2>&1
-chmod -R g+rw ${residualDir} > /dev/null 2>&1
-chgrp ${group} ${subject_log} > /dev/null 2>&1
-chmod g+rw ${subject_log} > /dev/null 2>&1
-date +"end:%Y-%m-%dT%H:%M:%S%z" >> ${subject_log}
-echo "#--------------------------------------------------------------------------------" >> ${subject_log}
-echo "" >> ${subject_log}
+chgrp -R ${group} ${parDir} > /dev/null 2>&1
+chmod -R g+rw ${parDir} > /dev/null 2>&1
+
+# Write log entry on conclusion ------------------------------------------------
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi
+
+exit 0

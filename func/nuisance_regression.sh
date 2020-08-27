@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 #===============================================================================
 # Functional Timeseries -  Nuisance Regression
@@ -8,8 +8,8 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long group:,prefix:,template:,space:,\
-ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,\
-dir-scratch:,dir-code:,dir-pincsource:,\
+ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,is_ses:,\
+dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -17,13 +17,31 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
+# actions on exit, write to logs, clean scratch
 function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
+  EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
     fi
-    rmdir ${DIR_SCRATCH}
+  fi
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v ${DIR_PROJECT} ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
   fi
 }
 trap egress EXIT
@@ -39,12 +57,14 @@ PASS_HI=0
 REGRESSOR=
 TEMPLATE=HCPICBM
 SPACE=2mm
+DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
 VERBOSE=0
 HELP=false
+IS_SES=true
 
 while true; do
   case "$1" in
@@ -61,6 +81,7 @@ while true; do
     --regressor) REGRESSOR="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --is_ses) IS_SES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -103,6 +124,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
@@ -151,4 +173,3 @@ if [[ "${NO_LOG}" == "false" ]]; then
 fi
 
 exit 0
-

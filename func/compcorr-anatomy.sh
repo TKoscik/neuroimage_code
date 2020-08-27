@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 #===============================================================================
 # Functional Timeseries - Anatomical CompCorr
@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long group:,prefix:,\
+OPTS=`getopt -o hl --long group:,prefix:,is_ses:,\
 ts-bold:,label-tissue:,value-csf:,value-wm:,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -17,13 +17,31 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
+# actions on exit, write to logs, clean scratch
 function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
+  EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
     fi
-    rmdir ${DIR_SCRATCH}
+  fi
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v ${DIR_PROJECT} ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
   fi
 }
 trap egress EXIT
@@ -42,6 +60,7 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 NO_LOG=false
+IS_SES=true
 
 while true; do
   case "$1" in
@@ -53,6 +72,7 @@ while true; do
     --label-tissue) LABEL_TISSUE="$2" ; shift 2 ;;
     --value-csf) VALUE_CSF="$2" ; shift 2 ;;
     --value-wm) VALUE_WM="$2" ; shift 2 ;;
+    --is_ses) IS_SES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -82,6 +102,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --label-tissue <value>   Full path to file containing tissue type labels'
   echo '  --value-csf <value>      numeric value indicating CSF in label file, default=1'
   echo '  --value-wm <value>      numeric value indicating WM in label file, default=3'
+  echo '  --is_ses <boolean>       is there a session folder,'
+  echo '                           default: true'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
@@ -89,6 +111,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 
@@ -119,8 +142,13 @@ cat ${DIR_SCRATCH}/${PREFIX}_acompcorr_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}
 cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
 cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
 
-DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
-mkdir -p ${DIR_REGRESSORS}
+if [ "${IS_SES}" = true ]; then
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
+  mkdir -p ${DIR_REGRESSORS}
+else
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}
+  mkdir -p ${DIR_REGRESSORS}
+fi
 
 mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_REGRESSORS}/
@@ -132,4 +160,3 @@ if [[ "${NO_LOG}" == "false" ]]; then
 fi
 
 exit 0
-

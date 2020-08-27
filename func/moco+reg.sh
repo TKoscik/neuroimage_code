@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -43,16 +43,34 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, e.g., cleaning scratch on error ----------------------------
-# function egress {
-#   if [[ -d ${DIR_SCRATCH} ]]; then
-#     if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-#       rm -R ${DIR_SCRATCH}/*
-#     fi
-#     rmdir ${DIR_SCRATCH}
-#   fi
-# }
-#trap egress EXIT
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  if [[ "${DEBUG}" == "false" ]]; then
+    if [[ -d ${DIR_SCRATCH} ]]; then
+      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+        rm -R ${DIR_SCRATCH}/*
+      fi
+      rmdir ${DIR_SCRATCH}
+    fi
+  fi
+  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${NO_LOG}" == "false" ]]; then
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    if [[ ! -f ${FCN_LOG} ]]; then
+      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
+    fi
+    echo -e ${LOG_STRING} >> ${FCN_LOG}
+    if [[ -v ${DIR_PROJECT} ]]; then
+      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
+      if [[ ! -f ${PROJECT_LOG} ]]; then
+        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
+      fi
+      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
+    fi
+  fi
+}
+trap egress EXIT
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -131,8 +149,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
+  exit 0
 fi
 
+#Debugging statement - only uncomment if debugging
 #read -p "Press [Enter] key to continue debugging..."
 
 # Set up BIDs compliant variables and workspace --------------------------------
@@ -347,11 +368,4 @@ fi
 #     echo "pip could not be found"
 #     exit
 # fi
-
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
-
 exit 0
