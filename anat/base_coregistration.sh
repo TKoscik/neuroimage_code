@@ -133,7 +133,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
-DIR_XFM==${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
+DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}

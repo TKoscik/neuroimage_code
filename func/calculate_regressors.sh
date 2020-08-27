@@ -3,20 +3,22 @@
 ####################
 
 ver=1.0.0
-verDate=7/16/20
+verDate=8/24/20
 
 ####################
 
-# A script that will regress nuisance parameters from functional (task or rest) EPI data.  
+# A script that will create a variety of different regressors from functional (task or rest) EPI data.  
+# Which regressors get created depends on user choice
 # Initially made for motion derivatives/quadratics but other stuff got added
 #  1) Friston24 (motion parameters + quadratics & derivatives)
-#  2) TBD but may include framewise displacement etc.
+#  2) Framewise displacement
+#  3) TBD but may include spike regressors & more
 #
 # by Lauren Hopkins (lauren-hopkins@uiowa.edu)
 
 #########################################################################################################
 
-scriptName="getMotionDerivs_Nuisance.sh"
+scriptName="calculate_regressors.sh"
 userID=`whoami`
 
 #Source versions of programs used:
@@ -27,11 +29,7 @@ VER_matlab=${VER_matlab}
 source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
 
 # Parse inputs -----------------------------------------------------------------
-<<<<<<< HEAD
-OPTS=`getopt -o hl --long group:,prefix:,is_ses:,mask-brain:,\
-=======
-OPTS=`getopt -o hl --long group:,prefix:,is_ses:,\
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
+OPTS=`getopt -o hl --long group:,prefix:,is_ses:,moco_file:,\
 ts-bold:,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -40,33 +38,6 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-<<<<<<< HEAD
-# actions on exit, write to logs, clean scratch
-function egress {
-  EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
-    fi
-  fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
-=======
 # actions on exit, e.g., cleaning scratch on error ----------------------------
 function egress {
   if [[ -d ${DIR_SCRATCH} ]]; then
@@ -80,7 +51,6 @@ function egress {
       rm -R ${parDir}/friston24/*
     fi
     rmdir ${parDir}/friston24
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
   fi
 }
 trap egress EXIT
@@ -90,11 +60,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 GROUP=
 PREFIX=
 TS_BOLD=
-LABEL_TISSUE=
-VALUE_CSF=1
-VALUE_WM=3
 DIR_SAVE=
-MASK_BRAIN=
 DIR_SCRATCH=/Shared/inc_scratch/${userID}_scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_FUNC_CODE=${DIR_CODE}/func
@@ -112,7 +78,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --is_ses) IS_SES="$2" ; shift 2 ;;
-    --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
+    --moco_file) MOCO_FILE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -141,6 +107,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --ts-bold <value>        Full path to single, run timeseries'
   echo '  --is_ses <boolean>       is there a session folder,'
   echo '                           default: true'
+  echo '  --moco_file <value>      Full path to moco+6 or moco+12 file'
+  echo '                           default: moco+6 file in regressor directory'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
@@ -148,7 +116,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
-  NO_LOG=true
   exit 0
 fi
 
@@ -164,20 +131,6 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
-<<<<<<< HEAD
-if [ -z "${DIR_SAVE}" ]; then
-  if [ "${IS_SES}" = true ]; then
-    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-  else
-    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
-  fi
-fi
-=======
-# if [ -z "${DIR_SAVE}" ]; then
-#   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-# fi
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
-
 ###==================================the actual derivation function==================================###
 #Calculate quadradics and derivatives of an input set of regressors (e.g. mcImg.par) -- Take from HCP pipeline and altered
 deriveBackwards()
@@ -185,8 +138,6 @@ deriveBackwards()
   i=$1
   in=$2
   outDir=$3
-
-read -p "Press [Enter] key to continue debugging..."
 
   #Var becomes a string of values from column $i in $in. Single space separated
   Var=`cat ${in} | sed s/"  "/" "/g | cut -d " " -f ${i}`
@@ -263,17 +214,10 @@ read -p "Press [Enter] key to continue debugging..."
   #Motion Parameter directory
   if [ "${IS_SES}" = true ]; then
     parDir=${REGRESSION_TOP}/sub-${SUBJECT}/ses-${SESSION}
-<<<<<<< HEAD
-  else
-    parDir=${REGRESSION_TOP}/sub-${SUBJECT}
-  fi
-
-=======
   else 
     parDir=${REGRESSION_TOP}/sub-${SUBJECT}
   fi
   
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
  #EPI Mask directory
  maskDir=${FUNC_DIR}/mask
 #Round up some information about the input EPI
@@ -287,19 +231,16 @@ else
   TR=${TR}
 fi
 
+# If no moco file is passed default to moco+6 in the subject's regressor directory
+ if [ -z "${MOCO_FILE}" ]; then
+    MOCO_FILE=${parDir}/${PREFIX}_moco+6.1D
+ fi
+
 #Motion parameters (all mm) for input EPI
-epiPar=${parDir}/${PREFIX}_moco+6.1D
+epiPar=${MOCO_FILE}
 
 #Mask for EPI
-<<<<<<< HEAD
-if [ -z "${MASK_BRAIN}" ]; then
-  epiMask=${maskDir}/${epiBase}_mask.nii.gz
-else
-  epiMask=${MASK_BRAIN}
-fi
-=======
 epiMask=${maskDir}/${epiBase}_mask.nii.gz
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
 
 #Make 4dfp style motion parameter and derivative regressors for timeseries (quadratic and derivatives)
 #Take the backwards temporal derivative in column $i of input $2 and output it as $3
@@ -309,30 +250,14 @@ if [[ ! -d ${parDir}/friston24 ]]; then
   mkdir -p ${parDir}/friston24
 fi
 
-<<<<<<< HEAD
-#Reformat motion param file from comma-delim to space-delim otherwise fx won't add
-tr "," " " < $epiPar > ${parDir}/friston24/epiPar_space_tmp.1D
-#epiPar_space=`less -S ${parDir}/friston24/epiPar_space_tmp.1D`
-epiPar_space=${parDir}/friston24/epiPar_space_tmp.1D
-
-#Reformat input to be space delimited (will be merged with quadratics, derivatives)
-cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
-
-read -p "Press [Enter] key to continue debugging..."
-=======
 #Reformat input to be space delimited (will be merged with quadratics, derivatives)
 cat ${epiPar} | sed s/"  "/" "/g > ${parDir}/friston24/${epiBase}_Friston24.par
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
 
-#Loop through the 6 motion parameters (mm)
+#Loop through the 6 or 12 motion parameters (mm)
+num_params=`awk -F '[\t,]' '{print  NF}' ${MOCO_FILE} | head -n 1`
   i=1
-  while [[ ${i} -le 6 ]] ; do
-<<<<<<< HEAD
-    #deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
-    deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
-=======
+  while [[ ${i} -le ${num_params} ]] ; do
     deriveBackwards ${i} ${epiPar} ${parDir}/friston24
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
     let i=i+1
   done
 
@@ -367,8 +292,4 @@ if [[ "${NO_LOG}" == "false" ]]; then
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 
-<<<<<<< HEAD
 exit 0
-=======
-exit 0
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072

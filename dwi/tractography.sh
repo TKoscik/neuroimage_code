@@ -173,11 +173,11 @@ FIB_FILE=(`ls ${DIR_SCRATCH}/${PREFIX}*fib.gz`)
 #http://dsi-studio.labsolver.org/Manual/command-line-for-dsi-studio
 
 #Fiber tracking
-${DSI_STUDIO} --action=trk \
---source=${FIB_FILE} \
---connectivity=P56_annotation \
---fa_threshold=0.2 \
---output=${DIR_SCRATCH}/${PREFIX}_wb-track.trk.gz
+#${DSI_STUDIO} --action=trk \
+#--source=${FIB_FILE} \
+#--connectivity=P56_annotation \
+#--fa_threshold=0.2 \
+#--output=${DIR_SCRATCH}/${PREFIX}_wb-track.trk.gz
 
 #Move files to save directory
 mv ${FIB_FILE} ${DIR_SAVE}/${PREFIX}.fib.gz

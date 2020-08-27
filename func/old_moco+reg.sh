@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -24,17 +24,11 @@
 # 9) Depad motion-corrected, normalized BOLD TS
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-27
-# ------------------------------------------------------------------------------
-# UPDATED BY L. HOPKINS 2020-07-02
-# 10) Added 4D file check
-# 11) Added option for no session variable
-# 12) Stack check
-# TODO: Add QC function or source QC script 
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long group:,prefix:,\
-ts-bold:,target:,template:,space:,is_ses:,\
+ts-bold:,target:,template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -43,31 +37,13 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-# actions on exit, write to logs, clean scratch
+# actions on exit, e.g., cleaning scratch on error ----------------------------
 function egress {
-  EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
-      fi
-      rmdir ${DIR_SCRATCH}
+  if [[ -d ${DIR_SCRATCH} ]]; then
+    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+      rm -R ${DIR_SCRATCH}/*
     fi
-  fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    rmdir ${DIR_SCRATCH}
   fi
 }
 trap egress EXIT
@@ -82,16 +58,13 @@ TEMPLATE=
 SPACE=
 DIR_SAVE=/Shared/inc_scratch/hopkins_scratch
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-#For testing below
-#DIR_SCRATCH=/Shared/inc_scratch/scratch_20200704T155704922622532/
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-VERBOSE=1
+VERBOSE=0
 KEEP=false
 NO_LOG=false
-IS_SES=true
 
 while true; do
   case "$1" in
@@ -105,9 +78,8 @@ while true; do
     --target) TARGET="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
-    --is_ses) IS_SES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
@@ -132,8 +104,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --is_ses <boolean>       is there a session folder,'
-  echo '                           default: true'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
@@ -149,12 +119,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-pincsource <value> directory for PINC sourcefiles'
   echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
-  NO_LOG=true
-  exit 0
 fi
-
-#Debugging statement - only uncomment if debugging
-#read -p "Press [Enter] key to continue debugging..."
 
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
@@ -183,12 +148,6 @@ NUM_TR=`PrintHeader ${TS_BOLD} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1
 TR=`PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1`
 
 ### put check in here for 4d file.
-### L. Hopkins 7/2/2020
-if [ "${NUM_TR}" == 1 ]; then
-    echo "Input file is not a 4D file. Aborting."
-    exit
-fi
-
 
 # Motion correction -----------------------------------------------------------
 # pad image
@@ -210,7 +169,7 @@ antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NUM_TR} -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
   -t Rigid[0.1] -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
-  -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+  -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1  
 
 cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
 cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
@@ -231,26 +190,17 @@ rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 
 # get brain mask of mean BOLD -------------------------------------------------
 bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
-read -p "Press [Enter] key to continue debugging..."
-
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 
 # Registration to subject space -----------------------------------------------
-# L. Hopkins 7/22/2020 - Add options for situations where there is no SESSION info
-if [ "${IS_SES}" = true ]; then
-  T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}_ses-${SESSION}*${TARGET}.nii.gz`)
-  T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}_ses-${SESSION}*mask-brain*.nii.gz`)
-  # use raw to rigid transform to initialize, if it exists
-  RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}*${TARGET}+raw*.mat`)
+T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}_ses-${SESSION}*${TARGET}.nii.gz`)
+T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}_ses-${SESSION}*mask-brain*.nii.gz`)
+# use raw to rigid transform to initialize, if it exists
+RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}*${TARGET}+raw*.mat`)
+if [[ -f ${RAW_TO_RIGID} ]]; then
+  INIT_XFM=${RAW_TO_RIGID}
 else
-  T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}*${TARGET}.nii.gz`)
-  T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}*mask-brain*.nii.gz`)
-  RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}*${TARGET}+raw*.mat`)
-  if [[ -f ${RAW_TO_RIGID} ]]; then
-    INIT_XFM=${RAW_TO_RIGID}
-  else
-    INIT_XFM=[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
-  fi
+  INIT_XFM=[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
 fi
 
 antsRegistration \
@@ -269,7 +219,7 @@ antsRegistration \
   -m Mattes[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32] \
   -c [40x20x0,1e-7,8] -f 4x2x1 -s 2x1x0vox \
   -x [${T1_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]
-
+  
 # collapse transforms to deformation field
 antsApplyTransforms -d 3 \
   -o [${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz,1] \
@@ -278,21 +228,15 @@ antsApplyTransforms -d 3 \
   -r ${T1}
 
 # Push mean bold to template --------------------------------------------------
-if [ "${IS_SES}" = true ]; then
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
-else
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
-fi
+XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
 
 ### ADD in here what to do if stack is not found but components are
-### L. Hopkins 7/2/2020 -- still editing
-# Holy shit is this even right?
-if [ ! -z "${XFM_NORM}" ]; then
-  echo "Stack exists - applying transforms mean BOLD to template"
-else
-  echo "Stack does not exist - making stack from components"
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
-fi
+### L. Hopkins 7/2/2020
+#if [ ! -f ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz ]; then
+#  if [ ]; then
+#
+#  fi
+#fi
 
 antsApplyTransforms -d 3 \
   -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
@@ -330,11 +274,7 @@ fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
 rm ${MERGE_LS[@]}
 
 # Move files to appropriate locations -----------------------------------------
-if [ "${IS_SES}" = true ]; then
-  DIR_REGRESSOR=${DIR_PROJECT}/derivatives/func/regressors/sub-${SUBJECT}/ses-${SESSION}
-else
-  DIR_REGRESSOR=${DIR_PROJECT}/derivatives/func/regressors/sub-${SUBJECT}
-fi
+DIR_REGRESSOR=${DIR_PROJECT}/derivatives/func/regressors/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_REGRESSOR}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/
 mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/
@@ -348,24 +288,21 @@ mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
 mkdir -p ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
   ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
-
+  
 if [[ "${KEEP}" == "true" ]]; then
-  if [ "${IS_SES}" = true ]; then
-    mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
-    mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}/
-  else
-    mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}
-    mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/
-  fi
+  mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}/
 fi
 
 #===============================================================================
 # End of function
 #===============================================================================
 
-###ADD QC function - mriqc
-# if [ ! command -v pip &> /dev/null ]; then
-#     echo "pip could not be found"
-#     exit
-# fi
+# Write log entry on conclusion ------------------------------------------------
+if [[ "${NO_LOG}" == "false" ]]; then
+  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
+  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
+fi
+
 exit 0
+

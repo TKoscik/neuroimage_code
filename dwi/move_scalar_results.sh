@@ -115,7 +115,7 @@ mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_PROJECT}/derivatives/dwi/B0+mean/
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/mask
 mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIR_PROJECT}/derivatives/dwi/mask
 
-mkdir -p ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION
+mkdir -p ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 mv ${DIR_DWI}/*xfm* ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
 
 mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_raw
