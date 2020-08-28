@@ -27,11 +27,7 @@ VER_matlab=${VER_matlab}
 source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
 
 # Parse inputs -----------------------------------------------------------------
-<<<<<<< HEAD
 OPTS=`getopt -o hl --long group:,prefix:,is_ses:,mask-brain:,\
-=======
-OPTS=`getopt -o hl --long group:,prefix:,is_ses:,\
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
 ts-bold:,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -40,7 +36,6 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
-<<<<<<< HEAD
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
@@ -66,24 +61,6 @@ function egress {
       fi
       echo -e ${LOG_STRING} >> ${PROJECT_LOG}
     fi
-=======
-# actions on exit, e.g., cleaning scratch on error ----------------------------
-function egress {
-  if [[ -d ${DIR_SCRATCH} ]]; then
-    if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-      rm -R ${DIR_SCRATCH}/*
-    fi
-    rmdir ${DIR_SCRATCH}
-  fi
-  if [[ -d ${parDir}/friston24 ]]; then
-    if [[ "$(ls -A ${parDir}/friston24)" ]]; then
-      rm -R ${parDir}/friston24/*
-    fi
-    rmdir ${parDir}/friston24
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
-  fi
-}
-trap egress EXIT
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -164,7 +141,6 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
 fi
 
-<<<<<<< HEAD
 if [ -z "${DIR_SAVE}" ]; then
   if [ "${IS_SES}" = true ]; then
     DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
@@ -172,11 +148,6 @@ if [ -z "${DIR_SAVE}" ]; then
     DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
   fi
 fi
-=======
-# if [ -z "${DIR_SAVE}" ]; then
-#   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-# fi
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
 
 ###==================================the actual derivation function==================================###
 #Calculate quadradics and derivatives of an input set of regressors (e.g. mcImg.par) -- Take from HCP pipeline and altered
@@ -185,8 +156,6 @@ deriveBackwards()
   i=$1
   in=$2
   outDir=$3
-
-read -p "Press [Enter] key to continue debugging..."
 
   #Var becomes a string of values from column $i in $in. Single space separated
   Var=`cat ${in} | sed s/"  "/" "/g | cut -d " " -f ${i}`
@@ -263,17 +232,10 @@ read -p "Press [Enter] key to continue debugging..."
   #Motion Parameter directory
   if [ "${IS_SES}" = true ]; then
     parDir=${REGRESSION_TOP}/sub-${SUBJECT}/ses-${SESSION}
-<<<<<<< HEAD
   else
     parDir=${REGRESSION_TOP}/sub-${SUBJECT}
   fi
 
-=======
-  else 
-    parDir=${REGRESSION_TOP}/sub-${SUBJECT}
-  fi
-  
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
  #EPI Mask directory
  maskDir=${FUNC_DIR}/mask
 #Round up some information about the input EPI
@@ -291,15 +253,11 @@ fi
 epiPar=${parDir}/${PREFIX}_moco+6.1D
 
 #Mask for EPI
-<<<<<<< HEAD
 if [ -z "${MASK_BRAIN}" ]; then
   epiMask=${maskDir}/${epiBase}_mask.nii.gz
 else
   epiMask=${MASK_BRAIN}
 fi
-=======
-epiMask=${maskDir}/${epiBase}_mask.nii.gz
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
 
 #Make 4dfp style motion parameter and derivative regressors for timeseries (quadratic and derivatives)
 #Take the backwards temporal derivative in column $i of input $2 and output it as $3
@@ -309,7 +267,6 @@ if [[ ! -d ${parDir}/friston24 ]]; then
   mkdir -p ${parDir}/friston24
 fi
 
-<<<<<<< HEAD
 #Reformat motion param file from comma-delim to space-delim otherwise fx won't add
 tr "," " " < $epiPar > ${parDir}/friston24/epiPar_space_tmp.1D
 #epiPar_space=`less -S ${parDir}/friston24/epiPar_space_tmp.1D`
@@ -318,21 +275,10 @@ epiPar_space=${parDir}/friston24/epiPar_space_tmp.1D
 #Reformat input to be space delimited (will be merged with quadratics, derivatives)
 cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
 
-read -p "Press [Enter] key to continue debugging..."
-=======
-#Reformat input to be space delimited (will be merged with quadratics, derivatives)
-cat ${epiPar} | sed s/"  "/" "/g > ${parDir}/friston24/${epiBase}_Friston24.par
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
-
 #Loop through the 6 motion parameters (mm)
   i=1
   while [[ ${i} -le 6 ]] ; do
-<<<<<<< HEAD
-    #deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
     deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
-=======
-    deriveBackwards ${i} ${epiPar} ${parDir}/friston24
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
     let i=i+1
   done
 
@@ -367,8 +313,4 @@ if [[ "${NO_LOG}" == "false" ]]; then
   date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
 fi
 
-<<<<<<< HEAD
 exit 0
-=======
-exit 0
->>>>>>> 7e50df46b64669b3e26bd165bddaf7addadcc072
