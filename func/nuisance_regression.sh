@@ -130,6 +130,7 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
+source /Shared/pinc/sharedopt/apps/sourcefiles/afni_source.sh
 
 DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
 SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
