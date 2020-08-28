@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ####################
 
@@ -7,7 +7,7 @@ verDate=7/16/20
 
 ####################
 
-# A script that will regress nuisance parameters from functional (task or rest) EPI data.  
+# A script that will regress nuisance parameters from functional (task or rest) EPI data.
 # Initially made for motion derivatives/quadratics but other stuff got added
 #  1) Friston24 (motion parameters + quadratics & derivatives)
 #  2) TBD but may include framewise displacement etc.
@@ -61,6 +61,9 @@ function egress {
       fi
       echo -e ${LOG_STRING} >> ${PROJECT_LOG}
     fi
+  fi
+}
+trap egress EXIT
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -156,6 +159,8 @@ deriveBackwards()
   i=$1
   in=$2
   outDir=$3
+
+read -p "Press [Enter] key to continue debugging..."
 
   #Var becomes a string of values from column $i in $in. Single space separated
   Var=`cat ${in} | sed s/"  "/" "/g | cut -d " " -f ${i}`
@@ -278,6 +283,7 @@ cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
 #Loop through the 6 motion parameters (mm)
   i=1
   while [[ ${i} -le 6 ]] ; do
+    #deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
     deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
     let i=i+1
   done
