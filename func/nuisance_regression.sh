@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 #===============================================================================
 # Functional Timeseries -  Nuisance Regression
@@ -145,6 +145,22 @@ if [ -z "${DIR_SAVE}" ]; then
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
+
+##--------------- resample mask to fit input grid bc its off by like 1mm ---------------##
+if [ -z "${MASK_BRAIN}" ]; then
+  echo "No mask is provided."
+else
+  if [ -f "${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz" ]; then
+    rm ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
+  fi
+  mask_resampling=${MASK_BRAIN}
+  maskBase=`basename ${mask_resampling} | awk -F"." '{print $1}'`
+  AFNI="3dresample -master ${TS_BOLD}"
+  AFNI="${AFNI} -prefix ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz"
+  AFNI="${AFNI} -input ${mask_resampling}"
+  eval ${AFNI}
+  MASK_BRAIN=${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
+fi
 
 #==============================================================================
 # partial out nuisance variance
