@@ -203,7 +203,73 @@ deriveBackwards()
       mv ${outDir}/tmp1 ${parDir}/backwards_derivative.par; mv ${outDir}/tmp2 ${parDir}/backwards_derivative_quadratic.par; mv ${outDir}/tmp3 ${parDir}/quadratic.par
     fi
 }
+#================================================================================================================
 
+###==================================the actual framewise displacement function==================================###
+#Calculate cumulative FD from TR to TR, if above 0.25mm, create a regression file (0 for all other TRs, 1 for TR above limit)
+  #Will have one file TR that is above limit
+  #sqrt((trN-(trN-1))^2)
+spikeRegressionSetup()
+{
+  input=$1
+  outBase=$2
+  outDir=$3
+
+  #Determine number of TRs total
+  Length=`cat ${input} | wc -l`
+
+  #Loop through the TRs
+  i=2
+  while [[ $i -le $Length ]];
+    do
+
+    #Set index for previous TR
+    let j=i-1
+
+    #Calculate cumulative motion for current TR, preceeding TR
+    iSum=`cat $input | head -n+${i} | tail -n-1 | awk '{ for(y=1; y<=NF;y++) z+=$y; print z; z=0 }'`
+    jSum=`cat $input | head -n+${j} | tail -n-1 | awk '{ for(y=1; y<=NF;y++) z+=$y; print z; z=0 }'`
+
+    #Calculate rms of cumulative motion between TRs
+    rmsVal=`echo ${iSum} ${jSum} | awk '{print sqrt(($1-$2)^2)}'`
+
+    #If rms is >= 0.25, create a spike regression list (1 for current TR, 0 for all others)
+    if (( $(echo "${rmsVal} >= 0.25" | bc -l) )); then
+      let l=i+1
+
+      #Empty TRs before spike TR
+      pre=1
+      while [[ ${pre} -lt ${i} ]];
+        do
+        echo "0" >> $outDir/${outBase}_spike_${i}.1D
+        let pre=pre+1       
+      done
+
+      #Spike TR
+      echo "1" >> $outDir/${outBase}_spike_${i}.1D
+
+      #Empty TRs after spike TR
+      post=${l}
+      while [[ ${post} -le ${Length} ]];
+        do
+        echo "0" >> $outDir/${outBase}_spike_${i}.1D
+        let post=post+1
+      done
+
+    fi
+
+    let i=i+1
+  done
+
+  #Combine all spikes into one file
+  paste -d " " `ls -1tv $outDir/${outBase}_spike_*.1D` > $outDir/${outBase}_spikes.1D
+  rm $outDir/${outBase}_spike_*.1D
+}
+#================================================================================================================
+
+    ####################
+    #  derivSetup      #
+    ####################
 #Data dependencies:
  #Important directories
  FUNC_DIR=${DIR_PROJECT}/derivatives/func
@@ -251,7 +317,7 @@ if [[ ! -d ${parDir}/friston24 ]]; then
 fi
 
 #Reformat input to be space delimited (will be merged with quadratics, derivatives)
-cat ${epiPar} | sed s/"  "/" "/g > ${parDir}/friston24/${epiBase}_Friston24.par
+cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
 
 #Loop through the 6 or 12 motion parameters (mm)
 num_params=`awk -F '[\t,]' '{print  NF}' ${MOCO_FILE} | head -n 1`
@@ -260,7 +326,6 @@ num_params=`awk -F '[\t,]' '{print  NF}' ${MOCO_FILE} | head -n 1`
     deriveBackwards ${i} ${epiPar} ${parDir}/friston24
     let i=i+1
   done
-
 
   #Push together the original file and subsequent derivatives/quadratics into one file
   paste -d " " ${parDir}/friston24/${epiBase}_Friston24.par ${parDir}/friston24/_tmp3 ${parDir}/friston24/_tmp1 \
@@ -281,6 +346,23 @@ num_params=`awk -F '[\t,]' '{print  NF}' ${MOCO_FILE} | head -n 1`
   #paste -d ',' ${parDir}/${epiBase}__moco+derivs+quadratic.par ${parDir}/${PREFIX}_global-anatomy.1D ${parDir}/${PREFIX}_compcorr-anatomy.1D \
   #${parDir}/${PREFIX}_compcorr-temporal.1D > ${parDir}/${PREFIX}_all_regressors.par
   #regressor_array=${parDir}/${epiBase}__moco+derivs+quadratic.par,${parDir}/${PREFIX}_global-anatomy.1D,${parDir}/${PREFIX}_compcorr-anatomy.1D,${parDir}/${PREFIX}_compcorr-temporal.1D
+
+    ####################
+    #  spikeSetup      #
+    ####################
+
+ # if [[ ${doSpikeRegression} -eq 1 ]]; then
+
+    if [[ ! -d ${parDir}/spikes ]]; then
+      mkdir -p ${parDir}/spikes
+    fi
+
+    tr "," " " < ${parDir}/$epiPar > ${parDir}/epiPar_space_tmp.1D
+    epiPar_space=`less -S ${parDir}/epiPar_space_tmp.1D`
+    #Create movement regression spikes (rms motion TR difference > 0.25)
+    spikeRegressionSetup ${epiPar_space} ${epiBase} ${parDir}/spikes
+
+ # fi
 
 #End logging
 chgrp -R ${group} ${parDir} > /dev/null 2>&1
