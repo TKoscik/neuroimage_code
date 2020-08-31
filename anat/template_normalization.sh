@@ -150,11 +150,13 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
+IMAGE=(${IMAGE//,/ })
+NUM_IMAGE=${#IMAGE[@]}
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]}`
 fi
 
 DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
@@ -164,8 +166,6 @@ mkdir -p ${DIR_XFM}
 #===============================================================================
 # Start of Function
 #===============================================================================
-IMAGE=(${IMAGE//,/ })
-NUM_IMAGE=${#IMAGE[@]}
 
 # get and set modalities for output and fixed image targets
 DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}
