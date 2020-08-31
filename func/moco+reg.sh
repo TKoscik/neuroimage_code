@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration

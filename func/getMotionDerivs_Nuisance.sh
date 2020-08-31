@@ -7,7 +7,7 @@ verDate=7/16/20
 
 ####################
 
-# A script that will regress nuisance parameters from functional (task or rest) EPI data.  
+# A script that will regress nuisance parameters from functional (task or rest) EPI data.
 # Initially made for motion derivatives/quadratics but other stuff got added
 #  1) Friston24 (motion parameters + quadratics & derivatives)
 #  2) TBD but may include framewise displacement etc.
@@ -237,10 +237,10 @@ read -p "Press [Enter] key to continue debugging..."
   #Motion Parameter directory
   if [ "${IS_SES}" = true ]; then
     parDir=${REGRESSION_TOP}/sub-${SUBJECT}/ses-${SESSION}
-  else 
+  else
     parDir=${REGRESSION_TOP}/sub-${SUBJECT}
   fi
-  
+
  #EPI Mask directory
  maskDir=${FUNC_DIR}/mask
 #Round up some information about the input EPI
@@ -279,7 +279,10 @@ epiPar_space=${parDir}/friston24/epiPar_space_tmp.1D
 
 #Reformat input to be space delimited (will be merged with quadratics, derivatives)
 cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
+<<<<<<< HEAD
 
+=======
+>>>>>>> 434b05c28b44041eebd17d606da5311880e553c1
 
 #Loop through the 6 motion parameters (mm)
   i=1

@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash
 
 #===============================================================================
 # Functional Timeseries - Temporal CompCorr
@@ -158,4 +158,3 @@ if [[ "${NO_LOG}" == "false" ]]; then
 fi
 
 exit 0
-

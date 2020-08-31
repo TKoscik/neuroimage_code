@@ -160,4 +160,3 @@ if [[ "${NO_LOG}" == "false" ]]; then
 fi
 
 exit 0
-
