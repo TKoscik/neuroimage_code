@@ -331,31 +331,31 @@ rm ${MERGE_LS[@]}
 
 # Move files to appropriate locations -----------------------------------------
 if [ "${IS_SES}" = true ]; then
-  DIR_REGRESSOR=${DIR_PROJECT}/derivatives/func/regressors/sub-${SUBJECT}/ses-${SESSION}
+  DIR_REGRESSOR=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
 else
-  DIR_REGRESSOR=${DIR_PROJECT}/derivatives/func/regressors/sub-${SUBJECT}
+  DIR_REGRESSOR=${DIR_SAVE}/regressors/sub-${SUBJECT}
 fi
 mkdir -p ${DIR_REGRESSOR}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/
 mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/
 
-mkdir -p ${DIR_PROJECT}/derivatives/func/mask
+mkdir -p ${DIR_SAVE}/mask
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
+  ${DIR_SAVE}/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
+  ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
 
-mkdir -p ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}
+mkdir -p ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
+  ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
 
 if [[ "${KEEP}" == "true" ]]; then
   if [ "${IS_SES}" = true ]; then
-    mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}
-    mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/ses-${SESSION}/
+    mkdir -p ${DIR_SAVE}/prep/sub-${SUBJECT}/ses-${SESSION}
+    mv ${DIR_SCRATCH}/* ${DIR_SAVE}/prep/sub-${SUBJECT}/ses-${SESSION}/
   else
-    mkdir -p ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}
-    mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/sub-${SUBJECT}/
+    mkdir -p ${DIR_SAVE}/prep/sub-${SUBJECT}
+    mv ${DIR_SCRATCH}/* ${DIR_SAVE}/prep/sub-${SUBJECT}/
   fi
 fi
 
