@@ -19,7 +19,7 @@ function egress {
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          rm -R ${DIR_SCRATCH}/*
+          rm -R ${DIR_SCRATCH}
         else
           rmdir ${DIR_SCRATCH}
         fi
