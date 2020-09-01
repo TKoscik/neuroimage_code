@@ -128,9 +128,11 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+XFM=(${XFM//,/ })
+N_XFM=${#XFM[@]}
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${XFM[0]}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
@@ -140,8 +142,7 @@ mkdir -p ${DIR_SCRATCH}
 #==============================================================================
 # Start of function
 #==============================================================================
-XFM=(${XFM//,/ })
-N_XFM=${#XFM[@]}
+
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
   FROM=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "from"`
