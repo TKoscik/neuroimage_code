@@ -171,6 +171,8 @@ if [[ "${N_XFM}" > 1 ]]; then
     xfm_fcn="${xfm_fcn} -t ${XFM[$[{i}]}"
   done
   eval ${xfm_fcn}
+else
+  cp ${XFM} ${DIR_SCRATCH}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz
 fi
 
 # Create Jacobian Determinant imgae
