@@ -490,7 +490,7 @@ T1rhonewSL50	anat	-	SL50	-	-	-	-	-	-	T1rho
 Rest3PE1t299987	func	rest	-	-	-	-	-	-	-	bold
 T1rhonewSL10	anat	-	SL10	-	-	-	-	-	-	T1rho
 Rest4PE2t299987	func	rest	-	-	-	-	-	-	-	bold
-
+SEMapDWIPE1t9859	fmap	-	b0FieldMap	-	-	-	-	-	-	dwi
 
 
 
