@@ -246,6 +246,15 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
     for (( i=0; i<${NUM_IMAGE}; i++ )); do
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
     done
+    reg_fcn="${reg_fcn} -x [NULL,NULL]"
+    reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
+    reg_fcn="${reg_fcn} -f 8x4x2x1"
+    reg_fcn="${reg_fcn} -s 3x2x1x0vox"
+
+    reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
+    for (( i=0; i<${NUM_IMAGE}; i++ )); do
+      reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+    done
     if [ -n ${MASK} ]; then
       reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
     else
