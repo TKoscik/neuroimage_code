@@ -148,4 +148,16 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-tsv_hdr=(`head -1 ${ID_LS}`)
+SUBJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f pariticpant_id`)
+SESSION=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f session_id`)
+PROJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f project`)
+DIRECTORY=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f directory`)
+
+if [[ "${DIRECTORY}" == "NULL" ]]; then
+  if [[ "${PROJECT}" == "NULL" ]]; then
+    if [[ "${DIR_PROJECT}" == "NULL" ]]; then
+      DIR_PROJECT=`${DIR_CODE}/`
+    else
+    fi
+  fi
+fi

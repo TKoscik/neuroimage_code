@@ -62,14 +62,19 @@ fi
 HDR=(`head -1 ${INPUT}`)
 HDR=(${HDR//${DELIM}/ })
 
+WHICH_COL=NULL
 for i in "${!HDR[@]}"; do
    if [[ "${HDR[${i}]}" == "${FIELD}" ]]; then
        WHICH_COL=${i}
    fi
 done
 
-WHICH_COL=$((WHICH_COL+1))
-cut -d${DELIM} -f${WHICH_COL} < ${INPUT}
+if [[ "${WHICH_COL}" == "NULL" ]]; then
+  echo NULL
+else
+  WHICH_COL=$((WHICH_COL+1))
+  cut -d${DELIM} -f${WHICH_COL} < ${INPUT}
+fi
 
 
 #===============================================================================
