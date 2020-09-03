@@ -1,5 +1,13 @@
 #!/bin/bash -x
 
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
+
+
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
 #-------------------------------------------------------------------------------
@@ -32,7 +40,7 @@
 # TODO: Add QC function or source QC script
 #===============================================================================
 
-userID=`whoami`
+#userID=`whoami`
 set -e
 
 # actions on exit, write to logs, clean scratch
@@ -87,7 +95,7 @@ TARGET=T1w
 TEMPLATE=
 SPACE=
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${userID}_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
 #For testing below
 #DIR_SCRATCH=~
 DIR_CODE=/Shared/inc_scratch/code
