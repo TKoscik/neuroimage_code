@@ -43,7 +43,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvl --long group:,prefix:,\
+OPTS=`getopt -o hdvl --long prefix:,\
 image:,mask:,mask-dil:,template:,space:,\
 affine-only,hardcore,stack-xfm,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
@@ -55,7 +55,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=Research-INC_img_core
 PREFIX=
 IMAGE=
 MASK=
@@ -79,7 +78,6 @@ while true; do
     -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
@@ -113,7 +111,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
   echo '                           default=Research-INC_img_core'
   echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image(s) to align.'
