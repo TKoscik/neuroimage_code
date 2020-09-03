@@ -151,24 +151,14 @@ fi
 MOVING=(${MOVING\\,\ })
 N=${#MOVING[@]}
 
-if [[ "${MOVING_MASK,,}" != "null" ]]; then
-  MOVING_MASK=(${MOVING_MASK\\,\ })
-  if [[ "${N}" != "${#MOVING_MASK[@]}" ]]; then exit 1; fi
-else
-  for (( i=0; i<${N}; i ++ )); do
-    MOVING_MASK+=(NULL)
-    FIXED_MASK+=(NULL)
-  done
+if [[ "${MOVING_MASK,,}" == "null" ]]; then
+  FIXED_MASK=NULL
 fi
 
 if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED\\,\ })
   N_FIXED=${#FIXED[@]}
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
-  
-  FIXED_MASK=(${FIXED_MASK\\,\ })
-  N_FIXED_MASK=${#FIXED_MASK[@]}
-  if [[ "${N_FIXED_MASK}" != "${N}" ]]; then exit 1; fi
 else
   for (( i=0; i<${N_MOVING}; i++ )); do
     MOD=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"`
@@ -177,10 +167,10 @@ else
     else
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
     fi
-    if [[ "${MOVING_MASK[0]" != "NULL" ]]; then
-      FIXED_MASK+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz)
-    fi
   done
+  if [[ "${MOVING_MASK}" != "NULL" ]]; then
+    FIXED_MASK=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz
+  fi
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
@@ -200,16 +190,12 @@ mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # Dilate Masks
-if [[ "${MOVING_MASK[0]" != "NULL" ]]; then
+if [[ "${MOVING_MASK}" != "NULL" ]]; then
   if [[ "${MASK_DIL}" > 0 ]]; then
-    for (( i=0; i<${N}; i++ )); do
-    ImageMath 3 ${DIR_SCRATCH}/MOVING_mask-${i}+dil${MASK_DIL}.nii.gz \
-      MD ${MOVING_MASK[${i}]} ${MASK_DIL}
-    MOVING_MASK[${i}]=${DIR_SCRATCH}/MOVING_mask-${i}+dil${MASK_DIL}.nii.gz
-    
-    ImageMath 3 ${DIR_SCRATCH}/FIXED_mask-${i}+dil${MASK_DIL}.nii.gz \
-      MD ${FIXED_MASK[${i}]} ${MASK_DIL}
-    FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_mask-${i}+dil${MASK_DIL}.nii.gz
+    ImageMath 3 ${DIR_SCRATCH}/MOVING_mask-dil${MASK_DIL}.nii.gz MD ${MOVING_MASK} ${MASK_DIL}
+    ImageMath 3 ${DIR_SCRATCH}/FIXED_mask-dil${MASK_DIL}.nii.gz MD ${FIXED_MASK} ${MASK_DIL}
+    MOVING_MASK=${DIR_SCRATCH}/MOVING_mask-dil${MASK_DIL}.nii.gz    
+    FIXED_MASK=${DIR_SCRATCH}/FIXED_mask-dil${MASK_DIL}.nii.gz
   fi
 fi
 
@@ -228,72 +214,55 @@ reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
 
 if [[ "${RIGID_ONLY}" == "false" ]]; then
-   reg_fcn="${reg_fcn} -t Affine[0.5]"
-   for (( i=0; i<${NUM_IMAGE}; i++ )); do
-     reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,32,Regular,0.25]"
-   done
-   if [ -n ${MASK} ]; then
-     reg_fcn="${reg_fcn} -x [NULL,NULL]"
-   fi
+  reg_fcn="${reg_fcn} -t Affine[0.5]"
+  for (( i=0; i<${N}; i++ )); do
+    reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
+  done
+  reg_fcn="${reg_fcn} -x [NULL,NULL]"
   reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
   reg_fcn="${reg_fcn} -f 8x8x4x2x1"
   reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
   reg_fcn="${reg_fcn} -t Affine[0.1]"
-  for (( i=0; i<${NUM_IMAGE}; i++ )); do
-    reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,64,Regular,0.30]"
+  for (( i=0; i<${N}; i++ )); do
+    reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,64,Regular,0.30]"
   done
-  if [ -n ${MASK} ]; then
-    reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
-  else
-    reg_fcn="${reg_fcn} -x [NULL,NULL]"
-  fi
+  reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
   reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
   reg_fcn="${reg_fcn} -f 8x8x4x2x1"
   reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+
   if [[ "${AFFINE_ONLY}" == "false" ]]; then
     if [[ "${HARDCORE}" == "false" ]]; then
       reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
-      for (( i=0; i<${NUM_IMAGE}; i++ )); do
-        reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+      for (( i=0; i<${N}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
       done
       reg_fcn="${reg_fcn} -x [NULL,NULL]"
       reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x4x2x1"
       reg_fcn="${reg_fcn} -s 3x2x1x0vox"
       reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
-      for (( i=0; i<${NUM_IMAGE}; i++ )); do
-        reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+      for (( i=0; i<${N}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
       done
-      if [ -n ${MASK} ]; then
-        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
-      else
-        reg_fcn="${reg_fcn} -x [NULL,NULL]"
-      fi
+      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
       reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x4x2x1"
       reg_fcn="${reg_fcn} -s 3x2x1x0vox"
     else
       reg_fcn="${reg_fcn} -t BsplineSyN[0.5,48,0]"
-      for (( i=0; i<${NUM_IMAGE}; i++ )); do
-        reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+      for (( i=0; i<${N}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
       done
-      if [ -n ${MASK} ]; then
-        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
-      else
-        reg_fcn="${reg_fcn} -x [NULL,NULL]"
-      fi
+      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
       reg_fcn="${reg_fcn} -c [2000x1000x1000x100x40,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x6x4x2x1"
       reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
       reg_fcn="${reg_fcn} -t BsplineSyN[0.1,48,0]"
-      for (( i=0; i<${NUM_IMAGE}; i++ )); do
-        reg_fcn="${reg_fcn} -m CC[$${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,6]"
+      for (( i=0; i<${N}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,6]"
       done
-      if [ -n ${MASK} ]; then
-        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
-      else
-        reg_fcn="${reg_fcn} -x [NULL,NULL]"
-      fi
+      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
       reg_fcn="${reg_fcn} -c [20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 1"
       reg_fcn="${reg_fcn} -s 0vox"
@@ -302,6 +271,58 @@ if [[ "${RIGID_ONLY}" == "false" ]]; then
 fi
 eval ${reg_fcn}
 
+# Apply registration to all modalities
+for (( i=0; i<${N}; i++ )); do
+  unset MOD xfm_fcn
+  MOD=(`${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"`)
+  OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
+  xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
+  xfm_fcn="${xfm_fcn} -i ${MOVING[${i}]}"
+  xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
+  if [[ "${AFFINE_ONLY}" == "false" ]]; then
+    if [[ "${RIGID_ONLY}" == "false" ]]; then
+      xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
+    fi
+  fi
+  xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
+  xfm_fcn="${xfm_fcn} -r ${FIXED[0]}"
+  eval ${xfm_fcn}
+done
+
+# create and save stacked transforms
+if [[ "${RIGID_ONLY}" == "false" ]]; then
+  if [[ "${AFFINE_ONLY}" == "false" ]]; then
+    if [[ "${STACK_XFM}" == "true" ]]; then
+      antsApplyTransforms -d 3 \
+        -o [${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz,1] \
+        -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+        -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+        -r ${FIXED[0]}
+      antsApplyTransforms -d 3 \
+        -o [${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-stack.nii.gz,1] \
+        -t ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+        -t [${DIR_SCRATCH}/xfm_0GenericAffine.mat,1] \
+        -r ${FIXED[0]}
+     fi
+  fi
+fi
+
+# move transforms to appropriate location
+if [[ "${AFFINE_ONLY}" == "false" ]]; then
+  if [[ "${HARDCORE}" == "false" ]]; then
+    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
+    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz
+  else
+    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz
+    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
+  fi
+fi
+mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+  ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
 
 #===============================================================================
 # End of Function
