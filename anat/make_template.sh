@@ -58,7 +58,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
-id-ls:,dir-project:,mask-name:,mask-dil:,iterations:,resolution:,template:,space:,template-name:,\
+id-ls:,mod-ls:,dir-project:,mask-name:,mask-dil:,iterations:,resolution:,template:,space:,template-name:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -70,6 +70,7 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 ID_LS=
+MOD_LS=T1w,T2w
 DIR_PROJECT=NULL
 MASK_NAME=brain+ANTs
 MASK_DIL=2
@@ -94,6 +95,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --id-ls) ID_LS="$2" ; shift 2 ;;
+    --mod-ls) MOD_LS="$2" ; shift 2 ;;
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     --mask-name) MASK_NAME="$2" ; shift 2 ;;
     --mask-dil) MASK_DIL="$2" ; shift 2 ;;
@@ -148,16 +150,95 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-SUBJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f pariticpant_id`)
+mkdir -p ${DIR_SCRATCH}/coreg
+mkdir -p ${DIR_SCRATCH}/xfm
+mkdir -p ${DIR_SCRATCH}/job
+
+SUBJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id`)
 SESSION=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f session_id`)
 PROJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f project`)
 DIRECTORY=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f directory`)
+## probably need to adjust this to add masks
+
+N_SUB=${#SUBJECT[@]}
+if [[ "${SESSION}" == "NULL" ]]; then
+  IS_SES=false
+else
+  IS_SES=true
+fi
+
+MOD_LS=(${MOD_LS//,/ })
+N_MOD=${#MOD_LS[@]}
 
 if [[ "${DIRECTORY}" == "NULL" ]]; then
   if [[ "${PROJECT}" == "NULL" ]]; then
     if [[ "${DIR_PROJECT}" == "NULL" ]]; then
-      DIR_PROJECT=`${DIR_CODE}/`
-    else
+        for (( i=1; i<${N_SUB}; i++ )); do
+          SUB_PREFIX=sub-${SUBJECT[${i}]}
+          if [[ "${IS_SES}" == "true"  ]];
+            SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
+          fi
+          for (( j=1; j<${N_MOD}; j++ )); do
+            TEMP+=`ls ${DIR_PROJECT}/derivatives/anat/native/${SUB_PREFIX}*${MOD_LS[${j}]}`
+          done
+          FLS+=$(IFS=, ; echo "${TEMP[*]}")
+        done
     fi
+  else
+    for (( i=1; i<${N_SUB}; i++ )); do
+      SUB_PREFIX=sub-${SUBJECT[${i}]}
+      if [[ "${IS_SES}" == "true"  ]];
+        SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
+      fi
+      for (( j=1; j<${N_MOD}; j++ )); do
+        TEMP+=`ls ${PROJECT[${i}]}/derivatives/anat/native/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}`
+      done
+      FLS+=$(IFS=, ; echo "${TEMP[*]}")
+    done
+  fi
+else
+  for (( i=1; i<${N_SUB}; i++ )); do
+    SUB_PREFIX=sub-${SUBJECT[${i}]}
+    if [[ "${IS_SES}" == "true"  ]];
+      SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
+    fi
+    for (( j=1; j<${N_MOD}; j++ )); do
+      TEMP+=`ls ${DIRECTORY}/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}`
+    done
+    FLS+=$(IFS=, ; echo "${TEMP[*]}")
+  done
+fi
+
+# Do rigid if necessary to put in same space
+ITERATIONS=(${ITERATIONS//x/ })
+for k in {0..4}; do
+  for (( j=0; j<${ITERATIONS[${k}]}; j++ ))
+    for (( i=1; i<${N_SUB}; i++ )); do
+      SUB_PREFIX=sub-${SUBJECT[${i}]}
+      if [[ "${IS_SES}" == "true"  ]];
+        SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
+      fi
+      unset HOLD_LS
+      JOB=${DIR_SCRATCH}/job/${SUB_PREFIX}_reg-${k}-${j}.job
+      SH=${DIR_SCRATCH}/job/${SUB_PREFIX}_reg-${k}-${j}.sh
+
+      echo '#!/bin/bash -e' > ${JOB}
+      echo '#$ -q '${HPC_Q} >> ${JOB}
+      echo '#$ -pe '${HPC_PE} >> ${JOB}
+      echo '#$ -ckpt user' >> ${JOB}
+      echo '#$ -j y' >> ${JOB}
+      echo '#$ -o '${HPC_O} >> ${JOB}
+      echo '' >> ${JOB}
+      echo 'CHILD='${SH} >> ${JOB}
+      echo 'sg - Research-INC_img_core "chmod g+rwx ${CHILD}"' >> ${JOB}
+      echo 'sg - Research-INC_img_core "bash ${CHILD}"' >> ${JOB}
+      echo '' >> ${JOB}
+      echo '' >> ${JOB}
+
+      echo '' > ${SH}
+      echo 'source /Shared/pinc/sharedopt/apps/sourcefiles/ants_source.sh' >> ${SH}
+      echo '' >> ${SH}
+      echo ${DIR_CODE}'/anat/coregistration.sh \' >> ${SH}
+    done
   fi
 fi
