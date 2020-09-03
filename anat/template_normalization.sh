@@ -81,7 +81,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
-    --mask-dilation) MASK_DIL="$2" ; shift 2 ;;
+    --mask-dil) MASK_DIL="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --affine-only) AFFINE_ONLY=true ; shift ;;
