@@ -1,9 +1,21 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Build a neuroanatomical template using iterative registration to a group
+# average.
+#  -can be built on a subset of participants with an appropriate *.tsv file
+#  -input list can specify projects and/or file paths as well, header row will 
+#   be used looking for keywords (capitalization doesn't matter):
+#       -participant_id         mandatory
+#       -session_id             mandatory 
+#       -project                optional project directory, if used it will look
+#                               for the ${DIR_PROJECT}/derivatives/anat/native
+#                               folder. If not included, will default to the
+#                               project associated with the input list, or to
+#                               the project specified by the dir-project input
+#       -directory              optional
+# Authors: Timothy R. Koscik, PhD
+# Date: 2020-09-03
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -46,7 +58,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
-other-inputs:,template:,space:,\
+id-ls:,dir-project:,mask-name:,mask-dil:,iterations:,resolution:,template:,space:,template-name:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -57,9 +69,15 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER_INPUTS=
+ID_LS=
+DIR_PROJECT=NULL
+MASK_NAME=brain+ANTs
+MASK_DIL=2
+ITERATIONS=0x1x3x2
+RESOLUTION=1x1x1
 TEMPLATE=HCPICBM
 SPACE=1mm
+TEMPLATE_NAME=NULL
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -75,9 +93,15 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
+    --id-ls) ID_LS="$2" ; shift 2 ;;
+    --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
+    --mask-name) MASK_NAME="$2" ; shift 2 ;;
+    --mask-dil) MASK_DIL="$2" ; shift 2 ;;
+    --iterations) ITERATIONS="$2" ; shift 2 ;;
+    --resolution) RESOLUTION="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --template-name) TEMPLATE_NAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -124,36 +148,4 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
-fi
-
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
-
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
-
-#===============================================================================
-# End of Function
-#===============================================================================
-
-# Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
-if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
-fi
-
-# Exit function ---------------------------------------------------------------
-exit 0
-
+tsv_hdr=(`head -1 ${ID_LS}`)
