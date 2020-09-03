@@ -18,7 +18,7 @@ eval set -- "$OPTS"
 HELP=false
 INPUT=
 FIELD=
-DELIM=\t
+DELIM=NULL
 
 while true; do
   case "$1" in
@@ -41,6 +41,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -i | --input             tsv file to read from'
   echo '  -f | --field             string identifying field to be read'
+  echo '  -d | --delim             delimiter to use'
   echo ''
   exit 0
 fi
@@ -48,8 +49,18 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+if [[ "${DELIM}" == "NULL" ]]; then
+  FNAME=$(basename -- "${INPUT}")
+  EXT="${FNAME##*.}"
+  if [[ "${EXT,,}" == "tsv" ]]; then
+    DELIM=\t
+  elif [[ "${EXT,,}" == "csv" ]]; then
+    DELIM=,
+  fi
+fi
+
 HDR=(`head -1 ${INPUT}`)
-eval 'HDR=(${HDR//'${DELIM}'/ })'
+HDR=(${HDR//${DELIM}/ })
 
 for i in "${!HDR[@]}"; do
    if [[ "${HDR[${i}]}" == "${FIELD}" ]]; then
@@ -58,7 +69,8 @@ for i in "${!HDR[@]}"; do
 done
 
 WHICH_COL=$((WHICH_COL+1))
-eval 'cut -d'"'"${DELIM}"'"' -f'${WHICH_COL}' < '${INPUT}
+cut -d${DELIM} -f${WHICH_COL} < ${INPUT}
+
 
 #===============================================================================
 # End of Function
