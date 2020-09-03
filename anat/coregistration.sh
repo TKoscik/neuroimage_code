@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Coregistration of neuroimages
+# Authors: Timothy R. Koscik
+# Date: 2020-09-03
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -45,10 +45,13 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvkl --long prefix:,\
-other-inputs:,template:,space:,\
+OPTS=`getopt -o hvkl --long prefix:,\
+fixed:,fixed-mask:,moving:,moving-mask:,\
+rigid-only,affine-only,hardcore,stack-xfm,\
+mask-dil:,interpolation:,\
+template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -66,6 +69,7 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
+DRY_RUN=false
 VERBOSE=0
 KEEP=false
 
@@ -159,4 +163,5 @@ fi
 
 # Exit function ---------------------------------------------------------------
 exit 0
+
 
