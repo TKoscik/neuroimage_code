@@ -150,6 +150,7 @@ fi
 #===============================================================================
 MOVING=(${MOVING\\,\ })
 N=${#MOVING[@]}
+FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${MOVING[0]}`
 
 if [[ "${MOVING_MASK,,}" == "null" ]]; then
   FIXED_MASK=NULL
@@ -159,6 +160,7 @@ if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED\\,\ })
   N_FIXED=${#FIXED[@]}
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
+  TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED[0]}`
 else
   for (( i=0; i<${N_MOVING}; i++ )); do
     MOD=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"`
@@ -171,6 +173,7 @@ else
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
     FIXED_MASK=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz
   fi
+  TO=${TEMPLATE}+${SPACE}
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
@@ -181,8 +184,7 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING[0]}`
 fi
 
-FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${MOVING[0]}`
-TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED[0]}`
+# setup directories
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_from-${FROM}_to-${TO}
 fi
@@ -213,7 +215,7 @@ reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
 reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
 
-if [[ "${RIGID_ONLY}" == "false" ]]; then
+if [[ "${RIGID_ONLY,,}" == "false" ]]; then
   reg_fcn="${reg_fcn} -t Affine[0.5]"
   for (( i=0; i<${N}; i++ )); do
     reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
@@ -231,8 +233,8 @@ if [[ "${RIGID_ONLY}" == "false" ]]; then
   reg_fcn="${reg_fcn} -f 8x8x4x2x1"
   reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
 
-  if [[ "${AFFINE_ONLY}" == "false" ]]; then
-    if [[ "${HARDCORE}" == "false" ]]; then
+  if [[ "${AFFINE_ONLY,,}" == "false" ]]; then
+    if [[ "${HARDCORE,,}" == "false" ]]; then
       reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
@@ -290,9 +292,9 @@ for (( i=0; i<${N}; i++ )); do
 done
 
 # create and save stacked transforms
-if [[ "${RIGID_ONLY}" == "false" ]]; then
-  if [[ "${AFFINE_ONLY}" == "false" ]]; then
-    if [[ "${STACK_XFM}" == "true" ]]; then
+if [[ "${RIGID_ONLY,,}" == "false" ]]; then
+  if [[ "${AFFINE_ONLY,,}" == "false" ]]; then
+    if [[ "${STACK_XFM,,}" == "true" ]]; then
       antsApplyTransforms -d 3 \
         -o [${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz,1] \
         -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
@@ -308,8 +310,8 @@ if [[ "${RIGID_ONLY}" == "false" ]]; then
 fi
 
 # move transforms to appropriate location
-if [[ "${AFFINE_ONLY}" == "false" ]]; then
-  if [[ "${HARDCORE}" == "false" ]]; then
+if [[ "${AFFINE_ONLY,,}" == "false" ]]; then
+  if [[ "${HARDCORE,,}" == "false" ]]; then
     mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
       ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
     mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
@@ -321,8 +323,13 @@ if [[ "${AFFINE_ONLY}" == "false" ]]; then
       ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
   fi
 fi
-mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-  ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
+if [[ "${RIGID_ONLY,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+    ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
+else
+  mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+    ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
+fi
 
 #===============================================================================
 # End of Function
