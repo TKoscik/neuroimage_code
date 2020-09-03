@@ -9,13 +9,13 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-DEBUG=false
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
+  if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
@@ -45,10 +45,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvkl --long prefix:,\
+OPTS=`getopt -o hvkl --long prefix:,\
 other-inputs:,template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -67,12 +67,10 @@ DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
-KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
@@ -89,6 +87,9 @@ while true; do
     * ) break ;;
   esac
 done
+### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
+#         by DIR_INC for version 0.0.0.0. Specifying the directory may
+#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -98,7 +99,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
