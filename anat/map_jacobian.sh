@@ -166,11 +166,9 @@ XFM_TEMP=
 for (( i=${N_XFM}-1; i>=0; i-- )); do
   xfm_temp=`${DIR_CODE}/bids/get_field.sh -i ${XFM[${i}]} -f "xfm"`
   XFM_TEMP+=(${xfm_temp})
-  echo ${XFM_TEMP[@]}
 done
 XFM_NAME=$(IFS=+ ; echo "${XFM_TEMP[*]}")
 XFM_NAME=${XFM_NAME:1}
-echo ${XFM_NAME}
 
 # create save directory
 if [ -z "${DIR_SAVE}" ]; then
