@@ -168,7 +168,7 @@ if [[ "${N_XFM}" > 1 ]]; then
   xfm_fcn="${xfm_fcn} -o [${DIR_SCRATCH}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz,1]"
   xfm_fcn="${xfm_fcn} -n ${INTERPOLATION}"
   for (( i=0; i<${N_XFM}; i++ )); do
-    xfm_fcn="${xfm_fcn} -t ${XFM[$[{i}]}"
+    xfm_fcn="${xfm_fcn} -t ${XFM[${i}]}"
   done
   eval ${xfm_fcn}
 else
