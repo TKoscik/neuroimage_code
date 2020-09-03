@@ -45,13 +45,13 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=`getopt -o hdvkl --long prefix:,\
 fixed:,fixed-mask:,moving:,moving-mask:,\
 rigid-only,affine-only,hardcore,stack-xfm,\
 mask-dil:,interpolation:,\
 template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -60,7 +60,16 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER_INPUTS=
+FIXED=NULL
+FIXED_MASK=NULL
+MOVING=NULL
+MOVING_MASK=NULL
+MASK_DIL=2
+INTERPOLATION=BSpline[3]
+RIGID_ONLY=false
+AFFINE_ONLY=false
+HARDCORE=false
+STACK_XFM=false
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
@@ -69,7 +78,6 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
 VERBOSE=0
 KEEP=false
 
@@ -77,15 +85,22 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -d | --debug) DEBUG=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
+    --fixed) FIXED="$2" ; shift 2 ;;
+    --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
+    --moving) MOVING="$2" ; shift 2 ;;
+    --moving-mask) MOVING_MASK="$2" ; shift 2 ;;
+    --mask-dil) MASK_DIL="$2" ; shift 2 ;;
+    --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --rigid-only) RIGID_ONLY=true ; shift ;;
+    --affine-only) AFFINE_ONLY=true ; shift ;;
+    --hardcore) HARDCORE=true ; shift ;;
+    --stack-xfm) STACK_XFM=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -130,36 +145,167 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+#===============================================================================
+# Start of Function
+#===============================================================================
+MOVING=(${MOVING\\,\ })
+N=${#MOVING[@]}
+
+if [[ "${MOVING_MASK,,}" != "null" ]]; then
+  MOVING_MASK=(${MOVING_MASK\\,\ })
+  if [[ "${N}" != "${#MOVING_MASK[@]}" ]]; then exit 1; fi
+else
+  for (( i=0; i<${N}; i ++ )); do
+    MOVING_MASK+=(NULL)
+    FIXED_MASK+=(NULL)
+  done
 fi
 
+if [[ "${FIXED,,}" != "null" ]]; then
+  FIXED=(${FIXED\\,\ })
+  N_FIXED=${#FIXED[@]}
+  if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
+  
+  FIXED_MASK=(${FIXED_MASK\\,\ })
+  N_FIXED_MASK=${#FIXED_MASK[@]}
+  if [[ "${N_FIXED_MASK}" != "${N}" ]]; then exit 1; fi
+else
+  for (( i=0; i<${N_MOVING}; i++ )); do
+    MOD=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"`
+    if [[ "${MOD}" == "T2w" ]]; then
+      FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
+    else
+      FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
+    fi
+    if [[ "${MOVING_MASK[0]" != "NULL" ]]; then
+      FIXED_MASK+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz)
+    fi
+  done
+fi
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${MOVING[0]}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "ses"`
+if [ -z "${PREFIX}" ]; then
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING[0]}`
+fi
+
+FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${MOVING[0]}`
+TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED[0]}`
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_from-${FROM}_to-${TO}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-#===============================================================================
-# Start of Function
-#===============================================================================
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+# Dilate Masks
+if [[ "${MOVING_MASK[0]" != "NULL" ]]; then
+  if [[ "${MASK_DIL}" > 0 ]]; then
+    for (( i=0; i<${N}; i++ )); do
+    ImageMath 3 ${DIR_SCRATCH}/MOVING_mask-${i}+dil${MASK_DIL}.nii.gz \
+      MD ${MOVING_MASK[${i}]} ${MASK_DIL}
+    MOVING_MASK[${i}]=${DIR_SCRATCH}/MOVING_mask-${i}+dil${MASK_DIL}.nii.gz
+    
+    ImageMath 3 ${DIR_SCRATCH}/FIXED_mask-${i}+dil${MASK_DIL}.nii.gz \
+      MD ${FIXED_MASK[${i}]} ${MASK_DIL}
+    FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_mask-${i}+dil${MASK_DIL}.nii.gz
+  fi
+fi
+
+# register to template
+reg_fcn="antsRegistration"
+reg_fcn="${reg_fcn} -d 3 --float 1 --verbose ${VERBOSE} -u 1 -z 1"
+reg_fcn="${reg_fcn} -o ${DIR_SCRATCH}/xfm_"
+reg_fcn="${reg_fcn} -r [${FIXED[0]},${MOVING[0]},1]"
+reg_fcn="${reg_fcn} -t Rigid[0.2]"
+for (( i=0; i<${N}; i++ )); do
+  reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
+done
+reg_fcn="${reg_fcn} -x [NULL,NULL]"
+reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
+reg_fcn="${reg_fcn} -f 8x8x4x2x1"
+reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+
+if [[ "${RIGID_ONLY}" == "false" ]]; then
+   reg_fcn="${reg_fcn} -t Affine[0.5]"
+   for (( i=0; i<${NUM_IMAGE}; i++ )); do
+     reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,32,Regular,0.25]"
+   done
+   if [ -n ${MASK} ]; then
+     reg_fcn="${reg_fcn} -x [NULL,NULL]"
+   fi
+  reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
+  reg_fcn="${reg_fcn} -f 8x8x4x2x1"
+  reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+  reg_fcn="${reg_fcn} -t Affine[0.1]"
+  for (( i=0; i<${NUM_IMAGE}; i++ )); do
+    reg_fcn="${reg_fcn} -m Mattes[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,64,Regular,0.30]"
+  done
+  if [ -n ${MASK} ]; then
+    reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
+  else
+    reg_fcn="${reg_fcn} -x [NULL,NULL]"
+  fi
+  reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
+  reg_fcn="${reg_fcn} -f 8x8x4x2x1"
+  reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+  if [[ "${AFFINE_ONLY}" == "false" ]]; then
+    if [[ "${HARDCORE}" == "false" ]]; then
+      reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
+      for (( i=0; i<${NUM_IMAGE}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+      done
+      reg_fcn="${reg_fcn} -x [NULL,NULL]"
+      reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
+      reg_fcn="${reg_fcn} -f 8x4x2x1"
+      reg_fcn="${reg_fcn} -s 3x2x1x0vox"
+      reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
+      for (( i=0; i<${NUM_IMAGE}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+      done
+      if [ -n ${MASK} ]; then
+        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
+      else
+        reg_fcn="${reg_fcn} -x [NULL,NULL]"
+      fi
+      reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
+      reg_fcn="${reg_fcn} -f 8x4x2x1"
+      reg_fcn="${reg_fcn} -s 3x2x1x0vox"
+    else
+      reg_fcn="${reg_fcn} -t BsplineSyN[0.5,48,0]"
+      for (( i=0; i<${NUM_IMAGE}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+      done
+      if [ -n ${MASK} ]; then
+        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
+      else
+        reg_fcn="${reg_fcn} -x [NULL,NULL]"
+      fi
+      reg_fcn="${reg_fcn} -c [2000x1000x1000x100x40,1e-6,10]"
+      reg_fcn="${reg_fcn} -f 8x6x4x2x1"
+      reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+      reg_fcn="${reg_fcn} -t BsplineSyN[0.1,48,0]"
+      for (( i=0; i<${NUM_IMAGE}; i++ )); do
+        reg_fcn="${reg_fcn} -m CC[$${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,6]"
+      done
+      if [ -n ${MASK} ]; then
+        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MASK}]"
+      else
+        reg_fcn="${reg_fcn} -x [NULL,NULL]"
+      fi
+      reg_fcn="${reg_fcn} -c [20,1e-6,10]"
+      reg_fcn="${reg_fcn} -f 1"
+      reg_fcn="${reg_fcn} -s 0vox"
+    fi
+  fi
+fi
+eval ${reg_fcn}
+
+
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
-if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
-fi
 
 # Exit function ---------------------------------------------------------------
 exit 0

@@ -73,11 +73,9 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -d | --debug) DEBUG=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
@@ -101,12 +99,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -d | --debug             keep scratch folder for debugging'
-  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --other-inputs <value>   other inputs necessary for function'
