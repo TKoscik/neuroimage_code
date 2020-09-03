@@ -279,6 +279,10 @@ epiPar_space=${parDir}/friston24/epiPar_space_tmp.1D
 
 #Reformat input to be space delimited (will be merged with quadratics, derivatives)
 cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
+<<<<<<< HEAD
+
+=======
+>>>>>>> 434b05c28b44041eebd17d606da5311880e553c1
 
 #Loop through the 6 motion parameters (mm)
   i=1

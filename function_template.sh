@@ -9,18 +9,21 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-DEBUG=false
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
       fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
@@ -42,10 +45,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdcvkl --long group:,prefix:,\
+OPTS=`getopt -o hvkl --long prefix:,\
 other-inputs:,template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -53,7 +56,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
 PREFIX=
 OTHER_INPUTS=
 TEMPLATE=HCPICBM
@@ -64,19 +66,14 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
 VERBOSE=0
-KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
@@ -90,6 +87,9 @@ while true; do
     * ) break ;;
   esac
 done
+### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
+#         by DIR_INC for version 0.0.0.0. Specifying the directory may
+#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -99,13 +99,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -d | --debug             keep scratch folder for debugging'
-  echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --other-inputs <value>   other inputs necessary for function'

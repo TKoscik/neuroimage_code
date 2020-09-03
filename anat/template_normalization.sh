@@ -43,7 +43,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvl --long group:,prefix:,\
+OPTS=`getopt -o hdvl --long prefix:,\
 image:,mask:,mask-dil:,template:,space:,\
 affine-only,hardcore,stack-xfm,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
@@ -55,7 +55,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=Research-INC_img_core
 PREFIX=
 IMAGE=
 MASK=
@@ -79,11 +78,10 @@ while true; do
     -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
-    --mask-dilation) MASK_DIL="$2" ; shift 2 ;;
+    --mask-dil) MASK_DIL="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --affine-only) AFFINE_ONLY=true ; shift ;;
@@ -113,7 +111,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -d | --debug             keep scratch folder for debugging'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
   echo '                           default=Research-INC_img_core'
   echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
   echo '  --image <value>          full path to image(s) to align.'
@@ -150,11 +147,13 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
+IMAGE=(${IMAGE//,/ })
+NUM_IMAGE=${#IMAGE[@]}
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]}`
 fi
 
 DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}
@@ -164,8 +163,6 @@ mkdir -p ${DIR_XFM}
 #===============================================================================
 # Start of Function
 #===============================================================================
-IMAGE=(${IMAGE//,/ })
-NUM_IMAGE=${#IMAGE[@]}
 
 # get and set modalities for output and fixed image targets
 DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}
@@ -242,6 +239,15 @@ reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
 if [[ "${AFFINE_ONLY}" == "false" ]]; then
   if [[ "${HARDCORE}" == "false" ]]; then
+    reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
+    for (( i=0; i<${NUM_IMAGE}; i++ )); do
+      reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"
+    done
+    reg_fcn="${reg_fcn} -x [NULL,NULL]"
+    reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
+    reg_fcn="${reg_fcn} -f 8x4x2x1"
+    reg_fcn="${reg_fcn} -s 3x2x1x0vox"
+
     reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
     for (( i=0; i<${NUM_IMAGE}; i++ )); do
       reg_fcn="${reg_fcn} -m CC[${FIXED_IMAGE[${i}]},${IMAGE[${i}]},1,4]"

@@ -130,7 +130,7 @@ fi
 #==============================================================================
 SPACE=`${DIR_CODE}/bids/get_space_label.sh -i ${T1}`
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/myelin_${SPACE}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/myelin_${SPACE}
 fi
 mkdir -p ${DIR_SAVE}
 

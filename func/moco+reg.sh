@@ -33,7 +33,10 @@
 #===============================================================================
 
 userID=`whoami`
+<<<<<<< HEAD
 set -e
+=======
+>>>>>>> ac82f9fa33782102d74521da3e3e96b077d302bc
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -68,7 +71,10 @@ function egress {
 }
 trap egress EXIT
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> ac82f9fa33782102d74521da3e3e96b077d302bc
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
 ts-bold:,target:,template:,space:,is_ses:,\
@@ -80,6 +86,11 @@ if [ $? != 0 ]; then
 fi
 eval set -- "$OPTS"
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> ac82f9fa33782102d74521da3e3e96b077d302bc
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 PREFIX=

@@ -150,7 +150,12 @@ mkdir -p ${DIR_SAVE}
 ##--------------- resample mask to fit input grid bc its off by like 1mm ---------------##
 if [ -z "${MASK_BRAIN}" ]; then
   echo "No mask is provided."
+<<<<<<< HEAD
+else 
+  maskBase=`basename ${MASK_BRAIN} | awk -F"." '{print $1}'`
+=======
 else
+>>>>>>> 434b05c28b44041eebd17d606da5311880e553c1
   if [ -f "${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz" ]; then
     rm ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
   fi
@@ -160,7 +165,11 @@ else
   AFNI="${AFNI} -prefix ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz"
   AFNI="${AFNI} -input ${mask_resampling}"
   eval ${AFNI}
+<<<<<<< HEAD
+  MASK_BRAIN=${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz  
+=======
   MASK_BRAIN=${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
+>>>>>>> 434b05c28b44041eebd17d606da5311880e553c1
 fi
 
 #==============================================================================
