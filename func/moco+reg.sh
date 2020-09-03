@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -29,33 +29,29 @@
 # 10) Added 4D file check
 # 11) Added option for no session variable
 # 12) Stack check
-# TODO: Add QC function or source QC script 
+# TODO: Add QC function or source QC script
 #===============================================================================
 
-# Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long group:,prefix:,\
-ts-bold:,target:,template:,space:,is_ses:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-keep,help,verbose,no-log -n 'parse-options' -- "$@"`
-if [ $? != 0 ]; then
-  echo "Failed parsing options" >&2
-  exit 1
-fi
-eval set -- "$OPTS"
+userID=`whoami`
+set -e
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
+  #if [[ "${DEBUG}" = false ]]; then
+  if [[ "${KEEP}" = false ]]; then
+    if [[ -n "${DIR_SCRATCH}" ]]; then
+      if [[ -d "${DIR_SCRATCH}" ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
       fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" == "false" ]]; then
+  if [[ "${NO_LOG}" = false ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
@@ -72,18 +68,29 @@ function egress {
 }
 trap egress EXIT
 
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=`getopt -o hvkl --long prefix:,\
+ts-bold:,target:,template:,space:,is_ses:,\
+dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
+keep,help,verbose,no-log -n 'parse-options' -- "$@"`
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-GROUP=
 PREFIX=
 TS_BOLD=
 TARGET=T1w
 TEMPLATE=
 SPACE=
-DIR_SAVE=/Shared/inc_scratch/hopkins_scratch
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_SAVE=
+DIR_SCRATCH=/Shared/inc_scratch/scratch_${userID}_${DATE_SUFFIX}
 #For testing below
-#DIR_SCRATCH=/Shared/inc_scratch/scratch_20200704T155704922622532/
+#DIR_SCRATCH=~
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
@@ -99,7 +106,6 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --target) TARGET="$2" ; shift 2 ;;
@@ -130,8 +136,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --is_ses <boolean>       is there a session folder,'
   echo '                           default: true'
   echo '  --prefix <value>         scan prefix,'
@@ -159,13 +163,19 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+if [ -f "${TS_BOLD}" ]; then
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
+  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
+  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
+  TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
+  RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+  if [ -z "${PREFIX}" ]; then
+    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD}}`
+  fi
+else
+  echo "The BOLD file does not exist. Exiting."
+  echo "Check paths, file names, and arguments."
+  exit 1
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -231,7 +241,7 @@ rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 
 # get brain mask of mean BOLD -------------------------------------------------
 bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
-read -p "Press [Enter] key to continue debugging..."
+#read -p "Press [Enter] key to continue debugging..."
 
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 
@@ -246,11 +256,12 @@ else
   T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}*${TARGET}.nii.gz`)
   T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}*mask-brain*.nii.gz`)
   RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}*${TARGET}+raw*.mat`)
-  if [[ -f ${RAW_TO_RIGID} ]]; then
-    INIT_XFM=${RAW_TO_RIGID}
-  else
-    INIT_XFM=[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
-  fi
+fi
+
+if [ ! -z "${RAW_TO_RIGID}" ]; then
+  INIT_XFM=${RAW_TO_RIGID}
+else
+  INIT_XFM=[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
 fi
 
 antsRegistration \
@@ -279,20 +290,26 @@ antsApplyTransforms -d 3 \
 
 # Push mean bold to template --------------------------------------------------
 if [ "${IS_SES}" = true ]; then
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  #XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
 else
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  #XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
 fi
 
 ### ADD in here what to do if stack is not found but components are
 ### L. Hopkins 7/2/2020 -- still editing
 # Holy shit is this even right?
-if [ ! -z "${XFM_NORM}" ]; then
-  echo "Stack exists - applying transforms mean BOLD to template"
-else
-  echo "Stack does not exist - making stack from components"
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
-fi
+# if [ ! -z "${XFM_NORM}" ]; then
+#   echo "Stack exists - applying transforms mean BOLD to template"
+# else
+#   echo "Stack does not exist - making stack from components"
+#   if [ "${IS_SES}" = false ]; then
+#     XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+#   else
+#     XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+#   fi
+# fi
 
 antsApplyTransforms -d 3 \
   -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
@@ -368,4 +385,5 @@ fi
 #     echo "pip could not be found"
 #     exit
 # fi
+
 exit 0
