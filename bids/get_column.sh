@@ -45,11 +45,6 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-# debug
-INPUT=/Shared/koscikt_scratch/dm1_dwi/dems_for_dwi.csv
-FIELD=gender
-DELIM=\t
-
 #===============================================================================
 # Start of Function
 #===============================================================================
