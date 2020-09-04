@@ -53,14 +53,16 @@ if [[ "${DELIM}" == "NULL" ]]; then
   FNAME=$(basename -- "${INPUT}")
   EXT="${FNAME##*.}"
   if [[ "${EXT,,}" == "tsv" ]]; then
-    DELIM=\t
+    DELIM=tab
   elif [[ "${EXT,,}" == "csv" ]]; then
     DELIM=,
   fi
 fi
 
 HDR=(`head -1 ${INPUT}`)
-HDR=(${HDR//${DELIM}/ })
+if [[ "${DELIM}" != "tab" ]]; then
+  HDR=${HDR//${DELIM}/ })
+fi
 
 WHICH_COL=NULL
 for i in "${!HDR[@]}"; do
