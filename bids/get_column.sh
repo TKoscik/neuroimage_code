@@ -75,7 +75,11 @@ if [[ "${WHICH_COL}" == "NULL" ]]; then
   echo NULL
 else
   WHICH_COL=$((WHICH_COL+1))
-  cut -d${DELIM} -f${WHICH_COL} < ${INPUT}
+  if [[ "${DELIM}" == "tab" ]]; then
+    cut -d\t -f${WHICH_COL} < ${INPUT}
+  else
+    cut -d${DELIM} -f${WHICH_COL} < ${INPUT}
+  fi
 fi
 
 
