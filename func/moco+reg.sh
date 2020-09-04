@@ -1,6 +1,4 @@
 #!/bin/bash -x
-<<<<<<< HEAD
-=======
 
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -8,8 +6,6 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
-
->>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -43,11 +39,7 @@ NO_LOG=false
 # TODO: Add QC function or source QC script
 #===============================================================================
 
-<<<<<<< HEAD
-userID=`whoami`
-=======
 #userID=`whoami`
->>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
 set -e
 
 # actions on exit, write to logs, clean scratch
@@ -405,9 +397,5 @@ fi
 #     exit
 # fi
 
-<<<<<<< HEAD
-exit 0
-=======
 exit 0
 
->>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
