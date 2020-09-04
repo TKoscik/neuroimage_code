@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -33,20 +33,25 @@
 #===============================================================================
 
 userID=`whoami`
+set -e
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
+  #if [[ "${DEBUG}" = false ]]; then
+  if [[ "${KEEP}" = false ]]; then
+    if [[ -n "${DIR_SCRATCH}" ]]; then
+      if [[ -d "${DIR_SCRATCH}" ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
       fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" == "false" ]]; then
+  if [[ "${NO_LOG}" = false ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
@@ -63,6 +68,7 @@ function egress {
 }
 trap egress EXIT
 
+
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
 ts-bold:,target:,template:,space:,is_ses:,\
@@ -73,8 +79,6 @@ if [ $? != 0 ]; then
   exit 1
 fi
 eval set -- "$OPTS"
-
-
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -252,11 +256,12 @@ else
   T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}*${TARGET}.nii.gz`)
   T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}*mask-brain*.nii.gz`)
   RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}*${TARGET}+raw*.mat`)
-  if [[ -f ${RAW_TO_RIGID} ]]; then
-    INIT_XFM=${RAW_TO_RIGID}
-  else
-    INIT_XFM=[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
-  fi
+fi
+
+if [ ! -z "${RAW_TO_RIGID}" ]; then
+  INIT_XFM=${RAW_TO_RIGID}
+else
+  INIT_XFM=[${T1},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
 fi
 
 antsRegistration \
@@ -285,24 +290,26 @@ antsApplyTransforms -d 3 \
 
 # Push mean bold to template --------------------------------------------------
 if [ "${IS_SES}" = true ]; then
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  #XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
 else
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  #XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
 fi
 
 ### ADD in here what to do if stack is not found but components are
 ### L. Hopkins 7/2/2020 -- still editing
 # Holy shit is this even right?
-if [ ! -z "${XFM_NORM}" ]; then
-  echo "Stack exists - applying transforms mean BOLD to template"
-else
-  echo "Stack does not exist - making stack from components"
-  if [ "${IS_SES}" = false ]; then
-    XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
-  else
-    XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
-  fi
-fi
+# if [ ! -z "${XFM_NORM}" ]; then
+#   echo "Stack exists - applying transforms mean BOLD to template"
+# else
+#   echo "Stack does not exist - making stack from components"
+#   if [ "${IS_SES}" = false ]; then
+#     XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+#   else
+#     XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+#   fi
+# fi
 
 antsApplyTransforms -d 3 \
   -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
@@ -378,4 +385,5 @@ fi
 #     echo "pip could not be found"
 #     exit
 # fi
+
 exit 0

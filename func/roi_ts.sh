@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -x
 
 OPTS=`getopt -o hl --long group:,prefix:,\
 ts-bold:,label:,\
@@ -66,6 +66,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
+  echo '  --label <value>          Name of label - NOT PATH'
+  echo '                           e.g., WBCXN'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
@@ -80,11 +82,17 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-TEMPLATE_SPACE=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "reg"`
-TEMP=(${TEMPLATE_SPACE\\+\ })
-TEMPLATE=${TEMP[0]}
-SPACE=${TEMP[1]}
+#DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
+#TEMPLATE_SPACE=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "reg"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
+TEMPLATE_SPACE=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "reg"`
+ TEMP=(${TEMPLATE_SPACE\\+\ })
+ TEMPLATE=${TEMP[0]}
+ SPACE=${TEMP[1]}
+# TEMPLATE=HCPICBM
+# SPACE=2mm
+# LABEL=WBCXN
+
 if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
 fi
