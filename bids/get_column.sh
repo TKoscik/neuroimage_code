@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hifd --long input:,field:,delim:,help -n 'parse-options' -- "$@"`
+OPTS=`getopt -o hi:f:d: --long input:,field:,delim:,help -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
