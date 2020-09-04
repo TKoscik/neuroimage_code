@@ -61,7 +61,7 @@ fi
 
 HDR=(`head -1 ${INPUT}`)
 if [[ "${DELIM}" != "tab" ]]; then
-  HDR=${HDR//${DELIM}/ })
+  HDR=(${HDR//${DELIM}/ })
 fi
 
 WHICH_COL=NULL
