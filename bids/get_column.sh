@@ -63,7 +63,7 @@ if [[ "${DELIM}" == "NULL" ]]; then
 fi
 
 HDR=(`head -1 ${INPUT}`)
-HDR=(${HDR}//${DELIM}/ })
+HDR=(${HDR}//${DELIM}/ )
 echo $HDR
 WHICH_COL=NULL
 for i in "${!HDR[@]}"; do
