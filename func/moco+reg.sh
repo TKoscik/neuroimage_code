@@ -1,4 +1,15 @@
 #!/bin/bash -x
+<<<<<<< HEAD
+=======
+
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
+
+>>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
 
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
@@ -32,7 +43,11 @@
 # TODO: Add QC function or source QC script
 #===============================================================================
 
+<<<<<<< HEAD
 userID=`whoami`
+=======
+#userID=`whoami`
+>>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
 set -e
 
 # actions on exit, write to logs, clean scratch
@@ -88,7 +103,7 @@ TARGET=T1w
 TEMPLATE=
 SPACE=
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${userID}_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
 #For testing below
 #DIR_SCRATCH=~
 DIR_CODE=/Shared/inc_scratch/code
@@ -300,6 +315,10 @@ fi
 ### ADD in here what to do if stack is not found but components are
 ### L. Hopkins 7/2/2020 -- still editing
 # Holy shit is this even right?
+<<<<<<< HEAD
+=======
+#Doesn't matter - this file no longer exists; can delete
+>>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
 # if [ ! -z "${XFM_NORM}" ]; then
 #   echo "Stack exists - applying transforms mean BOLD to template"
 # else
@@ -386,4 +405,9 @@ fi
 #     exit
 # fi
 
+<<<<<<< HEAD
 exit 0
+=======
+exit 0
+
+>>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d

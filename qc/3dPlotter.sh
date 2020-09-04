@@ -121,6 +121,8 @@ mkdir -p ${DIR_SAVE}
 #NAME=$( basename ${IMAGE} )
 #NAME=${NAME::-7}
 
+source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
+
 job=${DIR_SCRATCH}/3dPlot.py
 
 if [ -z "${MASK}" ]; then
