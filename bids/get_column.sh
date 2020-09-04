@@ -51,17 +51,20 @@ fi
 #===============================================================================
 if [[ "${DELIM}" == "NULL" ]]; then
   FNAME=$(basename -- "${INPUT}")
+  echo $FNAME
   EXT="${FNAME##*.}"
-  if [[ "${EXT,,}" == "tsv" ]]; then
+  echo $EXT
+  if [[ "${EXT,,}" = "tsv" ]]; then
     DELIM=\t
+    echo $DELIM
   elif [[ "${EXT,,}" == "csv" ]]; then
     DELIM=,
   fi
 fi
 
 HDR=(`head -1 ${INPUT}`)
-HDR=(${HDR//${DELIM}/ })
-
+HDR=(${HDR}//${DELIM}/ })
+echo $HDR
 WHICH_COL=NULL
 for i in "${!HDR[@]}"; do
    if [[ "${HDR[${i}]}" == "${FIELD}" ]]; then
