@@ -133,6 +133,7 @@ if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/myelin_${SPACE}
 fi
 mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
 
 # resample T2-weighted image to match T1-weighted as necessary
 IFS=x read -r -a pixdim_t1 <<< $(PrintHeader ${T1} 1)
@@ -140,11 +141,10 @@ IFS=x read -r -a pixdim_t2 <<< $(PrintHeader ${T2} 1)
 if [[ "${pixdim_t1[0]}" != "${pixdim_t2[0]}" ]] || \
    [[ "${pixdim_t1[1]}" != "${pixdim_t2[1]}" ]] || \
    [[ "${pixdim_t1[2]}" != "${pixdim_t2[2]}" ]]; then
-   mkdir -p ${DIR_SCRATCH}
-   T2_NAME=`basename ${T2}`
-   antsApplyTransforms -d 3 \
-     -i ${T2} -o ${DIR_SCRATCH}/${T2_NAME} \
-     -r ${T1}
+  T2_NAME=`basename ${T2}`
+  antsApplyTransforms -d 3 \
+    -i ${T2} -o ${DIR_SCRATCH}/${T2_NAME} \
+    -r ${T1}
   T2=${DIR_SCRATCH}/${T2_NAME}
 fi
 
