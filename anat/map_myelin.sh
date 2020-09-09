@@ -149,7 +149,11 @@ if [[ "${pixdim_t1[0]}" != "${pixdim_t2[0]}" ]] || \
 fi
 
 # Calculate Myelin Map
-fslmaths ${T1} -div ${T2} ${DIR_SAVE}/${PREFIX}_reg-${SPACE}_myelin.nii.gz -odt float
+#fslmaths ${T1} -div ${T2} ${DIR_SAVE}/${PREFIX}_reg-${SPACE}_myelin.nii.gz -odt float
+# NOTE Division in FSL does not seem to work
+
+ImageMath 3 ${DIR_SCRATCH}/T2inv.nii.gz exp ${T2} -1
+ImageMath 3 ${DIR_SAVE}/${PREFIX}_reg-${SPACE}_myelin.nii.gz m ${T1} ${DIR_SCRATCH}/T2inv.nii.gz
 
 #==============================================================================
 # End of function
