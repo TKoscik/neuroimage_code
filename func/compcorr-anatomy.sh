@@ -1,5 +1,12 @@
 #!/bin/bash -ex
 
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
+
 #===============================================================================
 # Functional Timeseries - Anatomical CompCorr
 # Authors: Timothy R. Koscik
@@ -7,7 +14,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long group:,prefix:,is_ses:,\
+OPTS=`getopt -o hl --long prefix:,\
 ts-bold:,label-tissue:,value-csf:,value-wm:,\
 dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -20,7 +27,7 @@ eval set -- "$OPTS"
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
+  if [[ "${KEEP}" = false ]]; then
     if [[ -d ${DIR_SCRATCH} ]]; then
       if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
         rm -R ${DIR_SCRATCH}/*
@@ -29,7 +36,7 @@ function egress {
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" == "false" ]]; then
+  if [[ "${NO_LOG}" = false ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
@@ -46,16 +53,19 @@ function egress {
 }
 trap egress EXIT
 
+# Strict exit criteria - I don't want to be searching for errors if something fails
+set -u
+set -e
+
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-GROUP=
 PREFIX=
 TS_BOLD=
 LABEL_TISSUE=
 VALUE_CSF=1
 VALUE_WM=3
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
@@ -66,13 +76,11 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --label-tissue) LABEL_TISSUE="$2" ; shift 2 ;;
     --value-csf) VALUE_CSF="$2" ; shift 2 ;;
     --value-wm) VALUE_WM="$2" ; shift 2 ;;
-    --is_ses) IS_SES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -94,16 +102,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
   echo '  --label-tissue <value>   Full path to file containing tissue type labels'
   echo '  --value-csf <value>      numeric value indicating CSF in label file, default=1'
   echo '  --value-wm <value>      numeric value indicating WM in label file, default=3'
-  echo '  --is_ses <boolean>       is there a session folder,'
-  echo '                           default: true'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
@@ -118,15 +122,26 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+if [ -f "${TS_BOLD}" ]; then
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
+  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
+  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
+  TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
+  RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+  if [ -z "${PREFIX}" ]; then
+    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+  fi
+else
+  echo "The BOLD file does not exist. Exiting."
+  echo "Check paths, file names, and arguments."
+  exit 1
+fi
+# Set IS_SES variable
+if [ -z "${SESSION}" ]; then
+  IS_SES=false
 fi
 
+# Set DIR_SAVE variable
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/func
 fi
@@ -153,10 +168,5 @@ fi
 mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_REGRESSORS}/
 
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
-
 exit 0
+

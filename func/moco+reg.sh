@@ -40,7 +40,7 @@ NO_LOG=false
 #===============================================================================
 
 #userID=`whoami`
-set -e
+set -u
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -78,7 +78,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
-ts-bold:,target:,template:,space:,is_ses:,\
+ts-bold:,target:,template:,space:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -118,7 +118,6 @@ while true; do
     --target) TARGET="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
-    --is_ses) IS_SES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -143,8 +142,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --is_ses <boolean>       is there a session folder,'
-  echo '                           default: true'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
@@ -185,6 +182,12 @@ else
   exit 1
 fi
 
+# Set IS_SES variable
+if [ -z "${SESSION}" ]; then
+  IS_SES=false
+fi
+
+# Set DIR_SAVE variable
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/func
 fi
@@ -307,10 +310,7 @@ fi
 ### ADD in here what to do if stack is not found but components are
 ### L. Hopkins 7/2/2020 -- still editing
 # Holy shit is this even right?
-<<<<<<< HEAD
-=======
 #Doesn't matter - this file no longer exists; can delete
->>>>>>> db01d2dfa36ab7402c32b2204b6c72165d331e1d
 # if [ ! -z "${XFM_NORM}" ]; then
 #   echo "Stack exists - applying transforms mean BOLD to template"
 # else

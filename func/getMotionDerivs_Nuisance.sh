@@ -1,10 +1,15 @@
 #!/bin/bash -x
 
-####################
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
 
+####################
 ver=1.0.0
 verDate=7/16/20
-
 ####################
 
 # A script that will regress nuisance parameters from functional (task or rest) EPI data.
@@ -18,16 +23,13 @@ verDate=7/16/20
 
 scriptName="getMotionDerivs_Nuisance.sh"
 userID=`whoami`
+set -u
 
 #Source versions of programs used:
-VER_afni=${VER_afni}
-VER_ants=${VER_ants}
-VER_fsl=${VER_fsl}
-VER_matlab=${VER_matlab}
-source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
+#source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long group:,prefix:,is_ses:,mask-brain:,\
+OPTS=`getopt -o hl --long prefix:,mask-brain:,\
 ts-bold:,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -39,7 +41,7 @@ eval set -- "$OPTS"
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
+  if [[ "${KEEP}" = false ]]; then
     if [[ -d ${DIR_SCRATCH} ]]; then
       if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
         rm -R ${DIR_SCRATCH}/*
@@ -48,7 +50,7 @@ function egress {
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" == "false" ]]; then
+  if [[ "${NO_LOG}" = false ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
@@ -67,7 +69,6 @@ trap egress EXIT
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-GROUP=
 PREFIX=
 TS_BOLD=
 LABEL_TISSUE=
@@ -75,7 +76,7 @@ VALUE_CSF=1
 VALUE_WM=3
 DIR_SAVE=
 MASK_BRAIN=
-DIR_SCRATCH=/Shared/inc_scratch/${userID}_scratch_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_FUNC_CODE=${DIR_CODE}/func
 DIR_ANAT_CODE=${DIR_CODE}/anat
@@ -88,10 +89,8 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
-    --is_ses) IS_SES="$2" ; shift 2 ;;
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
@@ -114,13 +113,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
-  echo '  --is_ses <boolean>       is there a session folder,'
-  echo '                           default: true'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
@@ -135,13 +130,24 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+if [ -f "${TS_BOLD}" ]; then
+  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
+  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
+  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
+  TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
+  RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+  if [ -z "${PREFIX}" ]; then
+    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+  fi
+else
+  echo "The BOLD file does not exist. Exiting."
+  echo "Check paths, file names, and arguments."
+  exit 1
+fi
+
+# Set IS_SES variable
+if [ -z "${SESSION}" ]; then
+  IS_SES=false
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -160,7 +166,7 @@ deriveBackwards()
   in=$2
   outDir=$3
 
-read -p "Press [Enter] key to continue debugging..."
+#ead -p "Press [Enter] key to continue debugging..."
 
   #Var becomes a string of values from column $i in $in. Single space separated
   Var=`cat ${in} | sed s/"  "/" "/g | cut -d " " -f ${i}`
@@ -247,12 +253,12 @@ read -p "Press [Enter] key to continue debugging..."
 epiBase=`basename ${TS_BOLD} | awk -F"." '{print $1}'`
 epiPath=`dirname ${TS_BOLD}`
 numVols=`$ANTSPATH/PrintHeader ${TS_BOLD} 2 | awk -F"x" '{print $NF}'`
-trVal=`$ANTSPATH/PrintHeader ${TS_BOLD} 1 | awk -F"x" '{print $NF}'`
-if [[ ${TR} == "" ]]; then
-  TR=${trVal}
-else
-  TR=${TR}
-fi
+#trVal=`$ANTSPATH/PrintHeader ${TS_BOLD} 1 | awk -F"x" '{print $NF}'`
+# if [[ ${TR} == "" ]]; then
+#   TR=${trVal}
+# else
+#   TR=${TR}
+# fi
 
 #Motion parameters (all mm) for input EPI
 epiPar=${parDir}/${PREFIX}_moco+6.1D
@@ -279,14 +285,12 @@ epiPar_space=${parDir}/friston24/epiPar_space_tmp.1D
 
 #Reformat input to be space delimited (will be merged with quadratics, derivatives)
 cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
-<<<<<<< HEAD
-
-=======
->>>>>>> 434b05c28b44041eebd17d606da5311880e553c1
 
 #Loop through the 6 motion parameters (mm)
+num_params=`awk -F '[\t,]' '{print  NF}' ${epiPar} | head -n 1`
+
   i=1
-  while [[ ${i} -le 6 ]] ; do
+  while [[ ${i} -le ${num_params} ]] ; do
     #deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
     deriveBackwards ${i} ${epiPar_space} ${parDir}/friston24
     let i=i+1
@@ -300,6 +304,7 @@ cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
 
   #Clean up the last of the temporary files
   rm ${parDir}/friston24/_tmp*
+  rm -rf ${parDir}/friston24/
 
   #The last of the formatting (6 decimal places, nice columns)
   cat ${parDir}/friston24/${epiBase}_Friston24.par | awk '{for(i=1;i<=NF;i++)printf("%10.6f ",$i);printf("\n")}' \
@@ -314,13 +319,8 @@ cat ${epiPar} | sed 's/,/ /g' > ${parDir}/friston24/${epiBase}_Friston24.par
   #regressor_array=${parDir}/${epiBase}__moco+derivs+quadratic.par,${parDir}/${PREFIX}_global-anatomy.1D,${parDir}/${PREFIX}_compcorr-anatomy.1D,${parDir}/${PREFIX}_compcorr-temporal.1D
 
 #End logging
-chgrp -R ${group} ${parDir} > /dev/null 2>&1
 chmod -R g+rw ${parDir} > /dev/null 2>&1
 
-# Write log entry on conclusion ------------------------------------------------
-if [[ "${NO_LOG}" == "false" ]]; then
-  LOG_FILE=${DIR_PROJECT}/log/${PREFIX}.log
-  date +"task:$0,start:"${proc_start}",end:%Y-%m-%dT%H:%M:%S%z" >> ${LOG_FILE}
-fi
 
 exit 0
+
