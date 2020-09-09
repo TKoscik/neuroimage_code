@@ -7,7 +7,7 @@ OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
 
-#set -u
+set -u
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -121,18 +121,21 @@ proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -f "${TS_BOLD}" ]; then
   DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-  TEMPLATE_SPACE=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "reg"`
+  
   SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
   TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
   RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
   if [ -z "${PREFIX}" ]; then
     PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${TS_BOLD}`
   fi
-  #declare -A TEMP=()
-  TEMP=(${TEMPLATE_SPACE//+/ })
-  TEMPLATE=${TEMP[0]}
-  SPACE=${TEMP[1]}
-
+  if [ -z "${TEMPLATE}" ] | [ -z "${SPACE}" ]; then
+    TEMPLATE_SPACE=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "reg"`
+    TEMP=(${TEMPLATE_SPACE//+/ })
+    TEMPLATE=${TEMP[0]}
+    SPACE=${TEMP[1]}
+  else
+    TEMPLATE_SPACE=${TEMPLATE}_${SPACE}
+  fi
   # TEMPLATE=HCPICBM
   # SPACE=2mm
   # LABEL=WBCXN
