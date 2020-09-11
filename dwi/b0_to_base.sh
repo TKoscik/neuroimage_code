@@ -34,7 +34,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long group:,prefix:,\
+OPTS=`getopt -o hvl --long prefix:,\
 b0-image:,b0-mask:,fixed:,fixed-mask:,init-xfm:,\
 dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -45,7 +45,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
 PREFIX=
 B0_IMAGE=
 B0_MASK=
@@ -62,7 +61,6 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --b0-image) B0_IMAGE="$2" ; shift 2 ;;
     --b0-mask) B0_MASK="$2" ; shift 2 ;;
@@ -86,8 +84,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --b0-image <value>       B0 image'

@@ -34,7 +34,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdcvkl --long group:,prefix:,\
+OPTS=`getopt -o hdcvkl --long prefix:,\
 dir-dwi:,scalars:,xfms:,ref-image:,\
 dir-code:,dir-pincsource:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
@@ -45,7 +45,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
 PREFIX=
 DIR_DWI=
 SCALARS=fa,md,ad,rd
@@ -61,7 +60,6 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --scalars) SCALARS="$2" ; shift 2 ;;

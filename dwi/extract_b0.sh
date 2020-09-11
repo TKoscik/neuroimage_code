@@ -34,7 +34,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hcvkl --long group:,prefix:,\
+OPTS=`getopt -o hcvkl --long prefix:,\
 dir-dwi:,\
 dir-code:,dir-pincsource:,dir-save:,\
 keep,help,verbose,dry-run,no-log -n 'parse-options' -- "$@"`
@@ -46,7 +46,6 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-GROUP=
 PREFIX=
 DIR_DWI=
 DIR_CODE=/Shared/inc_scratch/code
@@ -64,7 +63,6 @@ while true; do
     -c | --dry-run) DRY-RUN=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
@@ -89,8 +87,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --dir-dwi <value>        location of the raw DWI data'
