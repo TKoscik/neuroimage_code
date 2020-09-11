@@ -44,10 +44,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdcvkl --long group:,prefix:,\
+OPTS=`getopt -o h --long prefix:,\
 bvec:,bval:,dwi-file:,brain-mask:,dsi-studio:,\
 dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
-help,debug,dry-run,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -55,7 +55,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
 PREFIX=
 BVEC=
 BVAL=
@@ -68,19 +67,10 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
-DRY_RUN=false
-VERBOSE=0
-KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
-    -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --bvec) BVEC="$2" ; shift 2 ;;
     --bval) BVAL="$2" ; shift 2 ;;
@@ -105,13 +95,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -d | --debug             keep scratch folder for debugging'
-  echo '  -c | --dry-run           test run of function'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --bvec <value>           bvec file'
@@ -175,7 +158,7 @@ FIB_FILE=(`ls ${DIR_SCRATCH}/${PREFIX}*fib.gz`)
 #Fiber tracking
 #${DSI_STUDIO} --action=trk \
 #--source=${FIB_FILE} \
-#--connectivity=P56_annotation \
+#--connectivity=WBCXN \
 #--fa_threshold=0.2 \
 #--output=${DIR_SCRATCH}/${PREFIX}_wb-track.trk.gz
 

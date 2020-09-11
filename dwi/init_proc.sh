@@ -36,7 +36,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long group:,prefix:,\
+OPTS=`getopt -o hl --long prefix:,\
 dwi-list:,dir-prep:,dir-code:,\
 help,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -46,7 +46,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
 PREFIX=
 DWI_LIST=
 DIR_PREP=
@@ -58,7 +57,6 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dwi-list) DWI_LIST="$2" ; shift 2 ;;
     --dir-prep) DIR_PREP="$2" ; shift 2 ;;
@@ -92,6 +90,8 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 if [ -z "${DIR_PREP}" ]; then
+  FILE_LIST=(${DWI_LIST//,/ })
+  INPUT_FILE=${FILE_LIST[0]}
   PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${INPUT_FILE}`
   SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
   SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
