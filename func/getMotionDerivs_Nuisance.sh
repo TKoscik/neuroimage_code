@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -302,14 +302,14 @@ num_params=`awk -F '[\t,]' '{print  NF}' ${epiPar} | head -n 1`
   ${parDir}/friston24/_tmp2 > ${parDir}/friston24/${epiBase}_Friston24.par_
   mv ${parDir}/friston24/${epiBase}_Friston24.par_ ${parDir}/friston24/${epiBase}_Friston24.par
 
-  #Clean up the last of the temporary files
-  rm ${parDir}/friston24/_tmp*
-  rm -rf ${parDir}/friston24/
-
   #The last of the formatting (6 decimal places, nice columns)
   cat ${parDir}/friston24/${epiBase}_Friston24.par | awk '{for(i=1;i<=NF;i++)printf("%10.6f ",$i);printf("\n")}' \
   > ${parDir}/friston24/${epiBase}_Friston24.par_
   mv ${parDir}/friston24/${epiBase}_Friston24.par_ ${parDir}/${epiBase}__moco+derivs+quadratic.par
+
+  #Clean up the last of the temporary files
+  rm ${parDir}/friston24/_tmp*
+  rm -rf ${parDir}/friston24/
 
   ##=============================Edit for big data=============================##
   # In the next script - nuisance_regression - it needs to ge passed a comma-separated list of regressors for 3dTproject

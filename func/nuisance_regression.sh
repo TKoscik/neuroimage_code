@@ -142,7 +142,7 @@ if [ -f "${TS_BOLD}" ]; then
   TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
   RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
   if [ -z "${PREFIX}" ]; then
-    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD}`
   fi
 else
   echo "The BOLD file does not exist. Exiting."
@@ -165,11 +165,11 @@ mkdir -p ${DIR_SAVE}
 if [ -z "${MASK_BRAIN}" ]; then
   echo "No mask is provided."
 else
+  mask_resampling=${MASK_BRAIN}
   maskBase=`basename ${mask_resampling} | awk -F"." '{print $1}'`
   if [ -f "${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz" ]; then
     rm ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
   fi
-  mask_resampling=${MASK_BRAIN}
   AFNI="3dresample -master ${TS_BOLD}"
   AFNI="${AFNI} -prefix ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz"
   AFNI="${AFNI} -input ${mask_resampling}"

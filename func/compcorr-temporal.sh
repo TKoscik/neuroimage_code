@@ -27,7 +27,7 @@ eval set -- "$OPTS"
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" = false ]]; then
+  if [[ "${KEEP}" = false ]]; then
     if [[ -d ${DIR_SCRATCH} ]]; then
       if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
         rm -R ${DIR_SCRATCH}/*
