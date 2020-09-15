@@ -47,7 +47,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
 other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,dir-template:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -64,7 +64,6 @@ DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 
@@ -82,7 +81,6 @@ while true; do
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
     --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -114,8 +112,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: ${DIR_CODE}'
   echo '  --dir-template <value>   directory where INC templates are stored,'
   echo '                           default: ${DIR_TEMPLATE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0

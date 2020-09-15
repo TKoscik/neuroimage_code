@@ -134,8 +134,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Timothy R. Koscik, PhD'
-  echo 'Date:   2020-03-27'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
@@ -387,12 +385,6 @@ fi
 #===============================================================================
 # End of function
 #===============================================================================
-
-###ADD QC function - mriqc
-# if [ ! command -v pip &> /dev/null ]; then
-#     echo "pip could not be found"
-#     exit
-# fi
 
 exit 0
 

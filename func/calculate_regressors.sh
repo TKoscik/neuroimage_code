@@ -29,8 +29,8 @@ VER_matlab=${VER_matlab}
 source /Shared/pinc/sharedopt/apps/sourcefiles/anaconda3_source.sh 2019.10
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long group:,prefix:,is_ses:,moco_file:,\
-ts-bold:,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+OPTS=`getopt -o hl --long prefix:,is_ses:,moco_file:,\
+ts-bold:,dir-save:,dir-scratch:,dir-code:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -57,7 +57,6 @@ trap egress EXIT
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-GROUP=
 PREFIX=
 TS_BOLD=
 DIR_SAVE=
@@ -65,7 +64,6 @@ DIR_SCRATCH=/Shared/inc_scratch/${userID}_scratch_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
 DIR_FUNC_CODE=${DIR_CODE}/func
 DIR_ANAT_CODE=${DIR_CODE}/anat
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 NO_LOG=false
 IS_SES=true
@@ -74,7 +72,6 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --is_ses) IS_SES="$2" ; shift 2 ;;
@@ -82,7 +79,6 @@ while true; do
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -94,8 +90,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: <<author names>>'
-  echo 'Date:   <<date of authorship>>'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
@@ -113,9 +107,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
+  NO_LOG=true
   exit 0
 fi
 

@@ -99,8 +99,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Timothy R. Koscik, Phd'
-  echo 'Date:   2020-02-25'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
