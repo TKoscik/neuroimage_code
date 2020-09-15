@@ -10,17 +10,19 @@ FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 NO_LOG=false
-DEBUG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
       fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
@@ -30,7 +32,7 @@ function egress {
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
     echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v DIR_PROJECT ]]; then
+    if [[ -v ${DIR_PROJECT} ]]; then
       PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
       if [[ ! -f ${PROJECT_LOG} ]]; then
         echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
@@ -42,9 +44,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvla --long group:,prefix:,\
+OPTS=`getopt -o hvla --long prefix:,\
 label:,value:,stats:,lut:,no-append,\
-dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+dir-save:,dir-scratch:,dir-code:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -53,7 +55,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-GROUP=
 PREFIX=
 LABEL=
 VALUE=
@@ -63,14 +64,12 @@ DIR_SAVE=
 NO_APPEND=false
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -a | --no-append) NO_APPEND=true ; shift ;;
@@ -83,7 +82,6 @@ while true; do
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
