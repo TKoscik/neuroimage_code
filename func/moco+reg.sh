@@ -300,27 +300,24 @@ antsApplyTransforms -d 3 \
 
 # Push mean bold to template --------------------------------------------------
 if [ "${IS_SES}" = true ]; then
-  #XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+  if [ -f ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz ]; then
+    XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  elif [ -f ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz ]; then
+    XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+  else
+    echo "${DIR_PROJECT}/derivatives/xfm/ doesn't have the right stack."
+    exit 1
+  fi
 else
-  #XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
-  XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+  if [ -f ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz ]; then
+    XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/*${TARGET}+rigid_to-${TEMPLATE}+*_xfm-stack.nii.gz`)
+  elif [ -f ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz ]; then
+    XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
+  else
+    echo "${DIR_PROJECT}/derivatives/xfm/ doesn't have the right stack."
+    exit 1
+  fi
 fi
-
-### ADD in here what to do if stack is not found but components are
-### L. Hopkins 7/2/2020 -- still editing
-# Holy shit is this even right?
-#Doesn't matter - this file no longer exists; can delete
-# if [ ! -z "${XFM_NORM}" ]; then
-#   echo "Stack exists - applying transforms mean BOLD to template"
-# else
-#   echo "Stack does not exist - making stack from components"
-#   if [ "${IS_SES}" = false ]; then
-#     XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
-#   else
-#     XFM_NORM=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}_from-native_to-${TEMPLATE}+${SPACE}_xfm-stack.nii.gz`)
-#   fi
-# fi
 
 antsApplyTransforms -d 3 \
   -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
