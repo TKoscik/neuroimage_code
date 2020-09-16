@@ -45,12 +45,12 @@
             - __regressor_deriv.sh__
                 - output should be ${PREFIX}_moco+6+deriv.1D
                 -bash:
-                `>> Rscript ${DIR_CODE}/func/regressor_deriv.sh`
+                `>> Rscript ${DIR_CODE}/func/regressor_deriv.sh`  
                 -R:
-                `R> args <- commandArgs(trailingOnly = TRUE)`
-                `R> df <- read.csv(args[i])`
-                `R> df <- apply(df, 2, diff)`
-                `R> return(df)`
+                `R> args <- commandArgs(trailingOnly = TRUE)`  
+                `R> df <- read.csv(args[i])`  
+                `R> df <- apply(df, 2, diff)`  
+                `R> return(df)`  
             - __regressor_quad.sh__
                 - output should be ${PREFIX}_moco+6+quad.1D
                 - output should just keep appending, e.g., ${PREFIX}_moco+6+deriv+quad.1D
