@@ -89,7 +89,12 @@ This would include:
 ## quality control
 - needed functions:
     - image panels for initial qc of dicoms
-    - 3d plotter with overlay for brain mask
+    - 3d plane view with ROI overlay for brain mask, navigable html
+    - 3d plane view with colored overlay
+        - options to specify color bar
+        - multiple overlays possible?
+        - navigable?
+        - easily exportable as publication ready figure?
     - time series gifs?
     - moco/1D plots
     - matrix heatmaps
