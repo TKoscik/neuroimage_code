@@ -43,10 +43,10 @@
             - __regressor_frame-disp.sh__
             - __regressor_spike.sh__
             - __regressor_deriv.sh__
-                - output should be ${PREFIX}_moco+6+deriv.1D
-                -bash:
+                - output should be ${PREFIX}_moco+6+deriv.1D  
+                -bash:  
                 `>> Rscript ${DIR_CODE}/func/regressor_deriv.sh`  
-                -R:
+                -R:  
                 `R> args <- commandArgs(trailingOnly = TRUE)`  
                 `R> df <- read.csv(args[i])`  
                 `R> df <- apply(df, 2, diff)`  
