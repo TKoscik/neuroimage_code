@@ -1,0 +1,4 @@
+We will use a 4 digit version number:
+e.g., 1.0.0.0
+
+<major non-compatible change>.<added features>.<bug fixes>.<tweaks>
