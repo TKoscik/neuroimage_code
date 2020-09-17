@@ -99,10 +99,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --image <value>          image containing intensity values,'
-  echo '                           e.g., FLAIR for WM hyperintensity maps.'
+  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
+  echo '  --image <value>          image containing intensity values, e.g., FLAIR for WM hyperintensity maps.'
   echo '  --mask <value>           mask containing values which should be included'
   echo '  --thresh-dir <value>     which direction to apply threshold, g (>=) or l (<=), default=g'
   echo '  --percentile <value>     percentile for intensity threshold'
@@ -142,7 +140,7 @@ fi
 LABEL="${LABEL_NAME}+${THRESH_DIR}${PERCENTILE}+sz${MIN_SIZE}"
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/label/${LABEL}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/label/${LABEL}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -155,20 +153,18 @@ else
   fslmaths ${IMAGE} -uthr ${THRESH} -mas ${MASK} -bin ${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz
 fi
 
-${FSLDIR}/bin/cluster --in=${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz --thresh=0.5 --osize=${DIR_SCRATCH}/${PREFIX}_clust.nii.gz
-
-if [[ "${MIN_SIZE}" != 0 ]]; then
-  fslmaths ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz -thr ${MIN_SIZE} -bin ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz > /dev/null
+if [[ "${MIN_SIZE}" != "0" ]]; then
+  ${FSLDIR}/bin/cluster --in=${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz --thresh=0.5 --osize=${DIR_SCRATCH}/${PREFIX}_clust.nii.gz > /dev/null
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz -thr ${MIN_SIZE} -bin ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz ${DIR_SAVE}/${PREFIX}_label-${LABEL}.nii.gz
+else
+  mv ${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz ${DIR_SAVE}/${PREFIX}_label-${LABEL}.nii.gz
 fi
-
-mv ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz \
-  ${DIR_SAVE}/${PREFIX}_label-${LABEL}.nii.gz
 
 #===============================================================================
 # End of Function
 #===============================================================================
 
-# Exit function ---------------------------------------------------------------
 exit 0
 
 
