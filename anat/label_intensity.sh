@@ -124,6 +124,7 @@ if [ -z "${PREFIX}" ]; then
   PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
+MOD=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "modality"})
 LABEL_NAME=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "label")
 if [[ -z "${LABEL_NAME}" ]]; then
   LABEL_NAME=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "mask")
@@ -137,7 +138,7 @@ if [[ ! "${TEST_DIR[@]}" =~ "${THRESH_DIR}" ]]; then
   echo "unrecognized threshold direction, must be g or l"
 fi
 
-LABEL="${LABEL_NAME}+${THRESH_DIR}${PERCENTILE}+sz${MIN_SIZE}"
+LABEL="${MOD}+${LABEL_NAME}+${THRESH_DIR}${PERCENTILE}+sz${MIN_SIZE}"
 
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/label/${LABEL}
