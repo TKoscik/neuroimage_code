@@ -21,8 +21,15 @@
 - naming convention for functions, lowercase and underscores
 - Update to file paths, imporant for default paths, should have one more layer to derivatives structure, to specify the pipeline:  
 ```
-dir_project
- derivatives/inc/anat
+dir_project/
+   └──derivatives/
+      ├──baw/
+      ├──freesurfer/
+      └──inc/
+         ├──anat/
+         ├──dwi/
+         └──func/
+```
 
 ## anatomical workflow
 - finish/start __map_hyperintensity.sh__
