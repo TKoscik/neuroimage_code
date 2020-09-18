@@ -18,6 +18,11 @@
 - remove deprecated functions entirely
 - add model folder, for stistical modelling workflows
 - probably should remove backticks and use $() instead... \`\` are deprecated
+- naming convention for functions, lowercase and underscores
+- Update to file paths, imporant for default paths, should have one more layer to derivatives structure, to specify the pipeline:  
+```
+dir_project
+ derivatives/inc/anat
 
 ## anatomical workflow
 - finish/start __map_hyperintensity.sh__
