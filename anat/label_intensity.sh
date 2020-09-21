@@ -1,9 +1,10 @@
 #!/bin/bash -e
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Label images based on image intensity percentile, optionally within masked region,
+# and of a minimal size
+# Authors: Timothy R. Koscik, PhD
+# Date: 2020-09-17
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
@@ -46,8 +47,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
-other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,\
+image:,mask:,thresh-dir:,percentile:,min-size:,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -57,13 +58,14 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
+IMAGE=
+MASK=
+THRESH_DIR=g
+PERCENTILE=99
+MIN_SIZE=5
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
 
@@ -74,20 +76,17 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
+    --thresh-dir) THRESH_DIR="$2" ; shift 2 ;;
+    --percentile) PERCENTILE="$2" ; shift 2 ;;
+    --min-size) MIN_SIZE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
 done
-### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
-#         by DIR_INC for version 0.0.0.0. Specifying the directory may
-#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -100,18 +99,14 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
+  echo '  --image <value>          image containing intensity values, e.g., FLAIR for WM hyperintensity maps.'
+  echo '  --mask <value>           mask containing values which should be included'
+  echo '  --thresh-dir <value>     which direction to apply threshold, g (>=) or l (<=), default=g'
+  echo '  --percentile <value>     percentile for intensity threshold'
+  echo '  --min-size <value>       minimum cluster size to include in final map'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -122,34 +117,55 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE})
+SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
+SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
+MOD=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "modality"})
+LABEL_NAME=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "label")
+if [[ -z "${LABEL_NAME}" ]]; then
+  LABEL_NAME=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "mask")
+  if [[ -z "${LABEL_NAME}" ]]; then
+    LABEL_NAME=ROI
+  fi
+fi
+
+TEST_DIR=(g l)
+if [[ ! "${TEST_DIR[@]}" =~ "${THRESH_DIR}" ]]; then
+  echo "unrecognized threshold direction, must be g or l"
+fi
+
+LABEL="${MOD}+${LABEL_NAME}+${THRESH_DIR}${PERCENTILE}+sz${MIN_SIZE}"
+
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/label/${LABEL}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+# intensity threshold image
+THRESH=$(fslstats ${IMAGE} -k ${MASK} -P ${PERCENTILE})
+if [[ "${THRESH_DIR}" == "g" ]]; then
+  fslmaths ${IMAGE} -thr ${THRESH} -mas ${MASK} -bin ${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz
+else
+  fslmaths ${IMAGE} -uthr ${THRESH} -mas ${MASK} -bin ${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz
+fi
+
+if [[ "${MIN_SIZE}" != "0" ]]; then
+  ${FSLDIR}/bin/cluster --in=${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz --thresh=0.5 --osize=${DIR_SCRATCH}/${PREFIX}_clust.nii.gz > /dev/null
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz -thr ${MIN_SIZE} -bin ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_clust.nii.gz ${DIR_SAVE}/${PREFIX}_label-${LABEL}.nii.gz
+else
+  mv ${DIR_SCRATCH}/${PREFIX}_thresh.nii.gz ${DIR_SAVE}/${PREFIX}_label-${LABEL}.nii.gz
+fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
 
-# Clean workspace --------------------------------------------------------------
-# edit directory for appropriate modality prep folder
-if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}/
-fi
-
-# Exit function ---------------------------------------------------------------
 exit 0
+
 

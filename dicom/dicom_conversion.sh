@@ -9,18 +9,20 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-DEBUG=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${DEBUG}" == "false" ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
       fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
   LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
@@ -30,7 +32,7 @@ function egress {
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
     echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v DIR_PROJECT ]]; then
+    if [[ -v ${DIR_PROJECT} ]]; then
       PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
       if [[ ! -f ${PROJECT_LOG} ]]; then
         echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
@@ -41,12 +43,11 @@ function egress {
 }
 trap egress EXIT
 
-
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hdvkl --long dir-project:,group:,email:,subject:,session:,\
+OPTS=`getopt -o hvkl --long dir-project:,email:,subject:,session:,\
 dicom-zip:,dicom-depth:,dont-use:,\
-dir-scratch:,dir-code:,dir-pincsource:,dir-dicomsource:,\
-help,debug,verbose,keep,no-log -n 'parse-options' -- "$@"`
+dir-scratch:,dir-code:,dir-dicomsource:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -54,7 +55,6 @@ fi
 eval set -- "$OPTS"
 
 DIR_PROJECT=
-GROUP=
 EMAIL=steven-j-cochran@uiowa.edu
 SUBJECT=
 SESSION=
@@ -63,7 +63,6 @@ DICOM_DEPTH=5
 DONT_USE=loc,cal,orig
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps
 DIR_DICOMSOURCE=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20190902
 HELP=false
 VERBOSE=false
@@ -73,12 +72,10 @@ KEEP=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
     -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
-    --group) GROUP="$2" ; shift 2 ;;
     --email) EMAIL="$2" ; shift 2 ;;
     --subject) SUBJECT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
@@ -87,7 +84,6 @@ while true; do
     --dont-use) DONT_USE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     --dir-dicomsource) DIR_DICOMSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -102,19 +98,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help               display command help'
-  echo '  -d | --debug              keep scratch folder for debugging'
   echo '  -v | --verbose            add verbose output to log file'
   echo '  -k | --keep               keep intermediates'
   echo '  -l | --no-log             disable writing to output log'
   echo '  --researcher <value>      directory containing the project, e.g. /Shared/koscikt'
   echo '  --project <value>         name of the project folder, e.g., iowa_black'
-  echo '  --group <value>           group permissions for project, e.g., Research-kosciklab'
   echo '  --email <values>          comma-delimited list of email addresses'
   echo '  --dicom-zip <value>       directory listing for DICOM zip-file'
   echo '  --dicom-depth <value>     depth to search dicom directory, default=5'
   echo '  --dir-scratch <value>     directory for temporary data'
   echo '  --dir-nimgcore <value>    directory where INPC tools and atlases are stored, default: /Shared/nopoulos/nimg_core'
-  echo '  --dir-pincsource <value>  directory where pinc apps are located, default: /Shared/pinc/sharedopt/apps'
   echo '  --dir-dicomsource <value> directory where dcm2niix source files are located, default: /Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20180622'
   echo '  --save-loc                whether to save localizer scans, default: false'
   echo ''
@@ -264,18 +257,13 @@ ${EMAIL}
 
 
 # Change ownership and permissions ---------------------------------------------
-chgrp ${GROUP} ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
-chgrp ${GROUP} ${DIR_PROJECT}/qc/dicom_conversion/${prefix}_qc-dicomConversion.html > /dev/null 2>&1
-chgrp -R ${GROUP} ${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]} > /dev/null 2>&1
+#chgrp ${GROUP} ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
+#chgrp ${GROUP} ${DIR_PROJECT}/qc/dicom_conversion/${prefix}_qc-dicomConversion.html > /dev/null 2>&1
+#chgrp -R ${GROUP} ${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]} > /dev/null 2>&1
 
-chmod g+rw ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
-chmod g+rw ${DIR_PROJECT}/qc/dicom_conversion/${prefix}_qc-dicomConversion.html  > /dev/null 2>&1
-chmod -R g+rw ${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]} > /dev/null 2>&1
-
-# Clean up temporary files -----------------------------------------------------
-if [ "${KEEP}" == "false" ]; then
-  rm -rd ${DIR_SCRATCH}
-fi
+#chmod g+rw ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
+#chmod g+rw ${DIR_PROJECT}/qc/dicom_conversion/${prefix}_qc-dicomConversion.html  > /dev/null 2>&1
+#chmod -R g+rw ${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]} > /dev/null 2>&1
 
 exit 0
 

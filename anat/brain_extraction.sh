@@ -9,7 +9,6 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-DEBUG=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
@@ -74,8 +73,6 @@ KEEP=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -d | --debug) DEBUG=true ; shift ;;
-    -c | --dry-run) DRY-RUN=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
@@ -101,8 +98,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Timothy R. Koscik, PhD'
-  echo 'Date: 2020-02-25'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
