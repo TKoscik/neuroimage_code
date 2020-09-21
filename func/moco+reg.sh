@@ -261,11 +261,11 @@ if [ "${IS_SES}" = true ]; then
   T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}_ses-${SESSION}*${TARGET}.nii.gz`)
   T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}_ses-${SESSION}*mask-brain*.nii.gz`)
   # use raw to rigid transform to initialize, if it exists
-  RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}*${TARGET}+raw*.mat`)
+  RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/ses-${SESSION}/sub-${SUBJECT}_ses-${SESSION}*${TARGET}+raw*${TEMPLATE}+${SPACE}*.mat`)
 else
   T1=(`ls ${DIR_PROJECT}/derivatives/anat/native/sub-${SUBJECT}*${TARGET}.nii.gz`)
   T1_MASK=(`ls ${DIR_PROJECT}/derivatives/anat/mask/sub-${SUBJECT}*mask-brain*.nii.gz`)
-  RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}*${TARGET}+raw*.mat`)
+  RAW_TO_RIGID=(`ls ${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}/sub-${SUBJECT}*${TARGET}+raw*${TEMPLATE}+${SPACE}*.mat`)
 fi
 
 if [ ! -z "${RAW_TO_RIGID}" ]; then
