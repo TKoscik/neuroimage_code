@@ -111,6 +111,7 @@ SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
 SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX="${PREFIX}_prep-reorient"
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -134,13 +135,13 @@ elif [[ "${ORIENT_CODE:1:1}" == "I" ]]; then
   Z=S
 fi
 NEW_CODE="${X}${Y}${Z}"
-MOD=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "modality")
-OUTNAME=${DIR_SCRATCH}/${PREFIX}_prep-reorient_${MOD}.nii.gz
+
+OUTNAME=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
 3dresample -orient ${NEW_CODE,,} -prefix ${OUTNAME} -input ${IMAGE}
 CopyImageHeaderInformation ${IMAGE} ${OUTNAME} ${OUTNAME} 1 1 0
 
-mv ${OUTNAME} ${DIR_SAVE}/${PREFIX}_prep-reorient_${MOD}.nii.gz
+mv ${OUTNAME} ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 #===============================================================================
 # End of Function
 #===============================================================================
