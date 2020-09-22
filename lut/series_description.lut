@@ -289,8 +289,8 @@ RESTRun3	func	rest	-	-	-	-	-	-	-	bold
 RESTRun4REV	func	rest	-	-	-	-	-	-	-	bold
 3DSagT1MPRAGE	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
 3DSagT2Cube	anat	-	sagCUBE	-	-	-	-	-	-	T2w
-ORIG3DSagT1MPRAGE	orig	sagMPRAGEOrig	-	-	-	-	-	-	T1w
-ORIG3DSagT2Cube	orig	-	sagCUBEOrig	-	-	-	-	-	-	T2w
+ORIG3DSagT1MPRAGE	orig	sagMPRAGEOrig	-	-	-	-	-	orig	T1w
+ORIG3DSagT2Cube	orig	-	sagCUBEOrig	-	-	-	-	-	orig	T2w
 RESTRun1	func	rest	-	-	-	-	-	-	-	bold
 RESTRun2REV	func	rest	-	-	-	-	-	-	-	bold
 localizer32ch	loc	-	localizer32ch	-	-	-	-	-	-	loc
@@ -326,8 +326,8 @@ DTIFieldmapP	fmap	-	b0FieldMap	-	-	PA	-	-	-	dwi
 DTIFieldmapA	fmap	-	b0FieldMap	-	-	AP	-	-	-	dwi
 T1weighted	anat	-	T1	-	-	-	-	-	-	T1w
 T2weighted	anat	-	T2	-	-	-	-	-	-	T2w
-ORIGT1weighted	anat	-	T1Orig	-	-	-	-	-	-	T1w
-ORIGT2weighted	anat	-	T2Orig	-	-	-	-	-	-	T2w
+ORIGT1weighted	orig	-	T1Orig	-	-	-	-	-	orig	T1w
+ORIGT2weighted	orig	-	T2Orig	-	-	-	-	-	orig	T2w
 FilteredT1weighted	anat	-	FilteredT1	-	-	-	-	-	-	T1w
 FilteredT2weighted	anat	-	FilteredT2	-	-	-	-	-	-	T2w
 Rest3PE1	func	rest	-	-	-	-	-	-	-	bold
