@@ -126,7 +126,7 @@ if [[ "${T1_SPACE}" != "${T2_SPACE}" ]]; then
   echo "T1w and T2w not in same space, aborting"
   exit 1
 fi
-TEMP=(${T1_SPACE//,/ })
+TEMP=(${T1_SPACE//+/ })
 TEMPLATE=${TEMP[0]}
 SPACE=${TEMP[1]}
 
