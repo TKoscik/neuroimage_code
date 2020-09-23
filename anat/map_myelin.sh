@@ -45,7 +45,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long prefix:,\
 t1:,t2:,\
-dir-save:,dir-scratch:,dir-code:,\
+dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -58,8 +58,6 @@ PREFIX=
 T1=
 T2=
 ROI=NULL
-ROI_VAL=1,2
-N_BINS=100
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -77,8 +75,6 @@ while true; do
     --t2) T2="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -106,8 +102,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           e.g., native = native'
   echo '                                 reg_${TEMPLATE}_${SPACE}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
   echo ''
   NO_LOG=true
   exit 0
