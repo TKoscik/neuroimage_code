@@ -160,162 +160,24 @@ cp ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz \
   ${DIR_SCRATCH}/norm_T2w.nii.gz
 cp ${T1} ${DIR_SCRATCH}/sub_T1w.nii.gz
 cp ${T2} ${DIR_SCRATCH}/sub_T2w.nii.gz
+cp ${ROI} ${DIR_SCRATCH}/roi.nii.gz
+gunzip ${DIR_SCRATCH}/*.gz
 
-# Truncate image intensity to 98%
-ImageMath 3 ${DIR_SCRATCH}/norm_T1w.nii.gz TruncateImageIntensity ${DIR_SCRATCH}/norm_T1w.nii.gz 0 0.98 100
-ImageMath 3 ${DIR_SCRATCH}/norm_T2w.nii.gz TruncateImageIntensity ${DIR_SCRATCH}/norm_T2w.nii.gz 0 0.98 100
-ImageMath 3 ${DIR_SCRATCH}/sub_T1w.nii.gz TruncateImageIntensity ${DIR_SCRATCH}/sub_T1w.nii.gz 0 0.98 100
-ImageMath 3 ${DIR_SCRATCH}/sub_T2w.nii.gz TruncateImageIntensity ${DIR_SCRATCH}/sub_T2w.nii.gz 0 0.98 100
+# calculate myelin map
+Rscript ${DIR_CODE}/anat/map_myelin.R \
+  ${DIR_SCRATCH}/norm_T1w.nii \
+  ${DIR_SCRATCH}/norm_T2w.nii \
+  ${DIR_SCRATCH}/sub_T1w.nii \
+  ${DIR_SCRATCH}/sub_T2w.nii \
+  ${DIR_SCRATCH}/roi.nii
 
-# remove negative values
-fslmaths ${DIR_SCRATCH}/norm_T1w.nii.gz -thr 0 ${DIR_SCRATCH}/norm_T1w.nii.gz
-fslmaths ${DIR_SCRATCH}/norm_T2w.nii.gz -thr 0 ${DIR_SCRATCH}/norm_T2w.nii.gz
-fslmaths ${DIR_SCRATCH}/sub_T1w.nii.gz -thr 0 ${DIR_SCRATCH}/sub_T1w.nii.gz
-fslmaths ${DIR_SCRATCH}/sub_T2w.nii.gz -thr 0 ${DIR_SCRATCH}/sub_T2w.nii.gz
-
-# convert to unsigned short (UINT16), and stretch range of data to fill dynamic range of numeric type
-ConvertImagePixelType ${DIR_SCRATCH}/norm_T1w.nii.gz ${DIR_SCRATCH}/norm_T1w.nii.gz 3
-ConvertImagePixelType ${DIR_SCRATCH}/norm_T2w.nii.gz ${DIR_SCRATCH}/norm_T2w.nii.gz 3
-ConvertImagePixelType ${DIR_SCRATCH}/sub_T1w.nii.gz ${DIR_SCRATCH}/sub_T1w.nii.gz 3
-ConvertImagePixelType ${DIR_SCRATCH}/sub_T2w.nii.gz ${DIR_SCRATCH}/sub_T2w.nii.gz 3
-
-# Convert back to float for math
-ConvertImage 3 ${DIR_SCRATCH}/norm_T1w.nii.gz ${DIR_SCRATCH}/norm_T1w.nii.gz 0
-ConvertImage 3 ${DIR_SCRATCH}/norm_T2w.nii.gz ${DIR_SCRATCH}/norm_T2w.nii.gz 0
-ConvertImage 3 ${DIR_SCRATCH}/sub_T1w.nii.gz ${DIR_SCRATCH}/sub_T1w.nii.gz 0
-ConvertImage 3 ${DIR_SCRATCH}/sub_T2w.nii.gz ${DIR_SCRATCH}/sub_T2w.nii.gz 0
-
-# normalize intensity values
-NORM_MINMAX=($(fslstats -K ${ROI} ${DIR_SCRATCH}/norm_T1w.nii.gz -R))
-TEMP_HIST=($(fslstats -K ${ROI} ${DIR_SCRATCH}/norm_T1w.nii.gz -h ${N_BINS}))
-NORM_HIST=(${TEMP_HIST[@]//.000000/})
-NORM_X=(${NORM_HIST[@]:0:100})
-STEP_SIZE=$(echo ${NORM_MINMAX[1]} - ${NORM_MINMAX[0]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T1_NORM_MODE_X=${STEP_SIZE}
-TEMP_MAX=${NORM_X[0]}
-for (( i=1; i<${#NORM_X[@]}; i++ )); do
-  if [[ ${NORM_X[${i}]} -gt ${TEMP_MAX} ]]; then
-    T1_NORM_MODE_X=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${NORM_X[${i}]}
-  fi
-done
-NORM_Y=(${NORM_HIST[@]:100:100})
-STEP_SIZE=$(echo ${NORM_MINMAX[3]} - ${NORM_MINMAX[2]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T1_NORM_MODE_Y=${STEP_SIZE}
-TEMP_MAX=${NORM_Y[0]}
-for (( i=1; i<${#NORM_Y[@]}; i++ )); do
-  if [[ ${NORM_Y[${i}]} -gt ${TEMP_MAX} ]]; then
-    T1_NORM_MODE_Y=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${NORM_Y[${i}]}
-  fi
-done
-
-NORM_MINMAX=($(fslstats -K ${ROI} ${DIR_SCRATCH}/norm_T2w.nii.gz -R))
-TEMP_HIST=($(fslstats -K ${ROI} ${DIR_SCRATCH}/norm_T2w.nii.gz -h ${N_BINS}))
-NORM_HIST=(${TEMP_HIST[@]//.000000/})
-NORM_X=(${NORM_HIST[@]:0:100})
-STEP_SIZE=$(echo ${NORM_MINMAX[1]} - ${NORM_MINMAX[0]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T2_NORM_MODE_X=${STEP_SIZE}
-TEMP_MAX=${NORM_X[0]}
-for (( i=1; i<${#NORM_X[@]}; i++ )); do
-  if [[ ${NORM_X[${i}]} -gt ${TEMP_MAX} ]]; then
-    T2_NORM_MODE_X=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${NORM_X[${i}]}
-  fi
-done
-NORM_Y=(${NORM_HIST[@]:100:100})
-STEP_SIZE=$(echo ${NORM_MINMAX[3]} - ${NORM_MINMAX[2]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T2_NORM_MODE_Y=${STEP_SIZE}
-TEMP_MAX=${NORM_Y[0]}
-for (( i=1; i<${#NORM_Y[@]}; i++ )); do
-  if [[ ${NORM_Y[${i}]} -gt ${TEMP_MAX} ]]; then
-    T2_NORM_MODE_Y=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${NORM_Y[${i}]}
-  fi
-done
-
-SUB_MINMAX=($(fslstats -K ${ROI} ${DIR_SCRATCH}/sub_T1w.nii.gz -R))
-TEMP_HIST=($(fslstats -K ${ROI} ${DIR_SCRATCH}/sub_T1w.nii.gz -h ${N_BINS}))
-SUB_HIST=(${TEMP_HIST[@]//.000000/})
-SUB_X=(${SUB_HIST[@]:0:100})
-STEP_SIZE=$(echo ${SUB_MINMAX[1]} - ${SUB_MINMAX[0]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T1_SUB_MODE_X=${STEP_SIZE}
-TEMP_MAX=${SUB_X[0]}
-for (( i=1; i<${#SUB_X[@]}; i++ )); do
-  if [[ ${SUB_X[${i}]} -gt ${TEMP_MAX} ]]; then
-    T1_SUB_MODE_X=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${SUB_X[${i}]}
-  fi
-done
-SUB_Y=(${SUB_HIST[@]:100:100})
-STEP_SIZE=$(echo ${SUB_MINMAX[3]} - ${SUB_MINMAX[2]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T1_SUB_MODE_Y=${STEP_SIZE}
-TEMP_MAX=${SUB_Y[0]}
-for (( i=1; i<${#SUB_Y[@]}; i++ )); do
-  if [[ ${SUB_Y[${i}]} -gt ${TEMP_MAX} ]]; then
-    T1_SUB_MODE_Y=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${SUB_Y[${i}]}
-  fi
-done
-
-SUB_MINMAX=($(fslstats -K ${ROI} ${DIR_SCRATCH}/sub_T2w.nii.gz -R))
-TEMP_HIST=($(fslstats -K ${ROI} ${DIR_SCRATCH}/sub_T2w.nii.gz -h ${N_BINS}))
-SUB_HIST=(${TEMP_HIST[@]//.000000/})
-SUB_X=(${SUB_HIST[@]:0:100})
-STEP_SIZE=$(echo ${SUB_MINMAX[1]} - ${SUB_MINMAX[0]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T2_SUB_MODE_X=${STEP_SIZE}
-TEMP_MAX=${SUB_X[0]}
-for (( i=1; i<${#SUB_X[@]}; i++ )); do
-  if [[ ${SUB_X[${i}]} -gt ${TEMP_MAX} ]]; then
-    T2_SUB_MODE_X=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${SUB_X[${i}]}
-  fi
-done
-SUB_Y=(${SUB_HIST[@]:100:100})
-STEP_SIZE=$(echo ${SUB_MINMAX[3]} - ${SUB_MINMAX[2]} | bc -l)
-STEP_SIZE=$(echo ${STEP_SIZE} / ${N_BINS} | bc -l)
-T2_SUB_MODE_Y=${STEP_SIZE}
-TEMP_MAX=${SUB_Y[0]}
-for (( i=1; i<${#SUB_Y[@]}; i++ )); do
-  if [[ ${SUB_Y[${i}]} -gt ${TEMP_MAX} ]]; then
-    T2_SUB_MODE_Y=$(echo ${STEP_SIZE} \* ${i} | bc -l)
-    TEMP_MAX=${SUB_Y[${i}]}
-  fi
-done
-
-## scale T1
-M1=$(echo ${T1_NORM_MODE_X} - ${T1_NORM_MODE_Y} |bc -l)
-M2=$(echo ${T1_SUB_MODE_X} - ${T1_SUB_MODE_Y} |bc -l)
-M=$(echo ${M1} / ${M2} | bc -l)
-B1=$(echo ${T1_SUB_MODE_X} \* ${T1_NORM_MODE_Y} | bc -l)
-B2=$(echo ${T1_NORM_MODE_X} \* ${T1_SUB_MODE_Y} | bc -l)
-B3=$(echo ${B1} - ${B2} | bc -l)
-B4=$(echo ${T1_SUB_MODE_X} - ${T1_SUB_MODE_Y} | bc -l)
-B=$(echo ${B3} / ${B4} | bc -l)
-fslmaths ${DIR_SCRATCH}/sub_T1w.nii.gz -mul ${M} -add ${B} -thr 0 -range ${DIR_SCRATCH}/sub_T1w.nii.gz
-
-## scale T2
-M1=$(echo ${T2_NORM_MODE_X} - ${T2_NORM_MODE_Y} |bc -l)
-M2=$(echo ${T2_SUB_MODE_X} - ${T2_SUB_MODE_Y} |bc -l)
-M=$(echo ${M1} / ${M2} | bc -l)
-B1=$(echo ${T2_SUB_MODE_X} \* ${T2_NORM_MODE_Y} | bc -l)
-B2=$(echo ${T2_NORM_MODE_X} \* ${T2_SUB_MODE_Y} | bc -l)
-B3=$(echo ${B1} - ${B2} | bc -l)
-B4=$(echo ${T2_SUB_MODE_X} - ${T2_SUB_MODE_Y} | bc -l)
-B=$(echo ${B3} / ${B4} | bc -l)
-fslmaths ${DIR_SCRATCH}/sub_T2w.nii.gz -mul ${M} -add ${B} -thr 0 -range ${DIR_SCRATCH}/sub_T2w.nii.gz
-
-fslmaths -dt float ${DIR_SCRATCH}/sub_T1w.nii.gz -div ${DIR_SCRATCH}/sub_T2w.nii.gz ${DIR_SCRATCH}/myelin.nii.gz -odt float
-
-ImageMath 3 ${DIR_SCRATCH}/T2inv.nii.gz ^ ${T2} -1
-ImageMath 3 ${DIR_SAVE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_myelin.nii.gz m ${T1} ${DIR_SCRATCH}/T2inv.nii.gz
+# zip and move output
+gzip ${DIR_SCRATCH}/myelin.nii
+CopyImageHeaderInformation ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz \
+  ${DIR_SCRATCH}/myelin.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_myelin.nii.gz \
+  1 1 1
+mv ${DIR_SCRATCH}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_myelin.nii.gz ${DIR_SAVE}
 
 #==============================================================================
 # End of function
