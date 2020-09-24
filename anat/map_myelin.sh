@@ -8,6 +8,7 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
