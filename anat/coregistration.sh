@@ -196,9 +196,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_from-${FROM}_to-${TO}
 fi
-if [ -z "${DIR_XFM}" ]; then
-  DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}/ses-${SESSION}
-fi
+DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}/ses-${SESSION}
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
