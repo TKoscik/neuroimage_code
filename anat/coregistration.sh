@@ -156,7 +156,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-MOVING=(${MOVING\\,\ })
+MOVING=(${MOVING//,/ })
 N=${#MOVING[@]}
 FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${MOVING[0]}`
 
@@ -165,7 +165,7 @@ if [[ "${MOVING_MASK,,}" == "null" ]]; then
 fi
 
 if [[ "${FIXED,,}" != "null" ]]; then
-  FIXED=(${FIXED\\,\ })
+  FIXED=(${FIXED//,/ })
   N_FIXED=${#FIXED[@]}
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
   TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED[0]}`
