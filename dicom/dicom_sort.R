@@ -8,6 +8,7 @@ dont.use <- c("loc", "cal", "orig")
 dry.run <- FALSE
 subject.id <- NULL
 session.id <- NULL
+encode.ses <- FALSE
 if (length(args) > 3 ) {
   for (i in seq(4, length(args), 2)) {
     if (args[i] == "dir.inc.root") {
@@ -21,6 +22,8 @@ if (length(args) > 3 ) {
       subject.id <- args[i+1]
     } else if (args[i] == "session") {
       session.id <- args[i+1]
+    } else if (args[i] == "encode.ses") {
+      encode.ses <- args[i+1]
     }
   }
 }
@@ -62,7 +65,9 @@ if (is.null(session.id)) {
     warning(sprintf("dicom_sort WARNING: More than one unique session identifier was found. Using %s", session[1]))
   }
   participant$session <- gsub(" ", "", session[1])
-  participant$session <- ses_encode(as.numeric(participant$session))
+  if (encode.ses) {
+    participant$session <- ses_encode(as.numeric(participant$session))
+  }
 } else {
   participant$session <- session.id
 }
