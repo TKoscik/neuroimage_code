@@ -160,7 +160,8 @@ for (i in 1:n.files) {
     }
     df$target[i] <- paste(prefix, "_", paste(suffix, collapse=""), sep="")
   } else {
-    stop(sprintf("inc_dcmSort ERROR: %s not in series_description.lut", df$source[i]))
+    print(sprintf("inc_dcmSort ERROR: %s not in series_description.lut", df$source[i]))
+    dry.run <- TRUE
   }
 }
 
