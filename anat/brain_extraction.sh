@@ -9,6 +9,7 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=(`basename "$0"`)
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
@@ -68,7 +69,6 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
-KEEP=false
 
 while true; do
   case "$1" in
@@ -142,11 +142,11 @@ fi
 IMAGE=(${IMAGE//,/ })
 METHOD=(${METHOD//,/ })
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
+DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
+SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
+SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then 
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]}`
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -234,15 +234,17 @@ done
 if [[ ${NUM_METHOD} > 1 ]]; then
   majVote_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz"
   majVote_fcn="${majVote_fcn} MajorityVoting"
-  if [[ "${METHOD[${i}],,}" == "afni" ]] || [[ "${METHOD[${i}],,}" == "3dskullstrip" ]]; then
-    majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
-  fi
-  if [[ "${METHOD[${i}],,}" == "ants" ]]; then
-    majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
-  fi
-  if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
-    majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
-  fi
+  for (( i=0; i<${NUM_METHOD}; i++ )); do
+    if [[ "${METHOD[${i}],,}" == "afni" ]] || [[ "${METHOD[${i}],,}" == "3dskullstrip" ]]; then
+      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
+    fi
+    if [[ "${METHOD[${i}],,}" == "ants" ]]; then
+      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
+    fi
+    if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
+      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
+    fi
+  done
   eval ${majVote_fcn}
 fi
 
