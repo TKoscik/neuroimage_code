@@ -54,19 +54,8 @@ dir_project/
         - new regressor functions, I want each function to do one thing
             - __regressor_frame-disp.sh__
             - __regressor_spike.sh__
-            - __regressor_deriv.sh__
-                - output should be ${PREFIX}_moco+6+deriv.1D  
-                -bash:  
-                `>> Rscript ${DIR_CODE}/func/regressor_deriv.sh ${INPUT_1D} ${DIR_SAVE}`  
-                -R:  
-                `R> args <- commandArgs(trailingOnly = TRUE)`  
-                `R> library(tools)`  
-                `R> df <- read.csv(args[1], header=F)`  
-                `R> df <- apply(df, 2, diff)`  
-                `R> write.table(df, filename=paste0(args[2], basename(file_path_sans_ext(args[1])), quotes=F, row.names=F, col.names=F, sep=" "), ".1D")`  
-            - __regressor_quad.sh__
-                - output should be ${PREFIX}_moco+6+quad.1D
-                - output should just keep appending, e.g., ${PREFIX}_moco+6+deriv+quad.1D
+            - __regressor_deriv.sh__ DONE
+            - __regressor_quad.sh__  DONE
             - others?
     - __nuisance_regression.sh__, should be fine
     - __ts_deconvolve.sh__
