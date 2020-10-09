@@ -116,8 +116,8 @@ N_MASK=${#MASK_LS[@]}
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${MASK_LS[0]})
 if [ -z "${PREFIX}" ]; then
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "ses")
+  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${MASK_LS[0]} -f "sub")
+  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${MASK_LS[0]} -f "ses")
   PREFIX=sub-${SUBJECT}_ses-${SESSION}
 fi
 
