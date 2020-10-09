@@ -20,6 +20,7 @@
 - probably should remove backticks and use $() instead... \`\` are deprecated
 - naming convention for functions, lowercase and underscores
 - Update to file paths, imporant for default paths, should have one more layer to derivatives structure, to specify the pipeline:  
+- *** no IS_SES as an input variable into functions
 ```
 dir_project/
    └──derivatives/

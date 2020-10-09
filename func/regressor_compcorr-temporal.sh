@@ -1,11 +1,4 @@
-#!/bin/bash -x
-
-PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-OPERATOR=$(whoami)
-KEEP=false
-NO_LOG=false
+#!/bin/bash -e
 
 #===============================================================================
 # Functional Timeseries - Temporal CompCorr
@@ -13,16 +6,12 @@ NO_LOG=false
 # Date: 2020-03-27
 #===============================================================================
 
-# Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long prefix:,\
-ts-bold:,mask-brain:,\
-dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
-help,no-log -n 'parse-options' -- "$@"`
-if [ $? != 0 ]; then
-  echo "Failed parsing options" >&2
-  exit 1
-fi
-eval set -- "$OPTS"
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -53,9 +42,16 @@ function egress {
 }
 trap egress EXIT
 
-# Strict exit criteria - I don't want to be searching for errors if something fails
-set -u
-set -e
+# Parse inputs -----------------------------------------------------------------
+OPTS=`getopt -o hl --long prefix:,\
+ts-bold:,mask-brain:,\
+dir-save:,dir-scratch:,\
+help,no-log -n 'parse-options' -- "$@"`
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -68,7 +64,6 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 NO_LOG=false
-IS_SES=true
 
 while true; do
   case "$1" in
@@ -79,8 +74,6 @@ while true; do
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -106,62 +99,55 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
 fi
 
+#===============================================================================
+# Start of Function
+#===============================================================================
+
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-  TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-  RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+  DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD})
+  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
+  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
   if [ -z "${PREFIX}" ]; then
-    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+    PREFIX=$(${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD})
   fi
 else
   echo "The BOLD file does not exist. Exiting."
-  echo "Check paths, file names, and arguments."
   exit 1
-fi
-# Set IS_SES variable
-if [ -z "${SESSION}" ]; then
-  IS_SES=false
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/func
 fi
+if [ -z "${SESSION}" ]; then
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
+else
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}
+fi
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_REGRESSORS}
 
-#==============================================================================
-# ANTs tCompCorr
-#==============================================================================
-ImageMath 4 ${DIR_SCRATCH}/${PREFIX}_tcompcorr.nii.gz CompCorrAuto ${TS_BOLD} ${MASK_BRAIN} 6
+# ANTs tCompCorr --------------------------------------------------------------
+ImageMath 4 ${DIR_SCRATCH}/${PREFIX}_tcompcorr.nii.gz \
+  CompCorrAuto ${TS_BOLD} ${MASK_BRAIN} 6
 
 cat ${DIR_SCRATCH}/${PREFIX}_tcompcorr_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}/temp.1D
 cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global-temporal.1D
 cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_compcorr-temporal.1D
 
-if [ "${IS_SES}" = true ]; then
-  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
-  mkdir -p ${DIR_REGRESSORS}
-else
-  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}
-  mkdir -p ${DIR_REGRESSORS}
-fi
-
 mv ${DIR_SCRATCH}/${PREFIX}_global-temporal.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-temporal.1D ${DIR_REGRESSORS}/
 
-
+#===============================================================================
+# End of Function
+#===============================================================================
 exit 0
+
+

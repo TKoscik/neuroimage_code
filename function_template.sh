@@ -47,7 +47,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
 other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -79,8 +79,6 @@ while true; do
     --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
