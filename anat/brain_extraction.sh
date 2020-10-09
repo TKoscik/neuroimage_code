@@ -45,9 +45,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long group:,prefix:,\
+OPTS=`getopt -o hvkl --long prefix:,\
 image:,method:,suffix:,spatial-filter:,filter-radius:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -85,8 +85,6 @@ while true; do
     --template) TEMPLATE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -125,10 +123,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output, '
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/mask'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -140,13 +134,15 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 IMAGE=(${IMAGE//,/ })
+NUM_IMAGE=${#IMAGE[@]}
 METHOD=(${METHOD//,/ })
+NUM_METHOD=${#METHOD[@]}
 
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]})
+SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
+SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then 
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]}`
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -156,16 +152,16 @@ mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # Brain extraction ------------------------------------------------------------
-NUM_METHOD=${#METHOD[@]}
-NUM_IMAGE=${#IMAGE[@]}
 for (( i=0; i<${NUM_METHOD}; i++ )); do
-  # run AFNI 3dSkullStrip
+  # run AFNI 3dSkullStrip -----------------------------------------------------
   if [[ "${METHOD[${i}],,}" == "afni" ]] || [[ "${METHOD[${i}],,}" == "3dskullstrip" ]]; then
+    echo ">>>Running AFNI 3dSkullstrip"
     3dSkullStrip \
       -input ${IMAGE[0]} \
       -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
     fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
     if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
       sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
       sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
       sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
@@ -175,8 +171,9 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     fi
   fi
 
-  # run ANTs brain extraction
+  # run ANTs brain extraction -------------------------------------------------
   if [[ "${METHOD[${i}],,}" == "ants" ]]; then
+    echo ">>>Running ANTs Brain Extraction"
     DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}
     ants_fcn="antsBrainExtraction.sh"
     ants_fcn="${ants_fcn} -d 3"
@@ -197,6 +194,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     rm ${DIR_SCRATCH}/ants-bex_BrainExtraction*
 
     if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
       sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
       sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
       sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
@@ -206,8 +204,9 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     fi
   fi
 
-  # run FSL's BET
+  # run FSL's BET -------------------------------------------------------------
   if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
+    echo ">>>Running FSL's BET"
     fsl_fcn="bet ${IMAGE[0]}"
     fsl_fcn="${fsl_fcn} ${DIR_SCRATCH}/fsl_bet.nii.gz"
     if [[ ${NUM_IMAGE} > 1 ]]; then
@@ -220,6 +219,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     rm ${DIR_SCRATCH}/fsl*
     
     if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
       sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
       sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
       sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
@@ -232,6 +232,7 @@ done
 
 # do majority vote mask if multiple used
 if [[ ${NUM_METHOD} > 1 ]]; then
+  echo ">>>Running Majority Vote Function"
   majVote_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz"
   majVote_fcn="${majVote_fcn} MajorityVoting"
   for (( i=0; i<${NUM_METHOD}; i++ )); do
