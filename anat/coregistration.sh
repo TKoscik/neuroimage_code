@@ -74,7 +74,7 @@ TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
+DIR_CODE=/Shared/inc_scratch/code # $(read_json )
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
@@ -192,10 +192,10 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_from-${FROM}_to-${TO}
 fi
+
+DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}
 if [ -n "${SESSION}" ]; then
-  DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}/ses-${SESSION}
-else
-  DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}
+  DIR_XFM=${DIR_XFM}/ses-${SESSION}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

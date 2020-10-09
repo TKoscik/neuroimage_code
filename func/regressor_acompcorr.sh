@@ -1,11 +1,4 @@
-#!/bin/bash -ex
-
-PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-OPERATOR=$(whoami)
-KEEP=false
-NO_LOG=false
+#!/bin/bash -e
 
 #===============================================================================
 # Functional Timeseries - Anatomical CompCorr
@@ -13,16 +6,12 @@ NO_LOG=false
 # Date: 2020-03-27
 #===============================================================================
 
-# Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long prefix:,\
-ts-bold:,label-tissue:,value-csf:,value-wm:,\
-dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
-if [ $? != 0 ]; then
-  echo "Failed parsing options" >&2
-  exit 1
-fi
-eval set -- "$OPTS"
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=(`basename "$0"`)
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -53,9 +42,16 @@ function egress {
 }
 trap egress EXIT
 
-# Strict exit criteria - I don't want to be searching for errors if something fails
-set -u
-set -e
+# Parse inputs -----------------------------------------------------------------
+OPTS=`getopt -o hl --long prefix:,\
+ts-bold:,label-tissue:,value-csf:,value-wm:,\
+dir-save:,dir-scratch:,\
+help,no-log -n 'parse-options' -- "$@"`
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -70,7 +66,6 @@ DIR_CODE=/Shared/inc_scratch/code
 DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 NO_LOG=false
-IS_SES=true
 
 while true; do
   case "$1" in
@@ -83,8 +78,6 @@ while true; do
     --value-wm) VALUE_WM="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -96,77 +89,67 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: <<author names>>'
-  echo 'Date:   <<date of authorship>>'
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
   echo '  --label-tissue <value>   Full path to file containing tissue type labels'
   echo '  --value-csf <value>      numeric value indicating CSF in label file, default=1'
-  echo '  --value-wm <value>      numeric value indicating WM in label file, default=3'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --value-wm <value>       numeric value indicating WM in label file, default=3'
+  echo '  --dir-save <value>       directory to save output, default:'
+  echo '                             DIR_PROJECT/derivatives/func/regressor/sub-###/ses-###'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
 fi
+#===============================================================================
+# Start of Function
+#===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-  TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-  RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+  DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD})
+  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
+  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
   if [ -z "${PREFIX}" ]; then
-    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${IMAGE}`
+    PREFIX=$(${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD})
   fi
 else
   echo "The BOLD file does not exist. Exiting."
-  echo "Check paths, file names, and arguments."
   exit 1
-fi
-# Set IS_SES variable
-if [ -z "${SESSION}" ]; then
-  IS_SES=false
 fi
 
 # Set DIR_SAVE variable
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/func
 fi
+if [ -n "${SESSION}" ]; then
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
+else
+  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}
+fi
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_REGRESSORS}
 
-#==============================================================================
-# ANTs 3 Tissue Regressors (aCompCorr)
-#==============================================================================
-ImageMath 4 ${DIR_SCRATCH}/${PREFIX}_acompcorr.nii.gz ThreeTissueConfounds ${TS_BOLD} ${LABEL_TISSUE} ${VALUE_CSF} ${VALUE_WM}
+# ANTs 3 Tissue Regressors (aCompCorr) ----------------------------------------
+ImageMath 4 ${DIR_SCRATCH}/${PREFIX}_acompcorr.nii.gz \
+  ThreeTissueConfounds ${TS_BOLD} ${LABEL_TISSUE} ${VALUE_CSF} ${VALUE_WM}
 
 cat ${DIR_SCRATCH}/${PREFIX}_acompcorr_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}/temp.1D
 cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
 cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
 
-if [ "${IS_SES}" = true ]; then
-  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
-  mkdir -p ${DIR_REGRESSORS}
-else
-  DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}
-  mkdir -p ${DIR_REGRESSORS}
-fi
-
 mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_REGRESSORS}/
+
+#===============================================================================
+# End of Function
+#===============================================================================
 
 exit 0
 
