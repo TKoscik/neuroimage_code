@@ -1,9 +1,9 @@
 # TO DO for version 0
 
 ## General
-- add initialization file
-    - version number
-    - version date  
+- add initialization file  
+    - version number  
+    - version date    
     - DIR_CODE  
     - DIR_TEMPLATE >>> _find a home for this with Steve_ 
     - software needed, with versions  
@@ -16,10 +16,10 @@
 - remove all group, dir-code, dir-pincsource, dir-template inputs and references in help
     - replace with read from init file.
 - remove deprecated functions entirely
-- add model folder, for stistical modelling workflows
+- add model folder, for statistical modelling workflows
 - probably should remove backticks and use $() instead... \`\` are deprecated
 - naming convention for functions, lowercase and underscores
-- Update to file paths, imporant for default paths, should have one more layer to derivatives structure, to specify the pipeline:  
+- Update to file paths, important for default paths, should have one more layer to derivatives structure, to specify the pipeline:  
 - *** no IS_SES as an input variable into functions
 ```
 dir_project/
@@ -50,13 +50,13 @@ dir_project/
 - functions to include
     - moco+reg.sh >> rename to __moco_reg.sh__ (probably better to abandon the +)
     - regressor functions
-        - compcor-anatomy.sh >> rename to __regressor_compcorr-anat.sh__
-        - compcor-temporal.sh >> rename to __regressor_compcorr-temp.sh__
+        - ~~compcor-anatomy.sh >> rename to __regressor_acompcorr.sh__~~
+        - ~~compcor-temporal.sh >> rename to __regressor_tcompcorr.sh__~~
         - new regressor functions, I want each function to do one thing
             - __regressor_frame-disp.sh__
             - __regressor_spike.sh__
-            - __regressor_deriv.sh__ DONE
-            - __regressor_quad.sh__  DONE
+            - ~~__regressor_deriv.sh__~~  
+            - ~~__regressor_quad.sh__~~  
             - others?
     - __nuisance_regression.sh__, should be fine
     - __ts_deconvolve.sh__
