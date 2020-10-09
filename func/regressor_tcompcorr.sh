@@ -81,14 +81,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Timothy R. Koscik, PhD'
-  echo 'Date:   2020-03-27'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix,'
@@ -126,7 +124,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/func
 fi
-if [ -z "${SESSION}" ]; then
+if [ -n "${SESSION}" ]; then
   DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}/ses-${SESSION}
 else
   DIR_REGRESSORS=${DIR_SAVE}/regressors/sub-${SUBJECT}

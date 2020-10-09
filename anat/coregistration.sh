@@ -6,9 +6,10 @@
 # Date: 2020-09-03
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
@@ -25,7 +26,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -49,7 +50,7 @@ fixed:,fixed-mask:,moving:,moving-mask:,\
 rigid-only,affine-only,hardcore,stack-xfm,\
 mask-dil:,interpolation:,\
 template:,space:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -100,8 +101,6 @@ while true; do
     --stack-xfm) STACK_XFM=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -109,6 +108,7 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -144,10 +144,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output, default varies by'
   echo '                           function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -171,7 +167,7 @@ if [[ "${FIXED,,}" != "null" ]]; then
   TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED[0]}`
 else
   for (( i=0; i<${N_MOVING}; i++ )); do
-    MOD=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"`
+    MOD=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
     if [[ "${MOD}" == "T2w" ]]; then
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
     else
@@ -185,18 +181,22 @@ else
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${MOVING[0]}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${MOVING[0]})
+SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "sub")
+SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING[0]}`
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING[0]})
 fi
 
 # setup directories
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_from-${FROM}_to-${TO}
 fi
-DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}/ses-${SESSION}
+if [ -n "${SESSION}" ]; then
+  DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}/ses-${SESSION}
+else
+  DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}
+fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
@@ -286,7 +286,7 @@ eval ${reg_fcn}
 # Apply registration to all modalities
 for (( i=0; i<${N}; i++ )); do
   unset MOD xfm_fcn
-  MOD=(`${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"`)
+  MOD=($(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"))
   OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${MOVING[${i}]}"

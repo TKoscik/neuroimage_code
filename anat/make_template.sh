@@ -18,7 +18,7 @@
 # Date: 2020-09-03
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
@@ -38,7 +38,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -59,7 +59,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
 id-ls:,mod-ls:,dir-project:,mask-name:,mask-dil:,iterations:,resolution:,template:,space:,template-name:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,dir-pincsource:,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -106,9 +106,6 @@ while true; do
     --template-name) TEMPLATE_NAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -119,6 +116,7 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -136,12 +134,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -154,18 +146,13 @@ mkdir -p ${DIR_SCRATCH}/coreg
 mkdir -p ${DIR_SCRATCH}/xfm
 mkdir -p ${DIR_SCRATCH}/job
 
-SUBJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id`)
-SESSION=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f session_id`)
-PROJECT=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f project`)
-DIRECTORY=(`${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f directory`)
+SUBJECT=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id))
+SESSION=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f session_id))
+PROJECT=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f project))
+DIRECTORY=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f directory))
 ## probably need to adjust this to add masks
 
 N_SUB=${#SUBJECT[@]}
-if [[ "${SESSION}" == "NULL" ]]; then
-  IS_SES=false
-else
-  IS_SES=true
-fi
 
 MOD_LS=(${MOD_LS//,/ })
 N_MOD=${#MOD_LS[@]}
@@ -175,11 +162,11 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
     if [[ "${DIR_PROJECT}" == "NULL" ]]; then
         for (( i=1; i<${N_SUB}; i++ )); do
           SUB_PREFIX=sub-${SUBJECT[${i}]}
-          if [[ "${IS_SES}" == "true"  ]];
+          if [ -n "${SESSION}" ]; then
             SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
           fi
           for (( j=1; j<${N_MOD}; j++ )); do
-            TEMP+=`ls ${DIR_PROJECT}/derivatives/anat/native/${SUB_PREFIX}*${MOD_LS[${j}]}`
+            TEMP+=($(ls ${DIR_PROJECT}/derivatives/anat/native/${SUB_PREFIX}*${MOD_LS[${j}]}))
           done
           FLS+=$(IFS=, ; echo "${TEMP[*]}")
         done
@@ -187,11 +174,11 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
   else
     for (( i=1; i<${N_SUB}; i++ )); do
       SUB_PREFIX=sub-${SUBJECT[${i}]}
-      if [[ "${IS_SES}" == "true"  ]];
+      if [ -n "${SESSION}" ]; then
         SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
       fi
       for (( j=1; j<${N_MOD}; j++ )); do
-        TEMP+=`ls ${PROJECT[${i}]}/derivatives/anat/native/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}`
+        TEMP+=($(ls ${PROJECT[${i}]}/derivatives/anat/native/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}))
       done
       FLS+=$(IFS=, ; echo "${TEMP[*]}")
     done
@@ -199,11 +186,11 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
 else
   for (( i=1; i<${N_SUB}; i++ )); do
     SUB_PREFIX=sub-${SUBJECT[${i}]}
-    if [[ "${IS_SES}" == "true"  ]];
+    if [ -n "${SESSION}" ]; then
       SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
     fi
     for (( j=1; j<${N_MOD}; j++ )); do
-      TEMP+=`ls ${DIRECTORY}/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}`
+      TEMP+=($(ls ${DIRECTORY}/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}))
     done
     FLS+=$(IFS=, ; echo "${TEMP[*]}")
   done
@@ -215,7 +202,7 @@ for k in {0..4}; do
   for (( j=0; j<${ITERATIONS[${k}]}; j++ ))
     for (( i=1; i<${N_SUB}; i++ )); do
       SUB_PREFIX=sub-${SUBJECT[${i}]}
-      if [[ "${IS_SES}" == "true"  ]];
+      if [ -n "${SESSION}" ]; then
         SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
       fi
       unset HOLD_LS

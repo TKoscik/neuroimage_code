@@ -9,9 +9,10 @@
 # Software: FSL
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
@@ -28,7 +29,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -47,7 +48,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long group:,prefix:,\
+OPTS=`getopt -o hvkl --long prefix:,\
 dimension:,image:,method:,mask:,\
 smooth-kernel:,\
 weight:,shrink:,convergence,bspline:,hist-sharpen:,\
@@ -104,7 +105,6 @@ while true; do
     --do-t2) DO_T2=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -112,12 +112,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -v | --verbose           add verbose output to log file'
@@ -145,8 +145,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -158,15 +156,19 @@ fi
 IMAGE=(${IMAGE//,/ })
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]})
+SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
+SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]}`
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  if [ -n "${SESSION}" ]; then
+    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  else
+    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
+  fi
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -178,7 +180,7 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
     ${DIR_SCRATCH}/temp_t1mult2.nii.gz -odt float
   fslmaths ${DIR_SCRATCH}/temp_t1mult2.nii.gz -mas ${MASK} \
     ${DIR_SCRATCH}/temp_t1mult2_brain.nii.gz
-  mean_brain_val=`fslstats ${DIR_SCRATCH}/temp_t1mult2_brain.nii.gz -M`
+  mean_brain_val=$(fslstats ${DIR_SCRATCH}/temp_t1mult2_brain.nii.gz -M)
   fslmaths ${DIR_SCRATCH}/temp_t1mult2_brain.nii.gz -div ${mean_brain_val} \
     ${DIR_SCRATCH}/temp_t1mult2_brain_norm.nii.gz
 
@@ -197,15 +199,15 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
 
   # Create a mask using a threshold at Mean - 0.5*Stddev, with filling of holes
   # to remove any non-grey/white tissue.
-  STD=`fslstats ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod.nii.gz -S`
-  MEAN=`fslstats ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod.nii.gz -M`
-  lower=`echo "${MEAN} - (${STD} * 0.5)" | bc -l`
+  STD=$(fslstats ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod.nii.gz -S)
+  MEAN=$(fslstats ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod.nii.gz -M)
+  lower=$(echo "${MEAN}-${STD}*0.5" | bc -l)
   fslmaths ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod.nii.gz -thr ${lower} \
     -bin -ero -mul 255 ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod_mask.nii.gz
   ${FSLDIR}/bin/cluster -i ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod_mask.nii.gz \
     -t 0.5 -o ${DIR_SCRATCH}/temp_cl_idx
-  MINMAX=`fslstats ${DIR_SCRATCH}/temp_cl_idx.nii.gz -R`
-  MAX=`echo "${MINMAX}" | cut -d ' ' -f 2`
+  MINMAX=$(fslstats ${DIR_SCRATCH}/temp_cl_idx.nii.gz -R)
+  MAX=$(echo "${MINMAX}" | cut -d ' ' -f 2)
   fslmaths -dt int ${DIR_SCRATCH}/temp_cl_idx -thr ${MAX} -bin -mul 255 \
     ${DIR_SCRATCH}/temp_t1mult2_brain_norm_mod_mask.nii.gz
 
@@ -231,7 +233,7 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
 fi
 
 # gather modality for output
-MOD=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "modality"`
+MOD=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "modality")
 
 if [[ "${METHOD,,}" == "n4" ]]; then
   n4_fcn="N4BiasFieldCorrection"
@@ -253,7 +255,7 @@ if [[ "${METHOD,,}" == "n4" ]]; then
   eval ${n4_fcn}
   
   mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4_${MOD}.nii.gz ${DIR_SAVE}/
-  if [[ "${KEEP}" == "true" ]]; then
+  if [[ "${KEEP,,}" == "true" ]]; then
     mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz ${DIR_SAVE}/
   fi
 fi
@@ -262,11 +264,11 @@ if [[ "${METHOD,,}" == "t1wm" ]]; then
   t1wm_fcn="3dUnifize"
   t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM_${MOD}.nii.gz"
   t1wm_fcn="${t1wm_fcn} -input ${IMAGE[0]}"
-  if [[ "${NO_GM}" == "false" ]]; then
+  if [[ "${NO_GM,,}" == "false" ]]; then
     t1wm_fcn="${t1wm_fcn} -GM"
   fi
-  t1wm_fcn="${t1wm_fcn} -Urad 30"
-  if [[ "${DO_T2}" == "true" ]]; then
+  t1wm_fcn="${t1wm_fcn} -Urad ${URAD}"
+  if [[ "${DO_T2,,}" == "true" ]]; then
     t1wm_fcn="${t1wm_fcn} -T2"
   fi
   eval ${t1wm_fcn}

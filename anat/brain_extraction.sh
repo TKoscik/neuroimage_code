@@ -6,7 +6,7 @@
 # Date: 2020-02-27
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
@@ -26,7 +26,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -92,12 +92,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -139,8 +139,8 @@ METHOD=(${METHOD//,/ })
 NUM_METHOD=${#METHOD[@]}
 
 DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]})
-SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
-SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
+#SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
+#SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then 
   PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi

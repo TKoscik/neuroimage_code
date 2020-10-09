@@ -6,9 +6,10 @@
 # Date: 2020-03-03
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
@@ -25,7 +26,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -47,7 +48,7 @@ trap egress EXIT
 OPTS=`getopt -o hvl --long prefix:,\
 xfm:,interpolation:,from:,to:,ref-image:,\
 log,geom,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,\
+dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -86,8 +87,6 @@ while true; do
     --to) TO="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -95,12 +94,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -121,13 +120,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --to <value>             spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where template image can be found,'
-  echo '                           needed when combining multiple transforms.'
-  echo '                           default is '${DIR_TEMPLATE}' and the template'
-  echo '                           is determined by the "to" field in the'
-  echo '                           filename, unless a specific template is provided'
   echo ''
   NO_LOG=true
   exit 0
@@ -140,26 +132,29 @@ fi
 # Set up BIDs compliant variables and workspace
 XFM=(${XFM//,/ })
 N_XFM=${#XFM[@]}
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${XFM[0]}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${XFM[0]})
 if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "sub")
+  PREFIX=sub-${SUBJECT}
+  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "ses")
+  if [ -n "${SESSION}" ]; then
+    PREFIX=${PREFIX}_ses-${SESSION}
+  fi
 fi
 
 mkdir -p ${DIR_SCRATCH}
 
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
-  FROM=`${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "from"`
+  FROM=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "from")
 fi
 if [[ "${TO}" == "NULL" ]]; then
-  TO=`${DIR_CODE}/bids/get_field.sh -i ${XFM[-1]} -f "to"`
+  TO=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[-1]} -f "to")
 fi
 
 XFM_TEMP=
 for (( i=${N_XFM}-1; i>=0; i-- )); do
-  xfm_temp=`${DIR_CODE}/bids/get_field.sh -i ${XFM[${i}]} -f "xfm"`
+  xfm_temp=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[${i}]} -f "xfm")
   XFM_TEMP+=(${xfm_temp})
 done
 XFM_NAME=$(IFS=+ ; echo "${XFM_TEMP[*]}")

@@ -7,9 +7,10 @@
 # Software: ANTs
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KEEP=false
 NO_LOG=false
 
 # actions on exit, write to logs, clean scratch
@@ -26,7 +27,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -47,7 +48,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long prefix:,\
 image:,template:,space:,target:,\
-dir-save:,dir-scratch:,dir-code:,dir-template:,\
+dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -80,8 +81,6 @@ while true; do
     --target) TARGET="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -89,12 +88,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -107,10 +106,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save <value>       directory to save output,'
   echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -121,15 +116,18 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${IMAGE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE})
+SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
+SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
+  if [ -n "${SESSION}" ]; then
+    DIR_SAVE=${DIR_SAVE}/ses-${SESSION}
+  fi
 fi
 if [ -z "${SESSION}" ]; then
   DIR_XFM=${DIR_PROJECT}/derivatives/xfm/sub-${SUBJECT}
@@ -142,7 +140,7 @@ mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 
 # get image modality from filename ---------------------------------------------
-MOD=(`${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "modality"`)
+MOD=($(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "modality"))
 
 # resample template image to desired output spacing ----------------------------
 # always push image to an isotropic spacing to prevent issues with voxel
@@ -152,9 +150,9 @@ if [ -d ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE} ]; then
   DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}
   FIXED=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE}_${TARGET}.nii.gz
 else
-  dir_temp=(`ls -d ${DIR_TEMPLATE}/${TEMPLATE}/*um`)
+  dir_temp=($(ls -d ${DIR_TEMPLATE}/${TEMPLATE}/*um))
   if [ -n ${dir_temp} ]; then
-    dir_temp=(`ls -d ${DIR_TEMPLATE}/${TEMPLATE}/*mm`)
+    dir_temp=($(ls -d ${DIR_TEMPLATE}/${TEMPLATE}/*mm))
   fi
   DIR_TEMPLATE=${dir_temp[0]}
   space_temp=${DIR_TEMPLATE##*/}
@@ -164,7 +162,7 @@ else
   TEMP_SPACE=${TEMP_SPACE//um/}
   UNIT=${SPACE:(-2)}
   if [[  "${UNIT}" == "um" ]]; then
-    TEMP_SPACE=`echo "${TEMP_SPACE}/1000" | bc -l | awk '{printf "%0.3f", $0}'` 
+    TEMP_SPACE=$(echo "${TEMP_SPACE}/1000" | bc -l | awk '{printf "%0.3f", $0}')
   fi
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}_${space_temp}_${TARGET}.nii.gz \
