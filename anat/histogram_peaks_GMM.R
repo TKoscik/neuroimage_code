@@ -52,7 +52,7 @@ for (i in 1:iter) {
   mu <- mu + mdl$mu[mu.order]/iter
   sigma <- sigma + mdl$sigma[mu.order]/iter
 }
-cat(sprintf("mu=%0.3f,sigma=%0.3f", mu, sigma), sep=" ")
+cat(sprintf("%0.3f,%0.3f", mu, sigma), sep=" ")
 
 # clean up temporary files
 fls <- list.files(dir.scratch, full.names = TRUE)
