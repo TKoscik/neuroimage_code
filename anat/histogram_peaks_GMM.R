@@ -43,14 +43,16 @@ nii <- nii[mask]
 
 if (size > nrow(mask)) { size <- nrow(mask) }
 
-mu <- numeric(3)
+mu <- numeric(k)
+sigma <- numeric(k)
 for (i in 1:iter) {
   x <- sample(nii, size)
-  capture.output(mdl <- normalmixEM(x, k=3), file="/dev/null")
-  mu <- mu + sort(mdl$mu)
+  capture.output(mdl <- normalmixEM(x, k=k), file="/dev/null")
+  mu.order <- order(mdl$mu)
+  mu <- mu + mdl$mu[mu.order]/iter
+  sigma <- sigma + mdl$sigma[mu.order]/iter
 }
-mu <- mu/iter
-cat(mu, sep="x")
+cat(sprintf("mu=%0.3f,sigma=%0.3f", mu, sigma), sep="_")
 
 # clean up temporary files
 fls <- list.files(dir.scratch, full.names = TRUE)
