@@ -45,9 +45,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=`getopt -o hvkln --long prefix:,\
 fixed:,fixed-mask:,moving:,moving-mask:,\
-rigid-only,affine-only,hardcore,stack-xfm,\
+nonbrain,rigid-only,affine-only,hardcore,stack-xfm,\
 mask-dil:,interpolation:,\
 template:,space:,\
 dir-save:,dir-scratch:,\
@@ -65,6 +65,7 @@ FIXED_MASK=NULL
 MOVING=NULL
 MOVING_MASK=NULL
 MASK_DIL=2
+NONBRAIN=false
 INTERPOLATION=BSpline[3]
 RIGID_ONLY=false
 AFFINE_ONLY=false
@@ -95,6 +96,7 @@ while true; do
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --n | --nonbrain) NONBRAIN=true ; shift ;;
     --rigid-only) RIGID_ONLY=true ; shift ;;
     --affine-only) AFFINE_ONLY=true ; shift ;;
     --hardcore) HARDCORE=true ; shift ;;
@@ -211,6 +213,13 @@ if [[ "${MOVING_MASK}" != "NULL" ]]; then
   fi
 fi
 
+if [[ "${NONBRAIN}" == "true" ]]; then
+  MOVING_NONBRAIN=${DIR_SCRATCH}/MOVING_mask-nonbrain.nii.gz
+  FIXED_NONBRAIN=${DIR_SCRATCH}/FIXED_mask-nonbrain.nii.gz
+  fslmaths ${MOVING_MASK} -binv ${MOVING_NONBRAIN}
+  fslmaths ${FIXED_MASK} -binv ${FIXED_NONBRAIN}
+fi
+
 # register to template
 reg_fcn="antsRegistration"
 reg_fcn="${reg_fcn} -d 3 --float 1 --verbose ${VERBOSE} -u 1 -z 1"
@@ -224,7 +233,6 @@ reg_fcn="${reg_fcn} -x [NULL,NULL]"
 reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
 reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
-
 if [[ "${RIGID_ONLY,,}" == "false" ]]; then
   reg_fcn="${reg_fcn} -t Affine[0.5]"
   for (( i=0; i<${N}; i++ )); do
@@ -234,6 +242,18 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
   reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
   reg_fcn="${reg_fcn} -f 8x8x4x2x1"
   reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+  
+  if [[ "${NONBRAIN}" == "true" ]]; then
+    reg_fcn="${reg_fcn} -t Affine[0.1]"
+    for (( i=0; i<${N}; i++ )); do
+      reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,64,Regular,0.30]"
+    done
+    reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+    reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
+    reg_fcn="${reg_fcn} -f 8x8x4x2x1"
+    reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+  fi
+
   reg_fcn="${reg_fcn} -t Affine[0.1]"
   for (( i=0; i<${N}; i++ )); do
     reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,64,Regular,0.30]"
@@ -253,6 +273,18 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
       reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x4x2x1"
       reg_fcn="${reg_fcn} -s 3x2x1x0vox"
+
+      if [[ "${NONBRAIN}" == "true" ]]; then
+        reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
+        for (( i=0; i<${N}; i++ )); do
+          reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
+        done
+        reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
+        reg_fcn="${reg_fcn} -f 8x4x2x1"
+        reg_fcn="${reg_fcn} -s 3x2x1x0vox"
+      fi
+
       reg_fcn="${reg_fcn} -t SyN[0.1,3,0]"
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
@@ -262,6 +294,26 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
       reg_fcn="${reg_fcn} -f 8x4x2x1"
       reg_fcn="${reg_fcn} -s 3x2x1x0vox"
     else
+    
+      if [[ "${NONBRAIN}" == "true" ]]; then
+        reg_fcn="${reg_fcn} -t BsplineSyN[0.5,48,0]"
+        for (( i=0; i<${N}; i++ )); do
+          reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
+        done
+        reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        reg_fcn="${reg_fcn} -c [2000x1000x1000x100x40,1e-6,10]"
+        reg_fcn="${reg_fcn} -f 8x6x4x2x1"
+        reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
+        reg_fcn="${reg_fcn} -t BsplineSyN[0.1,48,0]"
+        for (( i=0; i<${N}; i++ )); do
+          reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,6]"
+        done
+        reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        reg_fcn="${reg_fcn} -c [20,1e-6,10]"
+        reg_fcn="${reg_fcn} -f 1"
+        reg_fcn="${reg_fcn} -s 0vox"
+      fi
+
       reg_fcn="${reg_fcn} -t BsplineSyN[0.5,48,0]"
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
