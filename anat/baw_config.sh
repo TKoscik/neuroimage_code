@@ -46,8 +46,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
-base-name:,csv-file:,space:,\
-dir-save:,dir-scratch:,\
+project-name:,csv-file:,queue:,\
+dir-save:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -57,10 +57,10 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-BASE_NAME=
+PROJECT_NAME=
 CSV_FILE=
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+QUEUE=PINC,CCOM
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
@@ -73,11 +73,10 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --base-name) BASE_NAME="$2" ; shift 2 ;;
+    --project-name) PROJECT_NAME="$2" ; shift 2 ;;
     --csv-file) CSV_FILE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --queue) QUEUE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -100,12 +99,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --project-name <value>   project name'
+  echo '  --csv-file <value>       csv file, full path'
+  echo '  --queue <value>          ARGON queues to submit to'
   echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_CODE}'
   echo '  --dir-template <value>   directory where INC templates are stored,'
@@ -130,6 +127,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
+DIR_SCRATCH=/Shared/inc_scratch/${PROJECT_NAME}_BAW
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
@@ -141,7 +139,7 @@ SESSION_DB_LONG=%(SESSION_DB_BASE)s
 
  
 
-EXPERIMENT_BASE=${BASE_NAME}
+EXPERIMENT_BASE=${PROJECT_NAME}
 #EXPERIMENT_TEMP=NOFL_20170302_DM1_temp
 #EXPERIMENT_LONG=NOFL_20170302_DM1_long
 
@@ -159,7 +157,7 @@ WORKFLOW_COMPONENTS_BASE=['denoise','landmark','auxlmk','tissue_classify','warp_
 #WORKFLOW_COMPONENTS_LONG=['denoise','landmark','auxlmk','tissue_classify','warp_atlas_to_subject','jointfusion_2015_wholebrain']
  
 
-+++BASE_OUTPUT_DIR=/Shared/nopoulos/structural/oz_MR/BAWEXPERIMENT_20180329
+BASE_OUTPUT_DIR=${DIR_SCRATCH}
  
 
 ATLAS_PATH=/Shared/pinc/sharedopt/ReferenceData/Atlas_20131115
@@ -182,14 +180,14 @@ CRASHDUMP_DIR=/tmp
 [RHEL7ARGON]
 ## The cluster queue to use for submitting "normal running" jobs.
 #QUEUE= -q all.q
-+++QUEUE= -q PINC,CCOM
+QUEUE= -q ${QUEUE}
 
  
 
 
 ## The cluster queue to use for submitting "long running" jobs.
 #QUEUE_LONG= -q all.q
-+++QUEUE_LONG= -q PINC,CCOM
+QUEUE_LONG= -q ${QUEUE}
 
  
 
