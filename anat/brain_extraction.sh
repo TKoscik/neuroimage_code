@@ -228,6 +228,33 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
       fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
     fi
   fi
+
+  if [[ "${METHOD[${i}],,}" == "fsurf" ]] || [[ "${METHOD[${i}],,}" == "freesurfer" ]] || [[ "${METHOD[${i}],,}" == "samseg" ]]; then
+    echo ">>>Running Freesurfer's SAMSEG"
+    mkdir -p ${DIR_SCRATCH}/samseg
+    samseg_fcn="run_samseg --input"
+    for (( j=0; j<${NUM_IMAGE}; j++ )); do
+      mri_convert ${IMAGE[${j}]} ${DIR_SCRATCH}/image${j}.mgz
+      samseg_fcn="${samseg_fcn} ${DIR_SCRATCH}/image${j}.mgz"
+    done
+    samseg_fcn="run_samseg --output ${DIR_SCRATCH}/samseg"
+    eval ${samseg_fcn}
+    mri_extract_label ${DIR_SCRATCH}/samseg/seg.mgz 0 4 24 43 165 258 259 ${DIR_SCRATCH}/samseg/nonbrain.mgz
+    mri_convert ${DIR_SCRATCH}/samseg/nonbrain.mgz ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
+    mri_convert ${DIR_SCRATCH}/samseg/seg.mgz ${DIR_SCRATCH}/samseg/brain.nii.gz
+    fslmaths ${DIR_SCRATCH}/samseg/nonbrain.nii.gz -binv ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
+    fslmaths ${DIR_SCRATCH}/samseg/brain.nii.gz -bin -mas ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
+
+    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
+      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
+      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
+      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz"
+      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
+      eval ${sf_fcn}
+      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
+    fi
+  fi
 done
 
 # do majority vote mask if multiple used
@@ -244,6 +271,9 @@ if [[ ${NUM_METHOD} > 1 ]]; then
     fi
     if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
       majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
+    fi
+    if [[ "${METHOD[${i}],,}" == "fsurf" ]] || [[ "${METHOD[${i}],,}" == "freesurfer" ]] || [[ "${METHOD[${i}],,}" == "samseg" ]]; then
+      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz"
     fi
   done
   eval ${majVote_fcn}
