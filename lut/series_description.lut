@@ -512,6 +512,7 @@ fMRI64x64FOV2cmt109917	func	rest	-	-	-	-	-	-	-	bold
 fMRI64x64FOV2cmt415917	func	rest	-	-	-	-	-	-	-	bold
 HighResAnat	anat	-	-	-	-	-	-	-	-	T2w
 AXT2	anat	-	-	-	-	-	-	-	-	T2w
+FIESTA0.09x0.1x0.12	anat	-	FIESTA	-	-	-	-	-	-	T2w
 
 
 
