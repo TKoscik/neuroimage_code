@@ -498,6 +498,20 @@ SEMapPE2t9917	fmap	-	SEMap	-	-	-	-	-	-	fieldmap
 Rest1PE1t299987	func	rest	-	-	-	-	-	-	-	bold
 Rest2PE2t299987	func	rest	-	-	-	-	-	-	-	bold
 RESTRun3t166240	func	rest	-	-	-	-	-	-	-	bold
+LowResLoci00001	loc	-	LowResLoci00001	-	-	-	-	-	-	loc
+LowResLoci00002	loc	-	LowResLoci00002	-	-	-	-	-	-	loc
+LowResLoci00003	loc	-	LowResLoci00003	-	-	-	-	-	-	loc
+HighResLoci00001	loc	-	HighResLoci00001	-	-	-	-	-	-	loc
+HighResLoci00008	loc	-	HighResLoci00008	-	-	-	-	-	-	loc
+HighResLoci000015	loc	-	HighResLoci000015	-	-	-	-	-	-	loc
+loci00001	loc	-	loci00001	-	-	-	-	-	-	loc
+loci00010	loc	-	loci00010	-	-	-	-	-	-	loc
+loci00019	loc	-	loci00019	-	-	-	-	-	-	loc
+fMRI64x64FOV2cmt55917	func	rest	-	-	-	-	-	-	-	bold
+fMRI64x64FOV2cmt109917	func	rest	-	-	-	-	-	-	-	bold
+fMRI64x64FOV2cmt415917	func	rest	-	-	-	-	-	-	-	bold
+HighResAnat	anat	-	-	-	-	-	-	-	-	T2w
+AXT2	anat	-	-	-	-	-	-	-	-	T2w
 
 
 
