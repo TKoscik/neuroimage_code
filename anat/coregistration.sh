@@ -229,7 +229,9 @@ reg_fcn="${reg_fcn} -t Rigid[0.2]"
 for (( i=0; i<${N}; i++ )); do
   reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
 done
-reg_fcn="${reg_fcn} -x [NULL,NULL]"
+if [[ "${MOVING_MASK}" != "NULL" ]]; then
+  reg_fcn="${reg_fcn} -x [NULL,NULL]"
+fi
 reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
 reg_fcn="${reg_fcn} -f 8x8x4x2x1"
 reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -238,7 +240,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
   for (( i=0; i<${N}; i++ )); do
     reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
   done
-  reg_fcn="${reg_fcn} -x [NULL,NULL]"
+  if [[ "${MOVING_MASK}" != "NULL" ]]; then
+    reg_fcn="${reg_fcn} -x [NULL,NULL]"
+  fi
   reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
   reg_fcn="${reg_fcn} -f 8x8x4x2x1"
   reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -248,7 +252,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
     for (( i=0; i<${N}; i++ )); do
       reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,64,Regular,0.30]"
     done
+    if [[ "${MOVING_MASK}" != "NULL" ]]; then
     reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+    fi
     reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
     reg_fcn="${reg_fcn} -f 8x8x4x2x1"
     reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -258,7 +264,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
   for (( i=0; i<${N}; i++ )); do
     reg_fcn="${reg_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,64,Regular,0.30]"
   done
-  reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+  if [[ "${MOVING_MASK}" != "NULL" ]]; then
+    reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+  fi
   reg_fcn="${reg_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
   reg_fcn="${reg_fcn} -f 8x8x4x2x1"
   reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -269,7 +277,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
       done
-      reg_fcn="${reg_fcn} -x [NULL,NULL]"
+      if [[ "${MOVING_MASK}" != "NULL" ]]; then
+        reg_fcn="${reg_fcn} -x [NULL,NULL]"
+      fi
       reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x4x2x1"
       reg_fcn="${reg_fcn} -s 3x2x1x0vox"
@@ -279,7 +289,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
         for (( i=0; i<${N}; i++ )); do
           reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
         done
-        reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        if [[ "${MOVING_MASK}" != "NULL" ]]; then
+          reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        fi
         reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
         reg_fcn="${reg_fcn} -f 8x4x2x1"
         reg_fcn="${reg_fcn} -s 3x2x1x0vox"
@@ -289,7 +301,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
       done
-      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+      if [[ "${MOVING_MASK}" != "NULL" ]]; then
+        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+      fi
       reg_fcn="${reg_fcn} -c [100x70x50x20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x4x2x1"
       reg_fcn="${reg_fcn} -s 3x2x1x0vox"
@@ -300,7 +314,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
         for (( i=0; i<${N}; i++ )); do
           reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
         done
-        reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        if [[ "${MOVING_MASK}" != "NULL" ]]; then
+          reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        fi
         reg_fcn="${reg_fcn} -c [2000x1000x1000x100x40,1e-6,10]"
         reg_fcn="${reg_fcn} -f 8x6x4x2x1"
         reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -308,7 +324,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
         for (( i=0; i<${N}; i++ )); do
           reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,6]"
         done
-        reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        if [[ "${MOVING_MASK}" != "NULL" ]]; then
+          reg_fcn="${reg_fcn} -x [${FIXED_NONBRAIN},${MOVING_NONBRAIN}]"
+        fi
         reg_fcn="${reg_fcn} -c [20,1e-6,10]"
         reg_fcn="${reg_fcn} -f 1"
         reg_fcn="${reg_fcn} -s 0vox"
@@ -318,7 +336,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]"
       done
-      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+      if [[ "${MOVING_MASK}" != "NULL" ]]; then
+        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+      fi
       reg_fcn="${reg_fcn} -c [2000x1000x1000x100x40,1e-6,10]"
       reg_fcn="${reg_fcn} -f 8x6x4x2x1"
       reg_fcn="${reg_fcn} -s 4x3x2x1x0vox"
@@ -326,7 +346,9 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
       for (( i=0; i<${N}; i++ )); do
         reg_fcn="${reg_fcn} -m CC[${FIXED[${i}]},${MOVING[${i}]},1,6]"
       done
-      reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+      if [[ "${MOVING_MASK}" != "NULL" ]]; then
+        reg_fcn="${reg_fcn} -x [${FIXED_MASK},${MOVING_MASK}]"
+      fi
       reg_fcn="${reg_fcn} -c [20,1e-6,10]"
       reg_fcn="${reg_fcn} -f 1"
       reg_fcn="${reg_fcn} -s 0vox"
