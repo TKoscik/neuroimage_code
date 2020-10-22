@@ -36,6 +36,14 @@ NO_LOG=false
 # 10) Added 4D file check
 # 11) Added option for no session variable
 # 12) Stack check
+# ------------------------------------------------------------------------------
+# UPDATE BY T. KOSCIK 2020-10-22
+# - fixed location and specification of transforms
+# --will now check early in script for necessary transforms
+# --no longer requires a stacked transform, will append affine and syn
+#   unless stack is present
+# --fixed handling of voxel spacing
+# -changed the way lack of session variables are handled to be more efficient
 # TODO: Add QC function or source QC script
 #===============================================================================
 
@@ -70,7 +78,6 @@ function egress {
   fi
 }
 trap egress EXIT
-
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvkl --long prefix:,\
