@@ -107,10 +107,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo ''
   NO_LOG=true
   exit 0
