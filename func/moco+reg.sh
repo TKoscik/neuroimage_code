@@ -80,10 +80,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 ts-bold:,target:,template:,space:,\
 dir-save:,dir-scratch:,\
-keep,help,verbose,no-log -n 'parse-options' -- "$@"`
+keep,help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -154,11 +154,11 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
+  DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD})
+  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
+  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
   if [ -z "${PREFIX}" ]; then
-    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD}}`
+    PREFIX=$(${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD}})
   fi
 else
   echo "The BOLD file does not exist. Exiting."
@@ -235,8 +235,8 @@ N_XFM=${#XFM_NORM[@]}
 
 # Motion Correction + registration ============================================
 # Get timeseries info ---------------------------------------------------------
-NUM_TR=`PrintHeader ${TS_BOLD} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1`
-TR=`PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1`
+NUM_TR=$(PrintHeader ${TS_BOLD} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1)
+TR=$(PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1)
 # check in here for 4d file.
 if [ "${NUM_TR}" == 1 ]; then
     echo "Input file is not a 4D file. Aborting."
@@ -250,7 +250,7 @@ for (( i=0; i<${NUM_TR}; i++ )); do
   VOL_NUM=$(printf "%04d" ${i})
   ImageMath 3 ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz PadImage ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz 5
 done
-MERGE_LS=(`ls ${DIR_SCRATCH}/vol*`)
+MERGE_LS=($(ls ${DIR_SCRATCH}/vol*))
 fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold+pad.nii.gz ${MERGE_LS[@]} ${TR}
 TS_BOLD=${DIR_SCRATCH}/${PREFIX}_bold+pad.nii.gz
 rm ${MERGE_LS[@]}
@@ -352,7 +352,7 @@ for (( i=0; i<${NUM_TR}; i++ )); do
   VOL_NUM=$(printf "%04d" ${i})
   ImageMath 3 ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz PadImage ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz -5
 done
-MERGE_LS=(`ls ${DIR_SCRATCH}/vol*`)
+MERGE_LS=($(ls ${DIR_SCRATCH}/vol*))
 fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
 rm ${MERGE_LS[@]}
 
