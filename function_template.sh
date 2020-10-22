@@ -62,10 +62,13 @@ TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
+
+# NOTE: DIR_INC, DIR_TEMPLATE will need to be set up in the init.json file, starting with first version
+## how to set these variables here?
+DIR_INC=/Shared/inc_scratch/code
+DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 
 while true; do
   case "$1" in
@@ -83,9 +86,7 @@ while true; do
     * ) break ;;
   esac
 done
-### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
-#         by DIR_INC for version 0.0.0.0. Specifying the directory may
-#         not be necessary, once things are sourced
+
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -117,11 +118,11 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE})
-SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub")
-SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT_FILE})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${INPUT_FILE})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${INPUT_FILE})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
