@@ -158,7 +158,7 @@ if [ -f "${TS_BOLD}" ]; then
   SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
   SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
   if [ -z "${PREFIX}" ]; then
-    PREFIX=$(${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD}})
+    PREFIX=$(${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD})
   fi
 else
   echo "The BOLD file does not exist. Exiting."
