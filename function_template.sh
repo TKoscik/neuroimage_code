@@ -45,10 +45,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 other-inputs:,template:,space:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -121,11 +121,11 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
+DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE})
+SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub")
+SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${INPUT_FILE})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
