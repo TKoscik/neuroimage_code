@@ -192,7 +192,7 @@ fi
 
 # setup directories
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_from-${FROM}_to-${TO}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_${TO}
 fi
 
 DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}
