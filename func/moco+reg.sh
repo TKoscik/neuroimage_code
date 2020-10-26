@@ -313,7 +313,7 @@ antsApplyTransforms -d 3 \
 
 # Push mean bold to template --------------------------------------------------
 unset xfm_fcn
-xfn_fcn="antsApplyTransforms -d 3"
+xfm_fcn="antsApplyTransforms -d 3"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz"
 xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz"
 for (( i=0; i<${N_XFM}; i++ )); do
@@ -325,7 +325,7 @@ eval ${xfm_fcn}
 
 # apply to brain mask as well
 unset xfm_fcn
-xfn_fcn="antsApplyTransforms -d 3 -n NearestNeighbor"
+xfm_fcn="antsApplyTransforms -d 3 -n NearestNeighbor"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz"
 xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz"
 for (( i=0; i<${N_XFM}; i++ )); do
