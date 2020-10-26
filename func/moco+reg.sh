@@ -317,7 +317,7 @@ xfm_fcn="antsApplyTransforms -d 3"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz"
 xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz"
 for (( i=0; i<${N_XFM}; i++ )); do
-  xfm_fcn="${xfm_fcn} ${XFM_NORM}"
+  xfm_fcn="${xfm_fcn} -t ${XFM_NORM}"
 done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz"
 xfm_fcn="${xfm_fcn} -r ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz"
@@ -329,7 +329,7 @@ xfm_fcn="antsApplyTransforms -d 3 -n NearestNeighbor"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz"
 xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz"
 for (( i=0; i<${N_XFM}; i++ )); do
-  xfm_fcn="${xfm_fcn} ${XFM_NORM}"
+  xfm_fcn="${xfm_fcn} -t ${XFM_NORM}"
 done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz"
 xfm_fcn="${xfm_fcn} -r ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz"
