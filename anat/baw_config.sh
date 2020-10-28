@@ -45,7 +45,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=`getopt -o hvkl --long \
 project-name:,csv-file:,queue:,\
 dir-save:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
@@ -56,7 +56,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-PREFIX=
 PROJECT_NAME=
 CSV_FILE=
 DIR_SAVE=
@@ -72,7 +71,6 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
     --project-name) PROJECT_NAME="$2" ; shift 2 ;;
     --csv-file) CSV_FILE="$2" ; shift 2 ;;
     --queue) QUEUE="$2" ; shift 2 ;;
@@ -97,8 +95,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
   echo '  --project-name <value>   project name'
   echo '  --csv-file <value>       csv file, full path'
   echo '  --queue <value>          ARGON queues to submit to'
@@ -117,16 +113,6 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${INPUT_FILE}`
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE}`
-fi
-
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
 
 mkdir -p ${DIR_SAVE}
 
