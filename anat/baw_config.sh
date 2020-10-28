@@ -127,178 +127,179 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
 fi
-DIR_SCRATCH=/Shared/inc_scratch/${PROJECT_NAME}_BAW
-mkdir -p ${DIR_SCRATCH}
+
 mkdir -p ${DIR_SAVE}
 
-[EXPERIMENT]
+CONFIG=${DIR_SAVE}/${PROJECT_NAME}.config
 
-SESSION_DB_BASE=${CSV_FILE}
-SESSION_DB_TEMP=%(SESSION_DB_BASE)s
-SESSION_DB_LONG=%(SESSION_DB_BASE)s
-
- 
-
-EXPERIMENT_BASE=${PROJECT_NAME}
-#EXPERIMENT_TEMP=NOFL_20170302_DM1_temp
-#EXPERIMENT_LONG=NOFL_20170302_DM1_long
-
-
-EXPERIMENT_TEMP_INPUT=%(EXPERIMENT_BASE)s
-EXPERIMENT_LONG_INPUT=%(EXPERIMENT_TEMP)s
-
-
-#WORKFLOW_COMPONENTS_LONG=['denoise','landmark','auxlmk','tissue_classify','segmentation','warp_atlas_to_subject','jointfusion_2012_neuro']
- 
-
-WORKFLOW_COMPONENTS_BASE=['denoise','landmark','auxlmk','tissue_classify','warp_atlas_to_subject','jointfusion_2015_wholebrain']
-#WORKFLOW_COMPONENTS_BASE=['denoise']
-#WORKFLOW_COMPONENTS_TEMP=[]
-#WORKFLOW_COMPONENTS_LONG=['denoise','landmark','auxlmk','tissue_classify','warp_atlas_to_subject','jointfusion_2015_wholebrain']
- 
-
-BASE_OUTPUT_DIR=${DIR_SCRATCH}
- 
-
-ATLAS_PATH=/Shared/pinc/sharedopt/ReferenceData/Atlas_20131115
-JOINTFUSION_ATLAS_DB_BASE=/Shared/pinc/sharedopt/ReferenceData/20160523_HDAdultAtlas/baw20160523WholeBrainAtlasDenoisedList_fixed.csv
-RELABEL2LOBES_FILENAME=/Shared/pinc/sharedopt/ReferenceData/20160523_HDAdultAtlas/Label2Lobes_Ver20160524.csv
-LABELMAP_COLORLOOKUP_TABLE=/Shared/pinc/sharedopt/ReferenceData/20160523_HDAdultAtlas/BAWHDAdultAtlas_FreeSurferConventionColorLUT_20160524.txt
- 
-
-USE_REGISTRATION_MASKING=True
- 
-
-[NIPYPE]
-GLOBAL_DATA_SINK_REWRITE=True
-#GLOBAL_DATA_SINK_REWRITE=False
-CRASHDUMP_DIR=/tmp
+echo '[EXPERIMENT]' >> ${CONFIG}
+echo '' >> ${CONFIG}
+echo 'SESSION_DB_BASE=${CSV_FILE}' >> ${CONFIG}
+echo 'SESSION_DB_TEMP=%(SESSION_DB_BASE)s' >> ${CONFIG}
+echo 'SESSION_DB_LONG=%(SESSION_DB_BASE)s' >> ${CONFIG}
 
  
 
-##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-[RHEL7ARGON]
-## The cluster queue to use for submitting "normal running" jobs.
-#QUEUE= -q all.q
-QUEUE= -q ${QUEUE}
+echo 'EXPERIMENT_BASE=${PROJECT_NAME}' >> ${CONFIG}
+echo '#EXPERIMENT_TEMP=NOFL_20170302_DM1_temp' >> ${CONFIG}
+echo '#EXPERIMENT_LONG=NOFL_20170302_DM1_long' >> ${CONFIG}
+
+
+echo 'EXPERIMENT_TEMP_INPUT=%(EXPERIMENT_BASE)s' >> ${CONFIG}
+echo 'EXPERIMENT_LONG_INPUT=%(EXPERIMENT_TEMP)s' >> ${CONFIG}
+
+
+echo '#WORKFLOW_COMPONENTS_LONG=['denoise','landmark','auxlmk','tissue_classify','segmentation','warp_atlas_to_subject','jointfusion_2012_neuro']' >> ${CONFIG}
+ 
+
+echo 'WORKFLOW_COMPONENTS_BASE=['denoise','landmark','auxlmk','tissue_classify','warp_atlas_to_subject','jointfusion_2015_wholebrain']' >> ${CONFIG}
+echo '#WORKFLOW_COMPONENTS_BASE=['denoise']' >> ${CONFIG}
+echo '#WORKFLOW_COMPONENTS_TEMP=[]' >> ${CONFIG}
+echo '#WORKFLOW_COMPONENTS_LONG=['denoise','landmark','auxlmk','tissue_classify','warp_atlas_to_subject','jointfusion_2015_wholebrain']' >> ${CONFIG}
+ 
+
+echo 'BASE_OUTPUT_DIR=${DIR_SAVE}' >> ${CONFIG}
+ 
+
+echo 'ATLAS_PATH=/Shared/pinc/sharedopt/ReferenceData/Atlas_20131115' >> ${CONFIG}
+echo 'JOINTFUSION_ATLAS_DB_BASE=/Shared/pinc/sharedopt/ReferenceData/20160523_HDAdultAtlas/baw20160523WholeBrainAtlasDenoisedList_fixed.csv' >> ${CONFIG}
+echo 'RELABEL2LOBES_FILENAME=/Shared/pinc/sharedopt/ReferenceData/20160523_HDAdultAtlas/Label2Lobes_Ver20160524.csv' >> ${CONFIG}
+echo 'LABELMAP_COLORLOOKUP_TABLE=/Shared/pinc/sharedopt/ReferenceData/20160523_HDAdultAtlas/BAWHDAdultAtlas_FreeSurferConventionColorLUT_20160524.txt' >> ${CONFIG}
+ 
+
+echo 'USE_REGISTRATION_MASKING=True' >> ${CONFIG}
+ 
+
+echo '[NIPYPE]' >> ${CONFIG}
+echo 'GLOBAL_DATA_SINK_REWRITE=True' >> ${CONFIG}
+echo '#GLOBAL_DATA_SINK_REWRITE=False' >> ${CONFIG}
+echo 'CRASHDUMP_DIR=/tmp' >> ${CONFIG}
+
+ 
+
+echo '##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@' >> ${CONFIG}
+echo '[RHEL7ARGON]' >> ${CONFIG}
+echo '## The cluster queue to use for submitting "normal running" jobs.' >> ${CONFIG}
+echo '#QUEUE= -q all.q' >> ${CONFIG}
+echo 'QUEUE= -q ${QUEUE}' >> ${CONFIG}
 
  
 
 
-## The cluster queue to use for submitting "long running" jobs.
-#QUEUE_LONG= -q all.q
-QUEUE_LONG= -q ${QUEUE}
+echo '## The cluster queue to use for submitting "long running" jobs.' >> ${CONFIG}
+echo '#QUEUE_LONG= -q all.q' >> ${CONFIG}
+echo 'QUEUE_LONG= -q ${QUEUE}' >> ${CONFIG}
 
  
 
-## The QSTAT command for immediate update of values [ use 'qstat' if in doubt ]
-QSTAT_IMMEDIATE=qstat
-QSTAT_CACHED=qstat
-## The QSTAT command for cached update of values ( to take load off of OGE server during heavy job usage ) [ use 'qstat' if in doubt ]
-# QSTAT_IMMEDIATE_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_immediate.sh
-# QSTAT_CACHED_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_cached.sh
+echo '## The QSTAT command for immediate update of values [ use 'qstat' if in doubt ]' >> ${CONFIG}
+echo 'QSTAT_IMMEDIATE=qstat' >> ${CONFIG}
+echo 'QSTAT_CACHED=qstat' >> ${CONFIG}
+echo '## The QSTAT command for cached update of values ( to take load off of OGE server during heavy job usage ) [ use 'qstat' if in doubt ]' >> ${CONFIG}
+echo '# QSTAT_IMMEDIATE_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_immediate.sh' >> ${CONFIG}
+echo '# QSTAT_CACHED_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_cached.sh' >> ${CONFIG}
 
 
-## Necessary modules to load for jobs
-MODULES=['intel/2017.1', 'ncurses/6.0',  'cmake/3.7.2', 'graphviz/2.40.1']
+echo '## Necessary modules to load for jobs' >> ${CONFIG}
+echo 'MODULES=['intel/2017.1', 'ncurses/6.0',  'cmake/3.7.2', 'graphviz/2.40.1']' >> ${CONFIG}
 
  
 
-# Run on a cluster?
-_GRAPHVIZ_BIN=/opt/apps/graphviz/2.40.1/bin/dot
-VIRTUALENV_DIR=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin
-# NAMICExternalProjects build tree
-_BUILD_DIR=/Shared/pinc/sharedopt/20170302/RHEL7/NEP-intel
-_BRAINSTOOLS_BIN_DIR=%(_BUILD_DIR)s/bin
-#_SIMPLEITK_PYTHON_LIB=%(_BUILD_DIR)s/lib
-#_SIMPLEITK_PACKAGE_DIR=%(_BUILD_DIR)s/SimpleITK-build/Wrapping
-#_NIPYPE_PACKAGE_DIR=
-#%(_BUILD_DIR)s/NIPYPE
-############## -- You should not need to modify below here. ###########
-APPEND_PYTHONPATH=%(_BUILD_DIR)s/BRAINSTools/AutoWorkup:%(_BUILD_DIR)s/BRAINSTools/AutoWorkup/workflows
-#%(_NIPYPE_PACKAGE_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_SIMPLEITK_PACKAGE_DIR)s
-APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_GRAPHVIZ_BIN)s
-#APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_GRAPHVIZ_BIN)s
+echo '# Run on a cluster?' >> ${CONFIG}
+echo '_GRAPHVIZ_BIN=/opt/apps/graphviz/2.40.1/bin/dot' >> ${CONFIG}
+echo 'VIRTUALENV_DIR=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin' >> ${CONFIG}
+echo '# NAMICExternalProjects build tree' >> ${CONFIG}
+echo '_BUILD_DIR=/Shared/pinc/sharedopt/20170302/RHEL7/NEP-intel' >> ${CONFIG}
+echo '_BRAINSTOOLS_BIN_DIR=%(_BUILD_DIR)s/bin' >> ${CONFIG}
+echo '#_SIMPLEITK_PYTHON_LIB=%(_BUILD_DIR)s/lib' >> ${CONFIG}
+echo '#_SIMPLEITK_PACKAGE_DIR=%(_BUILD_DIR)s/SimpleITK-build/Wrapping' >> ${CONFIG}
+echo '#_NIPYPE_PACKAGE_DIR=' >> ${CONFIG}
+echo '#%(_BUILD_DIR)s/NIPYPE' >> ${CONFIG}
+echo '############## -- You should not need to modify below here. ###########' >> ${CONFIG}
+echo 'APPEND_PYTHONPATH=%(_BUILD_DIR)s/BRAINSTools/AutoWorkup:%(_BUILD_DIR)s/BRAINSTools/AutoWorkup/workflows' >> ${CONFIG}
+echo '#%(_NIPYPE_PACKAGE_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_SIMPLEITK_PACKAGE_DIR)s' >> ${CONFIG}
+echo 'APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_GRAPHVIZ_BIN)s' >> ${CONFIG}
+echo '#APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_GRAPHVIZ_BIN)s' >> ${CONFIG}
  
-##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-[RHEL7PINC]
-## The cluster queue to use for submitting "normal running" jobs.
-#QUEUE= -q all.q
-QUEUE= -q x64
- 
-
-## The cluster queue to use for submitting "long running" jobs.
-#QUEUE_LONG= -q all.q
-QUEUE_LONG= -q x64
-
-
-## The QSTAT command for immediate update of values [ use 'qstat' if in doubt ]
-QSTAT_IMMEDIATE=qstat
-QSTAT_CACHED=qstat
-## The QSTAT command for cached update of values ( to take load off of OGE server during heavy job usage ) [ use 'qstat' if in doubt ]
-# QSTAT_IMMEDIATE_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_immediate.sh
-# QSTAT_CACHED_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_cached.sh
+echo '##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@' >> ${CONFIG}
+echo '[RHEL7PINC]' >> ${CONFIG}
+echo '## The cluster queue to use for submitting "normal running" jobs.' >> ${CONFIG}
+echo '#QUEUE= -q all.q' >> ${CONFIG}
+echo 'QUEUE= -q x64' >> ${CONFIG}
  
 
-## Necessary modules to load for jobs
-MODULES=[]
+echo '## The cluster queue to use for submitting "long running" jobs.' >> ${CONFIG}
+echo '#QUEUE_LONG= -q all.q' >> ${CONFIG}
+echo 'QUEUE_LONG= -q x64' >> ${CONFIG}
+
+
+echo '## The QSTAT command for immediate update of values [ use 'qstat' if in doubt ]' >> ${CONFIG}
+echo 'QSTAT_IMMEDIATE=qstat' >> ${CONFIG}
+echo 'QSTAT_CACHED=qstat' >> ${CONFIG}
+echo '## The QSTAT command for cached update of values ( to take load off of OGE server during heavy job usage ) [ use 'qstat' if in doubt ]' >> ${CONFIG}
+echo '# QSTAT_IMMEDIATE_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_immediate.sh' >> ${CONFIG}
+echo '# QSTAT_CACHED_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_cached.sh' >> ${CONFIG}
  
 
-# Run on a cluster?
-_GRAPHVIZ_BIN=/opt/apps/graphviz/2.40.1/bin/dot
-VIRTUALENV_DIR=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin
-# NAMICExternalProjects build tree
-_BUILD_DIR=/Shared/pinc/sharedopt/20170302/RHEL7/NEP-11
-_BRAINSTOOLS_BIN_DIR=%(_BUILD_DIR)s/bin
-#_SIMPLEITK_PYTHON_LIB=%(_BUILD_DIR)s/lib
-#_SIMPLEITK_PACKAGE_DIR=%(_BUILD_DIR)s/SimpleITK-build/Wrapping
-#_NIPYPE_PACKAGE_DIR=
-#%(_BUILD_DIR)s/NIPYPE
-############## -- You should not need to modify below here. ###########
-APPEND_PYTHONPATH=%(_BUILD_DIR)s/BRAINSTools/AutoWorkup:%(_BUILD_DIR)s/BRAINSTools/AutoWorkup/workflows
-#%(_NIPYPE_PACKAGE_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_SIMPLEITK_PACKAGE_DIR)s
-APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_GRAPHVIZ_BIN)s
-#APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_GRAPHVIZ_BIN)s
+echo '## Necessary modules to load for jobs' >> ${CONFIG}
+echo 'MODULES=[]' >> ${CONFIG}
  
 
-##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-[OSX]
-## The cluster queue to use for submitting "normal running" jobs.
-QUEUE=-q COE,UI,HJ,PINC
-#QUEUE=-q ICTS,COE,UI
-## The cluster queue to use for submitting "long running" jobs.
-QUEUE_LONG= -q COE,UI,HJ,PINC
-#QUEUE_LONG= -q ICTS,COE,UI
-## The QSTAT command for immediate update of values [ use 'qstat' if in doubt ]
-QSTAT_IMMEDIATE=qstat
-QSTAT_CACHED=qstat
-## The QSTAT command for cached update of values ( to take load off of OGE server during heavy job usage ) [ use 'qstat' if in doubt ]
-# QSTAT_IMMEDIATE_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_immediate.sh
-# QSTAT_CACHED_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_cached.sh
+echo '# Run on a cluster?' >> ${CONFIG}
+echo '_GRAPHVIZ_BIN=/opt/apps/graphviz/2.40.1/bin/dot' >> ${CONFIG}
+echo 'VIRTUALENV_DIR=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin' >> ${CONFIG}
+echo '# NAMICExternalProjects build tree' >> ${CONFIG}
+echo '_BUILD_DIR=/Shared/pinc/sharedopt/20170302/RHEL7/NEP-11' >> ${CONFIG}
+echo '_BRAINSTOOLS_BIN_DIR=%(_BUILD_DIR)s/bin' >> ${CONFIG}
+echo '#_SIMPLEITK_PYTHON_LIB=%(_BUILD_DIR)s/lib' >> ${CONFIG}
+echo '#_SIMPLEITK_PACKAGE_DIR=%(_BUILD_DIR)s/SimpleITK-build/Wrapping' >> ${CONFIG}
+echo '#_NIPYPE_PACKAGE_DIR=' >> ${CONFIG}
+echo '#%(_BUILD_DIR)s/NIPYPE' >> ${CONFIG}
+echo '############## -- You should not need to modify below here. ###########' >> ${CONFIG}
+echo 'APPEND_PYTHONPATH=%(_BUILD_DIR)s/BRAINSTools/AutoWorkup:%(_BUILD_DIR)s/BRAINSTools/AutoWorkup/workflows' >> ${CONFIG}
+echo '#%(_NIPYPE_PACKAGE_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_SIMPLEITK_PACKAGE_DIR)s' >> ${CONFIG}
+echo 'APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_GRAPHVIZ_BIN)s' >> ${CONFIG}
+echo '#APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_GRAPHVIZ_BIN)s' >> ${CONFIG}
  
 
-## Necessary modules to load for jobs
-MODULES=[]
+echo '##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@' >> ${CONFIG}
+echo '[OSX]' >> ${CONFIG}
+echo '## The cluster queue to use for submitting "normal running" jobs.' >> ${CONFIG}
+echo 'QUEUE=-q COE,UI,HJ,PINC' >> ${CONFIG}
+echo '#QUEUE=-q ICTS,COE,UI' >> ${CONFIG}
+echo '## The cluster queue to use for submitting "long running" jobs.' >> ${CONFIG}
+echo 'QUEUE_LONG= -q COE,UI,HJ,PINC' >> ${CONFIG}
+echo '#QUEUE_LONG= -q ICTS,COE,UI' >> ${CONFIG}
+echo '## The QSTAT command for immediate update of values [ use 'qstat' if in doubt ]' >> ${CONFIG}
+echo 'QSTAT_IMMEDIATE=qstat' >> ${CONFIG}
+echo 'QSTAT_CACHED=qstat' >> ${CONFIG}
+echo '## The QSTAT command for cached update of values ( to take load off of OGE server during heavy job usage ) [ use 'qstat' if in doubt ]' >> ${CONFIG}
+echo '# QSTAT_IMMEDIATE_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_immediate.sh' >> ${CONFIG}
+echo '# QSTAT_CACHED_EXE=/Shared/johnsonhj/HDNI/20160219_AutoWorkupTest/scripts/qstat_cached.sh' >> ${CONFIG}
  
-# Run on a cluster?
-_GRAPHVIZ_BIN=/usr/local/
-VIRTUALENV_DIR=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin
+
+echo '## Necessary modules to load for jobs' >> ${CONFIG}
+echo 'MODULES=[]' >> ${CONFIG}
  
-# NAMICExternalProjects build tree
-_BUILD_DIR=/scratch/johnsonhj/src/NEP-intel
-_BRAINSTOOLS_BIN_DIR=%(_BUILD_DIR)s/bin
-_SIMPLEITK_PYTHON_LIB=%(_BUILD_DIR)s/lib
-_SIMPLEITK_PACKAGE_DIR=%(_BUILD_DIR)s/SimpleITK-build/Wrapping
-_NIPYPE_PACKAGE_DIR=%(_BUILD_DIR)s/NIPYPE
-############## -- You should not need to modify below here. ###########
-APPEND_PYTHONPATH=%(_NIPYPE_PACKAGE_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_SIMPLEITK_PACKAGE_DIR)s
-APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_GRAPHVIZ_BIN)s
+echo '# Run on a cluster?' >> ${CONFIG}
+echo '_GRAPHVIZ_BIN=/usr/local/' >> ${CONFIG}
+echo 'VIRTUALENV_DIR=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin' >> ${CONFIG}
+ 
+echo '# NAMICExternalProjects build tree' >> ${CONFIG}
+echo '_BUILD_DIR=/scratch/johnsonhj/src/NEP-intel' >> ${CONFIG}
+echo '_BRAINSTOOLS_BIN_DIR=%(_BUILD_DIR)s/bin' >> ${CONFIG}
+echo '_SIMPLEITK_PYTHON_LIB=%(_BUILD_DIR)s/lib' >> ${CONFIG}
+echo '_SIMPLEITK_PACKAGE_DIR=%(_BUILD_DIR)s/SimpleITK-build/Wrapping' >> ${CONFIG}
+echo '_NIPYPE_PACKAGE_DIR=%(_BUILD_DIR)s/NIPYPE' >> ${CONFIG}
+echo '############## -- You should not need to modify below here. ###########' >> ${CONFIG}
+echo 'APPEND_PYTHONPATH=%(_NIPYPE_PACKAGE_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_SIMPLEITK_PACKAGE_DIR)s' >> ${CONFIG}
+echo 'APPEND_PATH=%(_BRAINSTOOLS_BIN_DIR)s:%(_SIMPLEITK_PYTHON_LIB)s:%(_GRAPHVIZ_BIN)s' >> ${CONFIG}
  
  
-[DEFAULT]
-# The prefix to add to all image files in the $(SESSION_DB) to account for different file system mount points
-MOUNT_PREFIX=
-MODULES=
+echo '[DEFAULT]' >> ${CONFIG}
+echo '# The prefix to add to all image files in the $(SESSION_DB) to account for different file system mount points' >> ${CONFIG}
+echo 'MOUNT_PREFIX=' >> ${CONFIG}
+echo 'MODULES=' >> ${CONFIG}
 
 
 #===============================================================================
