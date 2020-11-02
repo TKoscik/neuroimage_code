@@ -2,8 +2,8 @@
 
 #===============================================================================
 # Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Authors: Josh Cochran
+# Date: 10/19/20
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -57,19 +57,15 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
+POJECT_NAME=
+DIR_PROJECT=
+T1=
+T2=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
-
-# NOTE: DIR_INC, DIR_TEMPLATE will need to be set up in the init.json file, starting with first version
-## how to set these variables here?
-DIR_INC=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
+DIR_CODE=/Shared/inc_scratch/code
 
 while true; do
   case "$1" in
