@@ -205,19 +205,25 @@ mkdir -p ${DIR_XFM}
 
 # Dilate Masks
 if [[ "${MOVING_MASK}" != "NULL" ]]; then
+  if [[ "${NONBRAIN}" == "true" ]]; then
+    MOVING_NONBRAIN=${DIR_SCRATCH}/MOVING_mask-nonbrain.nii.gz
+    FIXED_NONBRAIN=${DIR_SCRATCH}/FIXED_mask-nonbrain.nii.gz
+    fslmaths ${MOVING_MASK} -binv ${MOVING_NONBRAIN}
+    fslmaths ${FIXED_MASK} -binv ${FIXED_NONBRAIN}
+  fi
   if [[ "${MASK_DIL}" > 0 ]]; then
     ImageMath 3 ${DIR_SCRATCH}/MOVING_mask-dil${MASK_DIL}.nii.gz MD ${MOVING_MASK} ${MASK_DIL}
     ImageMath 3 ${DIR_SCRATCH}/FIXED_mask-dil${MASK_DIL}.nii.gz MD ${FIXED_MASK} ${MASK_DIL}
-    MOVING_MASK=${DIR_SCRATCH}/MOVING_mask-dil${MASK_DIL}.nii.gz    
+    if [[ "${NONBRAIN}" == "true" ]]; then
+      ImageMath 3 ${MOVING_NONBRAIN} MD ${MOVING_NONBRAIN} ${MASK_DIL}
+      ImageMath 3 ${FIXED_NONBRAIN} MD ${FIXED_NONBRAIN} ${MASK_DIL}
+    fi
+
+    MOVING_MASK=${DIR_SCRATCH}/MOVING_mask-dil${MASK_DIL}.nii.gz
     FIXED_MASK=${DIR_SCRATCH}/FIXED_mask-dil${MASK_DIL}.nii.gz
   fi
-fi
-
-if [[ "${NONBRAIN}" == "true" ]]; then
-  MOVING_NONBRAIN=${DIR_SCRATCH}/MOVING_mask-nonbrain.nii.gz
-  FIXED_NONBRAIN=${DIR_SCRATCH}/FIXED_mask-nonbrain.nii.gz
-  fslmaths ${MOVING_MASK} -binv ${MOVING_NONBRAIN}
-  fslmaths ${FIXED_MASK} -binv ${FIXED_NONBRAIN}
+else
+  NONBRAIN="false"
 fi
 
 # register to template
