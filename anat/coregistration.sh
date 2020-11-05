@@ -384,6 +384,7 @@ for (( i=0; i<${N}; i++ )); do
   eval ${xfm_fcn}
 done
 
+# apply transform to other images
 if [[ -n ${APPLY_TO} ]]; then
   IMAGE_APPLY=(${APPLY_TO//, /})
   N_APPLY=${#IMAGE_APPLY[@]}
