@@ -60,7 +60,7 @@ if [[ -z ${SPACE} ]]; then
     SPACE=${SPACE//_/+}
   elif [[ "${DIR_INPUT,,}" == *"derivatives"* ]]; then
     SPACE="native"
-  elif [[ "${DIR_INPUT,,}" == "nifti" ]] || [[ "${DIR_INPUT,,}" == "rawdata" ]]; then
+  elif [[ "${DIR_INPUT,,}" == *"nifti"* ]] || [[ "${DIR_INPUT,,}" == *"rawdata"* ]]; then
     SPACE="raw"
   fi
 fi
