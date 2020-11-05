@@ -61,10 +61,9 @@ if [[ -z ${SPACE} ]]; then
     SPACE="native"
   elif [[ "${DIR_INPUT,,}" == "nifti" ]] || [[ "${DIR_INPUT,,}" == "rawdata" ]]; then
     SPACE="raw"
-  else
   fi
 fi
-echo ${SPACE}  
+echo ${SPACE}
 #==============================================================================
 # End of function
 #==============================================================================
