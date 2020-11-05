@@ -50,6 +50,7 @@ fixed:,fixed-mask:,moving:,moving-mask:,\
 nonbrain,rigid-only,affine-only,hardcore,stack-xfm,\
 mask-dil:,interpolation:,\
 template:,space:,\
+apply-to:,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -73,6 +74,7 @@ HARDCORE=false
 STACK_XFM=false
 TEMPLATE=HCPICBM
 SPACE=1mm
+APPLY_TO=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code # $(read_json )
@@ -101,6 +103,7 @@ while true; do
     --affine-only) AFFINE_ONLY=true ; shift ;;
     --hardcore) HARDCORE=true ; shift ;;
     --stack-xfm) STACK_XFM=true ; shift ;;
+    --apply-to) APPLY_TO="$2" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -365,7 +368,7 @@ eval ${reg_fcn}
 
 # Apply registration to all modalities
 for (( i=0; i<${N}; i++ )); do
-  unset MOD xfm_fcn
+  unset MOD xfm_fcn OUT_NAME
   MOD=($(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"))
   OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
@@ -380,6 +383,33 @@ for (( i=0; i<${N}; i++ )); do
   xfm_fcn="${xfm_fcn} -r ${FIXED[0]}"
   eval ${xfm_fcn}
 done
+
+if [[ -n ${APPLY_TO} ]]; then
+  IMAGE_APPLY=(${APPLY_TO//, /})
+  N_APPLY=${#IMAGE_APPLY[@]}
+  for (( i=0; i<${N_APPLY}; i++ )); do
+    unset MOD OUT_NAME
+    MOD=($(${DIR_CODE}/bids/get_field.sh -i ${IMAGE_APPLY[${i}]} -f "modality"))
+    OUT_BASE=$(${DIR_CODE}/get_bidsbase.sh -i ${IMAGE_APPLY[${i}]} -s)
+    OUT_NAME="${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}.nii.gz"
+    if [[ -f ${OUT_NAME} ]]; then
+      N_TEMP=($(ls ${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}*))
+      N_TEMP=${#N_TEMP[@]}
+      OUT_NAME="${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}+${N_TEMP}.nii.gz"
+    fi
+    xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
+    xfm_fcn="${xfm_fcn} -i ${IMAGE_APPLY[${i}]}"
+    xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
+    if [[ "${AFFINE_ONLY}" == "false" ]]; then
+      if [[ "${RIGID_ONLY}" == "false" ]]; then
+        xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
+      fi
+    fi
+    xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
+    xfm_fcn="${xfm_fcn} -r ${FIXED[0]}"
+    eval ${xfm_fcn}
+  done
+fi
 
 # create and save stacked transforms
 if [[ "${RIGID_ONLY,,}" == "false" ]]; then
