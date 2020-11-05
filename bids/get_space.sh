@@ -57,6 +57,7 @@ if [[ -z ${SPACE} ]]; then
     SPACE=${SPACE[-1]}
     SPACE=(${SPACE//// })
     SPACE=${SPACE[0]}
+    SPACE=${SPACE//_/+}
   elif [[ "${DIR_INPUT,,}" == *"derivatives"* ]]; then
     SPACE="native"
   elif [[ "${DIR_INPUT,,}" == "nifti" ]] || [[ "${DIR_INPUT,,}" == "rawdata" ]]; then
