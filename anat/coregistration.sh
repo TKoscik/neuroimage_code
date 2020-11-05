@@ -180,9 +180,59 @@ else
     fi
   done
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
-    FIXED_MASK=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz
+    WHICH_MASK=$(${DIR_CODE}/get_field.sh -i ${MOVING_MASK} -f mask)
+    WHICH_MASK=(${WHICH_MASK//+/ })
+    WHICH_MASK=${WHICH_MASK[0]}
+    if [[ -z ${WHICH_MASK} ]]; then
+      FIXED_MASK=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-brain.nii.gz
+    else
+      FIXED_MASK=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_mask-${WHICH_MASK}.nii.gz
+    fi
   fi
   TO=${TEMPLATE}+${SPACE}
+fi
+
+# Check if presized template exists
+if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
+  UNIT=${SPACE:(-2)}
+  SIZE=${SPACE//mm/}
+  SIZE=${SIZE//um/}
+  if [[  "${UNIT}" == "um" ]]; then
+    SIZE=$(echo "${SIZE}/1000" | bc -l | awk '{printf "%0.3f", $0}')
+  fi
+  AVAIL_SIZE=($(ls ${DIR_TEMPLATE}/${TEMPLATE} | xargs -n 1 basename))
+  MIN_AVAIL=999
+  MIN_UNIT=um
+  for (( i=0; i<${#AVAIL_SIZE[@]}; i++ )); do
+    TSIZE=${AVAIL_SIZE[${i}]}
+    TUNIT=${TSIZE:(-2)}
+    TSIZE=${TSIZE//mm/}
+    TSIZE=${TSIZE//um/}
+    if [[  "${TUNIT}" == "um" ]]; then
+      TSIZE=$(echo "${TSIZE}/1000" | bc -l | awk '{printf "%0.3f", $0}')
+    fi
+    if [[ "${TSIZE}" < "${MIN_AVAIL}" ]]; then
+      MIN_AVAIL=TSIZE
+      MIN_UNIT=TUNIT
+    fi
+  done
+  for (( i=0; i<${N_FIXED}; i++ )); do
+    TMOD=$(${DIR_CODE}/get_field.sh -i ${FIXED[${i}]} -f modality)
+    ResampleImage 3 \
+      ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_${TMOD}.nii.gz \
+      ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${TMOD}.nii.gz \
+      ${SIZE}x${SIZE}x${SIZE} 0 0 6
+    FIXED_NEW+=(${DIR_SCRATCH}/${TEMPLATE}_${SPACE_${TMOD}.nii.gz)
+  done
+  unset FIXED
+  FIXED=${FIXED_NEW}
+
+  WHICH_MASK=$(${DIR_CODE}/get_field.sh -i ${FIXED_MASK} -f mask)
+  ResampleImage 3 \
+    ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_mask-${WHICH_MASK}.nii.gz \
+    ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz \
+    ${SIZE}x${SIZE}x${SIZE} 0 1 6
+  FIXED_MASK=${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
