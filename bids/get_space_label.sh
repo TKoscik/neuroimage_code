@@ -51,17 +51,26 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-SPACE=(`dirname ${INPUT}`)
-SPACE=(${SPACE//// })
-SPACE=${SPACE[-1]}
-SPACE=(${SPACE//-/ })
-SPACE=${SPACE[-1]}
-SPACE=(${SPACE//_/ })
-SPACE=${SPACE[-1]}
-if [[ "${SPACE,,}" == "nifti" ]] || [[ "${SPACE,,}" == "rawdata" ]]; then
-  SPACE="raw"
+# 1. use reg field if exists in file name, or parse directory
+# 2. if reg_* exists in directory structure, pull space from reg_* folder name
+# 3. if in derivatives folder assume "native" space
+# 4. if in rawdata or nifti(deprecated) folder, assume "raw" space
+SPACE=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f reg)
+if [[ -z ${SPACE} ]]; then
+  DIR_INPUT=($(dirname ${INPUT}))
+  if [[ "${DIR_INPUT}" == *"reg_"* ]]; then
+    SPACE=(${DIR_INPUT//reg_/ })
+    SPACE=${SPACE[-1]}
+    SPACE=(${SPACE//// })
+    SPACE=${SPACE[0]}
+  elif [[ "${SPACE}" == *"derivatives"* ]]; then
+    SPACE="native"
+  elif [[ "${SPACE,,}" == "nifti" ]] || [[ "${SPACE,,}" == "rawdata" ]]; then
+    SPACE="raw"
+  else
+  fi
 fi
-echo ${SPACE}
+echo ${SPACE}  
 #==============================================================================
 # End of function
 #==============================================================================
