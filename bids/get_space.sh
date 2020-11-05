@@ -34,7 +34,7 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -52,14 +52,14 @@ fi
 SPACE=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f reg)
 if [[ -z ${SPACE} ]]; then
   DIR_INPUT=($(dirname ${INPUT}))
-  if [[ "${DIR_INPUT}" == *"reg_"* ]]; then
+  if [[ "${DIR_INPUT,,}" == *"reg_"* ]]; then
     SPACE=(${DIR_INPUT//reg_/ })
     SPACE=${SPACE[-1]}
     SPACE=(${SPACE//// })
     SPACE=${SPACE[0]}
-  elif [[ "${SPACE}" == *"derivatives"* ]]; then
+  elif [[ "${DIR_INPUT,,}" == *"derivatives"* ]]; then
     SPACE="native"
-  elif [[ "${SPACE,,}" == "nifti" ]] || [[ "${SPACE,,}" == "rawdata" ]]; then
+  elif [[ "${DIR_INPUT,,}" == "nifti" ]] || [[ "${DIR_INPUT,,}" == "rawdata" ]]; then
     SPACE="raw"
   else
   fi
