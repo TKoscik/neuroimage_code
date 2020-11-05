@@ -159,7 +159,7 @@ fi
 #===============================================================================
 MOVING=(${MOVING//,/ })
 N=${#MOVING[@]}
-FROM=`${DIR_CODE}/bids/get_space_label.sh -i ${MOVING[0]}`
+FROM=`${DIR_CODE}/bids/get_space.sh -i ${MOVING[0]}`
 
 if [[ "${MOVING_MASK,,}" == "null" ]]; then
   FIXED_MASK=NULL
@@ -169,7 +169,7 @@ if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED//,/ })
   N_FIXED=${#FIXED[@]}
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
-  TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED[0]}`
+  TO=`${DIR_CODE}/bids/get_space.sh -i ${FIXED[0]}`
 else
   for (( i=0; i<${N_MOVING}; i++ )); do
     MOD=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
