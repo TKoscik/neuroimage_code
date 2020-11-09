@@ -171,6 +171,7 @@ if [[ "${FIXED,,}" != "null" ]]; then
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
   TO=`${DIR_CODE}/bids/get_space.sh -i ${FIXED[0]}`
 else
+  unset FIXED
   for (( i=0; i<${N_MOVING}; i++ )); do
     MOD=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
     if [[ "${MOD}" == "T2w" ]]; then
