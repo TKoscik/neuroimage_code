@@ -45,7 +45,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=`getopt -o hvl --long prefix:,\
-t1:,t2:,\
+t1:,t2:,roi:,\
 dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
@@ -74,6 +74,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --t1) T1="$2" ; shift 2 ;;
     --t2) T2="$2" ; shift 2 ;;
+    --roi) ROI="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -124,8 +125,8 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 # Check that images are coregistered, i.e., contain same "reg" flag
-T1_SPACE=$(${DIR_CODE}/bids/get_space_label.sh -i ${T1})
-T2_SPACE=$(${DIR_CODE}/bids/get_space_label.sh -i ${T2})
+T1_SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${T1})
+T2_SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${T2})
 if [[ "${T1_SPACE}" != "${T2_SPACE}" ]]; then
   echo "T1w and T2w not in same space, aborting"
   exit 1
