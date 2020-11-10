@@ -44,10 +44,12 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long prefix:,\
+OPTS=$(getopt -o hvl --long prefix:,\
 t1:,t2:,roi:,\
+norm-t1:,norm-t2:,norm-roi:,\
+template:,space:,\
 dir-save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -58,7 +60,12 @@ eval set -- "$OPTS"
 PREFIX=
 T1=
 T2=
-ROI=NULL
+ROI=
+NORMT1=
+NORMT2=
+NORMROI=
+TEMPLATE=
+SPACE=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 DIR_CODE=/Shared/inc_scratch/code
@@ -75,6 +82,11 @@ while true; do
     --t1) T1="$2" ; shift 2 ;;
     --t2) T2="$2" ; shift 2 ;;
     --roi) ROI="$2" ; shift 2 ;;
+    --norm-t1) NORMT1="$2" ; shift 2 ;;
+    --norm-t2) NORMT2="$2" ; shift 2 ;;
+    --norm-roi) NORMROI="$2" ; shift 2 ;;
+    --template) TEMPLATE="$2" ; shift 2 ;;
+    --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -84,7 +96,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -124,59 +135,77 @@ if [ -z "${PREFIX}" ]; then
   fi
 fi
 
-# Check that images are coregistered, i.e., contain same "reg" flag
-T1_SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${T1})
-T2_SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${T2})
-if [[ "${T1_SPACE}" != "${T2_SPACE}" ]]; then
-  echo "T1w and T2w not in same space, aborting"
-  exit 1
-fi
-TEMP=(${T1_SPACE//+/ })
-TEMPLATE=${TEMP[0]}
-SPACE=${TEMP[1]}
-
-# Check if ROI map exists
-if [[ "${ROI}" == "NULL" ]]; then
-  ROI=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_label-normMyelin.nii.gz
-  ROI_VAL=(${ROI_VAL//,/ })
-  if [[ ! -f ${ROI} ]]; then
-    echo "ROI file does not exist, please create appropriate ROI labels"
+if [[ -n ${NORMT1} ]]; then
+# Check if norms provided
+  if [[ -z ${ROI} ]] & [[ ! -f ${ROI} ]]; then
+    echo 'ROI file containing labels for normalization regions must be specified and exist'
     exit 1
+  fi
+elif [[ -n ${TEMPLATE}  ]]; then
+# Check if template provided
+  NORMT1=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+  NORMT2=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz
+  NORMROI=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_label-normMyelin.nii.gz
+  if [[ -z ${ROI} ]]; then
+    ROI=${NORMROI}
+  fi
+else
+# attempt to infer template from file names
+  # Check that images are coregistered, i.e., contain same "reg" flag
+  T1_SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${T1})
+  T2_SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${T2})
+  if [[ "${T1_SPACE}" != "${T2_SPACE}" ]]; then
+    echo "T1w and T2w not in same space, aborting"
+    exit 1
+  fi
+  TEMP=(${T1_SPACE//+/ })
+  TEMPLATE=${TEMP[0]}
+  SPACE=${TEMP[1]}
+  NORMT1=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+  NORMT2=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz
+  NORMROI=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_label-normMyelin.nii.gz
+  if [[ -z ${ROI} ]]; then
+    ROI=${NORMROI}
   fi
 fi
 
+# Copy images to scratch, for manipulation
+cp ${NORMT1} ${DIR_SCRATCH}/norm_T1w.nii.gz
+cp ${NORMT2} ${DIR_SCRATCH}/norm_T2w.nii.gz
+cp ${NORMROI} ${DIR_SCRATCH}/norm_roi.nii.gz
+cp ${T1} ${DIR_SCRATCH}/sub_T1w.nii.gz
+cp ${T2} ${DIR_SCRATCH}/sub_T2w.nii.gz
+cp ${ROI} ${DIR_SCRATCH}/sub_roi.nii.gz
+gunzip ${DIR_SCRATCH}/*.gz
+
 # create save directory
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/myelin_${TEMPLATE}+${SPACE}
+  if [[ -n ${TEMPLATE} ]]; then
+    SUFFIX="${TEMPALTE}+${SPACE}"
+  else
+    SUFFIX="map"
+  fi
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/myelin_${SUFFIX}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
-
-# Copy images to scratch, for manipulation
-cp ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz \
-  ${DIR_SCRATCH}/norm_T1w.nii.gz
-cp ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz \
-  ${DIR_SCRATCH}/norm_T2w.nii.gz
-cp ${T1} ${DIR_SCRATCH}/sub_T1w.nii.gz
-cp ${T2} ${DIR_SCRATCH}/sub_T2w.nii.gz
-cp ${ROI} ${DIR_SCRATCH}/roi.nii.gz
-gunzip ${DIR_SCRATCH}/*.gz
 
 # calculate myelin map
 Rscript ${DIR_CODE}/anat/map_myelin.R \
   ${DIR_SCRATCH}/norm_T1w.nii \
   ${DIR_SCRATCH}/norm_T2w.nii \
+  ${DIR_SCRATCH}/norm_roi.nii \
   ${DIR_SCRATCH}/sub_T1w.nii \
   ${DIR_SCRATCH}/sub_T2w.nii \
-  ${DIR_SCRATCH}/roi.nii
+  ${DIR_SCRATCH}/sub_roi.nii
 
 # zip and move output
 gzip ${DIR_SCRATCH}/myelin.nii
-CopyImageHeaderInformation ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz \
+CopyImageHeaderInformation ${T1} \
   ${DIR_SCRATCH}/myelin.nii.gz \
-  ${DIR_SCRATCH}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_myelin.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_myelin.nii.gz \
   1 1 1
-mv ${DIR_SCRATCH}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_myelin.nii.gz ${DIR_SAVE}
+mv ${DIR_SCRATCH}/${PREFIX}_myelin.nii.gz ${DIR_SAVE}
 
 #==============================================================================
 # End of function
