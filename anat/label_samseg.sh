@@ -2,6 +2,8 @@
 
 #===============================================================================
 # Wrapper for SAMSEG labelling from FreeSurfer
+# -useful for generating WM hyperintensities
+# -labels useful for generating myelin maps
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-11-10
 #===============================================================================
