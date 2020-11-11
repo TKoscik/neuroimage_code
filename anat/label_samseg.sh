@@ -1,20 +1,22 @@
-#!/bin/bash -e
+#!/bin/bash
 
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Wrapper for SAMSEG labelling from FreeSurfer
+# Authors: Timothy R. Koscik, PhD
+# Date: 2020-11-10
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+HOSTNAME="$(uname -n)"
 KEEP=false
 NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
+  if [[ "${HOSTNAME,,}" == *"argon"* ]]; then export OMP_NUM_THREADS=1; fi
   EXIT_CODE=$?
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
@@ -46,10 +48,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
-other-inputs:,template:,space:,\
+OPTS=$(getopt -o hkl --long prefix:,\
+image:,contrast:,thresh:,\
+pallidum-wm,lesion,wm-hyper,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -58,18 +61,18 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
+IMAGE=
+CONTRAST=
+THRESH=0.3
+PALLIDUM_WM=false
+LESION=false
+WM_HYPER=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
 
-# NOTE: DIR_INC, DIR_TEMPLATE will need to be set up in the init.json file, starting with first version
-## how to set these variables here?
+# NOTE: DIR_INC will set up in the init.json file, starting with first version
 DIR_INC=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 
 while true; do
   case "$1" in
@@ -78,9 +81,12 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --contrast) CONTRAST="$2" ; shift 2 ;;
+    --thresh) THRESH="$2" ; shift 2 ;;
+    --pallidum-wm) PALLIDUM_WM="true" ; shift ;;
+    --lesion) LESION="true" ; shift ;;
+    --wm-hyper) WM_HYPER="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -113,31 +119,89 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
+# set OpenMP Threads -----------------------------------------------------------
+if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
+  NTHREADS=$(echo "${NSLOTS} / 7" | bc)
+  if [[ "${NTHREADS}" == "0" ]]; then NTHREADS=1; fi
+  export OMP_NUM_THREADS=${NTHREADS}
+fi
+
 #===============================================================================
 # Start of Function
 #===============================================================================
+IMAGE=(${IMAGE//,/ })
+N_IMAGE=${#IMAGE[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT_FILE})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${INPUT_FILE})
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
+  PREFIX="sub-${SUBJECT}"
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
+  if [[ -n ${SESSION} ]];
+    PREFIX="${PREFIX}_ses-${SESSION}"
+  fi
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
+
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+# Set up contrasts if not specified --------------------------------------------
+if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
+  if [[ -z ${CONTRAST} ]]; then
+    for (( i=0; i<${N_IMAGE}; i++ )); do
+      unset MOD
+      MOD=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[${i}]} -f modality)
+      if [[ "${MOD,,}" == "flair" ]]; || [[ "${MOD,,}" == "t2w" ]]; then
+        CONTRAST+=(1)
+      else
+        echo "Contrast for ${MOD} not specified using value 0"
+        CONTRAST+=(0)
+      fi
+    done
+  fi
+fi
+
+# Run SAMSEG -------------------------------------------------------------------
+samseg_fcn="run_samseg --input ${IMAGE[@]}"
+if [[ "${PALLIDUM_WM}" == "false" ]]; then
+  samseg_fcn="${samseg_fcn} --pallidum-separate"
+fi
+if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
+  samseg_fcn="${samseg_fcn} --lesion"
+  samseg_fcn="${samseg_fcn} --lesion-mask-pattern ${CONTRAST[@]//x/ }"
+  samseg_fcn="${samseg_fcn} --threshold ${THRESH}"
+fi
+samseg_fcn="${samseg_fcn} --output ${DIR_SCRATCH}"
+if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
+  samseg_fcn="${samseg_fcn} --threads ${NTHREADS}"
+fi
+eval ${samseg_fcn}
+
+# Convert and save segmentation output -----------------------------------------
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAMSEG=${DIR_PROJECT}/derivatives/anat/label/samseg
+else
+  DIR_SAMSEG=${DIR_SAVE}
+fi
+mkdir -p ${DIR_SAMSEG}
+mri_convert ${DIR_SCRATCH}/seg.mgz ${DIR_SAMSEG}/${PREFIX}_label-samseg.nii.gz
+
+# Output WM Hyperintensity map if requested ------------------------------------
+if [[ "${WM_HYPER}" == "true" ]]; then
+  if [ -z "${DIR_SAVE}" ]; then
+    DIR_HYPERWM=${DIR_PROJECT}/derivatives/anat/label/hyperWM
+  else
+    DIR_HYPERWM=${DIR_SAVE}
+  fi
+  mkdir -p ${DIR_HYPERWM}
+  fslmaths ${DIR_SAMSEG}/${PREFIX}_label-samseg.nii.gz \
+    -thr 99 -uthr 99 -bin \
+    ${DIR_HYPERWM}/${PREFIX}_label-hyperWM.nii.gz
+fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
 
