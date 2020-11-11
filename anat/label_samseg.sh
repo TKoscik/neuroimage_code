@@ -140,7 +140,7 @@ if [ -z "${PREFIX}" ]; then
   SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
   PREFIX="sub-${SUBJECT}"
   SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
-  if [[ -n ${SESSION} ]];
+  if [[ -n ${SESSION} ]]; then
     PREFIX="${PREFIX}_ses-${SESSION}"
   fi
 fi
@@ -154,7 +154,7 @@ if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
     for (( i=0; i<${N_IMAGE}; i++ )); do
       unset MOD
       MOD=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[${i}]} -f modality)
-      if [[ "${MOD,,}" == "flair" ]]; || [[ "${MOD,,}" == "t2w" ]]; then
+      if [[ "${MOD,,}" == "flair" ]] || [[ "${MOD,,}" == "t2w" ]]; then
         CONTRAST+=(1)
       else
         echo "Contrast for ${MOD} not specified using value 0"
