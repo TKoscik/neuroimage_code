@@ -46,10 +46,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 dimension:,image:,mask:,model:,shrink:,patch:,search:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -93,7 +93,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"

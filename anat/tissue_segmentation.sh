@@ -45,11 +45,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 image:,mask:,n-class:,class-label:,\
 dimension:,convergence:,likelihood-model:,mrf:,use-random:,posterior-form:,\
 dir-save:,dir-scratch:\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -100,7 +100,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -137,8 +136,6 @@ NUM_IMAGE=${#IMAGE[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then
   PREFIX=`${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi
@@ -165,7 +162,11 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
 gunzip ${DIR_SCRATCH}/*.gz
 
 # fit a Gaussian mixture model to get initial values for k-means
-INIT_VALUES=($(Rscript ${DIR_INC}/anat/histogram_peaks_GMM.R ${DIR_SCRATCH}/temp.nii ${DIR_SCRATCH}/mask.nii ${DIR_SCRATCH} "k" ${N_CLASS}))
+INIT_VALUES=($(Rscript ${DIR_INC}/anat/histogram_peaks_GMM.R \
+  ${DIR_SCRATCH}/temp.nii \
+  ${DIR_SCRATCH}/mask.nii \
+  ${DIR_SCRATCH} \
+  "k" ${N_CLASS}))
 
 # run Atropos tisue segmentation
 atropos_fcn="Atropos -d ${DIM}"
