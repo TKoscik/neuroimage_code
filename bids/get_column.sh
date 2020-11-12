@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Pull a named column from a tab-delimited file
 # Authors: Timothy R. Koscik, PhD
@@ -7,7 +6,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hi:f:d: --long input:,field:,delim:,help -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hi:f:d: --long input:,field:,delim:,help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -33,6 +32,7 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -59,7 +59,7 @@ if [[ "${DELIM}" == "NULL" ]]; then
   fi
 fi
 
-HDR=(`head -1 ${INPUT}`)
+HDR=($(head -1 ${INPUT}))
 if [[ "${DELIM}" != "tab" ]]; then
   HDR=(${HDR//${DELIM}/ })
 fi
@@ -85,8 +85,5 @@ fi
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
-
-
 

@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Get base BIDS filename.
 # Strip directory, file extension, and modality
@@ -9,7 +8,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hsi: --long input:,strip-mod,help -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hsi: --long input:,strip-mod,help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -33,12 +32,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -i | --input             BIDs compliant filepath'
   echo '  -s | --strip-mod         logical to strip modality from end'
@@ -50,7 +49,7 @@ fi
 # Start of function
 #==============================================================================
 OUTPUT=
-temp=$(basename ${INPUT})
+temp=($(basename ${INPUT}))
 temp=(${temp//./ })
 OUTPUT=${temp[0]}
 

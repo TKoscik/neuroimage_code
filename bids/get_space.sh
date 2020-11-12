@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Get the spacing label from BIDS-IA format
 # 1. use reg field if exists in file name, or parse directory
@@ -9,7 +8,6 @@
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-12
 #===============================================================================
-
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hi: --long input:,help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then

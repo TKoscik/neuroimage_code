@@ -1,14 +1,12 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Get field value from BIDs filename.
 # compliant with BIDs 1.2.2, and includes INPC-specific extensions
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-09
 #===============================================================================
-
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hi:f: --long input:,field:,help -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hi:f: --long input:,field:,help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -32,12 +30,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -i | --input             BIDs compliant filepath'
   echo '  -f | --field             field to retreive.'

@@ -1,13 +1,11 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Get BIDS project name from file name
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-09
 #===============================================================================
-
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hi: --long input:,help -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hi: --long input:,help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -29,12 +27,12 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
+  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -i | --input             file path to find BIDs Project directory'
   echo ''
