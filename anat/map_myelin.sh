@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #===============================================================================
 # Calculate Myelin Map
 # Authors: Timothy R. Koscik, PhD
@@ -10,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -64,8 +65,6 @@ NORM_T1="0.1x1.45x2.45x3.55x3.765794"
 NORM_T2="0.1x1.95x3.1x4.5x6.738198"
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_INC=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 
 while true; do

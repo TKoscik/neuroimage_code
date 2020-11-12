@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Convert a set of masks to a set of labels, where each possible overlap is a
 # unique value, sort of like a Venn diagram
@@ -12,6 +11,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -46,10 +46,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hkl --long prefix:,\
+OPTS=$(getopt -o hkl --long prefix:,\
 mask-ls:,label:,\
 dir-save:,dir-scratch:,\
-help,keep,no-log -n 'parse-options' -- "$@"`
+help,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -62,7 +62,6 @@ MASK_LS=
 LABEL=venn
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 
 while true; do
@@ -98,10 +97,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --mask-ls <value>        comma-separated list of masks'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
   echo ''
   NO_LOG=true
   exit 0
@@ -114,11 +109,14 @@ MASK_LS=(${MASK_LS//,/ })
 N_MASK=${#MASK_LS[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${MASK_LS[0]})
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MASK_LS[0]})
 if [ -z "${PREFIX}" ]; then
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${MASK_LS[0]} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${MASK_LS[0]} -f "ses")
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "sub")
+  PREFIX=sub-${SUBJECT}
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "ses")
+  if [ -n "${SESSION}" ]; then
+    PREFIX=${PREFIX}_ses-${SESSION}
+  fi
 fi
 
 if [ -z "${DIR_SAVE}" ]; then

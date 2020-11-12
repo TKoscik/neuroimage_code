@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Coregistration of neuroimages
 # Authors: Timothy R. Koscik
@@ -11,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {

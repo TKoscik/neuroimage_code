@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # K-Means Tissue Segmentation
 # Authors: Timothy R. Koscik
@@ -11,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -70,7 +70,6 @@ USE_RANDOM=1
 POSTERIOR_FORM=Socrates[0]
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -124,7 +123,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default" ${RESEARCHER}/${PROJECT}/derivatives/anat/label'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
+  echo '                           default: ${DIR_INC}'
   echo ''
   NO_LOG=true
   exit 0
@@ -137,16 +136,16 @@ IMAGE=(${IMAGE//,/ })
 NUM_IMAGE=${#IMAGE[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]})
-SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
-SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=`${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
+  PREFIX=`${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SESSION}
@@ -166,7 +165,7 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
 gunzip ${DIR_SCRATCH}/*.gz
 
 # fit a Gaussian mixture model to get initial values for k-means
-INIT_VALUES=($(Rscript ${DIR_CODE}/anat/histogram_peaks_GMM.R ${DIR_SCRATCH}/temp.nii ${DIR_SCRATCH}/mask.nii ${DIR_SCRATCH} "k" ${N_CLASS}))
+INIT_VALUES=($(Rscript ${DIR_INC}/anat/histogram_peaks_GMM.R ${DIR_SCRATCH}/temp.nii ${DIR_SCRATCH}/mask.nii ${DIR_SCRATCH} "k" ${N_CLASS}))
 
 # run Atropos tisue segmentation
 atropos_fcn="Atropos -d ${DIM}"

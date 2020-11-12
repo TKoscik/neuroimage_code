@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Rigid Alignment of Images to Template
 # Authors: Timothy R. Koscik, PhD
@@ -12,6 +11,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -64,8 +64,6 @@ SPACE=1mm
 TARGET=T1w
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
 
@@ -116,11 +114,11 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE})
-SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
-SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -140,7 +138,7 @@ mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 
 # get image modality from filename ---------------------------------------------
-MOD=($(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "modality"))
+MOD=($(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "modality"))
 
 # resample template image to desired output spacing ----------------------------
 # always push image to an isotropic spacing to prevent issues with voxel

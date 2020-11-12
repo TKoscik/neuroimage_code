@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Label images based on image intensity percentile, optionally within masked region,
 # and of a minimal size
@@ -12,6 +11,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -65,7 +65,6 @@ PERCENTILE=99
 MIN_SIZE=5
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_INC=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -115,7 +114,6 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
 if [ -z "${PREFIX}" ]; then

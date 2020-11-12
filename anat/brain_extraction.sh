@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Brain Extraction
 # Authors: Timothy R. Koscik, PhD
@@ -11,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -128,13 +128,12 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-
-# Set up BIDs compliant variables and workspace --------------------------------
 IMAGE=(${IMAGE//,/ })
 NUM_IMAGE=${#IMAGE[@]}
 METHOD=(${METHOD//,/ })
 NUM_METHOD=${#METHOD[@]}
 
+# Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
 if [ -z "${PREFIX}" ]; then 
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})

@@ -1,12 +1,10 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Intensity Non-Uniformity Correction
 # - Myelin mapping method, sqrt(T1w*T2w)
 # - N4 bias correction
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-02-26
-# Software: FSL
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -14,6 +12,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -152,6 +151,10 @@ fi
 # Start of Function
 #===============================================================================
 IMAGE=(${IMAGE//,/ })
+if [[ "${#IMAGE[@]}" == 1 ]] & [[ "${METHOD,,}" == "t1t2" ]]; then
+  echo "You must give a T1w AND T2w for the t1t2 method, switching to N4"
+  METHOD="n4"
+fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})

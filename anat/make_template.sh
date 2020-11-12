@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Build a neuroanatomical template using iterative registration to a group
 # average.
@@ -23,6 +22,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -57,10 +57,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 id-ls:,mod-ls:,dir-project:,mask-name:,mask-dil:,iterations:,resolution:,template:,space:,template-name:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -81,9 +81,6 @@ SPACE=1mm
 TEMPLATE_NAME=NULL
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 
@@ -110,13 +107,9 @@ while true; do
     * ) break ;;
   esac
 done
-### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
-#         by DIR_INC for version 0.0.0.0. Specifying the directory may
-#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -146,10 +139,10 @@ mkdir -p ${DIR_SCRATCH}/coreg
 mkdir -p ${DIR_SCRATCH}/xfm
 mkdir -p ${DIR_SCRATCH}/job
 
-SUBJECT=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id))
-SESSION=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f session_id))
-PROJECT=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f project))
-DIRECTORY=($(${DIR_CODE}/bids/get_column.sh -i ${ID_LS} -f directory))
+SUBJECT=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id))
+SESSION=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f session_id))
+PROJECT=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f project))
+DIRECTORY=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f directory))
 ## probably need to adjust this to add masks
 
 N_SUB=${#SUBJECT[@]}
@@ -225,7 +218,7 @@ for k in {0..4}; do
       echo '' > ${SH}
       echo 'source /Shared/pinc/sharedopt/apps/sourcefiles/ants_source.sh' >> ${SH}
       echo '' >> ${SH}
-      echo ${DIR_CODE}'/anat/coregistration.sh \' >> ${SH}
+      echo ${DIR_INC}'/anat/coregistration.sh \' >> ${SH}
     done
   fi
 fi

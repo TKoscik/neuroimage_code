@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Function Description
 # Authors: <<author names>>
@@ -11,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -45,10 +45,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 input:,times:,map-algorithm:,max-time:,threshold:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -64,7 +64,6 @@ MAX_TIME=400.0
 THRESHOLD=50
 DIR_SAVE=
 #DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 NO_LOG=false
@@ -116,8 +115,8 @@ fi
 proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 DIR_PROJECT=$(${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT})
-SUBJECT=$(${DIR_CODE}/code/bids/get_field.sh -i ${INPUT} -f "sub")
-SESSION=$(${DIR_CODE}/code/bids/get_field.sh -i ${INPUT} -f "ses")
+SUBJECT=$(${DIR_INC}/code/bids/get_field.sh -i ${INPUT} -f "sub")
+SESSION=$(${DIR_INC}/code/bids/get_field.sh -i ${INPUT} -f "ses")
 if [ -z "${PREFIX}" ]; then
   PREFIX=sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
@@ -135,7 +134,7 @@ mkdir -p ${DIR_SAVE}
 # Start of Function
 #===============================================================================
 
-${DIR_CODE}/anat/T1rhoMap \
+${DIR_INC}/anat/T1rhoMap \
 --inputVolumes ${INPUT} \
 --t1rhoTimes ${TIMES} \
 --mappingAlgorithm ${MAPPING_ALGORITHM} \

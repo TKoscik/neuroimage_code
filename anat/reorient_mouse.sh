@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Fix orientation of mouse brain image
 # Authors: Timothy R. Koscik, PhD
@@ -11,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -60,7 +60,6 @@ PREFIX=
 IMAGE=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -77,13 +76,9 @@ while true; do
     * ) break ;;
   esac
 done
-### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
-#         by DIR_INC for version 0.0.0.0. Specifying the directory may
-#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -105,17 +100,16 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE})
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE})
   PREFIX="${PREFIX}_prep-reorient"
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SESSION}

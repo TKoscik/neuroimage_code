@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Rician Denoising
 # Authors: Timothy R. Koscik, PhD
@@ -12,6 +11,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -67,7 +67,6 @@ PATCH=1
 SEARCH=2
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -123,14 +122,14 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE})
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SESSION}
@@ -143,7 +142,7 @@ mkdir -p ${DIR_SAVE}
 # Rician Denoising
 #===============================================================================
 # gather modailty for output
-MOD=($(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "modality"))
+MOD=($(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "modality"))
 
 # Denoise image
 dn_fcn="DenoiseImage -d ${DIM}"

@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/bash -e
 #===============================================================================
 # Wrapper for SAMSEG labelling from FreeSurfer
 # -useful for generating WM hyperintensities
@@ -72,9 +71,6 @@ WM_HYPER=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-
-# NOTE: DIR_INC will set up in the init.json file, starting with first version
-DIR_INC=/Shared/inc_scratch/code
 
 while true; do
   case "$1" in

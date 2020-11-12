@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/bash -e
 #===============================================================================
 # Calculate Jacobian determinant of a deformation matrix
 # Authors: Timothy R. Koscik, PhD
@@ -11,6 +10,7 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -45,11 +45,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long prefix:,\
+OPTS=$(getopt -o hvl --long prefix:,\
 xfm:,interpolation:,from:,to:,ref-image:,\
 log,geom,\
 dir-save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -67,8 +67,6 @@ FROM=NULL
 TO=NULL
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
 
@@ -94,7 +92,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -128,15 +125,14 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-
 # Set up BIDs compliant variables and workspace
 XFM=(${XFM//,/ })
 N_XFM=${#XFM[@]}
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${XFM[0]})
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${XFM[0]})
 if [ -z "${PREFIX}" ]; then
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "sub")
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f "sub")
   PREFIX=sub-${SUBJECT}
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "ses")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f "ses")
   if [ -n "${SESSION}" ]; then
     PREFIX=${PREFIX}_ses-${SESSION}
   fi
@@ -146,15 +142,15 @@ mkdir -p ${DIR_SCRATCH}
 
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
-  FROM=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[0]} -f "from")
+  FROM=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f "from")
 fi
 if [[ "${TO}" == "NULL" ]]; then
-  TO=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[-1]} -f "to")
+  TO=$(${DIR_INC}/bids/get_field.sh -i ${XFM[-1]} -f "to")
 fi
 
 XFM_TEMP=
 for (( i=${N_XFM}-1; i>=0; i-- )); do
-  xfm_temp=$(${DIR_CODE}/bids/get_field.sh -i ${XFM[${i}]} -f "xfm")
+  xfm_temp=$(${DIR_INC}/bids/get_field.sh -i ${XFM[${i}]} -f "xfm")
   XFM_TEMP+=(${xfm_temp})
 done
 XFM_NAME=$(IFS=+ ; echo "${XFM_TEMP[*]}")
@@ -185,7 +181,6 @@ if [[ "${N_XFM}" > 1 ]]; then
 else
   XFM_JAC=${XFM}
 fi
-
 
 # Create Jacobian Determinant imgae
 CreateJacobianDeterminantImage 3 \
