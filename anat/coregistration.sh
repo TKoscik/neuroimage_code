@@ -45,14 +45,14 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkln --long prefix:,\
+OPTS=$(getopt -o hvkln --long prefix:,\
 fixed:,fixed-mask:,moving:,moving-mask:,\
 nonbrain,rigid-only,affine-only,hardcore,stack-xfm,\
 mask-dil:,interpolation:,\
 template:,space:,\
 apply-to:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -77,8 +77,6 @@ SPACE=1mm
 APPLY_TO=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code # $(read_json )
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -113,7 +111,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -159,7 +156,7 @@ fi
 #===============================================================================
 MOVING=(${MOVING//,/ })
 N=${#MOVING[@]}
-FROM=`${DIR_CODE}/bids/get_space.sh -i ${MOVING[0]}`
+FROM=$(${DIR_INC}/bids/get_space.sh -i ${MOVING[0]})
 
 if [[ "${MOVING_MASK,,}" == "null" ]]; then
   FIXED_MASK=NULL
@@ -169,11 +166,11 @@ if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED//,/ })
   N_FIXED=${#FIXED[@]}
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
-  TO=`${DIR_CODE}/bids/get_space.sh -i ${FIXED[0]}`
+  TO=(${DIR_INC}/bids/get_space.sh -i ${FIXED[0]})
 else
   unset FIXED
   for (( i=0; i<${N_MOVING}; i++ )); do
-    MOD=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
+    MOD=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
     if [[ "${MOD}" == "T2w" ]]; then
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
     else
@@ -181,7 +178,7 @@ else
     fi
   done
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
-    WHICH_MASK=$(${DIR_CODE}/get_field.sh -i ${MOVING_MASK} -f mask)
+    WHICH_MASK=$(${DIR_INC}/get_field.sh -i ${MOVING_MASK} -f mask)
     WHICH_MASK=(${WHICH_MASK//+/ })
     WHICH_MASK=${WHICH_MASK[0]}
     if [[ -z ${WHICH_MASK} ]]; then
@@ -218,7 +215,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
     fi
   done
   for (( i=0; i<${N_FIXED}; i++ )); do
-    TMOD=$(${DIR_CODE}/get_field.sh -i ${FIXED[${i}]} -f modality)
+    TMOD=$(${DIR_INC}/get_field.sh -i ${FIXED[${i}]} -f modality)
     ResampleImage 3 \
       ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_${TMOD}.nii.gz \
       ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${TMOD}.nii.gz \
@@ -228,7 +225,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
   unset FIXED
   FIXED=${FIXED_NEW}
 
-  WHICH_MASK=$(${DIR_CODE}/get_field.sh -i ${FIXED_MASK} -f mask)
+  WHICH_MASK=$(${DIR_INC}/get_field.sh -i ${FIXED_MASK} -f mask)
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_mask-${WHICH_MASK}.nii.gz \
     ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz \
@@ -237,11 +234,11 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${MOVING[0]})
-SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "sub")
-SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${MOVING[0]} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MOVING[0]})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[0]} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${MOVING[0]})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${MOVING[0]})
 fi
 
 # setup directories
@@ -420,7 +417,7 @@ eval ${reg_fcn}
 # Apply registration to all modalities
 for (( i=0; i<${N}; i++ )); do
   unset MOD xfm_fcn OUT_NAME
-  MOD=($(${DIR_CODE}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"))
+  MOD=($(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"))
   OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${MOVING[${i}]}"
@@ -441,8 +438,8 @@ if [[ -n ${APPLY_TO} ]]; then
   N_APPLY=${#IMAGE_APPLY[@]}
   for (( i=0; i<${N_APPLY}; i++ )); do
     unset MOD OUT_NAME
-    MOD=($(${DIR_CODE}/bids/get_field.sh -i ${IMAGE_APPLY[${i}]} -f "modality"))
-    OUT_BASE=$(${DIR_CODE}/get_bidsbase.sh -i ${IMAGE_APPLY[${i}]} -s)
+    MOD=($(${DIR_INC}/bids/get_field.sh -i ${IMAGE_APPLY[${i}]} -f "modality"))
+    OUT_BASE=$(${DIR_INC}/get_bidsbase.sh -i ${IMAGE_APPLY[${i}]} -s)
     OUT_NAME="${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}.nii.gz"
     if [[ -f ${OUT_NAME} ]]; then
       N_TEMP=($(ls ${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}*))

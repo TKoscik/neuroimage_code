@@ -4,7 +4,7 @@
 - add initialization file  
     - version number  
     - version date    
-    - DIR_CODE  
+    - DIR_CODE ==> DIR_INC 
     - DIR_TEMPLATE >>> _find a home for this with Steve_ 
     - software needed, with versions  
         - AFNI, latest
