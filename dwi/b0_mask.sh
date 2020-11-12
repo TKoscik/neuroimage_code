@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Function Description
 # Authors: Timothy R. Koscik, PhD
@@ -15,7 +14,7 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -34,10 +33,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long prefix:,\
+OPTS=$(getopt -o hvl --long prefix:,\
 b0-image:,dil:,\
 dir-code:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -48,8 +47,6 @@ eval set -- "$OPTS"
 PREFIX=
 B0_IMAGE=
 DIL=5
-DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 
@@ -61,8 +58,6 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --b0-image) B0_IMAGE="$2" ; shift 2 ;;
     --dil) DIL="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -83,29 +78,30 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --b0-image <value>       b0 image'
   echo '  --dil <value>            value of dilation'
   echo '                           default: 5'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
 fi
 
-# Set up BIDs compliant variables and workspace --------------------------------
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${B0_IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${B0_IMAGE} -f "ses"`
-if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
-fi
-
 #===============================================================================
 # Start of Function
 #===============================================================================
+# Set up BIDs compliant variables and workspace --------------------------------
+if [ -z "${PREFIX}" ]; then
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${B0_IMAGE} -f "sub")
+  PREFIX="sub-${SUBJECT}"
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${B0_IMAGE} -f "ses")
+  if [[ -n ${SESSION} ]]; then
+    PREFIX="${PREFIX}_ses-${SESSION}"
+  fi
+fi
+
 DIR_DWI=$(dirname "${B0_IMAGE}") 
 bet ${B0_IMAGE} ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz -m -n
-mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain_mask.nii.gz ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
-ImageMath 3 ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil${DIL}.nii.gz MD ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIL}
+mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain_mask.nii.gz \
+  ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
+ImageMath 3 ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil${DIL}.nii.gz \
+  MD ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIL}
 #===============================================================================
 # End of Function
 #===============================================================================

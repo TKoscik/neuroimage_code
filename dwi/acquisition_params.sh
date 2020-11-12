@@ -1,12 +1,11 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Find acquisition parameters for DWI files
 # Authors: Josh Cochran
 # Date: 3/30/2020
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 DEBUG=false
@@ -15,7 +14,7 @@ NO_LOG=false
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -34,9 +33,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long prefix:,\
-dir-dwi:,dir-code:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hvl --long prefix:,\
+dir-dwi:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -47,8 +46,6 @@ eval set -- "$OPTS"
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 PREFIX=
 DIR_DWI=
-DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 VERBOSE=0
 HELP=false
 NO_LOG=false
@@ -60,8 +57,6 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -69,42 +64,39 @@ done
 
 # Usage Help ------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Josh Cochran'
-  echo 'Date:   3/30/2020'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
+  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --dir-dwi <value>        location of the raw DWI data'
-  echo '  --dir-code <value>       top level directory where INC tools,'
-  echo '                           templates, etc. are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
 fi
 
+#===============================================================================
+# Start of Function
+#===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-anyfile=(`ls ${DIR_DWI}/sub*.nii.gz`)
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${anyfile[0]} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+  anyfile=($(ls ${DIR_DWI}/sub*.nii.gz))
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${anyfile[0]} -f "sub")
+  PREFIX="sub-${SUBJECT}"
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${anyfile[0]} -f "ses")
+  if [[ -n ${SESSION} ]]; then
+    PREFIX="${PREFIX}_ses-${SESSION}"
+  fi
 fi
 
 #==============================================================================
 # AcqParams + All bvec, bval, index + Merge files for All_B0 and All_dwi
 #==============================================================================
-
 #remove old files
 if [[ -f ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt ]]; then
   rm ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt
@@ -139,7 +131,10 @@ touch ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt
 
 #loop through DWI files to pull out info
 for i in ${DIR_DWI}/*_dwi.nii.gz; do
-  unset DTI_NAME B0s NUM_B0s PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME NAME_BASE BVALS XVALS YVALS ZVALS PED_STRING PED_STRING PED EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME
+  unset DTI_NAME B0s NUM_B0s PED_STRING PED_STRING PED EES_STRING EES
+  unset ACQ_MPE_STRING ACQ_MPE READOUT_TIME NAME_BASE
+  unset BVALS XVALS YVALS ZVALS PED_STRING PED_STRING PED
+  unset EES_STRING EES ACQ_MPE_STRING ACQ_MPE READOUT_TIME
 #pull the file name with and without file path
   NAME_BASE=$( basename $i )
   NAME_BASE=${NAME_BASE::-11}
@@ -246,6 +241,5 @@ cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_DWI}/${PREF
 #------------------------------------------------------------------------------
 # End of Function
 #------------------------------------------------------------------------------
-
 exit 0
 
