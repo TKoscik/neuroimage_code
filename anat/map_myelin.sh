@@ -152,6 +152,7 @@ if [[ -z ${SPACE_LAB} ]]; then
 fi
 
 # Copy images to scratch, for manipulation
+mkdir -p ${DIR_SCRATCH}
 cp ${T1} ${DIR_SCRATCH}/t1.nii.gz
 cp ${T2} ${DIR_SCRATCH}/t2.nii.gz
 cp ${LABEL} ${DIR_SCRATCH}/label.nii.gz
@@ -162,7 +163,6 @@ if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/anat/myelin_${SPACE_LAB}
 fi
 mkdir -p ${DIR_SAVE}
-mkdir -p ${DIR_SCRATCH}
 
 # calculate myelin map
 Rscript ${DIR_INC}/anat/map_myelin.R \
