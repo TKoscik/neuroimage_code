@@ -1,12 +1,11 @@
 #!/bin/bash -e
-
 #===============================================================================
 # DICOM Conversion Script
 # Authors: Timothy R. Koscik & S. Joshua Cochran
 # Date: 2020-04-21
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 NO_LOG=false
@@ -25,7 +24,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -44,10 +43,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long dir-project:,email:,subject:,session:,\
-dicom-zip:,dicom-depth:,dont-use:,\
-dir-scratch:,dir-code:,dir-dicomsource:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hvkl --long dir-project:,email:,participant:,session:,\
+dicom-zip:,dicom-depth:,dont-use:,dir-scratch:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -56,14 +54,12 @@ eval set -- "$OPTS"
 
 DIR_PROJECT=
 EMAIL=steven-j-cochran@uiowa.edu
-SUBJECT=
+PARTICIPANT=
 SESSION=
 DICOM_ZIP=
 DICOM_DEPTH=5
 DONT_USE=loc,cal,orig
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_DICOMSOURCE=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20190902
 HELP=false
 VERBOSE=false
 KEEP=false
@@ -77,14 +73,12 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     --email) EMAIL="$2" ; shift 2 ;;
-    --subject) SUBJECT="$2" ; shift 2 ;;
+    --participant) PARTICIPANT="$2" ; shift 2 ;;
     --session) SESSION="$2" ; shift 2 ;;
     --dicom-zip) DICOM_ZIP="$2" ; shift 2 ;;
     --dicom-depth) DICOM_DEPTH="$2" ; shift 2 ;;
     --dont-use) DONT_USE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-dicomsource) DIR_DICOMSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -101,15 +95,15 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose            add verbose output to log file'
   echo '  -k | --keep               keep intermediates'
   echo '  -l | --no-log             disable writing to output log'
-  echo '  --researcher <value>      directory containing the project, e.g. /Shared/koscikt'
-  echo '  --project <value>         name of the project folder, e.g., iowa_black'
+  echo '  --dir-project <value>     directory containing the project, e.g. /Shared/koscikt'
   echo '  --email <values>          comma-delimited list of email addresses'
+  echo '  --participant <value>         participant identifier string'
+  echo '  --session <value>         session identifier string'
   echo '  --dicom-zip <value>       directory listing for DICOM zip-file'
   echo '  --dicom-depth <value>     depth to search dicom directory, default=5'
   echo '  --dir-scratch <value>     directory for temporary data'
-  echo '  --dir-nimgcore <value>    directory where INPC tools and atlases are stored, default: /Shared/nopoulos/nimg_core'
-  echo '  --dir-dicomsource <value> directory where dcm2niix source files are located, default: /Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20180622'
-  echo '  --save-loc                whether to save localizer scans, default: false'
+  echo '  --dont-use                comma separated string of files to skip,'
+  echo '                            default: loc,cal,orig'
   echo ''
   NO_LOG=true
   exit 0
@@ -146,13 +140,13 @@ fi
 
 # Convert DICOM to NIFTI -------------------------------------------------------
 if [[ ${FILE_TYPE} == 0 ]]; then 
-  ${DIR_DICOMSOURCE}/dcm2niix \
+  ${DIR_DCM2NIIX}/dcm2niix \
     -b y -d ${DICOM_DEPTH} -z i -t y \
     -f '%x__%n__%t__%s__%d' \
     -o ${DIR_SCRATCH}/rawdata \
     ${DIR_SCRATCH}/sourcedata
 elif [[ ${FILE_TYPE} == 1 ]]; then
-  ${DIR_DICOMSOURCE}/dcm2niix \
+  ${DIR_DCM2NIIX}/dcm2niix \
     -b y -d ${DICOM_DEPTH} -z i -t y \
     -f '%x__%n__%t__%s__%d' \
     -o ${DIR_SCRATCH}/rawdata \
@@ -160,7 +154,7 @@ elif [[ ${FILE_TYPE} == 1 ]]; then
 fi
 
 # Sort NIFTI files, giving them appropriate names ------------------------------
-dcmsort_r_fcn="Rscript ${DIR_CODE}/dicom/dicom_sort.R"
+dcmsort_r_fcn="Rscript ${DIR_INC}/dicom/dicom_sort.R"
 dcmsort_r_fcn="${dcmsort_r_fcn} ${DIR_PROJECT}"
 dcmsort_r_fcn="${dcmsort_r_fcn} ${DIR_SCRATCH}/rawdata"
 if [[ ${FILE_TYPE} == 0 ]]; then
@@ -168,76 +162,59 @@ if [[ ${FILE_TYPE} == 0 ]]; then
 else
   dcmsort_r_fcn="${dcmsort_r_fcn} ${DIR_SCRATCH}/dicoms.zip"
 fi
-dcmsort_r_fcn=${dcmsort_r_fcn}' "dir.inc.root" '${DIR_CODE}
+dcmsort_r_fcn=${dcmsort_r_fcn}' "dir.inc.root" '${DIR_INC}
 dcmsort_r_fcn=${dcmsort_r_fcn}' "dont.use" '${DONT_USE}
-if [ ! -z ${SUBJECT} ]; then
-  dcmsort_r_fcn=${dcmsort_r_fcn}' "subject" '${SUBJECT}
+if [ ! -z ${PARTICIPANT} ]; then
+  dcmsort_r_fcn=${dcmsort_r_fcn}' "participant" '${PARTICIPANT}
 fi
 if [ ! -z ${SESSION} ]; then
   dcmsort_r_fcn=${dcmsort_r_fcn}' "session" '${SESSION}
 fi
 eval ${dcmsort_r_fcn}
 
-#if [[ ${FILE_TYPE} == 0 ]]; then 
-#  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
-#    ${DIR_PROJECT} \
-#    ${DIR_SCRATCH}/rawdata \
-#    ${DICOM_ZIP} \
-#    "dir.inc.root" ${DIR_CODE} \
-#    "dont.use" ${DONT_USE} \
-#    "dry.run" "FALSE"
-#elif [[ ${FILE_TYPE} == 1 ]]; then
-#  Rscript ${DIR_CODE}/dicom/dicom_sort.R \
-#    ${DIR_PROJECT} \
-#    ${DIR_SCRATCH}/rawdata \
-#    ${DIR_SCRATCH}/dicoms.zip \
-#    "dir.inc.root" ${DIR_CODE} \
-#    "dont.use" ${DONT_USE} \
-#    "dry.run" "FALSE"
-#fi
 # Extract all temporary nii.gz files -------------------------------------------
 gunzip ${DIR_SCRATCH}/rawdata/sub*.gz
 
 # Generate scan text descriptions ----------------------------------------------
-NII_LS=(`ls ${DIR_SCRATCH}/rawdata/sub*.nii`)
-JSON_LS=(`ls ${DIR_SCRATCH}/rawdata/sub*.json`)
+NII_LS=($(ls ${DIR_SCRATCH}/rawdata/sub*.nii))
+JSON_LS=($(ls ${DIR_SCRATCH}/rawdata/sub*.json))
 N_SCANS=${#NII_LS[@]}
 for (( i=0; i<${N_SCANS}; i++ )); do
   DESC_NAME=(${NII_LS[${i}]})
   DESC_NAME=(${DESC_NAME%.nii})
   echo ${DESC_NAME}
-  DESC_TEMP=`Rscript ${DIR_CODE}/dicom/scan_description.R ${NII_LS[${i}]} ${JSON_LS[${i}]}`
+  DESC_TEMP=$(Rscript ${DIR_INC}/dicom/scan_description.R ${NII_LS[${i}]} ${JSON_LS[${i}]})
   echo ${DESC_TEMP} > ${DESC_NAME}_scanDescription.txt
 done
 
 # Generate DICOM Conversion QC Report ------------------------------------------
-Rscript ${DIR_CODE}/qc/qc_dicom_conversion.R ${DIR_PROJECT} ${DIR_SCRATCH}/rawdata
+Rscript ${DIR_INC}/qc/qc_dicom_conversion.R ${DIR_PROJECT} ${DIR_SCRATCH}/rawdata
 
 # Move QC report output --------------------------------------------------------
 mkdir -p ${DIR_PROJECT}/qc/dcmConversion
 cp ${DIR_SCRATCH}/rawdata/*dcmConversion.html ${DIR_PROJECT}/qc/dcmConversion/
 
 # send email -------------------------------------------------------------------
-# Gather subject info for email text
-info_tsv=`ls ${DIR_SCRATCH}/rawdata/*subject-info.tsv`
+# Gather participant info for email text
+info_tsv=$(ls ${DIR_SCRATCH}/rawdata/*participant-info.tsv)
 while IFS=$'\t\r' read -r a b c d;
 do
-  subject+=(${a})
+  participant+=(${a})
   session+=(${b})
   site+=(${c})
   dot+=(${d})
 done < ${info_tsv}
-prefix=sub-${subject[1]}_ses-${session[1]}
-DIR_TEXT=${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]}/txt
+prefix=sub-${participant[1]}_ses-${session[1]}
+DIR_TEXT=${DIR_PROJECT}/rawdata/sub-${participant[1]}/ses-${session[1]}/txt
 mkdir -p ${DIR_TEXT}
 cp ${DIR_SCRATCH}/rawdata/*_scanDescription.txt ${DIR_TEXT}/
 
-ATTACHMENT=`ls ${DIR_SCRATCH}/rawdata/*dcmConversion.html`
-NSS_CFG_DIR=`ls -d ~/.mozilla/firefox/*default`
+ATTACHMENT=$(ls ${DIR_SCRATCH}/rawdata/*dcmConversion.html)
+NSS_CFG_DIR=$(ls -d ~/.mozilla/firefox/*default)
 
 echo "INPC DICOM Conversion Report
 
-Subject: ${subject[1]}
+Participant: ${participant[1]}
 Session: ${session[1]}
 Site: ${site[1]}
 Date of Scan: ${dot[1]}
@@ -249,21 +226,11 @@ Date of Scan: ${dot[1]}
 -S smtp=smtp://smtp.gmail.com:587 \
 -S from="ianimgcore@gmail.com" \
 -S smtp-auth-user="ianimgcore@gmail.com" \
--S smtp-auth-password="brains brains brains" \
+-S smtp-auth-password="we process brains for you" \
 -S ssl-verify=ignore \
 -S nss-config-dir=${NSS_CFG_DIR} \
 -a ${ATTACHMENT} \
 ${EMAIL}
-
-
-# Change ownership and permissions ---------------------------------------------
-#chgrp ${GROUP} ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
-#chgrp ${GROUP} ${DIR_PROJECT}/qc/dicom_conversion/${prefix}_qc-dicomConversion.html > /dev/null 2>&1
-#chgrp -R ${GROUP} ${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]} > /dev/null 2>&1
-
-#chmod g+rw ${DIR_PROJECT}/sourcedata/${prefix}_DICOM.zip > /dev/null 2>&1
-#chmod g+rw ${DIR_PROJECT}/qc/dicom_conversion/${prefix}_qc-dicomConversion.html  > /dev/null 2>&1
-#chmod -R g+rw ${DIR_PROJECT}/rawdata/sub-${subject[1]}/ses-${session[1]} > /dev/null 2>&1
 
 exit 0
 

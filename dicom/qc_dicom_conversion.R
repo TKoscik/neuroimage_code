@@ -12,13 +12,11 @@ if (length(args) > 3 ) {
 }
 
 library(tools)
-source(paste0(dir.inc.root, "/dicom/ses_decode.R"))
 
 fls <- list.files(dir.input, pattern="sub-")
 fls <- fls[grepl(fls, pattern="nii")]
 subject <- unlist(strsplit(unlist(strsplit(fls[1], split="-"))[2], split="_"))[1]
 session <- unlist(strsplit(unlist(strsplit(fls[1], split="-"))[3], split="_"))[1]
-dot <- ses_decode(session)
 dot <- sprintf("%s-%s-%sT%s:%s:%s", substr(dot,1,4), substr(dot,5,6), 
                substr(dot,7,8), substr(dot,9,10), substr(dot,11,12), substr(dot,13,14))
 mod <- character(length(fls))
@@ -44,7 +42,7 @@ rmd.fid <- file(rmd.file, "w")
 
 # Save subject info for email message
 xf <- data.frame(subject, session, dot)
-write.table(xf, paste0(dir.input, "/", prefix, "_subject-info.tsv"), sep="\t",
+write.table(xf, paste0(dir.input, "/", prefix, "_participant-info.tsv"), sep="\t",
             quote=FALSE, row.names=FALSE, col.names=TRUE)
 
 # Write RMD file ---------------------------------------------------------------
