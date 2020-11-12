@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Function Description
 # Authors: <<author names>>
@@ -66,11 +65,6 @@ DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
-# NOTE: DIR_INC, DIR_TEMPLATE will need to be set up in the init.json file, starting with first version
-## how to set these variables here?
-DIR_INC=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
-
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
@@ -87,7 +81,6 @@ while true; do
     * ) break ;;
   esac
 done
-
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -116,13 +109,15 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT_FILE})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT})
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${INPUT_FILE})
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "sub")
+  PREFIX="sub-${SUBJECT}"
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "ses")
+  if [[ -n ${SESSION} ]]; then
+    PREFIX="${PREFIX}_ses-${SESSION}"
+  fi
 fi
 
 if [ -z "${DIR_SAVE}" ]; then

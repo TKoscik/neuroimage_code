@@ -1,21 +1,32 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Coregistration of B0 to Base Image
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-06-15
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-DEBUG=false
+KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -34,10 +45,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvl --long prefix:,\
+OPTS=$(getopt -o hvl --long prefix:,\
 b0-image:,b0-mask:,fixed:,fixed-mask:,init-xfm:,\
-dir-code:,dir-pincsource:,\
-help,verbose,no-log -n 'parse-options' -- "$@"`
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -51,8 +61,6 @@ B0_MASK=
 FIXED=
 FIXED_MASK=
 INIT_XFM=
-DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=0
 
@@ -67,8 +75,6 @@ while true; do
     --fixed) FIXED="$2" ; shift 2 ;;
     --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
     --init-xfm) INIT_XFM="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -91,27 +97,26 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --fixed <vaule>          fixed image to registar to'
   echo '  --fixed-mask <value>     mask of the fixed image'
   echo '  --init-xfm <vaule>       inital rigid registration mat file'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
 fi
 
+#===============================================================================
+# Start of Function
+#===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${B0_IMAGE} -f "sub"`
-SESSION=`${DIR_CODE}/bids/get_field.sh -i ${B0_IMAGE} -f "ses"`
 if [ -z "${PREFIX}" ]; then
-  PREFIX=sub-${SUBJECT}_ses-${SESSION}
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "sub")
+  PREFIX="sub-${SUBJECT}"
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "ses")
+  if [[ -n ${SESSION} ]]; then
+    PREFIX="${PREFIX}_ses-${SESSION}"
+  fi
 fi
 
 DIR_SAVE=$(dirname "${B0_IMAGE}")
 
-#===============================================================================
-# Start of Function
-#===============================================================================
 antsRegistration \
   -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE} \
   -o ${DIR_SAVE}/${PREFIX}_xfm_ \
@@ -129,7 +134,7 @@ antsRegistration \
   -c [40x20x0,1e-7,8] -f 4x2x1 -s 2x1x0vox \
   -x [${FIXED_MASK},${B0_MASK}]  
 
-TO=`${DIR_CODE}/bids/get_space_label.sh -i ${FIXED}`
+TO=$(${DIR_INC}/bids/get_space.sh -i ${FIXED})
 mv ${DIR_SAVE}/${PREFIX}_xfm_0GenericAffine.mat ${DIR_SAVE}/${PREFIX}_from-B0+raw_to-${TO}_xfm-affine.mat
 mv ${DIR_SAVE}/${PREFIX}_xfm_1Warp.nii.gz ${DIR_SAVE}/${PREFIX}_from-B0+raw_to-${TO}_xfm-syn.nii.gz
 mv ${DIR_SAVE}/${PREFIX}_xfm_1InverseWarp.nii.gz ${DIR_SAVE}/${PREFIX}_from-${TO}_to-B0+raw_xfm-syn.nii.gz
@@ -148,7 +153,5 @@ antsApplyTransforms -d 3 \
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Exit function ---------------------------------------------------------------
 exit 0
 
