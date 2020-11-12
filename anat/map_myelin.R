@@ -1,12 +1,14 @@
 
 # evaluate input arguments -----------------------------------------------------
 args <- commandArgs(trailingOnly = TRUE)
+
 nii.t1 <- NULL
 nii.t1 <- NULL
 nii.label <- NULL
 label.vals <- "1x2x3"
 norms.t1 <- "0.1x1.45x2.45x3.55x3.765794"
 norms.t2 <- "0.1x1.95x3.1x4.5x6.738198"
+
 for (i in seq(1,length(args),2)) {
   if (tolower(args[i]) == "t1") { nii.t1 <- args[i+1] }
   if (tolower(args[i]) == "t2") { nii.t2 <- args[i+1] }
@@ -69,7 +71,7 @@ for (i in 1:4) {
 scaled.t1[scaled.t1 == 0] <- min(scaled.t1[scaled.t1 != 0])/2 # remove zeros to prevent Inf or Div-0
 scaled.t2[scaled.t2 == 0] <- min(scaled.t2[scaled.t2 != 0])/2 # remove zeros to prevent Inf or Div-0
 myelin <- scaled.t1 / scaled.t2 # Calculate Myelin^2
-myelin[myelin > quantile(myelin, 0.98, na.rm=T)] <- quantile(myelin, 0.98, na.rm=T) # winsorize upper limit, CSF and noise in BG can have extreme values
+myelin[myelin > quantile(myelin, 0.98)] <- quantile(myelin, 0.98) # winsorize upper limit, CSF and noise in BG can have extreme values
 myelin <- sqrt(myelin) # claculate myelin
 
 # gather nifti parameters and save output --------------------------------------
