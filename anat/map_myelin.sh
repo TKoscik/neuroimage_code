@@ -168,7 +168,7 @@ mkdir -p ${DIR_SAVE}
 Rscript ${DIR_INC}/anat/map_myelin.R \
   "t1" ${DIR_SCRATCH}/t1.nii "t2" ${DIR_SCRATCH}/t2.nii \
   "label" ${DIR_SCRATCH}/label.nii "label-values" ${LABEL_VALS} \
-  "t1.norms" ${NORMS_T1} "t2.norms" ${NORMS_T2}
+  "t1.norms" ${NORM_T1} "t2.norms" ${NORM_T2}
 
 # zip and move output
 gzip ${DIR_SCRATCH}/myelin.nii
