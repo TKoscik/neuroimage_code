@@ -166,8 +166,8 @@ mkdir -p ${DIR_SAVE}
 
 # calculate myelin map
 Rscript ${DIR_INC}/anat/map_myelin.R \
-  "t1" ${T1} "t2" ${T2} \
-  "label" ${LABEL} "label-values" ${LABEL_VALS} \
+  "t1" ${DIR_SCRATCH}/t1.nii "t2" ${DIR_SCRATCH}/t2.nii \
+  "label" ${DIR_SCRATCH}/label.nii "label-values" ${LABEL_VALS} \
   "t1.norms" ${NORMS_T1} "t2.norms" ${NORMS_T2}
 
 # zip and move output
