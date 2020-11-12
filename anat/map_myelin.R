@@ -69,7 +69,7 @@ for (i in 1:4) {
 scaled.t1[scaled.t1 == 0] <- min(scaled.t1[scaled.t1 != 0])/2 # remove zeros to prevent Inf or Div-0
 scaled.t2[scaled.t2 == 0] <- min(scaled.t2[scaled.t2 != 0])/2 # remove zeros to prevent Inf or Div-0
 myelin <- scaled.t1 / scaled.t2 # Calculate Myelin^2
-myelin[myelin > quantile(myelin, 0.98)] <- quantile(myelin, 0.98) # winsorize upper limit, CSF and noise in BG can have extreme values
+myelin[myelin > quantile(myelin, 0.98, na.rm=T)] <- quantile(myelin, 0.98, na.rm=T) # winsorize upper limit, CSF and noise in BG can have extreme values
 myelin <- sqrt(myelin) # claculate myelin
 
 # gather nifti parameters and save output --------------------------------------
