@@ -48,13 +48,13 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 dimension:,image:,method:,mask:,\
 smooth-kernel:,\
 weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 no-gm,urad:,do-t2,\
-dir-save:,dir-scratch:,dir-code:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+dir-save:,dir-scratch:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -78,7 +78,6 @@ URAD=30
 DO_T2=false
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -112,7 +111,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -156,11 +154,11 @@ fi
 IMAGE=(${IMAGE//,/ })
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE[0]})
-SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
-SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -233,7 +231,7 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
 fi
 
 # gather modality for output
-MOD=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE[0]} -f "modality")
+MOD=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "modality")
 
 if [[ "${METHOD,,}" == "n4" ]]; then
   n4_fcn="N4BiasFieldCorrection"

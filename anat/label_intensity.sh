@@ -46,10 +46,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 image:,mask:,thresh-dir:,percentile:,min-size:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -65,7 +65,7 @@ PERCENTILE=99
 MIN_SIZE=5
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
+DIR_INC=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -90,7 +90,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -118,17 +117,15 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${IMAGE})
-#SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "sub")
-#SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${IMAGE} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${IMAGE})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
-MOD=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "modality"})
-LABEL_NAME=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "label")
+MOD=$(${DIR_INC}/bids/get_field.sh -i ${mask} -f "modality"})
+LABEL_NAME=$(${DIR_INC}/bids/get_field.sh -i ${mask} -f "label")
 if [[ -z "${LABEL_NAME}" ]]; then
-  LABEL_NAME=$(${DIR_CODE}/bids/get_field.sh -i ${mask} -f "mask")
+  LABEL_NAME=$(${DIR_INC}/bids/get_field.sh -i ${mask} -f "mask")
   if [[ -z "${LABEL_NAME}" ]]; then
     LABEL_NAME=ROI
   fi
