@@ -1,55 +1,82 @@
-args <- commandArgs(trailingOnly = TRUE)
 
+# evaluate input arguments -----------------------------------------------------
+args <- commandArgs(trailingOnly = TRUE)
+nii.t1 <- NULL
+nii.t1 <- NULL
+nii.label <- NULL
+label.vals <- "1x2x3"
+norms.t1 <- "0.1x1.45x2.45x3.55x3.765794"
+norms.t2 <- "0.1x1.95x3.1x4.5x6.738198"
+for (i in seq(1,length(args),2)) {
+  if (tolower(args[i]) == "t1") { nii.t1 <- args[i+1] }
+  if (tolower(args[i]) == "t2") { nii.t2 <- args[i+1] }
+  if (tolower(args[i]) == "label") { nii.label <- args[i+1] }
+  if (tolower(args[i]) == "label-values") { label.vals <- args[i+1] }
+  if (tolower(args[i]) == "t1.norms") { norms.t1 <- args[i+1] }
+  if (tolower(args[i]) == "t2.norms") { norms.t2 <- args[i+1] }
+}
+
+# set up R environment ---------------------------------------------------------
 library(nifti.io)
 get_mode <- function(x) {
   x <- hist(x, breaks=50, plot=FALSE)
   x$mids[which.max(x$counts)]
 }
 
-norm.t1 <- as.numeric(read.nii.volume(args[1],1))
-norm.t2 <- as.numeric(read.nii.volume(args[2],1))
-norm.roi <- as.numeric(read.nii.volume(args[3],1))
-norm.roi1 <- which(norm.roi==1)
-norm.roi2 <- which(norm.roi==2)
-sub.t1 <- as.numeric(read.nii.volume(args[4],1))
-sub.t2 <- as.numeric(read.nii.volume(args[5],1))
-sub.roi <- as.numeric(read.nii.volume(args[6],1))
-sub.roi1 <- which(sub.roi==1)
-sub.roi2 <- which(sub.roi==2)
+# load nifti images ------------------------------------------------------------
+t1 <- as.numeric(read.nii.volume(nii.t1,1))
+t2 <- as.numeric(read.nii.volume(nii.t2,1))
+label <- as.numeric(read.nii.volume(nii.label,1))
+label.vals <- as.numeric(unlist(strsplit(label.vals, "x")))
+norms.t1 <- as.numeric(unlist(strsplit(norms.t1, "x")))
+norms.t2 <- as.numeric(unlist(strsplit(norms.t2, "x")))
 
-qval <- quantile(norm.t1, 0.98)
-norm.t1[norm.t1 > qval] <- qval
-norm.t1[norm.t1 < 0] <- 0
-t1.Xr <- get_mode(norm.t1[norm.roi1])
-t1.Yr <- get_mode(norm.t1[norm.roi2])
+# extract T1w distribution parameters ------------------------------------------
+sub.t1 <- numeric(5)
+sub.t1[1] <- get_mode(t1)
+sub.t1[2] <- get_mode(t1[which(label==label.vals[1])])
+sub.t1[3] <- get_mode(t1[which(label==label.vals[2])])
+sub.t1[4] <- get_mode(t1[which(label==label.vals[3])])
+sub.t1[5] <- quantile(t1, 0.98)
 
-qval <- quantile(norm.t2, 0.98)
-norm.t2[norm.t2 > qval] <- qval
-norm.t2[norm.t2 < 0] <- 0
-t2.Xr <- get_mode(norm.t2[norm.roi1])
-t2.Yr <- get_mode(norm.t2[norm.roi2])
+# extract T2w distribution parameters ------------------------------------------
+sub.t2 <- numeric(5)
+sub.t2[1] <- get_mode(t2)
+sub.t2[2] <- get_mode(t2[which(label==label.vals[3])])
+sub.t2[3] <- get_mode(t2[which(label==label.vals[2])])
+sub.t2[4] <- get_mode(t2[which(label==label.vals[1])])
+sub.t2[5] <- quantile(t2[which(label==label.vals[1])], 0.98)
 
-qval <- quantile(sub.t1, 0.98)
-sub.t1[sub.t1 > qval] <- qval
-sub.t1[sub.t1 < 0] <- 0
-t1.Xs <- get_mode(sub.t1[sub.roi1])
-t1.Ys <- get_mode(sub.t1[sub.roi2])
+# scale T1w values to normalized template values -------------------------------
+scaled.t1 <- numeric(length(t1))
+scaled.t1[t1 <= sub.t1[1]] <- 0 # set zero value at BG peak, zero anything below
+scaled.t1[t1 > sub.t1[5]] <- norms.t1[5] # set voxels greater than 98 percentile to the 98% of normalized curve
+for (i in 1:4) {
+  idx <- which((t1 > sub.t1[i]) & (t1 <= sub.t1[i+1]))
+  scaled.t1[idx] <- ((t1[idx] - sub.t1[i]) / (sub.t1[i+1] - sub.t1[i])) * (norms.t1[i+1] - norms.t1[i]) + norms.t1[i]
+}
 
-qval <- quantile(sub.t2, 0.98)
-sub.t2[sub.t2 > qval] <- qval
-sub.t2[sub.t2 < 0] <- 0
-t2.Xs <- get_mode(sub.t2[sub.roi1])
-t2.Ys <- get_mode(sub.t2[sub.roi2])
+# scale T2w values to normalized template values -------------------------------
+scaled.t2 <- numeric(length(t2))
+scaled.t2[t2 <= sub.t2[1]] <- 0 # set zero value at BG peak, zero anything below
+scaled.t2[t2 > sub.t2[5]] <- norms.t2[5] # set voxels greater than 98 percentile to the 98% of normalized curve
+for (i in 1:4) {
+  idx <- which((t2 > sub.t2[i]) & (t2 <= sub.t2[i+1]))
+  scaled.t2[idx] <- ((t2[idx] - sub.t2[i]) / (sub.t2[i+1] - sub.t2[i])) * (norms.t2[i+1] - norms.t2[i]) + norms.t2[i]
+}
 
-sub.t1 <- ((t1.Xr - t1.Yr)/(t1.Xs - t1.Ys)) * sub.t1 + (((t1.Xs * t1.Yr) - (t1.Xr * t1.Ys))/(t1.Xs - t1.Ys))
-sub.t2 <- ((t2.Xr - t2.Yr)/(t2.Xs - t2.Ys)) * sub.t2 + (((t2.Xs * t2.Yr) - (t2.Xr * t2.Ys))/(t2.Xs - t2.Ys))
+# calculate myelin values ------------------------------------------------------
+scaled.t1[scaled.t1 == 0] <- min(scaled.t1[scaled.t1 != 0])/2 # remove zeros to prevent Inf or Div-0
+scaled.t2[scaled.t2 == 0] <- min(scaled.t2[scaled.t2 != 0])/2 # remove zeros to prevent Inf or Div-0
+myelin <- scaled.t1 / scaled.t2 # Calculate Myelin^2
+myelin[myelin > quantile(myelin, 0.98)] <- quantile(myelin, 0.98) # winsorize upper limit, CSF and noise in BG can have extreme values
+myelin <- sqrt(myelin) # claculate myelin
 
-myelin <- sub.t1 / sub.t2
-
-img.dims <- nii.dims(args[1])
-pixdim <- unlist(nii.hdr(args[1], "pixdim"))
-orient <- nii.orient(args[1])
-save.dir <- dirname(args[1])
-
+# gather nifti parameters and save output --------------------------------------
+img.dims <- nii.dims(nii.t1)
+pixdim <- unlist(nii.hdr(nii.t1, "pixdim"))
+orient <- nii.orient(nii.t1)
+save.dir <- dirname(nii.t1)
 init.nii(paste0(save.dir, "/myelin.nii"), img.dims, pixdim, orient)
 write.nii.volume(paste0(save.dir, "/myelin.nii"), 1, myelin)
+
