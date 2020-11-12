@@ -1,13 +1,42 @@
 {
-    "ver": "0.0.0.0",
-    "DIR_INC": "/Shared/inc_scratch/code",
-    "DIR_TEMPLATE": "/Shared/nopoulos/nimg_core/templates_human",
+    "version": "0.0.0.0",
+    "export_paths": {
+        "DIR_INC": "/Shared/pinc/sharedopt/apps/inc_tools/Linux/x86_64/",
+        "DIR_TEMPLATE": "/Dedicated/inc_database/templates"
+    },
     "software_dependencies": {
-        "AFNI": "",
-        "ANTs": "",
-        "FSL": "6.0.1_multicore",
+        "afni": "18.2.04",
+        "ants": "2.3.1",
+        "dcm2niix": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20200331",
+        "DSI_Studio": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/20200122",
+        "fsl": "6.0.1_multicore",
+        "freesurfer": "7.1.0",
         "anaconda3": "2019.10"
     },
-    "argon_dependencies": ["OpenBLAS", "R"],
-    "r_packages": ["tools", "devtools", "nifti.io"]
+    "aliases": {
+        "snap": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-20190612/bin/itksnap",
+        "snapqt": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-qt4-20190612/bin/itksnap"
+    },
+    "argon_dependencies": {
+        "OpenBLAS": "0.2.19",
+        "R": "3.5.1",
+        "tensorflow": "1.7.0_python-3.6.4"
+    },
+    "r_packages": {
+        "CRAN": ["devtools",
+                 "effects",
+                 "ggplot2",
+                 "gridExtra",
+                 "lme4",
+                 "lmerTest",
+                 "mixtools",
+                 "R.utils",
+                 "reshape2",
+                 "tools",
+                 "viridis"]
+        "github": ["tkoscik/nifti.io",
+                   "tkoscik/fsurfR",
+                   "tkoscik/tkmisc",
+                   "tkoscik/ez.combat",
+                   "tkoscik/power.pro"]
 }

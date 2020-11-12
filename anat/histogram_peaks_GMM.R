@@ -19,15 +19,6 @@ if (length(args)>3) {
   }
 }
 
-pkg.ls <- c("R.utils", "tools", "mixtools", "nifti.io")
-for (i in 1:length(pkg.ls)) {
-  if (!require(pkg.ls[i], character.only = TRUE)) {
-    if (pkg.ls[i] %in% c("nifti.io", ))
-    install.packages(pkg.ls[i], dependencies = TRUE)
-    library(x, character.only = TRUE)
-  }
-}
-
 suppressMessages(library(R.utils))
 suppressMessages(library(tools))
 suppressMessages(library(mixtools))
