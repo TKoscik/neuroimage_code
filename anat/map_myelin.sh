@@ -133,8 +133,7 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-
-# Set up BIDs compliant variables and workspace --------------------------------
+# Set up BIDs compliant variables and workspace -------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
 if [ -z "${PREFIX}" ]; then
   SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "sub")

@@ -89,7 +89,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
@@ -112,8 +111,6 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
-
 DIR_PROJECT=$(${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT})
 SUBJECT=$(${DIR_INC}/code/bids/get_field.sh -i ${INPUT} -f "sub")
 SESSION=$(${DIR_INC}/code/bids/get_field.sh -i ${INPUT} -f "ses")

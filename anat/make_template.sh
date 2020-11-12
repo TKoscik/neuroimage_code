@@ -24,6 +24,9 @@ KEEP=false
 NO_LOG=false
 umask 007
 
+echo "this function is incomplete and not functional, aborting"
+exit 1
+
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
