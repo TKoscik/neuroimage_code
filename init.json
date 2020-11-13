@@ -34,10 +34,11 @@
                  "R.utils",
                  "reshape2",
                  "tools",
-                 "viridis"]
+                 "viridis"],
         "github": ["tkoscik/nifti.io",
                    "tkoscik/fsurfR",
                    "tkoscik/tkmisc",
                    "tkoscik/ez.combat",
                    "tkoscik/power.pro"]
+    }
 }
