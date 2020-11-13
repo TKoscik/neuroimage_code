@@ -6,6 +6,11 @@
         "DIR_DCM2NIIX": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20200331",
         "DIR_DSISTUDIO": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/20200122"
     },
+    "argon_modules": {
+        "OpenBLAS": "0.2.19",
+        "R": "3.5.1",
+        "tensorflow": "1.7.0_python-3.6.4"
+    },
     "software_dependencies": {
         "afni": "18.2.04",
         "ants": "2.3.1",
@@ -16,29 +21,5 @@
     "aliases": {
         "snap": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-20190612/bin/itksnap",
         "snapqt": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-qt4-20190612/bin/itksnap"
-    },
-    "argon_dependencies": {
-        "OpenBLAS": "0.2.19",
-        "R": "3.5.1",
-        "tensorflow": "1.7.0_python-3.6.4"
-    },
-    "r_packages": {
-        "CRAN": ["devtools",
-                 "effects",
-                 "ggplot2",
-                 "gridExtra",
-                 "jsonlite",
-                 "lme4",
-                 "lmerTest",
-                 "mixtools",
-                 "R.utils",
-                 "reshape2",
-                 "tools",
-                 "viridis"],
-        "github": ["tkoscik/nifti.io",
-                   "tkoscik/fsurfR",
-                   "tkoscik/tkmisc",
-                   "tkoscik/ez.combat",
-                   "tkoscik/power.pro"]
     }
 }
