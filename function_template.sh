@@ -111,17 +111,21 @@ fi
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "sub")
   PREFIX="sub-${SUBJECT}"
-  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "ses")
   if [[ -n ${SESSION} ]]; then
     PREFIX="${PREFIX}_ses-${SESSION}"
   fi
 fi
 
+DIR_SUBSES="sub-${SUBJECT}"
+if [[ -n ${SESSION} ]]; then
+  DIR_SUBSES="${DIR_SUBSES}_ses-${SESSION}"
+fi
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/${DIR_SUBSES}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -133,6 +137,5 @@ mkdir -p ${DIR_SAVE}
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
 
