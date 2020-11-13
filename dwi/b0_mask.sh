@@ -9,6 +9,7 @@ FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
+NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
@@ -115,7 +116,5 @@ ImageMath 3 ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil${DIL}.nii.gz \
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Exit function ---------------------------------------------------------------
 exit 0
 

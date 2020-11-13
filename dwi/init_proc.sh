@@ -1,5 +1,4 @@
 #!/bin/bash -e
-
 #===============================================================================
 # Initialize Diffusion Preprocessing
 # - select dwi files to process together
@@ -8,16 +7,28 @@
 # Date: 2020-06-16
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-DEBUG=false
+KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -36,9 +47,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long prefix:,\
-dwi-list:,dir-prep:,dir-code:,\
-help,no-log -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hl --long prefix:,\
+dwi:,dir-prep:,\
+help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -47,9 +58,8 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-DWI_LIST=
+DWI=
 DIR_PREP=
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -58,9 +68,8 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --dwi-list) DWI_LIST="$2" ; shift 2 ;;
+    --dwi) DWI="$2" ; shift 2 ;;
     --dir-prep) DIR_PREP="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -77,9 +86,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
   echo '                           e.g., Research-kosciklab'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --dwi-list <value>       Comma-separated list of DWI files to process'
+  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
+  echo '  --dwi <value>            Comma-separated list of DWI files to process'
   echo '                           together'
   echo '  --dir-prep <value>       directory to copy dwi files for processing'
   echo '                           will be persistent after function'
@@ -88,26 +96,31 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-# Set up BIDs compliant variables and workspace --------------------------------
-if [ -z "${DIR_PREP}" ]; then
-  FILE_LIST=(${DWI_LIST//,/ })
-  INPUT_FILE=${FILE_LIST[0]}
-  PROJECT=`${DIR_CODE}/bids/get_project.sh -i ${INPUT_FILE}`
-  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "sub"`
-  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${INPUT_FILE} -f "ses"`
-  DIR_PREP=/Shared/inc_scratch/${PROJECT}_sub-${SUBJECT}_ses-${SESSION}_DWIprep_${DATE_SUFFIX}
-fi
-mkdir -p ${DIR_PREP}
-
 #===============================================================================
 # Start of Function
 #===============================================================================
-DWI_LIST=(${DWI_LIST//,/ })
-N_DWI=${#DWI_LIST[@]}
+DWI=(${DWI//,/ })
+N_DWI=${#DWI[@]}
+
+# Set up BIDs compliant variables and workspace --------------------------------
+PROJECT=$(${DIR_INC}/bids/get_project.sh -i ${DWI[0]})
+if [ -z "${DIR_PREP}" ]; then
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${DWI[0]} -f "sub")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${DWI[0]} -f "ses")
+  f [ -z "${PREFIX}" ]; then
+  PREFIX="sub-${SUBJECT}"
+  if [[ -n ${SESSION} ]]; then
+    PREFIX="${PREFIX}_ses-${SESSION}"
+  fi
+fi
+  DIR_PREP=/Shared/inc_scratch/${PROJECT}_${PREFIX}_DWIprep_${DATE_SUFFIX}
+fi
+mkdir -p ${DIR_PREP}
+
 for (( i=0; i<${N_DWI}; i++ )); do
-  DWI=${DWI_LIST[${i}]}
-  NAME_BASE=${DWI::-7}
-  cp ${DWI} ${DIR_PREP}/
+  NAME_BASE=${DWI[${i}]}
+  NAME_BASE=${NAME_BASE::-7}
+  cp ${DWI[${i}]} ${DIR_PREP}/
   cp ${NAME_BASE}.json ${DIR_PREP}/
   cp ${NAME_BASE}.bval ${DIR_PREP}/
   cp ${NAME_BASE}.bvec ${DIR_PREP}/
@@ -116,7 +129,5 @@ echo ${DIR_PREP}
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Exit function ---------------------------------------------------------------
 exit 0
 

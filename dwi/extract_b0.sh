@@ -80,7 +80,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -c | --dry-run           test run of function'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'

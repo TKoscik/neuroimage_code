@@ -55,7 +55,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 PREFIX=
 DIR_DWI=
 VERBOSE=0
@@ -247,7 +246,6 @@ fslmerge -t ${DIR_DWI}/${PREFIX}_B0s+raw.nii.gz ${FIRST_NAME}_dwi_B0+raw.nii.gz 
 fslmerge -t ${DIR_DWI}/${PREFIX}_dwis.nii.gz ${FIRST_NAME2}_dwi.nii.gz ${TEMP_DWI_FILES[@]}
 
 cat ${FIRST_NAME3}_B0sAcqParams.txt ${TEMP_B0_ACQ_FILES[@]} >> ${DIR_DWI}/${PREFIX}_B0sAcqParams.txt
-
 
 #------------------------------------------------------------------------------
 # End of Function

@@ -46,7 +46,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hl --long prefix:,\
-dir-dwi:,dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
+dir-dwi:,dir-save:,dir-scratch:,\
 keep,help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -58,7 +58,7 @@ eval set -- "$OPTS"
 PREFIX=
 DIR_DWI=
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${DATE_SUFFIX}
+DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 
 while true; do
@@ -93,6 +93,9 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
+#==============================================================================
+# START OF FUNCTION
+#==============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DWI_LIST=($(ls ${DIR_DWI}/*_dwi.nii.gz))
 N_DWI=${#DWI_LIST[@]}
@@ -102,14 +105,12 @@ if [ -z "${DIR_SAVE}" ]; then
 fi
 mkdir -p ${DIR_SAVE}
 
-#==============================================================================
-# Check and Fix Odd Dimensions
-#==============================================================================
+# Check and Fix Odd Dimensions -------------------------------------------------
 for (( i=0; i<${N_DWI}; i++ )); do
   DWI=${DWI_LIST[${i}]}
-  NAME_BASE=$(${DIR_CODE}/bids/get_bidsbase.sh -i ${DWI})
+  NAME_BASE=$(${DIR_INC}/bids/get_bidsbase.sh -i ${DWI})
   unset DIM_TEMP
-  DIM_TEMP=`PrintHeader ${DWI} 2`
+  DIM_TEMP=$(PrintHeader ${DWI} 2)
   DIM_TEMP=(${DIM_TEMP//x/ })
   DIMCHK=0
   for j in {0..2}; do

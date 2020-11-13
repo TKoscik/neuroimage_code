@@ -21,6 +21,7 @@
 - naming convention for functions, lowercase and underscores
 - Update to file paths, important for default paths, should have one more layer to derivatives structure, to specify the pipeline:  
 - *** no IS_SES as an input variable into functions
+- is it possible to make the egress function a separate function and have trap execute it? so that we can get rid of the egress function for everything?
 ```
 dir_project/
    └──derivatives/

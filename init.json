@@ -3,12 +3,12 @@
     "export_paths": {
         "DIR_INC": "/Shared/pinc/sharedopt/apps/inc_tools/Linux/x86_64/",
         "DIR_TEMPLATE": "/Dedicated/inc_database/templates",
-        "DIR_DCM2NIIX": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20200331"
+        "DIR_DCM2NIIX": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20200331",
+        "DIR_DSISTUDIO": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/20200122"
     },
     "software_dependencies": {
         "afni": "18.2.04",
         "ants": "2.3.1",
-        "DSI_Studio": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/20200122",
         "fsl": "6.0.1_multicore",
         "freesurfer": "7.1.0",
         "anaconda3": "2019.10"
