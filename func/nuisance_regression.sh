@@ -1,43 +1,33 @@
-#!/bin/bash -x
-
-PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-OPERATOR=$(whoami)
-KEEP=false
-NO_LOG=false
-
+#!/bin/bash -e
 #===============================================================================
 # Functional Timeseries -  Nuisance Regression
 # Authors: Timothy R. Koscik
 # Date: 2020-03-27
 #===============================================================================
-set -u
-
-# Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long prefix:,template:,space:,\
-ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,\
-dir-save:,dir-scratch:,dir-code:,dir-pincsource:,\
-keep,help,verbose,no-log -n 'parse-options' -- "$@"`
-if [ $? != 0 ]; then
-  echo "Failed parsing options" >&2
-  exit 1
-fi
-eval set -- "$OPTS"
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${KEEP}" = false ]]; then
-    if [[ -d ${DIR_SCRATCH} ]]; then
-      if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-        rm -R ${DIR_SCRATCH}/*
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
       fi
-      rmdir ${DIR_SCRATCH}
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
-  if [[ "${NO_LOG}" = false ]]; then
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
+  if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
@@ -54,8 +44,18 @@ function egress {
 }
 trap egress EXIT
 
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvkl --long prefix:,template:,space:,\
+ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,\
+dir-save:,dir-scratch:,\
+keep,help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 PREFIX=
 TS_BOLD=
 MASK_BRAIN=
@@ -66,12 +66,9 @@ TEMPLATE=HCPICBM
 SPACE=2mm
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 KEEP=false
 VERBOSE=0
 HELP=false
-IS_SES=true
 
 while true; do
   case "$1" in
@@ -89,8 +86,6 @@ while true; do
     --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
-    --dir-code) DIR_CODE="$2" ; shift 2 ;;
-    --dir-pincsource) DIR_PINCSOURCE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -98,12 +93,9 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FUNC_NAME=(`basename "$0"`)
   echo ''
   echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FUNC_NAME}"
-  echo 'Author: Timothy R. Koscik, PhD'
-  echo 'Date:   2020-03-07'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
@@ -122,37 +114,28 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --space <value>          spacing of template to use, default=2mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-pincsource <value> directory for PINC sourcefiles'
-  echo '                           default: ${DIR_PINCSOURCE}'
   echo ''
   NO_LOG=true
   exit 0
 fi
 
+#===============================================================================
+# Start of Function
+#===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-proc_start=$(date +%Y-%m-%dT%H:%M:%S%z)
-source /Shared/pinc/sharedopt/apps/sourcefiles/afni_source.sh
-
 if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=`${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD}`
-  SUBJECT=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub"`
-  SESSION=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses"`
-  TASK=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "task"`
-  RUN=`${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "run"`
+  DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "sub")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "ses")
   if [ -z "${PREFIX}" ]; then
-    PREFIX=`${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD}`
+    PREFIX="sub-${SUBJECT}"
+    if [[ -n ${SESSION} ]]; then
+      PREFIX="${PREFIX}_ses-${SESSION}"
+    fi
   fi
 else
-  echo "The BOLD file does not exist. Exiting."
-  echo "Check paths, file names, and arguments."
+  echo "The BOLD file does not exist. aborting."
   exit 1
-fi
-
-# Set IS_SES variable
-if [ -z "${SESSION}" ]; then
-  IS_SES=false
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
@@ -161,26 +144,8 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-##--------------- resample mask to fit input grid bc its off by like 1mm ---------------##
-if [ -z "${MASK_BRAIN}" ]; then
-  echo "No mask is provided."
-else
-  mask_resampling=${MASK_BRAIN}
-  maskBase=`basename ${mask_resampling} | awk -F"." '{print $1}'`
-  if [ -f "${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz" ]; then
-    rm ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
-  fi
-  AFNI="3dresample -master ${TS_BOLD}"
-  AFNI="${AFNI} -prefix ${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz"
-  AFNI="${AFNI} -input ${mask_resampling}"
-  eval ${AFNI}
-  MASK_BRAIN=${DIR_PROJECT}/derivatives/func/mask/${maskBase}_resampled.nii.gz
-fi
-
-#==============================================================================
-# partial out nuisance variance
-#==============================================================================
-TR=`PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1`
+# partial out nuisance variance -----------------------------------------------
+TR=$(PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1)
 REGRESSOR=(${REGRESSOR//,/ })
 N_REG=${#REGRESSOR[@]}
 
@@ -197,6 +162,8 @@ eval ${AFNI_CALL}
 
 mv ${DIR_SCRATCH}/resid.nii.gz ${DIR_SAVE}/${PREFIX}_bold.nii.gz
 
-
+#===============================================================================
+# End of Function
+#===============================================================================
 exit 0
 

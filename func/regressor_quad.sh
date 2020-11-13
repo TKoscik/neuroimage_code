@@ -6,11 +6,12 @@
 # Date: 2020-10-08
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=(`basename "$0"`)
+FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KEEP=false
 NO_LOG=false
+umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
@@ -26,7 +27,7 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=`date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}"`
+  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
@@ -45,8 +46,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hl --long regressor:,dir-save:,\
-help,no-log -n 'parse-options' -- "$@"`
+OPTS=$(getopt -o hl --long regressor:,dir-save:,\
+help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -56,7 +57,6 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 REGRESSOR=
 DIR_SAVE=
-DIR_CODE=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
@@ -70,9 +70,6 @@ while true; do
     * ) break ;;
   esac
 done
-### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
-#         by DIR_INC for version 0.0.0.0. Specifying the directory may
-#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -82,7 +79,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --regressor <value>      directory listing for a *.1D regressor file'
   echo '  --dir-save <value>       directory to save output, optional'
@@ -94,23 +90,15 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${REGRESSOR})
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${REGRESSOR} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${REGRESSOR} -f "ses")
-  DIR_SAVE=${DIR_PROJECT}/derivatives/func/regressor/sub-${SUBJECT}/ses-${SESSION}
+  DIR_SAVE=$(dirname ${REGRESSOR})
 fi
 mkdir -p ${DIR_SAVE}
 
-Rscript ${DIR_CODE}/func/regressor_quad.R ${REGRESSOR} ${DIR_SAVE}
+Rscript ${DIR_INC}/func/regressor_quad.R ${REGRESSOR} ${DIR_SAVE}
 
 #===============================================================================
 # End of Function
 #===============================================================================
-
-# Exit function ---------------------------------------------------------------
 exit 0
-
-
 

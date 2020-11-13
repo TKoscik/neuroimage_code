@@ -1,12 +1,4 @@
-#!/bin/bash -x
-
-PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=($(basename "$0"))
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-OPERATOR=$(whoami)
-KEEP=false
-NO_LOG=false
-
+#!/bin/bash -e
 #===============================================================================
 # Functional Timeseries - Motion Correction and Registration
 #-------------------------------------------------------------------------------
@@ -47,12 +39,20 @@ NO_LOG=false
 # TODO: Add QC function or source QC script
 #===============================================================================
 
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KEEP=false
+NO_LOG=false
+umask 007
+
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${KEEP}" = false ]]; then
-    if [[ -n "${DIR_SCRATCH}" ]]; then
-      if [[ -d "${DIR_SCRATCH}" ]]; then
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
           rm -R ${DIR_SCRATCH}
         else
@@ -62,7 +62,7 @@ function egress {
     fi
   fi
   LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
-  if [[ "${NO_LOG}" = false ]]; then
+  if [[ "${NO_LOG}" == "false" ]]; then
     FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
@@ -91,7 +91,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 PREFIX=
 TS_BOLD=
 TARGET=T1w
@@ -99,9 +98,6 @@ TEMPLATE=
 SPACE=
 DIR_SAVE=
 DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
-DIR_CODE=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
-DIR_PINCSOURCE=/Shared/pinc/sharedopt/apps/sourcefiles
 HELP=false
 VERBOSE=1
 KEEP=false
@@ -151,14 +147,13 @@ fi
 #==============================================================================
 # Start of Function
 #==============================================================================
-
 # Set up BIDs compliant variables and workspace --------------------------------
 if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD})
-  SUBJECT=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
-  SESSION=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
+  DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
+  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
+  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
   if [ -z "${PREFIX}" ]; then
-    PREFIX=$(${DIR_CODE}/bids/get_bidsbase -s -i ${TS_BOLD})
+    PREFIX=$(${DIR_INC}/bids/get_bidsbase -s -i ${TS_BOLD})
   fi
 else
   echo "The BOLD file does not exist. Exiting."
@@ -218,7 +213,7 @@ fi
 unset XFM_STACK XFM_RIGID XFM_AFFINE XFM_SYN
 for (( i=0; i<${#XFM_LS[@]}; i++ )); do
   unset XFM_ARG
-  XFM_ARG=$(${DIR_CODE}/bids/get_field.sh -i ${XFM_LS[${i}]} -f xfm)
+  XFM_ARG=$(${DIR_INC}/bids/get_field.sh -i ${XFM_LS[${i}]} -f xfm)
   if [[ "${XFM_ARG,,}" == "rigid" ]]; then XFM_RIGID=${XFM_LS[${i}]}; fi
   if [[ "${XFM_ARG,,}" == "affine" ]]; then XFM_AFFINE=${XFM_LS[${i}]}; fi
   if [[ "${XFM_ARG,,}" == "syn" ]]; then XFM_SYN=${XFM_LS[${i}]}; fi
@@ -380,6 +375,5 @@ fi
 #===============================================================================
 # End of function
 #===============================================================================
-
 exit 0
 
