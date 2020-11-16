@@ -137,7 +137,7 @@ fi
 LABEL="${MOD}+${LABEL_NAME}+${THRESH_DIR}${PERCENTILE}+sz${MIN_SIZE}"
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/label/${LABEL}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/label/${LABEL}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

@@ -3,6 +3,8 @@
 # K-Means Tissue Segmentation
 # Authors: Timothy R. Koscik
 # Date: 2020-03-03
+# NOTES:
+# -implement SAMSEG tissue segmentation option
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -119,7 +121,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --class-label <values>   array of names for classes, default is'
   echo '                           numeric'
   echo '  --dir-save <value>       directory to save output,'
-  echo '                           default" ${RESEARCHER}/${PROJECT}/derivatives/anat/label'
+  echo '                           default" ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/label'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo '  --dir-code <value>       directory where INC tools are stored,'
   echo '                           default: ${DIR_INC}'
@@ -143,7 +145,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
   SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SESSION}
   fi

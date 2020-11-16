@@ -140,7 +140,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           [FWHM,wienerNoise,binNumber]'
   echo '                           default=[0.15,0.01,200]'
   echo '  --dir-save <value>       directory to save output,'
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
+  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -166,9 +166,9 @@ fi
 
 if [ -z "${DIR_SAVE}" ]; then
   if [ -n "${SESSION}" ]; then
-    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}/ses-${SESSION}
   else
-    DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}
   fi
 fi
 mkdir -p ${DIR_SCRATCH}

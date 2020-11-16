@@ -3,6 +3,7 @@
 # Function Description
 # Authors: <<author names>>
 # Date: <<date>>
+# NOTES rewrite to specify save dierctory or default to: derivatives/inc
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -46,7 +47,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hl --long prefix:,\
-dir-dwi:,dir-project:,\
+dir-dwi:,dir-project:,dir-save:,\
 help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -58,6 +59,7 @@ eval set -- "$OPTS"
 PREFIX=
 DIR_DWI=
 DIR_PROJECT=
+DIR_SAVE=
 HELP=false
 
 while true; do
@@ -67,6 +69,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -85,6 +88,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --dir-dwi <value>        directory to save output, default varies by function'
   echo '  --dir-project <value>    directory for temporary workspace'
+  echo '  --dir-save <value>       directory to save data to'
+  echo '                           default=DIR_PROJECT/derivatives/inc'
+  echo '                           will make xfm and dwi (and more) subdirectories'
   echo ''
   NO_LOG=true
   exit 0
@@ -106,37 +112,40 @@ if [ -z "${PREFIX}" ]; then
     PREFIX="${PREFIX}_ses-${SESSION}"
   fi
 fi
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc
+fi
 
-mkdir -p ${DIR_PROJECT}/derivatives/dwi/B0+mean
-mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_PROJECT}/derivatives/dwi/B0+mean/
+mkdir -p ${DIR_SAVE}/dwi/B0+mean
+mv ${DIR_DWI}/${PREFIX}_B0+mean.nii.gz ${DIR_SAVE}/dwi/B0+mean/
 
-mkdir -p ${DIR_PROJECT}/derivatives/dwi/mask
-mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIR_PROJECT}/derivatives/dwi/mask
+mkdir -p ${DIR_SAVE}/dwi/mask
+mv ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz ${DIR_SAVE}/dwi/mask
 
-mkdir -p ${DIR_PROJECT}/derivatives/xfm/${DIR_SUBSES}
-mv ${DIR_DWI}/*xfm* ${DIR_PROJECT}/derivatives/xfm/${DIR_SUBSES}
+mkdir -p ${DIR_SAVE}/xfm/${DIR_SUBSES}
+mv ${DIR_DWI}/*xfm* ${DIR_SAVE}/xfm/${DIR_SUBSES}
 
-mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_raw
-mv ${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz ${DIR_PROJECT}/derivatives/dwi/corrected_raw/${PREFIX}_dwi.nii.gz
+mkdir -p ${DIR_SAVE}/dwi/corrected_raw
+mv ${DIR_DWI}/${PREFIX}_dwi+corrected.nii.gz ${DIR_SAVE}/dwi/corrected_raw/${PREFIX}_dwi.nii.gz
 
-mkdir -p ${DIR_PROJECT}/derivatives/dwi/bvec+bval
-mv ${DIR_DWI}/${PREFIX}.bvec ${DIR_PROJECT}/derivatives/dwi/bvec+bval
-mv ${DIR_DWI}/${PREFIX}.bval ${DIR_PROJECT}/derivatives/dwi/bvec+bval
+mkdir -p ${DIR_SAVE}/dwi/bvec+bval
+mv ${DIR_DWI}/${PREFIX}.bvec ${DIR_SAVE}/dwi/bvec+bval
+mv ${DIR_DWI}/${PREFIX}.bval ${DIR_SAVE}/dwi/bvec+bval
 
 corrected_list=(`ls ${DIR_DWI}/${PREFIX}_reg*`)
 for (( i=0; i<${#corrected_list[@]}; i++ )); do
   SPACE=$(${DIR_CODE}/bids/get_space.sh -i ${corrected_list[${i}]})
-  mkdir -p ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}
-  mv ${corrected_list[${i}]} ${DIR_PROJECT}/derivatives/dwi/corrected_${SPACE}/
+  mkdir -p ${DIR_SAVE}/dwi/corrected_${SPACE}
+  mv ${corrected_list[${i}]} ${DIR_SAVE}/dwi/corrected_${SPACE}/
 done
 
-rsync -r ${DIR_DWI}/scalar* ${DIR_PROJECT}/derivatives/dwi/
+rsync -r ${DIR_DWI}/scalar* ${DIR_SAVE}/dwi/
 
-rsync -r ${DIR_DWI}/tensor* ${DIR_PROJECT}/derivatives/dwi/
+rsync -r ${DIR_DWI}/tensor* ${DIR_SAVE}/dwi/
 
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/dwi/prep/${DIR_SUBSES}
-  mv ${DIR_DWI}/* ${DIR_PROJECT}/derivatives/dwi/prep/${DIR_SUBSES}/
+  mkdir -p ${DIR_SAVE}/dwi/prep/${DIR_SUBSES}
+  mv ${DIR_DWI}/* ${DIR_SAVE}/dwi/prep/${DIR_SUBSES}/
 else
   if [[ "$(ls -A ${DIR_DWI})" ]]; then
     rm -R ${DIR_DWI}/*

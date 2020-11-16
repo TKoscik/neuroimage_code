@@ -119,7 +119,7 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/mask
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/mask
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

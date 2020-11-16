@@ -113,7 +113,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --patch <value>          patch radius, default:1 (1x1x1)'
   echo '  --search <value>         search radius, default:2 (2x2x2)'
   echo '  --dir-save <value>       directory to save output,'
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
+  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -129,7 +129,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
   SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SESSION}
   fi

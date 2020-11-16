@@ -120,7 +120,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                            -98% quantile of CSF voxels'
   echo '                           default="0.1x1.95x3.1x4.5x6.738198"'
   echo '  --dir-save <value>       directory to save output,'
-  echo '                           default: ${DIR_PROJECT}/derivatives/anat/myelin_${SPACE}'
+  echo '                           default: ${DIR_PROJECT}/derivatives/inc/anat/myelin_${SPACE}'
   echo '                           Space will be drawn from folder name,'
   echo '                           e.g., native = native'
   echo '                                 reg_${TEMPLATE}+${SPACE}'
@@ -158,7 +158,7 @@ gunzip ${DIR_SCRATCH}/*.gz
 
 # create save directory
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/myelin_${SPACE_LAB}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/myelin_${SPACE_LAB}
 fi
 mkdir -p ${DIR_SAVE}
 

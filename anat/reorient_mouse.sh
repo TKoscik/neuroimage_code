@@ -110,7 +110,7 @@ fi
 if [ -z "${DIR_SAVE}" ]; then
   SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
   SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}
   if [ -n "${SESSION}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SESSION}
   fi

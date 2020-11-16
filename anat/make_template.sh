@@ -8,7 +8,7 @@
 #       -participant_id         mandatory
 #       -session_id             mandatory 
 #       -project                optional project directory, if used it will look
-#                               for the ${DIR_PROJECT}/derivatives/anat/native
+#                               for the ${DIR_PROJECT}/derivatives/inc/anat/native
 #                               folder. If not included, will default to the
 #                               project associated with the input list, or to
 #                               the project specified by the dir-project input
@@ -162,7 +162,7 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
             SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
           fi
           for (( j=1; j<${N_MOD}; j++ )); do
-            TEMP+=($(ls ${DIR_PROJECT}/derivatives/anat/native/${SUB_PREFIX}*${MOD_LS[${j}]}))
+            TEMP+=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${SUB_PREFIX}*${MOD_LS[${j}]}))
           done
           FLS+=$(IFS=, ; echo "${TEMP[*]}")
         done
@@ -174,7 +174,7 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
         SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
       fi
       for (( j=1; j<${N_MOD}; j++ )); do
-        TEMP+=($(ls ${PROJECT[${i}]}/derivatives/anat/native/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}))
+        TEMP+=($(ls ${PROJECT[${i}]}/derivatives/inc/anat/native/sub-${SUBJECT[${i}]}_sub-${SESSION[${i}]}*${MOD_LS[${j}]}))
       done
       FLS+=$(IFS=, ; echo "${TEMP[*]}")
     done

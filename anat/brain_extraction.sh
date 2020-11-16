@@ -118,7 +118,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --template <value>       For ANTs method, which template to use,'
   echo '                           default=OASIS'
   echo '  --dir-save <value>       directory to save output, '
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/anat/mask'
+  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/mask'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -140,7 +140,7 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/mask
+  DIR_SAVE=${DIR_PROJECT}//inc/anat/mask
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

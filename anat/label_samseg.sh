@@ -178,7 +178,7 @@ eval ${samseg_fcn}
 
 # Convert and save segmentation output -----------------------------------------
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAMSEG=${DIR_PROJECT}/derivatives/anat/label/samseg
+  DIR_SAMSEG=${DIR_PROJECT}/derivatives/inc/anat/label/samseg
 else
   DIR_SAMSEG=${DIR_SAVE}
 fi
@@ -188,7 +188,7 @@ mri_convert ${DIR_SCRATCH}/seg.mgz ${DIR_SAMSEG}/${PREFIX}_label-samseg.nii.gz
 # Output WM Hyperintensity map if requested ------------------------------------
 if [[ "${WM_HYPER}" == "true" ]]; then
   if [ -z "${DIR_SAVE}" ]; then
-    DIR_HYPERWM=${DIR_PROJECT}/derivatives/anat/label/hyperWM
+    DIR_HYPERWM=${DIR_PROJECT}/derivatives/inc/anat/label/hyperWM
   else
     DIR_HYPERWM=${DIR_SAVE}
   fi

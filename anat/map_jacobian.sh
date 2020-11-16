@@ -158,7 +158,7 @@ XFM_NAME=${XFM_NAME:1}
 
 # create save directory
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/jac_from-${FROM}_to-${TO}_xfm-${XFM_NAME}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/jac_from-${FROM}_to-${TO}_xfm-${XFM_NAME}
 fi
 mkdir -p ${DIR_SAVE}
 
@@ -190,7 +190,7 @@ CreateJacobianDeterminantImage 3 \
 
 # keep stack xfm if desired
 if [[ "${KEEP}" == "true" ]]; then
-  DIR_XFM=${DIR_PROJECT}/derivatives/xfm
+  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm
   mkdir -p ${DIR_XFM}
   mv ${DIR_SCRATCH}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz ${DIR_XFM}/
 fi

@@ -243,10 +243,10 @@ fi
 
 # setup directories
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/reg_${TO}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/reg_${TO}
 fi
 
-DIR_XFM=${DIR_PROJECT}/derivatives/anat/sub-${SUBJECT}
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/anat/sub-${SUBJECT}
 if [ -n "${SESSION}" ]; then
   DIR_XFM=${DIR_XFM}/ses-${SESSION}
 fi
