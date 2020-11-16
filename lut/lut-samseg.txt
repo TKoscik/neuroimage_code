@@ -9,8 +9,8 @@ value   label
 11  caudate_left
 12  putamen_left
 13  pallidum_left
-14  ventricle_3_left
-15  ventricle_4_left
+14  ventricle_3
+15  ventricle_4
 16  brainstem
 17  hippocampus_left
 18  amygdala_left
@@ -39,4 +39,4 @@ value   label
 99  wm_hyperintensity
 165 skull
 258 head
-259 skull_approximate
+259 eyes
