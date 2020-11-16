@@ -1,74 +1,51 @@
-# TO DO for version 0.0.0.0
+# TO DO =======================================================================
+## Version: 0.0.0.0
 ## Updated: 2020-11-16
 
-## General
-- add initialization file  
-    - ~~version number~~  
-    - version date  
-    - ~~DIR_CODE ==> DIR_INC~~  
-    - ~~DIR_TEMPLATE >>> _find a home for this with Steve_~~ 
-    - ~~software needed, with versions~~  
-        - ~~AFNI, latest~~
-        - ~~ANTs, latest~~
-        - ~~FSL, 6.0.1 multicore~~
-            - ~~on ARGON needs OpenBLAS module~~
-        - ~~R~~
-        - ~~Python, version?~~ does 3dplotter work?
-- ~~remove all group, dir-code, dir-pincsource, dir-template inputs and references in help~~
-    - setup with source script using init file.
-- ~~remove deprecated functions entirely~~
-- add model folder, for statistical modelling workflows
-- ~~probably should remove backticks and use $() instead... \`\` are deprecated~~
-- ~~naming convention for functions, lowercase and underscores~~
-- ~~no IS_SES as an input variable into functions~~  
-- is it possible to make the egress function a separate function and have trap execute it? so that we can get rid of the egress function for everything?  
-- ~~Update to file paths, important for default paths, should have one more layer to derivatives structure, to specify the pipeline:~~  
-```
-dir_project/
-   └──derivatives/
-      ├──baw/
-      ├──freesurfer/
-      └──inc/
-         ├──anat/
-         ├──dwi/
-         └──func/
-```
+# general ---------------------------------------------------------------------
+[x] initialization file
+    [x] set software and versions, modules
+    [x] write R setup script
+[x] change DIR_CODE to DIR_INC
+[x] DIR_TEMPLATE -> /Dedicated/inc_database/templates
+[ ] check help for all files, update with only used and update arguments
+[ ] can egress function be moved to separate function?
+[x] replace backticks with $()
+[x] remove deprecated
+[ ] remove incomplete functions, keep for copy to dev branch after versioning
+[x] inc derivatives to ${DIR_PROJECT}/derivatives/inc
+[ ] update HCP templates (decide if MNI variant)
 
-## anatomical workflow
-- ~~finish/start __map_hyperintensity.sh__~~, SAMSEG  
-- ~~deprecate older registration functions, replace with __coregistration.sh__~~  
-- fix/finish/debug __make_template.sh__  
-    - process needs debugging and updating to use coregistration.sh
-- other stat map functions?
-    - ~~__map_myelin.sh__~~  
+# anatomical workflow ---------------------------------------------------------
+[x] add intensity based labels
+[x] added mask "venn" labeller
+[x] added samseg labeller
+[x] added wm hyperintensity based on samseg
+[x] fix myelin map normalization
+[ ] finish and debug make_template.sh
+[ ] check/debug T1rho function
 
-## diffusion workflow
-- clarification of what the tractography function does?
-- need correlation matrix for output
+# diffusion workflow ----------------------------------------------------------
+[ ] check that diffusion tractography is using the methods we prefer
+[ ] correlation matrix for output
 
-## functional workflow
-- functions to include
-    - ~~moco+reg.sh >> rename to __moco_reg.sh__ (probably better to abandon the +)~~  
-    - regressor functions
-        - ~~compcor-anatomy.sh >> rename to __regressor_acompcorr.sh__~~
-        - ~~compcor-temporal.sh >> rename to __regressor_tcompcorr.sh__~~
-        - new regressor functions, I want each function to do one thing
-            - __regressor_frame-disp.sh__
-            - __regressor_spike.sh__
-            - ~~__regressor_deriv.sh__~~  
-            - ~~__regressor_quad.sh__~~  
-            - others?
-    - ~~__nuisance_regression.sh__, should be fine~~  
-    - __ts_deconvolve.sh__
-        - can this be done simultaneously to nuisance_regression? or does that interfere with LSS?
-        - with LSS and LSA options (LSS as default)
-        - can we allow amplitude and duration modulation with stim_times_IM, LSS?
-        - provide options for HRF, but default to canonical
-        - alternatives for regression, is robust regression implemented? this may be a longer discussion and a longer term project (assuming people do tasks more frequently)
-    - ~~__roi_ts.sh__, should be fine~~  
-    - __connectivity_mx.sh__
-        - take output of roi_ts.sh and make a correlation matrix, (using R would be easy)
-        - optional output variable, correlation coefficient (maybe option for cross order) or z-score
+# functional workflow ---------------------------------------------------------
+[x] fix moco+reg.sh, rename to moco_reg.sh
+[ ] regressor functions
+    [x] regressor_acompcorr.sh
+    [x] regressor_tcompcorr.sh
+    [x] regressor_deriv.sh
+    [x] regressor_quad.sh
+    [ ] regressor_frame-disp.sh
+    [ ] regressor_spike.sh
+[ ] ts_deconvolve.sh
+    - simultaneously to nuisance_regression? or does that interfere with LSS?
+    [ ] LSS and LSA options (LSS as default)
+    [ ] allow amplitude and duration modulation with stim_times_IM, LSS?
+    [ ] provide options for HRF, but default to canonical
+[ ] connectivity_mx.sh, output of roi_ts.sh (using R would be easy)
+    [ ] optional correlation coefficient or z-score
+    [ ] optional cross-correlation order
 
 
 

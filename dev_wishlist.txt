@@ -8,15 +8,13 @@
 - T1rho pipeline (check/debug)
 - make_template
 
-## difusion pipeline
+## diffusion pipeline
 - verify tractography pipeline
 - connectiviy matrices
 
 ## functional pipeline
-- functional regressors
-    - framewise displacement
-    - spike regressors
-- ts_deconvolve
+[ ] ts_deconvolve.sh, additional regression methods options, like robust regression
+[ ] ts_censor.sh, timeseries censoring function
 
 ## quality control
 - qc
