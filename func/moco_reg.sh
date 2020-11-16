@@ -162,7 +162,7 @@ fi
 
 # Set DIR_SAVE variable
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/func
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -178,9 +178,9 @@ else
 fi
 
 # Native anatomical, brain mask, and rigid alignment transform
-ANAT=($(ls ${DIR_PROJECT}/derivatives/anat/native/${SUBSES}*${TARGET}.nii.gz))
-ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/anat/mask/${SUBSES}*mask-brain*.nii.gz))
-XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/xfm/${DIR_SUBSES}/${SUBSES}*from-${TARGET}+raw_to-${TEMPLATE}*.mat))
+ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${SUBSES}*${TARGET}.nii.gz))
+ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${SUBSES}*mask-brain*.nii.gz))
+XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}/${SUBSES}*from-${TARGET}+raw_to-${TEMPLATE}*.mat))
 if [[ -z ${ANAT} ]]; then
   echo "Native anatomical not found, aborting."
   exit 1
@@ -198,7 +198,7 @@ else
 fi
 
 # Find transforms
-DIR_XFM=${DIR_PROJECT}/derivatives/xfm/${DIR_SUBSES}
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}
 unset XFM_LS XFM_ARG XFM_NORM
 XFM_LS=($(ls ${DIR_XFM}/*native_to-${TEMPLATE}* 2>/dev/null))
 if [[ -z ${XFM_LS} ]]; then
@@ -352,24 +352,24 @@ fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
 rm ${MERGE_LS[@]}
 
 # Move files to appropriate locations -----------------------------------------
-DIR_REGRESSOR=${DIR_PROJECT}/derivatives/func/regressors/${DIR_SUBSES}
+DIR_REGRESSOR=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIR_SUBSES}
 mkdir -p ${DIR_REGRESSOR}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/
 mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/
 
-mkdir -p ${DIR_PROJECT}/derivatives/func/mask
+mkdir -p ${DIR_PROJECT}/derivatives/inc/func/mask
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
+  ${DIR_PROJECT}/derivatives/inc/func/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
+  ${DIR_PROJECT}/derivatives/inc/func/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
 
-mkdir -p ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}
+mkdir -p ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
+  ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
 
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/func/prep/${DIR_SUBSES}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/func/prep/${DIR_SUBSES}/
+  mkdir -p ${DIR_PROJECT}/derivatives/inc/func/prep/${DIR_SUBSES}
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/func/prep/${DIR_SUBSES}/
 fi
 
 #===============================================================================

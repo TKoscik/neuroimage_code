@@ -139,7 +139,7 @@ else
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/func/resid_${TEMPLATE}+${SPACE}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/resid_${TEMPLATE}+${SPACE}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

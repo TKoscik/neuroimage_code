@@ -119,7 +119,7 @@ else
 fi
 
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/func/regressors/${DIR_SUBSES}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIR_SUBSES}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}

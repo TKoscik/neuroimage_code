@@ -9,7 +9,7 @@ HARDWARE="$(uname -m)"
 
 # set version number for INC code ----------------------------------------------
 INC_VERSION="$1"
-if [[ -z ${INPUT_VERSION} ]]; then
+if [[ -z ${INC_VERSION} ]]; then
   INC_VERSION="0.0.0.0"
 fi
 
@@ -34,6 +34,7 @@ for (( i=0; i<${#PATHS[@]}; i++ )); do
   TEMP=${TEMP//\"}
   TEMP=(${TEMP//:/ })
   export ${TEMP[0]}=${TEMP[1]}
+  echo "EXPORTING DIRECTORIES: ${TEMP[0]}=${TEMP[1]}"
 done
 
 # load Argon modules -----------------------------------------------------------
@@ -44,6 +45,7 @@ if [[ "${HOSTNAME}" == "argon" ]]; then
   MODS=${MODS//://}
   MODS=${MODS//,/ }
   module load ${MODS}
+  echo "LOADING MODULES: ${MODS}"
 fi
 
 # run source files for software dependencies -----------------------------------
@@ -55,6 +57,7 @@ for (( i=0; i<${#SRC[@]}; i++ )); do
   TEMP=${TEMP//\"}
   TEMP=(${TEMP//:/ })
   source /Shared/pinc/sharedopt/apps/sourcefiles/${TEMP[0]}_source.sh ${TEMP[1]}
+  echo "LOADING SOFTWARE DEPENDENCIES: ${TEMP[0]} version ${TEMP[1]}"
 done
 
 # set up aliases ---------------------------------------------------------------
@@ -68,12 +71,14 @@ if [[ "${HOSTNAME}" != "argon" ]]; then
     TEMP=${TEMP//\"}
     TEMP=(${TEMP//:/ })
     alias ${TEMP[0]}=${TEMP[1]}
+    echo "SETTING ALIASES: ${TEMP[0]}=${TEMP[1]}"
   done
 fi
 
 # setup R packages -------------------------------------------------------------
 # run manually for now
 #Rscript /Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${INC_VERSION}/r_setup.R
-
-
+echo "INC CODE version ${INC_VERSION} has been setup."
+echo "If you haven't setup your R environment, please run:"
+echo "Rscript /Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${INC_VERSION}/r_setup.R"
 

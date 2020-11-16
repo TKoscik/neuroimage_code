@@ -97,7 +97,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --value-csf <value>      numeric value indicating CSF in label file, default=1'
   echo '  --value-wm <value>       numeric value indicating WM in label file, default=3'
   echo '  --dir-save <value>       directory to save output, default:'
-  echo '                             DIR_PROJECT/derivatives/func/regressor/sub-###/ses-###'
+  echo '                             DIR_PROJECT/derivatives/inc/func/regressor/sub-###/ses-###'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -125,7 +125,7 @@ fi
 
 # Set DIR_SAVE variable
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/func
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
 fi
 DIR_REGRESSORS=${DIR_SAVE}/regressors/${DIR_SUBSES}
 mkdir -p ${DIR_SCRATCH}

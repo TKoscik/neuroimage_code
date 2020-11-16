@@ -125,7 +125,7 @@ if [[ -n ${SESSION} ]]; then
   DIR_SUBSES="${DIR_SUBSES}_ses-${SESSION}"
 fi
 if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/${DIR_SUBSES}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIR_SUBSES}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
