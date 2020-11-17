@@ -103,6 +103,8 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
+
+
 # write python job -------------------------------------------------------------
 PY=${DIR_SCRATCH}/3dPlot.py
 if [ -z "${MASK}" ]; then
