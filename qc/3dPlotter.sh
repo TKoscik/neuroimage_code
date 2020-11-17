@@ -103,7 +103,25 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-
+# downsample if bigger than 1mm isotropic
+SPACE=$(${DIR_INC}/generic/nii_info.sh -i ${IMAGE} -f space)
+SPACE=(${SPACE//,/ })
+for i in {0..2}; do
+  if [[ "${SPACE[${i}]}" < "1" ]]; then
+    BNAME=$(basename ${IMAGE})
+    ResampleImage 3 ${IMAGE} ${DIR_SCRATCH}/${BNAME} 1x1x1 0 0 6
+    IMAGE=${DIR_SCRATCH}/${BNAME}
+    if [[ -n ${MASK} ]]; then
+      BNAME=$(basename ${MASK})
+      antsApplyTransforms -d 3 -n NearestNeighbor \
+        -i ${MASK} \
+        -o ${DIR_SCRATCH}/${BNAME} \
+        -r ${IMAGE} 
+      MASK=${DIR_SCRATCH}/${BNAME}
+    fi
+    break
+  fi
+done
 
 # write python job -------------------------------------------------------------
 PY=${DIR_SCRATCH}/3dPlot.py
