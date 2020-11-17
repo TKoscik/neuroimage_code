@@ -53,7 +53,7 @@ fi
 if [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
   OUT=$(PrintHeader ${IMAGE} 2)
 fi
-if [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "num-tr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
+if [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
   OUT=$(PrintHeader ${IMAGE} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1)
 fi
 if [[ "${FIELD,,}" == "tr" ]]; then

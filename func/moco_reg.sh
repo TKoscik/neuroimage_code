@@ -230,8 +230,8 @@ N_XFM=${#XFM_NORM[@]}
 
 # Motion Correction + registration ============================================
 # Get timeseries info ---------------------------------------------------------
-NUM_TR=$(PrintHeader ${TS_BOLD} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1)
-TR=$(PrintHeader ${TS_BOLD} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1)
+NUM_TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f numTR)
+TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f TR)
 # check in here for 4d file.
 if [ "${NUM_TR}" == 1 ]; then
     echo "Input file is not a 4D file. Aborting."
