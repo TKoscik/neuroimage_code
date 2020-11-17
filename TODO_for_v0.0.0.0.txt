@@ -27,7 +27,7 @@
 
 # diffusion workflow ----------------------------------------------------------
 [ ] check that diffusion tractography is using the methods we prefer
-[ ] correlation matrix for output
+[ ] correlation matrix to long output, with from and to columns, maybe a summary function to pull seed to seed connectivity
 
 # functional workflow ---------------------------------------------------------
 [x] fix moco+reg.sh, rename to moco_reg.sh
