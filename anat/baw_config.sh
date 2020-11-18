@@ -90,9 +90,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
   echo '  --project-name <value>   project name'
   echo '  --csv-file <value>       csv file, full path'
   echo '  --queue <value>          ARGON queues to submit to'
