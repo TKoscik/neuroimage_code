@@ -46,10 +46,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
-other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o h --long \
+project-name:,t1:,t2:,\
+dir-save:,queue:,\
+help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -57,28 +57,22 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-POJECT_NAME=
-DIR_PROJECT=
+PROJECT_NAME=
 T1=
 T2=
+QUEUE=PINC,CCOM
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
-DIR_CODE=/Shared/inc_scratch/code
+DIR_INC=/Shared/inc_scratch/code
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
-    -l | --no-log) NO_LOG=true ; shift ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --project-name) PROJECT_NAME="$2" ; shift 2 ;;
+    --t1) T1="$2" ; shift 2 ;;
+    --t2) T2="$2" ; shift 2 ;;
+    --queue) QUEUE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -94,17 +88,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --project-name <value>   Name of project'
+  echo '  --t1 <value>             T1w images, can take multiple comma seperated images'
+  echo '  --t2 <value>             T2w images, can take multiple comma seperated images'
+  echo '  --queue <value>          HPC queues to submit jobs to, default: PINC,CCOM'
   echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -115,22 +103,48 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT_FILE})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_FILE} -f "ses")
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
+SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "sub")
+SESSION=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${INPUT_FILE})
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${T1})
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/anat/prep/sub-${SUBJECT}/ses-${SESSION}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
+CSV=${DIR_PROJECT}/code/baw.csv
+CONFIGFILE=${DIR_PROJECT}/code/${PROJECT_NAME}.config
 
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+if [[ ! -f "${CONFIGFILE}" ]]: then
+  ${DIR_INC}/anat/baw_config.sh \
+    --project-name ${PROJECT_NAME} \
+    --csv-file ${CSV} \
+    --dir-save ${DIR_PROJECT}/derivatives/baw \
+    --queue ${QUEUE}
+fi
+
+T1=(${T1//,/ })
+T2=(${T2//,/ })
+N_T1=${#T1[@]}
+N_T2=${#T2[@]}
+
+unset IMAGES
+for (( i=0; i<${N_T1}; i++ )); do
+  IMAGES+=(\'T1-30\':[\'${T1[${i}]}\']) 
+done
+
+for (( i=0; i<${N_T2}; i++ )); do
+  IMAGES+=(\'T2-30\':[\'${T2[${i}]}\'])
+done
+
+IMAGES=$(IFS=, ; echo "${IMAGES[*]}")
+
+
+echo '"'${PROJECT_NAME}'","sub-'${SUBJECT}'","ses-'${SESSION}'","{'${IMAGES}'}"' >> ${CSV}
+
+#sort -u ${CSV} -o ${CSV}
+
+export PATH=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
+bash ${DIR_INC}/anat/runbaw.sh -p 1 -s sessionid|all -r SGEGraph|SGE -c ${CONFIGFILE}
+
 
 #===============================================================================
 # End of Function
