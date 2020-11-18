@@ -60,7 +60,7 @@ eval set -- "$OPTS"
 PROJECT_NAME=
 CSV_FILE=
 DIR_SAVE=
-QUEUE=PINC,CCOM
+QUEUE=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
