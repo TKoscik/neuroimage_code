@@ -60,7 +60,7 @@ eval set -- "$OPTS"
 PROJECT_NAME=
 T1=
 T2=
-QUEUE=PINC,CCOM
+QUEUE=UI,CCOM
 DIR_SAVE=
 HELP=false
 DIR_INC=/Shared/inc_scratch/code
