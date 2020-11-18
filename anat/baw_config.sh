@@ -100,10 +100,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --csv-file <value>       csv file, full path'
   echo '  --queue <value>          ARGON queues to submit to'
   echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-code <value>       directory where INC tools are stored,'
-  echo '                           default: ${DIR_CODE}'
-  echo '  --dir-template <value>   directory where INC templates are stored,'
-  echo '                           default: ${DIR_TEMPLATE}'
+  echo '  --dir-inc <value>        directory where INC tools are stored,'
+  echo '                           default: ${DIR_INC}'
   echo ''
   NO_LOG=true
   exit 0
@@ -114,20 +112,19 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${CSV_FILE})
 
-mkdir -p ${DIR_SAVE}
-
-CONFIG=${DIR_SAVE}/${PROJECT_NAME}.config
+CONFIG=${DIR_PROJECT}/code/${PROJECT_NAME}.config
 
 echo '[EXPERIMENT]' >> ${CONFIG}
 echo '' >> ${CONFIG}
-echo 'SESSION_DB_BASE=${CSV_FILE}' >> ${CONFIG}
+echo 'SESSION_DB_BASE='${CSV_FILE} >> ${CONFIG}
 echo 'SESSION_DB_TEMP=%(SESSION_DB_BASE)s' >> ${CONFIG}
 echo 'SESSION_DB_LONG=%(SESSION_DB_BASE)s' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
-echo 'EXPERIMENT_BASE=${PROJECT_NAME}' >> ${CONFIG}
+echo 'EXPERIMENT_BASE='${PROJECT_NAME} >> ${CONFIG}
 echo '#EXPERIMENT_TEMP=NOFL_20170302_DM1_temp' >> ${CONFIG}
 echo '#EXPERIMENT_LONG=NOFL_20170302_DM1_long' >> ${CONFIG}
 echo '' >> ${CONFIG}
@@ -137,7 +134,7 @@ echo 'EXPERIMENT_LONG_INPUT=%(EXPERIMENT_TEMP)s' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '#WORKFLOW_COMPONENTS_LONG=['\'denoise\'','\'landmark\'','\'auxlmk\'','\'tissue_classify\'','\'segmentation\'','\'warp_atlas_to_subject\'','\'jointfusion_2012_neuro\'']' >> ${CONFIG}
- echo '' >> ${CONFIG}
+echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo 'WORKFLOW_COMPONENTS_BASE=['\'denoise\'','\'landmark\'','\'auxlmk\'','\'tissue_classify\'','\'warp_atlas_to_subject\'','\'jointfusion_2015_wholebrain\'']' >> ${CONFIG}
 echo '#WORKFLOW_COMPONENTS_BASE=['\'denoise\'']' >> ${CONFIG}
@@ -145,7 +142,7 @@ echo '#WORKFLOW_COMPONENTS_TEMP=[]' >> ${CONFIG}
 echo '#WORKFLOW_COMPONENTS_LONG=['\'denoise\'','\'landmark\'','\'auxlmk\'','\'tissue_classify\'','\'warp_atlas_to_subject\'','\'jointfusion_2015_wholebrain\'']' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
-echo 'BASE_OUTPUT_DIR=${DIR_SAVE}' >> ${CONFIG}
+echo 'BASE_OUTPUT_DIR='${DIR_SAVE} >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo 'ATLAS_PATH=/Shared/pinc/sharedopt/ReferenceData/Atlas_20131115' >> ${CONFIG}
@@ -168,14 +165,14 @@ echo '##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 echo '[RHEL7ARGON]' >> ${CONFIG}
 echo '## The cluster queue to use for submitting "normal running" jobs.' >> ${CONFIG}
 echo '#QUEUE= -q all.q' >> ${CONFIG}
-echo 'QUEUE= -q ${QUEUE}' >> ${CONFIG}
+echo 'QUEUE= -q '${QUEUE} >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '## The cluster queue to use for submitting "long running" jobs.' >> ${CONFIG}
 echo '#QUEUE_LONG= -q all.q' >> ${CONFIG}
-echo 'QUEUE_LONG= -q ${QUEUE}' >> ${CONFIG}
+echo 'QUEUE_LONG= -q '${QUEUE} >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
 echo '' >> ${CONFIG}
