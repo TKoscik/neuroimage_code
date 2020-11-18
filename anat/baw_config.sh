@@ -46,10 +46,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=`getopt -o hvkl --long \
+OPTS=`getopt -o h --long \
 project-name:,csv-file:,queue:,\
 dir-save:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@"`
+help -n 'parse-options' -- "$@"`
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -64,14 +64,11 @@ QUEUE=
 DIR_CODE=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
-VERBOSE=0
+
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
-    -l | --no-log) NO_LOG=true ; shift ;;
     --project-name) PROJECT_NAME="$2" ; shift 2 ;;
     --csv-file) CSV_FILE="$2" ; shift 2 ;;
     --queue) QUEUE="$2" ; shift 2 ;;
