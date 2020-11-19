@@ -522,44 +522,24 @@ SagMPRAGET1R2X2	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
 SagMPRAGET1R2X1	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
 rsfMRIRun1t312787	func    rest    -	-	-	-	-	-	-	bold
 rsfMRIFieldMapt29477	fmap	FieldMap	-	-	-	-	-	-	fieldmap
-BOLDresting4X4X4AP	func	-	rest	-	-	-	-	-	-	bold
-resttopupAP	func	-	rest	-	-	-	-	-	-	bold
-resttopupPA	func	-	rest	-	-	-	-	-	-	bold
+BOLDresting4X4X4AP	func	-	rest	-	-	AP	-	-	-	bold
+resttopupAP	func	-	rest	-	-	-	AP	-	-	bold
+resttopupPA	func	-	rest	-	-	-	PA	-	-	bold
 Fieldmapping4X4X4APe1	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
 Fieldmapping4X4X4APe2	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
 Fieldmapping4X4X4APe2ph	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
 CORMPRAGE	anat	-	CORMPRAGE	-	-	-	-	-	-	T1w
-axdkiPA	dwi	-	-	-	-	-	-	-	-	dwi
-axdkiPAADC	dwi	-	-	-	-	-	-	-	-	fieldmap
-axdkiPATRACEW	dwi	-	-	-	-	-	-	-	-	fieldmap
-axdkiPAFA	dwi	-	-	-	-	-	-	-	-	fieldmap
-axdkiPAColFA	dwi	-	-	-	-	-	-	-	-	fieldmap
-dkitopupAP	dwi	-	-	-	-	-	-	-	-	fieldmap
-dkitopupPA	dwi	-	-	-	-	-	-	-	-	fieldmap
+axdkiPA	dwi	-	-	-	-	-	-	PA	-	dwi
+axdkiPAADC	fmap	-	ADCDKIFieldMap	-	-	PA	-	-	-	dwi
+axdkiPATRACEW	fmap	-	TRACEWDKIFieldMap	-	-	PA	-	-	-	dwi
+axdkiPAFA	fmap	-	FADKIFieldMap	-	-	PA	-	-	-	dwi
+axdkiPAColFA	fmap	-	ColFADKIFieldMap	-	-	PA	-	-	-	dwi
+dkitopupAP	fmap	-	topupDKIFieldMap	-	-	AP	-	-	-	dwi
+dkitopupPA	fmap	-	topupDKIFieldMap	-	-	PA	-	-	-	dwi
 t2spaceCOR	anat	-	-	-	-	-	-	-	-	T2w
 SAGT2FLAIRSPACE	anat	-	-	-	-	-	-	-	-	FLAIR
 DTI30dir1b0run1	dwi	-	-	-	-	-	-	-	-	dwi
-DTI30dir1b0run1ADC	dwi	-	-	-	-	-	-	-	-	fieldmap
-DTI30dir1b0run1TRACEW	dwi	-	-	-	-	-	-	-	-	fieldmap
-DTI30dir1b0run1FA	dwi	-	-	-	-	-	-	-	-	fieldmap
-DTI30dir1b0run1ColFA	dwi	-	-	-	-	-	-	-	-	fieldmap
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+DTI30dir1b0run1ADC	fmap	ADCDTIFieldMap	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1TRACEW	fmap	TRACEWDTIFieldMap	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1FA	fmap	FADTIFieldMap	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1ColFA	fmap	ColFADTIFieldMap	-	-	-	-	-	-	-	dwi
