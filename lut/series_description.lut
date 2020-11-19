@@ -220,11 +220,11 @@ sLASERCRBLWM	mrs	-	sLaser-roi-crblwm	-	-	-	-	-	-	mrs
 sLASERPons	mrs	-	sLaser-roi-pons	-	-	-	-	-	-	mrs
 waterstability8ml	orig	-	waterstability8ml	-	-	-	-	-	-	ss
 AxSWAN1mmoverallbest	anat	-	AxSWAN1mmBest	-	-	-	-	-	-	SWAN
-AxSWANHighRes	anat	-	AxSWANHighRes	-	-	-	-	-	-	SWAN
 T2MAPGREe1	anat	-	T2MAPGRE	-	-	-	echo-1	-	-	T2map
 T2MAPGREe2	anat	-	T2MAPGRE	-	-	-	echo-2	-	-	T2map
 T2MAPGREe3	anat	-	T2MAPGRE	-	-	-	echo-3	-	-	T2map
 T2MAPGREe4	anat	-	T2MAPGRE	-	-	-	echo-4	-	-	T2map
+T2MAPGREe5	anat	-	T2MAPGRE	-	-	-	echo-5	-	-	T2map
 CORFSPGRBRAVOe1	anat	-	corSPGR	-	-	-	echo-1	-	-	T1w
 CORFSPGRBRAVOe2	anat	-	corSPGR	-	-	-	echo-2	-	-	T1w
 CORFSPGRBRAVOe3	anat	-	corSPGR	-	-	-	echo-3	-	-	T1w
@@ -365,9 +365,6 @@ CalT1rhoSL50c48HAP	cal	-	CalT1rhoSL50c48HAP	-	-	-	-	-	-	cal
 CalT1rhoSL50cBODY	cal	-	CalT1rhoSL50cBODY	-	-	-	-	-	-	cal
 CalT1rhoSL10c48HAP	cal	-	CalT1rhoSL10c48HAP	-	-	-	-	-	-	cal
 CalT1rhoSL10cBODY	cal	-	CalT1rhoSL10cBODY	-	-	-	-	-	-	cal
-3PlaneLocSSFSEi00001	loc	-	3PlaneLocSSFSE	-	-	-	-	-	-	loc
-3PlaneLocSSFSEi00011	loc	-	3PlaneLocSSFSE	-	-	-	-	-	-	loc
-3PlaneLocSSFSEi00021	loc	-	3PlaneLocSSFSE	-	-	-	-	-	-	loc
 CalHNSHeadcBODY	cal	-	calHNSHeadcBODY	-	-	-	-	-	-	cal
 CalHNSHeadcHNSHead	cal	-	calHNSHeadcHNSHead	-	-	-	-	-	-	cal
 localizeri00001	loc	-	localizeri00001	-	-	-	-	-	-	loc
@@ -389,7 +386,6 @@ SCCORFSPGRBRAVO	anat	-	corSPGRBRAVOsc	-	-	-	-	-	sc	T1w
 SCSagCUBEFLAIR	anat	-	sagCUBEsc	-	-	-	-	-	sc	FLAIR
 MPRAGET1CoronalTI1000	anat	-	corMPRAGETI1000	-	-	-	-	-	-	T1w
 MPRAGET1CoronalTI800	anat	-	corMPRAGETI800	-	-	-	-	-	-	T1w
-MPRAGET1CoronalTI900	anat	-	corMPRAGETI900	-	-	-	-	-	-	T1w
 DTI70Directions	dwi	-	70dir	-	-	-	-	-	-	dwi
 CalDKI30Dirb1000c48HAP	cal	-	CalDKI30Dirb1000c48HAP	-	-	-	-	-	-	cal
 CalDKI30Dirb1000cBODY	cal	-	CalDKI30Dirb1000cBODY	-	-	-	-	-	-	cal
@@ -430,11 +426,6 @@ CalT1rhoSL10MANUALPRESCANcBODY	cal	-	CalT1rhoSL10MANUALPRESCANcBODY	-	-	-	-	-	-	
 3PlaneLocSSFSEi00005	loc	-	3PlaneLocSSFSEi00005	-	-	-	-	-	-	loc
 3PlaneLocSSFSEi00011	loc	-	3PlaneLocSSFSEi00011	-	-	-	-	-	-	loc
 3PlaneLocSSFSEi00021	loc	-	3PlaneLocSSFSEi00021	-	-	-	-	-	-	loc
-T2MAPGREe1	anat	-	T2MAP	-	-	-	-	-	-	T2map
-T2MAPGREe2	anat	-	T2MAP	-	-	-	-	-	-	T2map
-T2MAPGREe3	anat	-	T2MAP	-	-	-	-	-	-	T2map
-T2MAPGREe4	anat	-	T2MAP	-	-	-	-	-	-	T2map
-T2MAPGREe5	anat	-	T2MAP	-	-	-	-	-	-	T2map
 PUCorCUBET2	anat	-	corCUBEpu	-	-	-	-	-	-	T2w
 CORFSPGRBRAVORUNTHISUNTILPROMOWORKS	anat	-	corSPGRBravo	-	-	-	-	-	-	T1w
 T2VAR155    anat    -	T2VAR155	-	-	-	-	-	-	T2w
@@ -514,6 +505,23 @@ fMRI64x64FOV2cmt415917	func	rest	-	-	-	-	-	-	-	bold
 HighResAnat	anat	-	-	-	-	-	-	-	-	T2w
 AXT2	anat	-	-	-	-	-	-	-	-	T2w
 FIESTA009x01x012	anat	-	FIESTA	-	-	-	-	-	-	T2w
+3PlaneLocFGREi00011	loc	-	3PlaneLocFGREi00011	-	-	-	-	-	-	loc
+3PlaneLocFGREi00021	loc	-	3PlaneLocFGREi00021	-	-	-	-	-	-	loc
+SWANTerra	anat	-	SWANTerra	-	-	-	-	-	-	SWAN
+SWANMIP	anat	-	SWANMIP	-	-	-	-	-	-	SWAN
+DTITopUpSE32Dir	dwi	-	DTITopUpSE32Dir	-	-	-	-	-	-	dwi
+DTITopUpSEFlipPhase	dwi	-	DTITopUpSEFlipPhase	-	-	-	-	-	-	dwi
+SWAN	anat	-	SWAN	-	-	-	-	-	-	SWAN
+7TOptFLAIRETL160	anat	-	7TOptETL160	-	-	-	-	-	-	FLAIR
+7TOptFLAIRFS	anat	-	7TOptFS	-	-	-	-	-	-	FLAIR
+DixonTE345cf	anat	-	DixonTE345cf	-	-	-	-	-	-	dix
+Rest1PE1t23187	func	rest	-	-	-	-	-	-	-	bold
+3PlaneLocSSFSEi00010	loc	-	3PlaneLocSSFSEi00010	-	-	-	-	-	-	loc
+3PlaneLocSSFSEi00019	loc	-	3PlaneLocSSFSEi00019	-	-	-	-	-	-	loc
+SagMPRAGET1R2X2	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
+SagMPRAGET1R2X1	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
+rsfMRIRun1t312787	func    rest    -	-	-	-	-	-	-	bold
+rsfMRIFieldMapt29477	fmap	FieldMap	-	-	-	-	-	-	fieldmap
 
 
 
