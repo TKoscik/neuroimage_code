@@ -522,6 +522,27 @@ SagMPRAGET1R2X2	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
 SagMPRAGET1R2X1	anat	-	sagMPRAGE	-	-	-	-	-	-	T1w
 rsfMRIRun1t312787	func    rest    -	-	-	-	-	-	-	bold
 rsfMRIFieldMapt29477	fmap	FieldMap	-	-	-	-	-	-	fieldmap
+BOLDresting4X4X4AP	func	-	rest	-	-	-	-	-	-	bold
+resttopupAP	func	-	rest	-	-	-	-	-	-	bold
+resttopupPA	func	-	rest	-	-	-	-	-	-	bold
+Fieldmapping4X4X4APe1	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
+Fieldmapping4X4X4APe2	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
+Fieldmapping4X4X4APe2ph	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
+CORMPRAGE	anat	-	CORMPRAGE	-	-	-	-	-	-	T1w
+axdkiPA	dwi	-	-	-	-	-	-	-	-	dwi
+axdkiPAADC	dwi	-	-	-	-	-	-	-	-	dwi
+axdkiPAATRACEW	dwi	-	-	-	-	-	-	-	-	dwi
+axdkiPAAFA	dwi	-	-	-	-	-	-	-	-	dwi
+axdkiPAAColFA	dwi	-	-	-	-	-	-	-	-	dwi
+dkitopupAP	dwi	-	-	-	-	-	-	-	-	dwi
+dkitopupPA	dwi	-	-	-	-	-	-	-	-	dwi
+t2spaceCOR	anat	-	-	-	-	-	-	-	-	T2w
+SAGT2FLAIRSPACE	anat	-	-	-	-	-	-	-	-	FLAIR
+DTI30dir1b0run1	dwi	-	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1ADC	dwi	-	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1TRACEW	dwi	-	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1FA	dwi	-	-	-	-	-	-	-	-	dwi
+DTI30dir1b0run1ColFA	dwi	-	-	-	-	-	-	-	-	dwi
 
 
 
