@@ -528,7 +528,7 @@ resttopupPA	func	-	rest	-	-	-	PA	-	-	bold
 Fieldmapping4X4X4APe1	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
 Fieldmapping4X4X4APe2	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
 Fieldmapping4X4X4APe2ph	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
-CORMPRAGE	anat	-	CORMPRAGE	-	-	-	-	-	-	T1w
+CORMPRAGE	anat	-	corMPRAGE	-	-	-	-	-	-	T1w
 axdkiPA	dwi	-	-	-	-	-	-	PA	-	dwi
 axdkiPAADC	fmap	-	ADCDKIFieldMap	-	-	PA	-	-	-	dwi
 axdkiPATRACEW	fmap	-	TRACEWDKIFieldMap	-	-	PA	-	-	-	dwi
@@ -536,8 +536,8 @@ axdkiPAFA	fmap	-	FADKIFieldMap	-	-	PA	-	-	-	dwi
 axdkiPAColFA	fmap	-	ColFADKIFieldMap	-	-	PA	-	-	-	dwi
 dkitopupAP	fmap	-	topupDKIFieldMap	-	-	AP	-	-	-	dwi
 dkitopupPA	fmap	-	topupDKIFieldMap	-	-	PA	-	-	-	dwi
-t2spaceCOR	anat	-	-	-	-	-	-	-	-	T2w
-SAGT2FLAIRSPACE	anat	-	-	-	-	-	-	-	-	FLAIR
+t2spaceCOR	anat	-	corSPACE	-	-	-	-	-	-	T2w
+SAGT2FLAIRSPACE	anat	-	sagSPACE	-	-	-	-	-	-	FLAIR
 DTI30dir1b0run1	dwi	-	-	-	-	-	-	-	-	dwi
 DTI30dir1b0run1ADC	fmap	ADCDTIFieldMap	-	-	-	-	-	-	-	dwi
 DTI30dir1b0run1TRACEW	fmap	TRACEWDTIFieldMap	-	-	-	-	-	-	-	dwi
