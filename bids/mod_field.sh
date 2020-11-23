@@ -6,7 +6,9 @@
 # Date: 2020-03-09
 #===============================================================================
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hi:f: --long input:,field:,help -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hmadi:f:v: \
+--long input:,mod,add,del,field:,value:,/
+help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -21,8 +23,12 @@ HELP=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -i | --input) INPUT="$2" ; shift 2 ;;
-    -f | --field) FIELD="$2" ; shift 2 ;;
+    -i | --input) INPUT="$2" ; shift 2 ;
+    -m | --mod) ACTION=modify ; shift ;
+    -a | --add) ACTION=add ; shift ;
+    -d | --del) ACTION=delete ; shift ;;
+    -f | --field) FIELD="$2" ; shift 2 ;
+    -v | --value) VALUE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
