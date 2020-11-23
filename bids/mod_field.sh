@@ -58,54 +58,76 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-FNAME=$(basename ${INPUT})
+
+
+# Gather input information ----------------------------------------------------
 DNAME=$(dirname ${INPUT})
+FNAME=$(basename ${INPUT})
+filename=$(basename -- "$fullfile")
+extension="${filename##*.}"
+filename="${filename%.*}"
+
 
 TEMP=(${FNAME//_/ })
 TEMP=(${FNAME//-/ })
-
-MODALITY=${TEMP[-1]}
+INPUT_MODALITY=${TEMP[-1]}
 unset TEMP[-1]
-
 for (( i=0; i<=${#TEMP[@]}; i+=2 )); do
-  FLAG+=(${TEMP[${i}]})
+  INPUT_FLAG+=(${TEMP[${i}]})
 done
 for (( i=1; i<=${#TEMP[@]}; i+=2 )); do
-  VALUE+=(${TEMP[${i}]})
+  INPUT_VALUE+=(${TEMP[${i}]})
 done
+N_FLAG=${#INPUT_FLAG[@]}
 
-if [[ -n ${MOD} ]]; then
-  MOD=(${MOD//,/ })
-  for (( i=0; i<${#MOD[@]}; i++)) {
-    *** loop over flags to find match, then overwrite value
-  } 
-fi
-
-if [[ -n ${DEL} ]]; then
-  *** loop over flags and keep only good ones, i.e., not in delete variable... do the same for values 
-fi
-
-if [[ -n ${ADD} ]]; then
-  *** loop over possible flags add if in name already add if requested, do the same for value, make sure in BIDS order
-fi
-
-
-OUTPUT=
-temp=$(basename ${INPUT})
-temp=(${temp//_/ })
-if [[ "${FIELD,,}" == "modality" ]]; then
-  OUTPUT=${temp[-1]}
-else
-  for (( i=0; i<${#temp[@]}; i++ )); do
-    flag=(${temp[${i}]//-/ })
-    if [[ "${flag[0]}" == "${FIELD,,}" ]]; then
-      OUTPUT=${flag[1]}
+# loop over possible flags, modify, add, or delete
+if [[ "${ACTION,,}" == "modify" ]]; then
+  for (( i=0; i<${N_FLAG}; i++ )); do
+    if [[ "${INPUT_FLAG,,}" == "${FIELD,,}" ]]; then
+      INPUT_VALUE[${i}]=${VALUE}
       break
     fi
   done
+  OUTPUT_FLAG=(${INPUT_FLAG[@]})
+  OUTPUT_VALUE=(${INPUT_VALUE[@]})
 fi
-OUTPUT=(${OUTPUT//./ }) # remove file extensions if present
-echo ${OUTPUT[0]}
+
+if [[ "${ACTION,,}" == "delete" ]]; then
+  for (( i=0; i<${N_FLAG}; i++ )); do
+    if [[ "${INPUT_FLAG,,}" == "${FIELD,,}" ]]; then
+      unset INPUT_FLAG[${i}]
+      unset INPUT_VALUE[${i}]
+      break
+    fi
+  done
+  OUTPUT_FLAG=(${INPUT_FLAG[@]})
+  OUTPUT_VALUE=(${INPUT_VALUE[@]})
+fi
+
+BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
+N_BIDS=${#BIDS_LS[@]}
+if [[ -n ${ADD} ]]; then
+  for (( i=0; i<${N_BIDS}; i++ )); do
+    for (( j=0; i<${N_FLAG}; i++ )); do
+      if [[ "${INPUT_FLAG[${j}]}" == "${FLAG_LS[${i}]}" ]]; then
+        OUTPUT_FLAG+=(${INPUT_FLAG[${j}]})
+        OUTPUT_VALUE+=(${INPUT_VALUE[${j}]})
+      elif [[ "${FIELD,,}" =~ "${FLAG_LS[${i}]}" ]]; then
+        OUTPUT_FLAG+=(${FIELD})
+        OUTPUT_VALUE+=(${VALUE})
+      fi
+    done
+  done
+fi
+
+# write output
+OUTPUT_STR="${DNAME}/"
+N_OUT=${#OUTPUT_FLAG[@]}
+for (( i=0; i<${N_OUT}; i++ )); do
+  OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
+done
+OUTPUT_STR="{OUTPUT_STR::-1}
+
 #==============================================================================
 # End of function
 #==============================================================================
