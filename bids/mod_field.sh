@@ -63,10 +63,8 @@ fi
 # Gather input information ----------------------------------------------------
 DNAME=$(dirname ${INPUT})
 FNAME=$(basename ${INPUT})
-filename=$(basename -- "$fullfile")
-extension="${filename##*.}"
-filename="${filename%.*}"
-
+EXT=${FNAME##*.}
+FNAME=${FNAME%.*}
 
 TEMP=(${FNAME//_/ })
 TEMP=(${FNAME//-/ })
@@ -126,7 +124,7 @@ N_OUT=${#OUTPUT_FLAG[@]}
 for (( i=0; i<${N_OUT}; i++ )); do
   OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
 done
-OUTPUT_STR="{OUTPUT_STR::-1}
+OUTPUT_STR="${OUTPUT_STR::-1}.${EXT}"
 
 #==============================================================================
 # End of function
