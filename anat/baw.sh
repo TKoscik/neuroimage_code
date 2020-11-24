@@ -46,10 +46,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o h --long \
+OPTS=$(getopt -o ha --long \
 project-name:,t1:,t2:,\
-dir-save:,queue:,\
-help -n 'parse-options' -- "$@")
+dir-save:,queue:,r-flag:,\
+help,all -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -60,18 +60,22 @@ eval set -- "$OPTS"
 PROJECT_NAME=
 T1=
 T2=
+R_FLAG=SGEGraph
 QUEUE=UI,CCOM
 DIR_SAVE=
 HELP=false
+ALL=false
 DIR_INC=/Shared/inc_scratch/code
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -a | --all) ALL=true ; shift ;;
     --project-name) PROJECT_NAME="$2" ; shift 2 ;;
     --t1) T1="$2" ; shift 2 ;;
     --t2) T2="$2" ; shift 2 ;;
     --queue) QUEUE="$2" ; shift 2 ;;
+    --r-flag) R_FLAG="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -88,10 +92,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
+  echo '  -a | --all               run for all subjects in csv'
   echo '  --project-name <value>   Name of project'
   echo '  --t1 <value>             T1w images, can take multiple comma seperated images'
   echo '  --t2 <value>             T2w images, can take multiple comma seperated images'
   echo '  --queue <value>          HPC queues to submit jobs to, default: PINC,CCOM'
+  echo '  --r-flag <value>         Changes r flag for running BAW, default: SGEGraph'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo ''
   NO_LOG=true
@@ -141,9 +147,14 @@ IMAGES=$(IFS=, ; echo "${IMAGES[*]}")
 echo '"'${PROJECT_NAME}'","sub-'${SUBJECT}'","ses-'${SESSION}'","{'${IMAGES}'}"' >> ${CSV}
 
 #sort -u ${CSV} -o ${CSV}
+if [[ "${ALL}" == "true" ]]; then
+  SESID=all
+else
+  SESID=ses-${SESSION}
+fi
 
 export PATH=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
-bash ${DIR_INC}/anat/runbaw.sh -p 1 -s sessionid|all -r SGEGraph|SGE -c ${CONFIGFILE}
+bash ${DIR_INC}/anat/runbaw.sh -p 1 -s ${SESID} -r ${R_FLAG} -c ${CONFIGFILE}
 
 
 #===============================================================================
