@@ -61,7 +61,7 @@ PROJECT_NAME=
 CSV_FILE=
 DIR_SAVE=
 QUEUE=
-DIR_CODE=/Shared/inc_scratch/code
+DIR_INC=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 
