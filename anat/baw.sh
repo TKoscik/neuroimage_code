@@ -48,7 +48,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o ha --long \
 project-name:,t1:,t2:,\
-dir-save:,queue:,r-flag:,\
+dir-save:,queue:,runtype:,\
 help,all -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -60,7 +60,7 @@ eval set -- "$OPTS"
 PROJECT_NAME=
 T1=
 T2=
-R_FLAG=SGEGraph
+RUNTYPE=SGEGraph
 QUEUE=UI,CCOM
 DIR_SAVE=
 HELP=false
@@ -75,7 +75,7 @@ while true; do
     --t1) T1="$2" ; shift 2 ;;
     --t2) T2="$2" ; shift 2 ;;
     --queue) QUEUE="$2" ; shift 2 ;;
-    --r-flag) R_FLAG="$2" ; shift 2 ;;
+    --runtype) RUNTYPE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -97,7 +97,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --t1 <value>             T1w images, can take multiple comma seperated images'
   echo '  --t2 <value>             T2w images, can take multiple comma seperated images'
   echo '  --queue <value>          HPC queues to submit jobs to, default: PINC,CCOM'
-  echo '  --r-flag <value>         Changes r flag for running BAW, default: SGEGraph'
+  echo '  --runtype <value>        Changes runtype flag for BAW, default: SGEGraph'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo ''
   NO_LOG=true
@@ -154,7 +154,7 @@ else
 fi
 
 export PATH=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
-bash ${DIR_INC}/anat/runbaw.sh -p 1 -s ${SESID} -r ${R_FLAG} -c ${CONFIGFILE}
+bash ${DIR_INC}/anat/runbaw.sh -p 1 -s ${SESID} -r ${RUNTYPE} -c ${CONFIGFILE}
 
 
 #===============================================================================
