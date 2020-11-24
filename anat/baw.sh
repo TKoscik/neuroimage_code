@@ -113,7 +113,7 @@ fi
 CSV=${DIR_PROJECT}/code/baw.csv
 CONFIGFILE=${DIR_PROJECT}/code/${PROJECT_NAME}.config
 
-if [[ ! -f "${CONFIGFILE}" ]]: then
+if [[ ! -f "${CONFIGFILE}" ]]; then
   ${DIR_INC}/anat/baw_config.sh \
     --project-name ${PROJECT_NAME} \
     --csv-file ${CSV} \
