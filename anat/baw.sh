@@ -115,7 +115,7 @@ SESSION=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "ses")
 if [ -z "${PREFIX}" ]; then
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${T1})
 fi
-
+mkdir -p ${DIR_PROJECT}/derivatives/baw
 CSV=${DIR_PROJECT}/code/baw.csv
 CONFIGFILE=${DIR_PROJECT}/code/${PROJECT_NAME}.config
 
