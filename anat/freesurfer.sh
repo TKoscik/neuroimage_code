@@ -125,11 +125,6 @@ source ${FREESURFER_HOME}/FreeSurferEnv.sh
 recon-all -subject ${PREFIX} ${IMAGES[*]} -all
 
 
-
-export PATH=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
-bash ${DIR_INC}/anat/runbaw.sh -p 1 -s ${SESID} -r ${RUNTYPE} -c ${CONFIGFILE}
-
-
 #===============================================================================
 # End of Function
 #===============================================================================
