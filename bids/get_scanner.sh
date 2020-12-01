@@ -59,10 +59,10 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [[ "${ALL}" == "true"]]; then
+if [[ "${ALL}" == "true" ]]; then
   PARTICIPANT_TSV=${DIR_PROJECT}/participants.tsv
-  PARTICIPANT_ID=($(${DIR_INC}/bids/get_column.sh -i ${PARTICIPANT_TSV} -f "sub"))
-  SESSION_ID=($(${DIR_INC}/bids/get_column.sh -i ${PARTICIPANT_TSV} -f "ses"))
+  PARTICIPANT_ID=($(${DIR_INC}/bids/get_column.sh -i ${PARTICIPANT_TSV} -f "participant_id"))
+  SESSION_ID=($(${DIR_INC}/bids/get_column.sh -i ${PARTICIPANT_TSV} -f "session_id"))
   PARTICIPANT_ID=("${PARTICIPANT_ID[@]:1}")
   SESSION_ID=("${SESSION_ID[@]:1}")
 else
@@ -77,7 +77,7 @@ fi
 
 SAVE_FILE=${DIR_SAVE}/scanner.tsv
 TABS=$(printf '\t')
-if [[ -z ${SAVE_FILE} ]]; then
+if [[ ! -f ${SAVE_FILE} ]]; then
   touch ${SAVE_FILE}
   if [[ -n ${SESSION_ID} ]]; then
     echo "participant_id${TABS}session_id${TABS}scanner_field${TABS}scanner_vendor${TABS}scanner_model${TABS}scanner_serial${TABS}scanner_software${TABS}scanner_coilReceive${TABS}scanner_coil" >> ${SAVE_FILE}
@@ -99,13 +99,15 @@ for (( i=0; i<${N}; i++ )); do
     JSON_LS=($(find ${DIR_PROJECT}/rawdata/sub-${PARTICIPANT_ID} -type f -name "*.json"))
     unset JSON_VALUE
     for (( k=0; k<${#JSON_LS[@]}; k++ )); do
-      JSON_VALUE=$(jq -c '.${JSON_FIELDS[${j}]}' ${JSON_LS[${k}]})
-      if [[ -n ${JSON_VALUE} ]]; then
+      json_str='JSON_VALUE=$(jq -c '"'."${JSON_FIELDS[${j}]}"'"' ${JSON_LS[${k}]})'
+      eval ${json_str}
+      if [[ "${JSON_VALUE}" != "null" ]]; then
         break
       fi
     done
     OUT_STR="${OUT_STR}${TABS}${JSON_VALUE}"
   done
+  OUT_STR=${OUT_STR//\"/}
   echo "${OUT_STR}" >> ${SAVE_FILE}
 done
 
