@@ -231,7 +231,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
       mri_convert ${IMAGE[${j}]} ${DIR_SCRATCH}/image${j}.mgz
       samseg_fcn="${samseg_fcn} ${DIR_SCRATCH}/image${j}.mgz"
     done
-    samseg_fcn="run_samseg --output ${DIR_SCRATCH}/samseg"
+    samseg_fcn="${samseg_fcn} --output ${DIR_SCRATCH}/samseg"
     eval ${samseg_fcn}
     mri_extract_label ${DIR_SCRATCH}/samseg/seg.mgz 0 4 24 43 165 258 259 ${DIR_SCRATCH}/samseg/nonbrain.mgz
     mri_convert ${DIR_SCRATCH}/samseg/nonbrain.mgz ${DIR_SCRATCH}/samseg/nonbrain.nii.gz

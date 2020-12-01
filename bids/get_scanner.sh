@@ -95,9 +95,9 @@ for (( i=0; i<${N}; i++ )); do
     OUT_STR="${OUT_STR}${TABS}${SESSION_ID[${i}]}"
   fi
   unset JSON_LS
+  JSON_LS=($(find ${DIR_PROJECT}/rawdata/sub-${PARTICIPANT_ID[${i}]} -type f -name "*.json"))
   for (( j=0; j<${JSON_N}; j++ )); do
-    JSON_LS=($(find ${DIR_PROJECT}/rawdata/sub-${PARTICIPANT_ID} -type f -name "*.json"))
-    unset JSON_VALUE
+   unset JSON_VALUE
     for (( k=0; k<${#JSON_LS[@]}; k++ )); do
       json_str='JSON_VALUE=$(jq -c '"'."${JSON_FIELDS[${j}]}"'"' ${JSON_LS[${k}]})'
       eval ${json_str}
