@@ -47,7 +47,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o h --long \
-t1:,t2:,\
+t1:,t2:,version:,\
 help -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -58,6 +58,7 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 T1=
 T2=
+VERSION=7.1.0
 HELP=false
 DIR_INC=/Shared/inc_scratch/code
 
@@ -66,6 +67,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     --t1) T1="$2" ; shift 2 ;;
     --t2) T2="$2" ; shift 2 ;;
+    --version) VERSION="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -83,6 +85,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  --t1 <value>             T1w images, can take multiple comma seperated images'
   echo '  --t2 <value>             T2w images, can take multiple comma seperated images'
+  echo '  --version <value>        version of freesurfer to use; default: 7.1.0' 
   echo ''
   NO_LOG=true
   exit 0
@@ -118,9 +121,9 @@ if [[ ${N_T2} -gt 0 ]];then
   IMAGES+=(-T2pial)
 fi
 
-export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/7.1.0
+export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${VERSION}
 export SUBJECTS_DIR=${DIR_PROJECT}/derivatives/freesurfer
-export FS_LICENSE=/Shared/inc_scratch/license/fs_license.txt
+export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${VERSION}/license.txt
 source ${FREESURFER_HOME}/FreeSurferEnv.sh
 recon-all -subject ${PREFIX} ${IMAGES[*]} -all
 
