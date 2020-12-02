@@ -237,7 +237,7 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
     mri_convert ${DIR_SCRATCH}/samseg/nonbrain.mgz ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
     mri_convert ${DIR_SCRATCH}/samseg/seg.mgz ${DIR_SCRATCH}/samseg/brain.nii.gz
     fslmaths ${DIR_SCRATCH}/samseg/nonbrain.nii.gz -binv ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
-    fslmaths ${DIR_SCRATCH}/samseg/brain.nii.gz -bin -mas ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
+    fslmaths ${DIR_SCRATCH}/samseg/brain.nii.gz -bin -mas ${DIR_SCRATCH}/samseg/nonbrain.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
 
     if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
       echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"

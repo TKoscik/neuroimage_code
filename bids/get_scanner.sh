@@ -95,7 +95,11 @@ for (( i=0; i<${N}; i++ )); do
     OUT_STR="${OUT_STR}${TABS}${SESSION_ID[${i}]}"
   fi
   unset JSON_LS
-  JSON_LS=($(find ${DIR_PROJECT}/rawdata/sub-${PARTICIPANT_ID[${i}]} -type f -name "*.json"))
+  SEARCH_PATH=${DIR_PROJECT}/rawdata/sub-${PARTICIPANT_ID[${i}]}
+  if [[ -n ${SESSION_ID} ]]; then
+    SEARCH_PATH=${SEARCH_PATH}/ses-${SESSION_ID[${i}]}
+  fi
+  JSON_LS=($(find ${SEARCH_PATH} -type f -name "*.json"))
   for (( j=0; j<${JSON_N}; j++ )); do
    unset JSON_VALUE
     for (( k=0; k<${#JSON_LS[@]}; k++ )); do
