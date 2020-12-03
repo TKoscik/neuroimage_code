@@ -82,7 +82,14 @@ if (file.exists(px.file)) {
 # Generate new filenames
 desc.lut <- read.csv(paste0(dir.inc.root, "/lut/series_description.lut"), sep="\t", stringsAsFactors = FALSE)
 for (i in 1:n.files) {
-  desc <- unlist(strsplit(df$source[i], split="__"))
+  dcm.temp <- read_json(paste0(dir.input, "/", df$source[i], ".json"), simplifyVector = T)
+  if (any(grepl("SeriesDescription", names(dcm.temp)))) {
+    desc <- dcm.temp[which(names(dcm.temp) == "SeriesDescription")]
+  } else {
+    desc <- dcm.temp[which(names(dcm.temp) == "ProtocolName")]
+  }
+  
+  #desc <- unlist(strsplit(df$source[i], split="__"))
   df$scan.num[i] <- as.numeric(unlist(strsplit(df$source[i], split="__"))[4])
   if (desc[5] == "CBF") { desc <- desc[1:5] }
   desc <- paste(desc[5:length(desc)], collapse="")
@@ -114,29 +121,34 @@ for (i in 1:n.files) {
     }
     if (df$destination[i] %in% c("dwi", "func", "fmap")) {
       series.num <- unlist(strsplit(df$source[i], "__"))[4]
-      dcm.temp <- read_json(paste0(dir.input, "/", df$source[i], ".json"), simplifyVector = T)
-      phase.orient <- dcm.temp$InPlanePhaseEncodingDirectionDICOM
-      phase.dir <- dcm.temp$ImageOrientationPatientDICOM
-      phase.dir <- as.integer(phase.dir*phase.dir + 0.5)
-      if (phase.dir[1]==1 && phase.dir[6]==1) {
-        if (phase.orient == "COL") {
-          values[flags=="dir"] <- "AP"
-        } else if (phase.orient == "ROW") {
-          values[flags=="dir"] <- "RL"
-        }
-      } else if (phase.dir[1]==1 && phase.dir[5]==1) {
-        if (phase.orient == "COL") {
-          values[flags=="dir"] <- "SI"
-        } else if (phase.orient == "ROW") {
-          values[flags=="dir"] <- "AP"
-        }
-      } else if (phase.dir[2]==1 && phase.dir[6]==1) {
-        if (phase.orient == "COL") {
-          values[flags=="dir"] <- "SI"
-        } else if (phase.orient == "ROW") {
-          values[flags=="dir"] <- "RL"
-        }
-      }
+      if (grepl("-", dcm.temp[which(names(dcm.temp) == "PhaseEncodingDirection")]))
+        values[flags=="dir"] <- "rev"
+      else
+        values[flags=="dir"] <- "fwd"
+      fi
+      #dcm.temp <- read_json(paste0(dir.input, "/", df$source[i], ".json"), simplifyVector = T)
+      #phase.orient <- dcm.temp$InPlanePhaseEncodingDirectionDICOM
+      #phase.dir <- dcm.temp$ImageOrientationPatientDICOM
+      #phase.dir <- as.integer(phase.dir*phase.dir + 0.5)
+      #if (phase.dir[1]==1 && phase.dir[6]==1) {
+      #  if (phase.orient == "COL") {
+      #    values[flags=="dir"] <- "AP"
+      #  } else if (phase.orient == "ROW") {
+      #    values[flags=="dir"] <- "RL"
+      #  }
+      #} else if (phase.dir[1]==1 && phase.dir[5]==1) {
+      #  if (phase.orient == "COL") {
+      #    values[flags=="dir"] <- "SI"
+      #  } else if (phase.orient == "ROW") {
+      #    values[flags=="dir"] <- "AP"
+      #  }
+      #} else if (phase.dir[2]==1 && phase.dir[6]==1) {
+      #  if (phase.orient == "COL") {
+      #    values[flags=="dir"] <- "SI"
+      #  } else if (phase.orient == "ROW") {
+      #    values[flags=="dir"] <- "RL"
+      #  }
+      #}
     }
     
     if (df$destination[i] == "func" & values[flags=="task"]=="-") {
@@ -172,31 +184,36 @@ for (i in 1:length(name.ls)) {
   which.name <- df$target[df$target == name.ls[i]]
   if (length(which.name) > 1) {
     for (j in 1:length(which.name)) {
-      tmp <- unlist(strsplit(unlist(strsplit(which.name[j], "_")), "-"))
-      if ("acq" %in% tmp) {
-        idx <- which(tmp == "acq")+1
-        tmp[idx] <- paste0(tmp[idx], "+", j-1)
-      } else if ("site" %in% tmp) {
-        idx <- which(tmp == "site")+1
-        tmp <- c(tmp[1:idx], "acq", j-1, tmp[(idx+1):length(tmp)])
-      } else if ("ses" %in% tmp) {
-        idx <- which(tmp == "ses")+1
-        tmp <- c(tmp[1:idx], "acq", j-1, tmp[(idx+1):length(tmp)])
-      } else {
-        idx <- which(tmp == "sub")+1
-        tmp <- c(tmp[1:idx], "acq", j-1, tmp[(idx+1):length(tmp)])
-      }
-      new.target <- character()
-      for (k in 1:length(tmp)) {
-        if (k %% 2 == 1) {
-          new.target <- paste0(new.target, tmp[k], "-")
-        } else {
-          new.target <- paste0(new.target, tmp[k], "_")
-        }
-      }
-      which.name[j] <- substr(new.target, 1, nchar(new.target)-1)
+      tname <- df$target[which.name]
+      tname <- unlist(strsplit(tname, "_"))
+      df$target[which.name] <- paste(c(tname[1:(length(tname-1)), "run-", j, tname(length(tname))]), collapse="_")
     }
-    df$target[df$target == name.ls[i]] <- which.name
+    #for (j in 1:length(which.name)) {
+      #tmp <- unlist(strsplit(unlist(strsplit(which.name[j], "_")), "-"))
+      #if ("acq" %in% tmp) {
+      #  idx <- which(tmp == "acq")+1
+      #  tmp[idx] <- paste0(tmp[idx], "+", j-1)
+      #} else if ("site" %in% tmp) {
+      #  idx <- which(tmp == "site")+1
+      #  tmp <- c(tmp[1:idx], "acq", j-1, tmp[(idx+1):length(tmp)])
+      #} else if ("ses" %in% tmp) {
+      #  idx <- which(tmp == "ses")+1
+      #  tmp <- c(tmp[1:idx], "acq", j-1, tmp[(idx+1):length(tmp)])
+      #} else {
+      #  idx <- which(tmp == "sub")+1
+      #  tmp <- c(tmp[1:idx], "acq", j-1, tmp[(idx+1):length(tmp)])
+      #}
+      #new.target <- character()
+      #for (k in 1:length(tmp)) {
+      #  if (k %% 2 == 1) {
+      #    new.target <- paste0(new.target, tmp[k], "-")
+      #  } else {
+      #    new.target <- paste0(new.target, tmp[k], "_")
+      #  }
+      #}
+      #which.name[j] <- substr(new.target, 1, nchar(new.target)-1)
+    #}
+    #df$target[df$target == name.ls[i]] <- which.name
   }
 }
 
