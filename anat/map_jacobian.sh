@@ -157,7 +157,7 @@ XFM_NAME=$(IFS=+ ; echo "${XFM_TEMP[*]}")
 XFM_NAME=${XFM_NAME:1}
 
 # create save directory
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/jac_from-${FROM}_to-${TO}_xfm-${XFM_NAME}
 fi
 mkdir -p ${DIR_SAVE}
