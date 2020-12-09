@@ -151,7 +151,7 @@ fi
 # Start of Function
 #===============================================================================
 IMAGE=(${IMAGE//,/ })
-if [[ "${#IMAGE[@]}" == 1 ]] & [[ "${METHOD,,}" == "t1t2" ]]; then
+if [[ "${#IMAGE[@]}" == 1 ]] && [[ "${METHOD,,}" == "t1t2" ]]; then
   echo "You must give a T1w AND T2w for the t1t2 method, switching to N4"
   METHOD="n4"
 fi
