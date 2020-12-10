@@ -118,11 +118,11 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # set OpenMP Threads -----------------------------------------------------------
-if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
-  NTHREADS=$(echo "${NSLOTS} / 7" | bc)
-  if [[ "${NTHREADS}" == "0" ]]; then NTHREADS=1; fi
-  export OMP_NUM_THREADS=${NTHREADS}
-fi
+#if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
+#  NTHREADS=$(echo "${NSLOTS} / 7" | bc)
+#  if [[ "${NTHREADS}" == "0" ]]; then NTHREADS=1; fi
+#  export OMP_NUM_THREADS=${NTHREADS}
+#fi
 
 #===============================================================================
 # Start of Function
@@ -165,15 +165,16 @@ samseg_fcn="run_samseg --input ${IMAGE[@]}"
 if [[ "${PALLIDUM_WM}" == "false" ]]; then
   samseg_fcn="${samseg_fcn} --pallidum-separate"
 fi
-if [[ "${LESION}" == "true" ]] | [[ "${WM_HYPER}" == "true" ]]; then
+if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
   samseg_fcn="${samseg_fcn} --lesion"
   samseg_fcn="${samseg_fcn} --lesion-mask-pattern ${CONTRAST[@]//x/ }"
   samseg_fcn="${samseg_fcn} --threshold ${THRESH}"
 fi
 samseg_fcn="${samseg_fcn} --output ${DIR_SCRATCH}"
-if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
-  samseg_fcn="${samseg_fcn} --threads ${NTHREADS}"
-fi
+#if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
+#  samseg_fcn="${samseg_fcn} --threads ${NTHREADS}"
+#fi
+echo ${samseg_fcn}
 eval ${samseg_fcn}
 
 # Convert and save segmentation output -----------------------------------------
