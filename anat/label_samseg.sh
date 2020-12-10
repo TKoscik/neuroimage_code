@@ -165,7 +165,7 @@ samseg_fcn="run_samseg --input ${IMAGE[@]}"
 if [[ "${PALLIDUM_WM}" == "false" ]]; then
   samseg_fcn="${samseg_fcn} --pallidum-separate"
 fi
-if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
+if [[ "${LESION}" == "true" ]] | [[ "${WM_HYPER}" == "true" ]]; then
   samseg_fcn="${samseg_fcn} --lesion"
   samseg_fcn="${samseg_fcn} --lesion-mask-pattern ${CONTRAST[@]//x/ }"
   samseg_fcn="${samseg_fcn} --threshold ${THRESH}"
