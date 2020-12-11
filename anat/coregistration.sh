@@ -178,7 +178,7 @@ else
     fi
   done
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
-    WHICH_MASK=$(${DIR_INC}/get_field.sh -i ${MOVING_MASK} -f mask)
+    WHICH_MASK=$(${DIR_INC}/bids/get_field.sh -i ${MOVING_MASK} -f mask)
     WHICH_MASK=(${WHICH_MASK//+/ })
     WHICH_MASK=${WHICH_MASK[0]}
     if [[ -z ${WHICH_MASK} ]]; then
@@ -215,7 +215,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
     fi
   done
   for (( i=0; i<${N_FIXED}; i++ )); do
-    TMOD=$(${DIR_INC}/get_field.sh -i ${FIXED[${i}]} -f modality)
+    TMOD=$(${DIR_INC}/bids/get_field.sh -i ${FIXED[${i}]} -f modality)
     ResampleImage 3 \
       ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_${TMOD}.nii.gz \
       ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${TMOD}.nii.gz \
@@ -225,7 +225,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
   unset FIXED
   FIXED=${FIXED_NEW}
 
-  WHICH_MASK=$(${DIR_INC}/get_field.sh -i ${FIXED_MASK} -f mask)
+  WHICH_MASK=$(${DIR_INC}/bids/get_field.sh -i ${FIXED_MASK} -f mask)
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_mask-${WHICH_MASK}.nii.gz \
     ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz \
@@ -439,7 +439,7 @@ if [[ -n ${APPLY_TO} ]]; then
   for (( i=0; i<${N_APPLY}; i++ )); do
     unset MOD OUT_NAME
     MOD=($(${DIR_INC}/bids/get_field.sh -i ${IMAGE_APPLY[${i}]} -f "modality"))
-    OUT_BASE=$(${DIR_INC}/get_bidsbase.sh -i ${IMAGE_APPLY[${i}]} -s)
+    OUT_BASE=$(${DIR_INC}/bids/get_bidsbase.sh -i ${IMAGE_APPLY[${i}]} -s)
     OUT_NAME="${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}.nii.gz"
     if [[ -f ${OUT_NAME} ]]; then
       N_TEMP=($(ls ${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}*))
