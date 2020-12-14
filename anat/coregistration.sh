@@ -434,7 +434,7 @@ done
 
 # apply transform to other images
 if [[ -n ${APPLY_TO} ]]; then
-  IMAGE_APPLY=(${APPLY_TO//, /})
+  IMAGE_APPLY=(${APPLY_TO//,/ })
   N_APPLY=${#IMAGE_APPLY[@]}
   for (( i=0; i<${N_APPLY}; i++ )); do
     unset MOD OUT_NAME
