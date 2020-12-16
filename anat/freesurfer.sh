@@ -122,7 +122,7 @@ if [[ ${N_T2} -gt 0 ]];then
 fi
 
 export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${VERSION}
-export SUBJECTS_DIR=${DIR_PROJECT}/derivatives/freesurfer
+export SUBJECTS_DIR=${DIR_PROJECT}/derivatives/freesurfer/subject_dir
 export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${VERSION}/license.txt
 source ${FREESURFER_HOME}/FreeSurferEnv.sh
 recon-all -subject ${PREFIX} ${IMAGES[*]} -all
