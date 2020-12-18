@@ -61,6 +61,7 @@ B0_MASK=
 FIXED=
 FIXED_MASK=
 INIT_XFM=
+DIR_INC=/Shared/inc_scratch/code
 HELP=false
 VERBOSE=0
 
