@@ -479,25 +479,24 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
 fi
 
 # move transforms to appropriate location
-if [[ "${AFFINE_ONLY,,}" == "false" ]]; then
-  if [[ "${HARDCORE,,}" == "false" ]]; then
-    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
-    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz
-  else
-    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz
-    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
-  fi
-fi
-if [[ "${RIGID_ONLY,,}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-    ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
+if [[ "${RIGID_ONLY,,}" == "false" ]]; then
+  if [[ "${AFFINE_ONLY,,}" == "false" ]]; then
+    if [[ "${HARDCORE,,}" == "false" ]]; then
+      mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+        ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
+      mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+        ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz
+    else
+      mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+        ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz
+      mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+        ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
+    fi
+    mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
 else
   mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-    ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
+    ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
 fi
 
 #===============================================================================
