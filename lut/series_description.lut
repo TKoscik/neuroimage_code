@@ -543,3 +543,4 @@ DTI30dir1b0run1ADC	fmap	ADCDTIFieldMap	-	-	-	-	-	-	-	dwi
 DTI30dir1b0run1TRACEW	fmap	TRACEWDTIFieldMap	-	-	-	-	-	-	-	dwi
 DTI30dir1b0run1FA	fmap	FADTIFieldMap	-	-	-	-	-	-	-	dwi
 DTI30dir1b0run1ColFA	fmap	ColFADTIFieldMap	-	-	-	-	-	-	-	dwi
+Fieldmapping4X4X4AP	fmap	-	FieldMapBOLD	-	-	-	-	-	-	fieldmap
