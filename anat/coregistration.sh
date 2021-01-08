@@ -162,6 +162,7 @@ if [[ "${MOVING_MASK,,}" == "null" ]]; then
   FIXED_MASK=NULL
 fi
 
+HIST_MATCH=1
 if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED//,/ })
   N_FIXED=${#FIXED[@]}
@@ -175,6 +176,11 @@ else
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
     else
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
+    fi
+    #Use histogram matching
+    MOD_FIXED=$(${DIR_INC}/bids/get_field.sh -i ${FIXED[${i}]} -f modality)
+    if [[ "${MOD_FIXED}" != "${MOD}" ]]; then
+      HIST_MATCH=0
     fi
   done
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
@@ -279,7 +285,7 @@ fi
 
 # register to template
 reg_fcn="antsRegistration"
-reg_fcn="${reg_fcn} -d 3 --float 1 --verbose ${VERBOSE} -u 1 -z 1"
+reg_fcn="${reg_fcn} -d 3 --float 1 --verbose ${VERBOSE} -u ${HIST_MATCH} -z 1"
 reg_fcn="${reg_fcn} -o ${DIR_SCRATCH}/xfm_"
 reg_fcn="${reg_fcn} -r [${FIXED[0]},${MOVING[0]},1]"
 reg_fcn="${reg_fcn} -t Rigid[0.2]"
