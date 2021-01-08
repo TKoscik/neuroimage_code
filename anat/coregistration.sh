@@ -162,7 +162,6 @@ if [[ "${MOVING_MASK,,}" == "null" ]]; then
   FIXED_MASK=NULL
 fi
 
-HIST_MATCH=1
 if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED//,/ })
   N_FIXED=${#FIXED[@]}
@@ -176,11 +175,6 @@ else
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
     else
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz)
-    fi
-    #Use histogram matching
-    MOD_FIXED=$(${DIR_INC}/bids/get_field.sh -i ${FIXED[${i}]} -f modality)
-    if [[ "${MOD_FIXED}" != "${MOD}" ]]; then
-      HIST_MATCH=0
     fi
   done
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
@@ -238,6 +232,16 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
     ${SIZE}x${SIZE}x${SIZE} 0 1 6
   FIXED_MASK=${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz
 fi
+
+# don't use histogram matching if image pairs are mixed modality
+HIST_MATCH=1
+for (( i=0; i<${N_MOVING}; i++ )); do
+  MOD_MOVING=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
+  MOD_FIXED=$(${DIR_INC}/bids/get_field.sh -i ${FIXED[${i}]} -f modality)
+  if [[ "${MOD_FIXED}" != "${MOD_MOVING}" ]]; then
+    HIST_MATCH=0
+  fi
+do
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MOVING[0]})
