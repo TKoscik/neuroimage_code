@@ -233,7 +233,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
   FIXED_MASK=${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz
 fi
 
-# don't use histogram matching if image pairs are mixed modality
+# do not use histogram matching if image pairs are mixed modality
 HIST_MATCH=1
 for (( i=0; i<${N_MOVING}; i++ )); do
   MOD_MOVING=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
