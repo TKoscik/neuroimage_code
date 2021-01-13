@@ -14,7 +14,6 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 INPUT=
-DIR_INC=/Shared/inc_scratch/code
 HELP=false
 
 while true; do
@@ -35,7 +34,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -i | --input             file path to find BIDs Project directory'
+  echo '  -i | --input             spacing label to convert to x delimited'
+  echo '                           string for function'
   echo ''
   exit 0
 fi
@@ -44,24 +44,19 @@ fi
 # Start of function
 #==============================================================================
 UNIT=${INPUT:(-2)}
-SPACE_LABEL=${INPUT//mm/}
-SPACE_LABEL=${SPACE_LABEL//um/}
-SPACE_VALS=(${SPACE_LABEL//x/ })
-N_DIMS=${#SPACE_VALS[@]}
-
-if [[ "${N_DIMS}" == "1" ]]; then
-  SPACE_VALS+=(${SPACE_VALS[0]})
-  SPACE_VALS+=(${SPACE_VALS[0]})
-  N_DIMS=3
+SIZE=${INPUT//mm/}
+SIZE=${SIZE//um/}
+VALS=(${SIZE//x/ })
+if [[ "${#VALS[@]}" == "1" ]]; then
+  VALS=(${VALS[0]} ${VALS[0]} ${VALS[0]})
 fi
-
 for (( i=0; i<3; i++ )); do
   if [[  "${UNIT}" == "um" ]]; then
-      SPACE_VALS[${i}]=$(echo "${SPACE_VALS[${i}]}/1000" | bc -l | awk '{printf "%0.3f", $0}')
+      VALS[${i}]=$(echo "${VALS[${i}]}/1000" | bc -l | awk '{printf "%0.3f", $0}')
   fi
 done
-SPACE_FCN=($(IFS=x ; echo "${SPACE_VALS[*]}"))
-echo ${SPACE_FCN}
+VALS=($(IFS=x ; echo "${VALS[*]}"))
+echo ${VALS}
 #==============================================================================
 # End of function
 #==============================================================================
