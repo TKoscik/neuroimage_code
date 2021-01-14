@@ -44,7 +44,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkl --long dir-project:,email:,participant:,session:,\
-dicom-zip:,dicom-depth:,dont-use:,dir-scratch:,\
+dicom-zip:,dicom-depth:,dont-use:,dir-scratch:,version:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -58,8 +58,10 @@ PARTICIPANT=
 SESSION=
 DICOM_ZIP=
 DICOM_DEPTH=5
+VERSION=1.0.20190902
 DONT_USE=loc,cal,orig
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_DCM2NIIX=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/${VERSION}
 HELP=false
 VERBOSE=false
 KEEP=false
@@ -77,6 +79,7 @@ while true; do
     --session) SESSION="$2" ; shift 2 ;;
     --dicom-zip) DICOM_ZIP="$2" ; shift 2 ;;
     --dicom-depth) DICOM_DEPTH="$2" ; shift 2 ;;
+    --version) VERSION="$2" ; shift 2 ;;
     --dont-use) DONT_USE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -97,10 +100,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log             disable writing to output log'
   echo '  --dir-project <value>     directory containing the project, e.g. /Shared/koscikt'
   echo '  --email <values>          comma-delimited list of email addresses'
-  echo '  --participant <value>         participant identifier string'
+  echo '  --participant <value>     participant identifier string'
   echo '  --session <value>         session identifier string'
   echo '  --dicom-zip <value>       directory listing for DICOM zip-file'
   echo '  --dicom-depth <value>     depth to search dicom directory, default=5'
+  echo '  --version <value>         version of dcm2niix to use, default 1.0.20190902'
   echo '  --dir-scratch <value>     directory for temporary data'
   echo '  --dont-use                comma separated string of files to skip,'
   echo '                            default: loc,cal,orig'
