@@ -40,8 +40,8 @@ df <- data.frame(source = fls,
 n.files <- nrow(df)
 
 # Retreive identifiers ---------------------------------------------------------
-participant <- data.frame(subject=character(1),
-                   session=character(1),
+participant <- data.frame(participant_id=character(1),
+                   session_id=character(1),
                    stringsAsFactors = FALSE)
 if (is.null(subject.id)) {
   subject <- unique(unlist(strsplit(df$source, split="__"))[2])
@@ -50,9 +50,9 @@ if (is.null(subject.id)) {
   if (length(subject) != 1) {
     warning(sprintf("dicom_sort WARNING: More than one unique subject identifier was found. Using %s", subject[1]))
   }
-  participant$subject <- gsub(" ", "", subject[1])
+  participant$participant_id <- gsub(" ", "", subject[1])
 } else {
-  participant$subject <- subject.id
+  participant$participant_id <- subject.id
 }
 
 if (is.null(session.id)) {
@@ -60,14 +60,14 @@ if (is.null(session.id)) {
   if (length(session) != 1) {
     warning(sprintf("dicom_sort WARNING: More than one unique session identifier was found. Using %s", session[1]))
   }
-  participant$session <- gsub(" ", "", session[1])
+  participant$session_id <- gsub(" ", "", session[1])
 } else {
-  participant$session <- session.id
+  participant$session_id <- session.id
 }
 
 # Set participant values -------------------------------------------------------
-prefix <- paste0("sub-", participant$subject,
-                 "_ses-", participant$session)
+prefix <- paste0("sub-", participant$participant_id,
+                 "_ses-", participant$session_id)
 px.file <- paste0(dir.project, "/participants.tsv")
 if (file.exists(px.file)) {
   tf <- read.csv(px.file, sep = "\t", stringsAsFactors = FALSE)
@@ -91,8 +91,8 @@ for (i in 1:n.files) {
   
   #desc <- unlist(strsplit(df$source[i], split="__"))
   df$scan.num[i] <- as.numeric(unlist(strsplit(df$source[i], split="__"))[4])
-  if (desc[5] == "CBF") { desc <- desc[1:5] }
-  desc <- paste(desc[5:length(desc)], collapse="")
+#  if (desc[5] == "CBF") { desc <- desc[1:5] }
+  desc <- paste(unname(unlist(desc)), collapse="")
   desc <- gsub("[^[:alnum:] ]", "", desc)
   
   found.desc <- FALSE
@@ -121,11 +121,15 @@ for (i in 1:n.files) {
     }
     if (df$destination[i] %in% c("dwi", "func", "fmap")) {
       series.num <- unlist(strsplit(df$source[i], "__"))[4]
-      if (grepl("-", dcm.temp[which(names(dcm.temp) == "PhaseEncodingDirection")]))
-        values[flags=="dir"] <- "rev"
-      else
-        values[flags=="dir"] <- "fwd"
-      fi
+      if (("PhaseEncodingDirection" %in% names(dcm.temp)) == TRUE) {
+        if (grepl("-", dcm.temp[which(names(dcm.temp) == "PhaseEncodingDirection")])){
+          values[flags=="dir"] <- "rev"
+        } else {
+          values[flags=="dir"] <- "fwd"
+        }
+      } else {
+        values[flags=="dir"] <- "ukn"
+      }
       #dcm.temp <- read_json(paste0(dir.input, "/", df$source[i], ".json"), simplifyVector = T)
       #phase.orient <- dcm.temp$InPlanePhaseEncodingDirectionDICOM
       #phase.dir <- dcm.temp$ImageOrientationPatientDICOM
@@ -170,7 +174,7 @@ for (i in 1:n.files) {
     }
     df$target[i] <- paste(prefix, "_", paste(suffix, collapse=""), sep="")
   } else {
-    print(sprintf("inc_dcmSort ERROR: %s not in series_description.lut", df$source[i]))
+    print(sprintf("inc_dcmSort ERROR: %s not in series_description.lut", desc))
     dry.run <- TRUE
   }
 }
@@ -184,9 +188,9 @@ for (i in 1:length(name.ls)) {
   which.name <- df$target[df$target == name.ls[i]]
   if (length(which.name) > 1) {
     for (j in 1:length(which.name)) {
-      tname <- df$target[which.name]
-      tname <- unlist(strsplit(tname, "_"))
-      df$target[which.name] <- paste(c(tname[1:(length(tname-1)), "run-", j, tname(length(tname))]), collapse="_")
+      idx <- which(df$target == which.name[j])[1]
+      tname <- unlist(strsplit(which.name[j], "_"))
+      df$target[idx] <- paste(c(tname[1:(length(tname)-1)], paste(c("run-", j), collapse = ""), tname[length(tname)]), collapse="_")
     }
     #for (j in 1:length(which.name)) {
       #tmp <- unlist(strsplit(unlist(strsplit(which.name[j], "_")), "-"))
