@@ -58,10 +58,9 @@ PARTICIPANT=
 SESSION=
 DICOM_ZIP=
 DICOM_DEPTH=5
-VERSION=1.0.20190902
+VERSION=1.0.20200331
 DONT_USE=loc,cal,orig
 DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-DIR_DCM2NIIX=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/${VERSION}
 HELP=false
 VERBOSE=false
 KEEP=false
@@ -104,7 +103,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --session <value>         session identifier string'
   echo '  --dicom-zip <value>       directory listing for DICOM zip-file'
   echo '  --dicom-depth <value>     depth to search dicom directory, default=5'
-  echo '  --version <value>         version of dcm2niix to use, default 1.0.20190902'
+  echo '  --version <value>         version of dcm2niix to use, default 1.0.20200331'
+  echo '                            Avoid 1.0.20180328 & 1.0.20190903'
   echo '  --dir-scratch <value>     directory for temporary data'
   echo '  --dont-use                comma separated string of files to skip,'
   echo '                            default: loc,cal,orig'
@@ -116,6 +116,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+DIR_DCM2NIIX=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/${VERSION}
 # Determine if input is a zip file or a DICOM directory ------------------------
 # 0 for zip file - 1 for DICOM directory ---------------------------------------
 if [ -f "${DICOM_ZIP}" ]; then 
