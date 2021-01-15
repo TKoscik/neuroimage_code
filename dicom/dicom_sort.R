@@ -228,7 +228,7 @@ if (dry.run) {
   # Write session.tsv
   session.tsv <- df[ , c("target", "destination", "mod", "use")]
   colnames(session.tsv)[1:2] <- c("filename", "type")
-  dir.session <- paste0(dir.project, "/rawdata/sub-", participant$subject, "/ses-", participant$session)
+  dir.session <- paste0(dir.project, "/rawdata/sub-", participant$participant_id, "/ses-", participant$session_id)
   dir.create(dir.session, recursive = TRUE, showWarnings=FALSE)
   write.table(session.tsv, file=paste0(dir.session, "/session.tsv"), sep="\t",
               quote=FALSE, row.names=FALSE, col.names=TRUE)
