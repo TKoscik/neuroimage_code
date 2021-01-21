@@ -61,10 +61,10 @@ PI=
 PROJECT=
 PID=
 SID=
+LUT_JSON=
 DCM_VERSION=1.0.20200331
-DIR_DCM2NIIX=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64
-
 DIR_SCRATCH=${DIR_TMP}/dicomConversion_${DATE_SUFFIX}
+DIR_SAVE=
 HELP=false
 VERBOSE=0
 
@@ -72,9 +72,7 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
     --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
@@ -94,10 +92,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
   echo '  --other-inputs <value>   other inputs necessary for function'
   echo '  --template <value>       name of template to use (if necessary),'
   echo '                           e.g., HCPICBM'
@@ -112,6 +107,13 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_QC}
+fi
+if [[ -z ${LUT_JSON} ]]; then
+  LUT_JSON=${DIR_INC}/lut/series_description.json
+fi
+
 # if no input given, use import directory for automated conversion
 if [[ -z "${INPUT_ZIP}" ]]; then
   INPUT_ZIP=($(ls ${DIR_IMPORT}/*.zip))
@@ -139,49 +141,108 @@ for (( i=0; i<${N}; i++ )); do
       ${DIR_DCM[${j}]}
   }
 
-  FNAME_ORIG=
-  FNAME_AUTO=
-  SUBDIR=
-  OUT_STR=
-
   FLS=($(ls ${DIR_SCRATCH}/*.nii.gz))
   N_FLS=${#FLS[@]}
   for (( j=0; j<${N_SCAN}; j++)) {
+    unset FNAME BNAME SUBDIR SUFFIX TEMP
+    unset TLS QC_TSV OUT_STR
     FNAME="${FLS[${j}]##*/}"
     BNAME="${FNAME[${j}]%%.*}"
+    FNAME_ORIG+="${BNAME}"
     TEMP=(${BNAME//_x-x_/ })
 
     # get Participant ID
-    PID=${TEMP[1]}
+    if [[ -z "${PID}" ]]; then
+      PID=${TEMP[1]}
+    elif [[ "${TEMP[1]}" != ${PID} ]]; then
+      echo "WARNING [INC:convert_dicom]--non-matching participant identifier detected: expected PID-${PID}, non-match PID-${TEMP[1]}"
+    fi
     
     # check Session ID
     CHK_SID="${TEMP[2]:0:8}T${TEMP[2]:8}"
     if [[ "${CHK_SID}" != "${SID}" ]]; then
-      SID="${CHK_SID}"
-    fi
+      echo "WARNING [INC:convert_dicom--non-matching session identifier detected: expected SID-${PID}, non-match SID-${CHK_SID}"
+    fi    
     
     # look up file suffix
-    CHK_DESC=$(echo "${TEMP[3]}" | sed 's/[^a-zA-Z0-9]//g')
-    JSON_STR=$(jq '.[] | select(any(. == "${CHK_DESC}"))' < ${DIR_INC}/lut/series_description.lut)
+    CHK_DESC=$(echo "${TEMP[4]}" | sed 's/[^a-zA-Z0-9]//g')
+    LUT_FCN='LUT_DESC=($(cat '${LUT_JSON}
+    LUT_FCN="${LUT_FCN} | jq 'to_entries[]"
+    LUT_FCN=${LUT_FCN}' | {"key1": .key, "key2": .value'
+    LUT_FCN=${LUT_FCN}' | to_entries[] | select( .value | index("'${CHK_DESC}'")) '
+    LUT_FCN="${LUT_FCN} | .key }"
+    LUT_FCN="${LUT_FCN} | [.key1, .key2]'"
+    LUT_FCN="${LUT_FCN} | tr -d ' [],"'"'"'))"
+    eval ${LUT_FCN}
+    if [[ -z ${LUT_DESC[@]} ]]; then
+      SUBDIR=unk
+      SUFFIX=unk
+    else
+      SUBDIR=${LUT_DESC[0]}
+      SUFFIX=${LUT_DESC[1]}
+    fi
     
+    # Check for same name files and append a run flag
+    TLS=($(ls ${DIR_SCRATCH}/sub-${PID}_ses-${SID}_${SUFFIX}*.nii.gz))
+    if [[ "${TLS}" > "1" ]]; then
+      unset PARTS
+      PARTS=(${SUFFIX//_/ })
+      for (( k=0; k<${#PARTS[@]}; k++ )); do
+        if [[ "${PARTS[${k}]}" =~ "run-" ]]; then
+          ${PARTS[${k}]}="run-${#TLS[@]}"
+          break
+        fi
+      done
+      SUFFIX=($(IFS=_ ; echo "${PARTS[*]}"))
+    fi
+        
+    # rename output files
+    rename "${BNAME}" "sub-${PID}_ses-${SID}_${SUFFIX}" ${DIR_SCRATCH}/*
+    
+    QC_TSV=${DIR_SCRATCH}/sub-${PID}_ses-${SID}_dicomConversion.tsv
+    if [[ ! -f ${OC_TSV} ]]; then
+      echo -ne "dir_dicom\t" > ${QC_TSV}
+      echo -ne "series_description\t" >> ${QC_TSV}
+      echo -ne "fname_orig\t" >> ${QC_TSV}
+      echo -ne "fname_auto\t" >> ${QC_TSV}
+      echo -ne "fname_manual\t" >> ${QC_TSV}
+      echo -ne "subdir\t" >> ${QC_TSV}
+      echo -ne "chk_view\t" >> ${QC_TSV}
+      echo -ne "chk_orient\t" >> ${QC_TSV}
+      echo -ne "rate_quality\t" >> ${QC_TSV}
+      echo -ne "qc_action\t" >> ${QC_TSV}
+      echo -ne "operator\t" >> ${QC_TSV}
+      echo -ne "qc_date\t" >> ${QC_TSV}
+      echo -ne "operator2\t" >> ${QC_TSV}
+      echo -e "qc_date2" > ${QC_TSV}
+    fi
+    echo -ne "${DIR_DCM[${j}]}\t" >> ${QC_TSV}
+    echo -ne "${CHK_DESC}\t" >> ${QC_TSV}
+    echo -ne "${BNAME}\t" >> ${QC_TSV}
+    echo -ne "sub-${PID}_ses-${SID}_${SUFFIX}\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "${SUBDIR}\t" >> ${QC_TSV}
+    echo -ne "false\t" >> ${QC_TSV}
+    echo -ne "false\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -e "-" >> ${QC_TSV}
   }
-  
-  for (( j=0; j<${N_SCAN}; j++)) {
-    # save output variables
-    FNAME_ORIG+="${BNAME}"
-    FNAME_AUTO+="sub-${PID}_ses-${SID}_${SUFFIX[${j}]"
-  }
-
+  # move and rename zipfile
+  mv ${INPUT_ZIP[${i}]} \
+    ${DIR_SCRATCH}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}_dicom.zip
   # move to DIR_QC
-  ## move and rename zipfile
-  ## move and rename scans
-  ##
+  mv ${DIR_SCRATCH} \
+    ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
+  chgrp -R Research-INC_img_core ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
+  chmod -R 770 ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
 done
-
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
-
 
