@@ -134,9 +134,42 @@ for (( i=0; i<${N}; i++ )); do
   for (( j=0; j<${N_SCAN}; j++)) {
     ${DIR_DCM2NIIX}/${DCM_VERSION}/dcm2niix \
       -b y \
-      -f "'%x_sep_%n_sep_%t_sep_%s_sep_%d'" \
+      -f "'%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'" \
       -o ${DIR_SCRATCH}/ \
       ${DIR_DCM[${j}]}
+  }
+
+  FNAME_ORIG=
+  FNAME_AUTO=
+  SUBDIR=
+  OUT_STR=
+
+  FLS=($(ls ${DIR_SCRATCH}/*.nii.gz))
+  N_FLS=${#FLS[@]}
+  for (( j=0; j<${N_SCAN}; j++)) {
+    FNAME="${FLS[${j}]##*/}"
+    BNAME="${FNAME[${j}]%%.*}"
+    TEMP=(${BNAME//_x-x_/ })
+
+    # get Participant ID
+    PID=${TEMP[1]}
+    
+    # check Session ID
+    CHK_SID="${TEMP[2]:0:8}T${TEMP[2]:8}"
+    if [[ "${CHK_SID}" != "${SID}" ]]; then
+      SID="${CHK_SID}"
+    fi
+    
+    # look up file suffix
+    CHK_DESC=$(echo "${TEMP[3]}" | sed 's/[^a-zA-Z0-9]//g')
+    JSON_STR=$(jq '.[] | select(any(. == "${CHK_DESC}"))' < ${DIR_INC}/lut/series_description.lut)
+    
+  }
+  
+  for (( j=0; j<${N_SCAN}; j++)) {
+    # save output variables
+    FNAME_ORIG+="${BNAME}"
+    FNAME_AUTO+="sub-${PID}_ses-${SID}_${SUFFIX[${j}]"
   }
 
   # move to DIR_QC
