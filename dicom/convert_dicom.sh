@@ -57,14 +57,10 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 INPUT_ZIP=
-PI=
-PROJECT=
-PID=
-SID=
-LUT_JSON=
+LUT_JSON=${DIR_INC}/lut/series_description.json
 DCM_VERSION=1.0.20200331
 DIR_SCRATCH=${DIR_TMP}/dicomConversion_${DATE_SUFFIX}
-DIR_SAVE=
+DIR_SAVE=${DIR_QC}
 HELP=false
 VERBOSE=0
 
@@ -73,9 +69,9 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --input-zip) INPUT_ZIP="$2" ; shift 2 ;;
+    --lut-json) LUT_JSON="$2" ; shift 2 ;;
+    --dcm-version) DCM_VERSION="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -93,9 +89,17 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
+  echo '  --input-zip <value>      <optional> directory listing for a zipped set'
+  echo '                           of DICOM files. Will default to DIR_IMPORT'
+  echo '  --lut-json <value>       directory listing for json look up table of '
+  echo '                           series descriptions. Formatted such that'
+  echo '                           objects specifying the BIDS-compliant rawdata'
+  echo '                           sub-directory, contain arrays with names'
+  echo '                           corresponding to the file suffix (e.g.,'
+  echo '                           acq-ACQ_modality), which each contain strings'
+  echo '                           stripped of non-alphanumeric characters that'
+  echo '                           correspond to all known series descriptions.'
+  echo '                           Default: DIR_INC/lut/series_description.json'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
@@ -107,13 +111,6 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_QC}
-fi
-if [[ -z ${LUT_JSON} ]]; then
-  LUT_JSON=${DIR_INC}/lut/series_description.json
-fi
-
 # if no input given, use import directory for automated conversion
 if [[ -z "${INPUT_ZIP}" ]]; then
   INPUT_ZIP=($(ls ${DIR_IMPORT}/*.zip))
@@ -203,6 +200,7 @@ for (( i=0; i<${N}; i++ )); do
     if [[ ! -f ${OC_TSV} ]]; then
       echo -ne "dir_dicom\t" > ${QC_TSV}
       echo -ne "series_description\t" >> ${QC_TSV}
+      echo -ne "scan_date\t" >> ${QC_TSV}
       echo -ne "fname_orig\t" >> ${QC_TSV}
       echo -ne "fname_auto\t" >> ${QC_TSV}
       echo -ne "fname_manual\t" >> ${QC_TSV}
@@ -218,18 +216,19 @@ for (( i=0; i<${N}; i++ )); do
     fi
     echo -ne "${DIR_DCM[${j}]}\t" >> ${QC_TSV}
     echo -ne "${CHK_DESC}\t" >> ${QC_TSV}
+    echo -ne "${SCAN_DATE}\t" >> ${QC_TSV}
     echo -ne "${BNAME}\t" >> ${QC_TSV}
     echo -ne "sub-${PID}_ses-${SID}_${SUFFIX}\t" >> ${QC_TSV}
-    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "NA\t" >> ${QC_TSV}
     echo -ne "${SUBDIR}\t" >> ${QC_TSV}
     echo -ne "false\t" >> ${QC_TSV}
     echo -ne "false\t" >> ${QC_TSV}
-    echo -ne "-\t" >> ${QC_TSV}
-    echo -ne "-\t" >> ${QC_TSV}
-    echo -ne "-\t" >> ${QC_TSV}
-    echo -ne "-\t" >> ${QC_TSV}
-    echo -ne "-\t" >> ${QC_TSV}
-    echo -e "-" >> ${QC_TSV}
+    echo -ne "NA\t" >> ${QC_TSV}
+    echo -ne "NA\t" >> ${QC_TSV}
+    echo -ne "NA\t" >> ${QC_TSV}
+    echo -ne "NA\t" >> ${QC_TSV}
+    echo -ne "NA\t" >> ${QC_TSV}
+    echo -e "NA" >> ${QC_TSV}
   }
   # move and rename zipfile
   mv ${INPUT_ZIP[${i}]} \
