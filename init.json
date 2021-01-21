@@ -6,7 +6,8 @@
         "DIR_TMP": "/Shared/inc_scratch",
         "DIR_TEMPLATE": "/Dedicated/inc_database/templates",
         "DIR_IMPORT": "/Dedicated/inc_scratch/import",
-        "DIR_DCM2NIIX": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/1.0.20200331",
+        "DIR_QC": "/Dedicated/inc_scratch/qc",
+        "DIR_DCM2NIIX": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64",
         "DIR_DSISTUDIO": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/20200122"
     },
     "argon_modules": {
