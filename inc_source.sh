@@ -8,15 +8,15 @@ KERNEL="$(unname -s)"
 HARDWARE="$(uname -m)"
 
 # set version number for INC code ----------------------------------------------
-INC_VERSION="$1"
-if [[ -z ${INC_VERSION} ]]; then
-  INC_VERSION="0.0.0.0"
+VERSION="$1"
+if [[ -z ${VERSION} ]]; then
+  VERSION="0.0.0.0"
 fi
-echo "Setting up Iowa Neuroimage Processing Core Software version ${INC_VERSION}"
+echo "Setting up Iowa Neuroimage Processing Core Software version ${VERSION}"
 
 # locate init.json -------------------------------------------------------------
 #DIR_INIT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-INIT=/Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${INC_VERSION}/init.json
+INIT=/Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${VERSION}/init.json
 if [[ -f ${INIT} ]]; then
   echo "file not found: ${INIT}"
   exit 1
@@ -27,9 +27,9 @@ if [[ "${HOSTNAME}" == "argon" ]]; then
   echo "LOADING MODULES:"
   MODS=($(jq -r '.argon_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
   for (( i=0; i<${#MODS[@]}; i++ )); do
-    VERSION=($(jq -r ".argon_modules.${MODS[${i}]}" < ${INIT} | tr -d ' [],"'))
-    module load ${MODS[${i}]}/${VERSION}
-    echo -e "\t ${MODS[${i}]}/${VERSION}"
+    VRS=($(jq -r ".argon_modules.${MODS[${i}]}" < ${INIT} | tr -d ' [],"'))
+    module load ${MODS[${i}]}/${VRS}
+    echo -e "\t ${MODS[${i}]}/${VRS}"
   done 
 fi
 
@@ -46,27 +46,24 @@ done
 echo "LOADING SOFTWARE DEPENDENCIES:"
 SRC=($(jq -r '.software_dependencies | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#SRC[@]}; i++ )); do
-  VERSION=($(jq -r ".software_dependencies.${SRC[${i}]}" < ${INIT} | tr -d ' [],"'))
-  source ${DIR_PINC}/sourcefiles/${SRC[${i}]}_source.sh ${VERSION}
-  echo -e "\t${SRC[${i}]^^}/${VERSION}"
+  VRS=($(jq -r ".software_dependencies.${SRC[${i}]}" < ${INIT} | tr -d ' [],"'))
+  source ${DIR_PINC}/sourcefiles/${SRC[${i}]}_source.sh ${VRS}
+  echo -e "\t${SRC[${i}]^^}/${VRS}"
 done
 
 # set up aliases ---------------------------------------------------------------
-## *** not sure if this will work?
-if [[ "${HOSTNAME}" != "argon" ]]; then
-  echo "SETTING ALIASES:"
-  AKA=($(jq -r '.software_aliases | keys' < ${INIT} | tr -d ' [],"'))
-  for (( i=0; i<${#AKA[@]}; i++ )); do
-    unset VARS VALS
-    VARS=($(jq -r ".software_aliases.${AKA[${i}]} | keys_unsorted" < ${INIT} | tr -d ' [],"'))
-    for (( j=0; j<${#VARS[@]}; j++ )); do
-      VALS+=($(jq -r ".software_aliases.${AKA[${i}]}.${VARS[${j}]}" < ${INIT} | tr -d ' [],"'))
-    done
-    AKA_STR=($(IFS=/ ; echo "${VALS[*]}"))
-    alias ${AKA[${i}]}=${AKA_STR}
-    echo -e "\t${AKA[${i}]}=${AKA_STR}"
+echo "SETTING SHORTCUTS:"
+AKA=($(jq -r '.software_aliases | keys' < ${INIT} | tr -d ' [],"'))
+for (( i=0; i<${#AKA[@]}; i++ )); do
+  unset VARS VALS
+  VARS=($(jq -r ".software_aliases.${AKA[${i}]} | keys_unsorted" < ${INIT} | tr -d ' [],"'))
+  for (( j=0; j<${#VARS[@]}; j++ )); do
+    VALS+=($(jq -r ".software_aliases.${AKA[${i}]}.${VARS[${j}]}" < ${INIT} | tr -d ' [],"'))
   done
-fi
+  AKA_STR=($(IFS=/ ; echo "${VALS[*]}"))
+  eval "${AKA[${i}]}=${AKA_STR}"
+  echo -e "\t${AKA[${i}]}=${AKA_STR}"
+done
 
 # setup R packages -------------------------------------------------------------
 # run manually for now

@@ -28,7 +28,7 @@ function egress {
   fi
   LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    FCN_LOG=${DIR_DB}/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
@@ -46,7 +46,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,\
-dir-input:,dir-save:,dcm-version:,\
+dir-input:,dir-save:,dcm-version:,depth:,reorient:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -57,7 +57,9 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 DIR_INPUT=
 DIR_SAVE=
-DCM_VERSION=${DCM_VERSION}
+DCM_VERSION=
+DEPTH=5
+REORIENT=
 HELP=false
 VERBOSE=0
 
@@ -84,11 +86,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --input-zip <value>      <optional> directory listing for a zipped set'
-  echo '                           of DICOM files. Will default to DIR_IMPORT'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --dir-input <value>      directory listing containing dcm files to'
+  echo '                           convert, must be unzipped'
+  echo '  --dir-save <value>       location to save nifti data'
+  echo '  --dcm-version <value>    can use any installed version of dcm2niix'
+  echo '  --depth <value>          how far down directory tree to look for dicom'
+  echo '                           files, default=5'
+  echo '  --reorient <value>       three letter code to reorient image, default=rpi'
   echo ''
   NO_LOG=true
   exit 0
@@ -97,11 +101,37 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-${DIR_DCM2NIIX}/${DCM_VERSION}/dcm2niix \
-  -b y \
-  -f "'%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'" \
-  -o ${DIR_SAVE}/ \
-  ${DIR_INPUT}
+if [[ -n ${DCM_VERSION} ]];
+  dcm_fcn="${DCM2NIIX}"
+else
+  KERNEL="$(unname -s)"
+  HARDWARE="$(uname -m)"
+  dcm_fcn="${DIR_PINC}/dcm2niix/${KERNEL}/${HARDWARE}/${VERSION}/dcm2niix"
+fi
+dcm_fcn="${dcm_fcn} -b y -d ${DEPTH} -v ${VERBOSE}"
+dcm_fcn=${dcm_fcn}' -f "%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'
+dcm_fcn="${dcm_fcn} -o ${DIR_SAVE}/"
+dcm_fcn="${dcm_fcn} ${DIR_INPUT}"
+
+eval ${dcm_fcn}
+
+if [[ -n ${REORIENT} ]]; then
+  if [[ "${REORIENT,,}" =~ "r" ]] | [[ "${REORIENT,,}" =~ "l" ]]; then
+    if [[ "${REORIENT,,}" =~ "p" ]] | [[ "${REORIENT,,}" =~ "a" ]]; then
+      if [[ "${REORIENT,,}" =~ "i" ]] | [[ "${REORIENT,,}" =~ "s" ]]; then
+        FLS=($(ls ${DIR_SAVE}/*.nii.gz))
+        N=${#FLS[@]}
+        for (( i=0; i<${N}, i++ )); do
+          CORIENT=$(3dinfo -orient ${FLS[${i}]})
+          if [[ "${CORIENT,,}" != "${REORIENT,,}" ]]; then
+            mv ${FLS[${i}]} ${DIR_SAVE}/temp.nii.gz
+            3dresample -orient ${REORIENT,,} -prefix ${FLS[${i}]} -input ${DIR_SAVE}/temp.nii.gz
+          fi
+        done
+      fi
+    fi
+  fi
+fi
 
 #===============================================================================
 # End of Function

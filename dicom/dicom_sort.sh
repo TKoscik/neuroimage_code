@@ -28,7 +28,7 @@ function egress {
   fi
   LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
+    FCN_LOG=${DIR_DB}/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
@@ -58,9 +58,8 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 INPUT_ZIP=
 LUT_JSON=${DIR_INC}/lut/series_description.json
-DCM_VERSION=1.0.20200331
 DIR_SCRATCH=${DIR_TMP}/dicomConversion_${DATE_SUFFIX}
-DIR_SAVE=${DIR_QC}
+DIR_SAVE=${DIR_QC}/dicomConversion
 HELP=false
 VERBOSE=0
 
@@ -71,7 +70,6 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --input-zip) INPUT_ZIP="$2" ; shift 2 ;;
     --lut-json) LUT_JSON="$2" ; shift 2 ;;
-    --dcm-version) DCM_VERSION="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -131,11 +129,10 @@ for (( i=0; i<${N}; i++ )); do
   N_SCAN=${#DIR_DCM[@]}
 
   for (( j=0; j<${N_SCAN}; j++)) {
-    ${DIR_DCM2NIIX}/${DCM_VERSION}/dcm2niix \
-      -b y \
-      -f "'%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'" \
-      -o ${DIR_SCRATCH}/ \
-      ${DIR_DCM[${j}]}
+    ${DIR_INC}/dicom/dicom_convert.sh \
+    --dir-input ${DIR_DCM[${j}]} \
+    --dir-save ${DIR_SCRATCH} \
+    --reorient rpi     
   }
 
   FLS=($(ls ${DIR_SCRATCH}/*.nii.gz))
@@ -195,7 +192,7 @@ for (( i=0; i<${N}; i++ )); do
         
     # rename output files
     rename "${BNAME}" "sub-${PID}_ses-${SID}_${SUFFIX}" ${DIR_SCRATCH}/*
-    
+
     QC_TSV=${DIR_SCRATCH}/sub-${PID}_ses-${SID}_dicomConversion.tsv
     if [[ ! -f ${OC_TSV} ]]; then
       echo -ne "dir_dicom\t" > ${QC_TSV}
@@ -212,28 +209,30 @@ for (( i=0; i<${N}; i++ )); do
       echo -ne "operator\t" >> ${QC_TSV}
       echo -ne "qc_date\t" >> ${QC_TSV}
       echo -ne "operator2\t" >> ${QC_TSV}
-      echo -e "qc_date2" > ${QC_TSV}
+      echo -e "qc_date2" >> ${QC_TSV}
     fi
-    echo -ne "${DIR_DCM[${j}]}\t" >> ${QC_TSV}
+    DIR_DCM_TEMP=${DIR_DCM[${j}]//${DIR_SCRATCH}\/}
+    echo -ne "${DIR_DCM_TEMP}\t" >> ${QC_TSV}
     echo -ne "${CHK_DESC}\t" >> ${QC_TSV}
     echo -ne "${SCAN_DATE}\t" >> ${QC_TSV}
     echo -ne "${BNAME}\t" >> ${QC_TSV}
     echo -ne "sub-${PID}_ses-${SID}_${SUFFIX}\t" >> ${QC_TSV}
-    echo -ne "NA\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
     echo -ne "${SUBDIR}\t" >> ${QC_TSV}
     echo -ne "false\t" >> ${QC_TSV}
     echo -ne "false\t" >> ${QC_TSV}
-    echo -ne "NA\t" >> ${QC_TSV}
-    echo -ne "NA\t" >> ${QC_TSV}
-    echo -ne "NA\t" >> ${QC_TSV}
-    echo -ne "NA\t" >> ${QC_TSV}
-    echo -ne "NA\t" >> ${QC_TSV}
-    echo -e "NA" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -ne "-\t" >> ${QC_TSV}
+    echo -e "-" >> ${QC_TSV}
   }
   # move and rename zipfile
   mv ${INPUT_ZIP[${i}]} \
     ${DIR_SCRATCH}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}_dicom.zip
   # move to DIR_QC
+  mkdir -p ${DIR_SAVE}
   mv ${DIR_SCRATCH} \
     ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
   chgrp -R Research-INC_img_core ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
