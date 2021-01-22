@@ -411,6 +411,10 @@ if [[ ! "${QC_ACTION[@],,}" =~ "-" ]] &
 fi
 
 # append novel acq fields to series_description.json
+# generate images for html reports
+# generate file tree for reports
+# generate and knit reports
+# send messages
 
 #===============================================================================
 # End of Function
