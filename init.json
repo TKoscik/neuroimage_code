@@ -17,11 +17,23 @@
         "tensorflow": "1.7.0_python-3.6.4"
     },
     "software_dependencies": {
-        "afni": "18.2.04",
-        "ants": "2.3.1",
-        "fsl": "6.0.1_multicore",
-        "freesurfer": "7.1.0",
-        "anaconda3": "2019.10"
+        "afni": {
+            "version": "18.2.04",
+            "commands": ["export AFNI_NIFTI_TYPE_WARN=NO"]
+        },
+        "ants": {
+            "version": "2.3.1"
+        },
+        "fsl": {
+            "version": "6.0.1_multicore"
+        },
+        "freesurfer": {
+            "version": "7.1.0",
+            "commands": "export "
+        },
+        "anaconda3": {
+            "version": "2019.10"
+        }
     },
     "software_shortcuts": {
         "DCM2NIIX": {

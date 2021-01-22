@@ -46,8 +46,14 @@ done
 echo "LOADING SOFTWARE DEPENDENCIES:"
 SRC=($(jq -r '.software_dependencies | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#SRC[@]}; i++ )); do
-  VRS=($(jq -r ".software_dependencies.${SRC[${i}]}" < ${INIT} | tr -d ' [],"'))
+  VRS=($(jq -r ".software_dependencies.${SRC[${i}]}.version" < ${INIT} | tr -d ' [],"'))
   source ${DIR_PINC}/sourcefiles/${SRC[${i}]}_source.sh ${VRS}
+  CMD=($(jq -r ".software_dependencies.${SRC[${i}]}.commands" < ${INIT} | tr -d ' [],"'))
+  for (( j=0; j<${#CMD[@]}; j++ )); do
+    if [[ "${CMD}" != "null" ]]; then
+      eval ${CMD[${j}]}
+    fi
+  done
   echo -e "\t${SRC[${i}]^^}/${VRS}"
 done
 
