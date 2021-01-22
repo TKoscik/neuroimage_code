@@ -7,8 +7,7 @@
         "DIR_TEMPLATE": "/Dedicated/inc_database/templates",
         "DIR_IMPORT": "/Dedicated/inc_scratch/import",
         "DIR_QC": "/Dedicated/inc_scratch/qc",
-        "DIR_DCM2NIIX": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64",
-        "DIR_DSISTUDIO": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/20200122"
+        "DIR_PINC": "/Shared/pinc/sharedopt/apps"
     },
     "argon_modules": {
         "stack": "2020.2",
@@ -24,8 +23,26 @@
         "freesurfer": "7.1.0",
         "anaconda3": "2019.10"
     },
-    "aliases": {
-        "snap": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-20190612/bin/itksnap",
-        "snapqt": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-qt4-20190612/bin/itksnap"
+    "software_aliases": {
+        "DCM2NIIX": {
+            "directory": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64",
+            "version": "1.0.20200331",
+            "name": "dcm2niix"
+        },
+        "DSISTUDIO": {
+            "directory": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64",
+            "version": "20200122",
+            "name": "dsistudio"
+        },
+        "SNAP": {
+            "directory": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64",
+            "version": "3.8.0-20190612",
+            "name": "bin/itksnap"
+        },
+        "SNAPQT": {
+            "directory": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64",
+            "version": "3.8.0-qt4-20190612",
+            "name": "bin/itksnap"
+        }
     }
 }

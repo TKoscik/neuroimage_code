@@ -12,66 +12,59 @@ INC_VERSION="$1"
 if [[ -z ${INC_VERSION} ]]; then
   INC_VERSION="0.0.0.0"
 fi
-
-# load json reader if on argon -------------------------------------------------
-if [[ "${HOSTNAME}" == "argon" ]]; then
-  module load stack/2020.2 jq/1.6_gcc-8.4.0
-fi
+echo "Setting up Iowa Neuroimage Processing Core Software version ${INC_VERSION}"
 
 # locate init.json -------------------------------------------------------------
+#DIR_INIT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 INIT=/Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${INC_VERSION}/init.json
 if [[ -f ${INIT} ]]; then
   echo "file not found: ${INIT}"
   exit 1
 fi
 
-# export directories -----------------------------------------------------------
-PATHS=$(jq -c '.export_paths' ${INIT})
-PATHS=${PATHS:1:-1}
-PATHS=(${PATHS//,/ })
-for (( i=0; i<${#PATHS[@]}; i++ )); do
-  TEMP=${PATHS[${i}]}
-  TEMP=${TEMP//\"}
-  TEMP=(${TEMP//:/ })
-  export ${TEMP[0]}=${TEMP[1]}
-  echo "EXPORTING DIRECTORIES: ${TEMP[0]}=${TEMP[1]}"
-done
-
 # load Argon modules -----------------------------------------------------------
 if [[ "${HOSTNAME}" == "argon" ]]; then
-  MODS=$(jq -c '.argon_modules' ${INIT})
-  MODS=${MODS:1:-1}
-  MODS=${MODS//\"}
-  MODS=${MODS//://}
-  MODS=${MODS//,/ }
-  module load ${MODS}
-  echo "LOADING MODULES: ${MODS}"
+  echo "LOADING MODULES:"
+  MODS=($(jq -r '.argon_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+  for (( i=0; i<${#MODS[@]}; i++ )); do
+    VERSION=($(jq -r ".argon_modules.${MODS[${i}]}" < ${INIT} | tr -d ' [],"'))
+    module load ${MODS[${i}]}/${VERSION}
+    echo -e "\t ${MODS[${i}]}/${VERSION}"
+  done 
 fi
 
+# export directories -----------------------------------------------------------
+echo "EXPORTING DIRECTORIES:"
+PATH_VARS=($(jq -r '.export_paths | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+for (( i=0; i<${#PATHS[@]}; i++ )); do
+  PATH_STR=($(jq -r ".export_paths.${PATH_VARS[${i}]}" < ${INIT} | tr -d ' [],"'))
+  export ${PATH_VARS[${i}]}=${PATH_STR}
+  echo -e "\t${PATH_VARS[${i}]}=${PATH_STR}"
+done
+
 # run source files for software dependencies -----------------------------------
-SRC=$(jq -c '.software_dependencies' ${INIT})
-SRC=${SRC:1:-1}
-SRC=(${SRC//,/ })
+echo "LOADING SOFTWARE DEPENDENCIES:"
+SRC=($(jq -r '.software_dependencies | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#SRC[@]}; i++ )); do
-  TEMP=${SRC[${i}]}
-  TEMP=${TEMP//\"}
-  TEMP=(${TEMP//:/ })
-  source /Shared/pinc/sharedopt/apps/sourcefiles/${TEMP[0]}_source.sh ${TEMP[1]}
-  echo "LOADING SOFTWARE DEPENDENCIES: ${TEMP[0]} version ${TEMP[1]}"
+  VERSION=($(jq -r ".software_dependencies.${SRC[${i}]}" < ${INIT} | tr -d ' [],"'))
+  source ${DIR_PINC}/sourcefiles/${SRC[${i}]}_source.sh ${VERSION}
+  echo -e "\t${SRC[${i}]^^}/${VERSION}"
 done
 
 # set up aliases ---------------------------------------------------------------
 ## *** not sure if this will work?
 if [[ "${HOSTNAME}" != "argon" ]]; then
-  AKA=$(jq -c '.aliases' ${INIT})
-  AKA=${AKA:1:-1}
-  AKA(${AKA//, })
+  echo "SETTING ALIASES:"
+  AKA=($(jq -r '.software_aliases | keys' < ${INIT} | tr -d ' [],"'))
   for (( i=0; i<${#AKA[@]}; i++ )); do
-    TEMP=${AKA[${i}]}
-    TEMP=${TEMP//\"}
-    TEMP=(${TEMP//:/ })
-    alias ${TEMP[0]}=${TEMP[1]}
-    echo "SETTING ALIASES: ${TEMP[0]}=${TEMP[1]}"
+    unset VARS VALS
+    VARS=($(jq -r ".software_aliases.${AKA[${i}]} | keys_unsorted" < ${INIT} | tr -d ' [],"'))
+    for (( j=0; j<${#VARS[@]}; j++ )); do
+      VALS+=($(jq -r ".software_aliases.${AKA[${i}]}.${VARS[${j}]}" < ${INIT} | tr -d ' [],"'))
+    done
+    AKA_STR=($(IFS=/ ; echo "${VALS[*]}"))
+    alias ${AKA[${i}]}=${AKA_STR}
+    echo -e "\t${AKA[${i}]}=${AKA_STR}"
   done
 fi
 
