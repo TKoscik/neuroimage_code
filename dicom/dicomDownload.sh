@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #===============================================================================
 # DICOM download from XNAT
-# Authors: Steve Slevinski, Josh Cochran, Timothy R. Koscik
+# Authors: Steve Slevinski, Timothy R. Koscik
 # Date: 2021-01-27
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
@@ -46,7 +46,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,\
-xnat-project:,pi:,project:,dir-project:,dir-save:,\
+xnat-project:,download-date:,pi:,project:,dir-save:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -56,9 +56,9 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 XNAT_PROJECT=
+DOWNLOAD_DATE=
 PI=
 PROJECT=
-DIR_PROJECT=
 DIR_SAVE=${DIR_IMPORT}
 HELP=false
 
@@ -67,9 +67,9 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --xnat-project) XNAT_PROJECT="$2" ; shift 2 ;;
+    --download-date) DOWNLOAD_DATE="$2" ; shift 2 ;;
     --pi) PI="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
-    --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -84,17 +84,21 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --xnat-project <value>   (required) name of the project on xnat,'
+  echo '                           e.g. "TK_BLACK"'
+  echo '  --download-date <value>  (required) date range for data download,'
+  echo '                           e.g., single date = "YYYY-mm-dd"'
+  echo '                                 date range = "YYYY-mm-dd:YYYY-mm-dd"'
+  echo '                           default=previous day'
+  echo '  --pi <value>             (optional) name of the PI to use in output'
+  echo '                           filename, default will us the INC lookup'
+  echo '                           table. e.g.,'
+  echo '                           pi-${PI}_project-${PROJECT}_YYYYmmddTHHMMSS'
+  echo '  --project <value>        (optional) name of the project to use in the'
+  echo '                           output filename'
+  echo '  --dir-save <value>       (optional) directory to save output,'
+  echo '                           default=${DIR_IMPORT}'
   echo ''
   NO_LOG=true
   exit 0
@@ -103,9 +107,43 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+if [[ "${DIR_SAVE}" != "${DIR_IMPORT}" ]]; then mkdir -p ${DIR_SAVE}; fi
 
+# Download data from XNAT using given inputs: name of project on XNAT and date range
+# may need to manipulate date range
+if [[ -z ${DOWNLOAD_DATE} ]]; then
+  # get yesterday date
+fi
+DL_LS=## list of files to download
+SID_LS=## date/time of scan for each subject to be downloaded
+N_DL=## number of files to download
 
+# use lookup table, as necessary -----------------------------------------------
+if [[ -z ${PI} ]] |
+   [[ -z ${PROJECT} ]]; then
+  XNAT_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f xnat_project))
+  for (( i=1; i${#XNAT_LS[@]}; i++ )); do
+    if [[ "${XNAT_LS[${i}]" == "${XNAT_PROJECT}" ]]; then
+      WHICH_PROJECT=${i}
+      break
+    fi
+  done
+  if [[ -z ${PI} ]]; then
+    PI_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f pi))
+    PI="${PI_LS[${WHICH_PROJECT}]}"
+  fi
+  if [[ -z ${PROJECT} ]]; then
+    PROJECT_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f project_name))
+    PROJECT="${PROJECT_LS[${WHICH_PROJECT}]}"
+  fi
+fi
+# get testing date? maybe get that above?
 
+for (( i=0; i<${N_DL}; i++ )); do
+  OUTNAME=${DIR_SAVE}/pi-${PI}_project-${PROJECT}_${SID_LS[${i}]}.zip
+  # download
+  # rename/move, can be done in one step?
+done
 
 #===============================================================================
 # End of Function
