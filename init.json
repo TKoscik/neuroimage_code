@@ -9,52 +9,71 @@
         "DIR_QC": "/Dedicated/inc_scratch/qc",
         "DIR_PINC": "/Shared/pinc/sharedopt/apps"
     },
-    "argon_modules": {
-        "stack": "2020.2",
-        "jq": "1.6_gcc-8.4.0",
-        "OpenBLAS": "0.2.19",
-        "R": "3.5.1",
-        "tensorflow": "1.7.0_python-3.6.4"
+    "hpc_setup": {
+        "hostname": "argon",
+        "command": ["module load stack/2020.2",
+                    "module load jq/1.6_gcc-8.4.0"
+        ]
     },
     "software_dependencies": {
+        "OpenBLAS": {
+            "hostname": "argon",
+            "version": "0.2.19",
+            "command": ["module load ${SW_NAME}/${VERSION}"]
+        },
+        "R": {
+            "hostname": "argon",
+            "version": "3.5.1",
+            "command": ["module load ${SW_NAME}/${VERSION}"]
+        },
         "afni": {
+            "hostname": "all",
             "version": "18.2.04",
-            "commands": ["export AFNI_NIFTI_TYPE_WARN=NO"]
+            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}",
+                        "export AFNI_NIFTI_TYPE_WARN=NO"]
         },
         "ants": {
-            "version": "2.3.1"
+            "hostname": "all",
+            "version": "2.3.1",
+            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}"]
         },
         "fsl": {
-            "version": "6.0.1_multicore"
+            "hostname": "all",
+            "version": "6.0.1_multicore",
+            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}"]
         },
         "freesurfer": {
+            "hostname": "all",
             "version": "7.1.0",
-            "commands": "export "
+            "command": ["export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${version}",
+                        "export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${version}/license.txt",
+                        "source ${FREESURFER_HOME}/FreeSurferEnv.sh"
+            ]
         },
         "anaconda3": {
-            "version": "2019.10"
-        }
-    },
-    "software_shortcuts": {
+            "hostname": "all",
+            "version": "2019.10",
+            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}"]
+        },
         "DCM2NIIX": {
-            "directory": "/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64",
+            "hostname": "all",
             "version": "1.0.20200331",
-            "name": "dcm2niix"
+            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/${VERSION}/dcm2niix"]
         },
         "DSISTUDIO": {
-            "directory": "/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64",
+            "hostname": "all",
             "version": "20200122",
-            "name": "dsistudio"
+            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/${VERSION}/dsistudio"]
         },
         "SNAP": {
-            "directory": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64",
+            "hostname": "all",
             "version": "3.8.0-20190612",
-            "name": "bin/itksnap"
+            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/${VERSION}/bin/itksnap"]
         },
         "SNAPQT": {
-            "directory": "/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64",
+            "hostname": "all",
             "version": "3.8.0-qt4-20190612",
-            "name": "bin/itksnap"
+            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/${VERSION}/bin/itksnap"]
         }
     }
 }

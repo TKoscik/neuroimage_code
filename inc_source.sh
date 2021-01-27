@@ -22,15 +22,15 @@ if [[ -f ${INIT} ]]; then
   exit 1
 fi
 
-# load Argon modules -----------------------------------------------------------
-if [[ "${HOSTNAME}" == "argon" ]]; then
-  echo "LOADING MODULES:"
-  MODS=($(jq -r '.argon_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
-  for (( i=0; i<${#MODS[@]}; i++ )); do
-    VRS=($(jq -r ".argon_modules.${MODS[${i}]}" < ${INIT} | tr -d ' [],"'))
-    module load ${MODS[${i}]}/${VRS}
-    echo -e "\t ${MODS[${i}]}/${VRS}"
-  done 
+# load JQ to read init info from JSON ------------------------------------------
+if [[ ! -x "$(command -v jq)" ]]; then
+  if [[ "${HOSTNAME}" == "argon" ]]; then
+    module load stack/2020.2 jq/1.6_gcc-8.4.0
+  fi
+  if [[ ! -x "$(command -v jq)" ]]; then
+    echo "ERROR [INC setup]: Cannot read from init.json, jq could not be found or is not executable"
+    exit 1
+  fi
 fi
 
 # export directories -----------------------------------------------------------
@@ -44,31 +44,22 @@ done
 
 # run source files for software dependencies -----------------------------------
 echo "LOADING SOFTWARE DEPENDENCIES:"
-SRC=($(jq -r '.software_dependencies | keys_unsorted' < ${INIT} | tr -d ' [],"'))
-for (( i=0; i<${#SRC[@]}; i++ )); do
-  VRS=($(jq -r ".software_dependencies.${SRC[${i}]}.version" < ${INIT} | tr -d ' [],"'))
-  source ${DIR_PINC}/sourcefiles/${SRC[${i}]}_source.sh ${VRS}
-  CMD=($(jq -r ".software_dependencies.${SRC[${i}]}.commands" < ${INIT} | tr -d ' [],"'))
-  for (( j=0; j<${#CMD[@]}; j++ )); do
-    if [[ "${CMD}" != "null" ]]; then
-      eval ${CMD[${j}]}
-    fi
-  done
-  echo -e "\t${SRC[${i}]^^}/${VRS}"
-done
-
-# set up aliases ---------------------------------------------------------------
-echo "SETTING SHORTCUTS:"
-AKA=($(jq -r '.software_aliases | keys' < ${INIT} | tr -d ' [],"'))
-for (( i=0; i<${#AKA[@]}; i++ )); do
-  unset VARS VALS
-  VARS=($(jq -r ".software_aliases.${AKA[${i}]} | keys_unsorted" < ${INIT} | tr -d ' [],"'))
-  for (( j=0; j<${#VARS[@]}; j++ )); do
-    VALS+=($(jq -r ".software_aliases.${AKA[${i}]}.${VARS[${j}]}" < ${INIT} | tr -d ' [],"'))
-  done
-  AKA_STR=($(IFS=/ ; echo "${VALS[*]}"))
-  eval "${AKA[${i}]}=${AKA_STR}"
-  echo -e "\t${AKA[${i}]}=${AKA_STR}"
+SW_LS=($(jq -r '.software_dependencies | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+for (( i=0; i<${#SW_LS[@]}; i++ )); do
+  unset SW_NAME VERSION CMDS
+  SW_NAME=${SW_LS[${i}]}
+  WHICH_HOST=($(jq -r ".software_dependencies.${SW_NAME}.hostname" < ${INIT} | tr -d ' [],"'))
+  VERSION=($(jq -r ".software_dependencies.${SW_NAME}.version" < ${INIT} | tr -d ' [],"'))
+  CMDS=($(jq -r ".software_dependencies.${SW_NAME}.command" < ${INIT} | tr -d ' [],"'))
+  if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] |
+     [[ "${WHICH_HOST}" == "all" ]]; then
+    for (( j=0; j<${#CMDS[@]}; j++ )); do
+      if [[ "${CMD}" != "null" ]]; then
+        eval ${CMD[${j}]}
+      fi
+    done
+  fi
+  echo -e "\t${SW_NAME^^}/${VERSION}"
 done
 
 # setup R packages -------------------------------------------------------------
