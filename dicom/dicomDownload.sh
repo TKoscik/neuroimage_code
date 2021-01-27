@@ -109,15 +109,6 @@ fi
 #===============================================================================
 if [[ "${DIR_SAVE}" != "${DIR_IMPORT}" ]]; then mkdir -p ${DIR_SAVE}; fi
 
-# Download data from XNAT using given inputs: name of project on XNAT and date range
-# may need to manipulate date range
-if [[ -z ${DOWNLOAD_DATE} ]]; then
-  # get yesterday date
-fi
-DL_LS=## list of files to download
-SID_LS=## date/time of scan for each subject to be downloaded
-N_DL=## number of files to download
-
 # use lookup table, as necessary -----------------------------------------------
 if [[ -z ${PI} ]] |
    [[ -z ${PROJECT} ]]; then
@@ -137,13 +128,34 @@ if [[ -z ${PI} ]] |
     PROJECT="${PROJECT_LS[${WHICH_PROJECT}]}"
   fi
 fi
-# get testing date? maybe get that above?
 
-for (( i=0; i<${N_DL}; i++ )); do
-  OUTNAME=${DIR_SAVE}/pi-${PI}_project-${PROJECT}_${SID_LS[${i}]}.zip
-  # download
-  # rename/move, can be done in one step?
+# generate date list if range is given -----------------------------------------
+if [[ -z ${DOWNLOAD_DATE} ]]; then
+  DOWNLOAD_DATE=$(date -d "yesterday 13:00" '+%Y-%m-%d')
+fi
+DATE_LS=(${DOWNLOAD_DATE//:/ })
+if [[ "${#DATE_LS[@]}" == "2" ]]; then
+  start_time=$(date -u -d 'TZ="UTC" '${DATE_LS[0]}' 00:00:00' '+%s')   
+  end_time=$(date -u -d 'TZ="UTC" '${DATE_LS[1]}' 23:59:59' '+%s')
+  interval=86400
+  DATE_LS=($(seq ${start_time} ${interval} ${end_time} | xargs -I{} date -u -d 'TZ="UTC" @'{} '+%F'))
+fi
+
+# download scans from specified project and date range -------------------------
+for (( i=0; i${#DATE_LS[@]}; i++ )); do
+  URL="https://rpacs.iibi.uiowa.edu/xnat/data/projects/"${XNAT_PROJECT}"/experiments?format=csv"
+  curl -X GET -u ${UP} ${URL} --fail --silent --show-error \
+  | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
+  | grep ${DATE_LS[${i}]} \
+  | cut -f1 > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
+
+  while read PID; do
+    URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/"${PID}"/scans/ALL/files?format=zip"
+    curl -X GET -u $UP $URL --fail --silent --show-error > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_sub-"${PID}"_"${DATE_LS[${i}]//-}".zip"
+  done < ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
+  rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 done
+
 
 #===============================================================================
 # End of Function

@@ -120,6 +120,7 @@ for (( i=0; i<${N}; i++ )); do
   unset PI PROJECT PID SID
   PI=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_ZIP[${i}]} -f pi)
   PROJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_ZIP[${i}]} -f project)
+  PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_ZIP[${i}]} -f sub)
   SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT_ZIP[${i}]} -f modality)
 
   unzip ${INPUT_ZIP[${i}]} -qq -d ${DIR_SCRATCH}
