@@ -46,7 +46,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,\
-xnat-project:,download-date:,pi:,project:,dir-save:,\
+up:,xnat-project:,download-date:,pi:,project:,dir-save:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -55,6 +55,7 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
+UP=
 XNAT_PROJECT=
 DOWNLOAD_DATE=
 PI=
@@ -85,6 +86,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
+  echo '  --up <value>             "UID:Password"'
   echo '  --xnat-project <value>   (required) name of the project on xnat,'
   echo '                           e.g. "TK_BLACK"'
   echo '  --download-date <value>  (required) date range for data download,'
@@ -93,12 +95,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default=previous day'
   echo '  --pi <value>             (optional) name of the PI to use in output'
   echo '                           filename, default will us the INC lookup'
-  echo '                           table. e.g.,'
-  echo '                           pi-${PI}_project-${PROJECT}_YYYYmmddTHHMMSS'
+  echo '                           table. '
   echo '  --project <value>        (optional) name of the project to use in the'
   echo '                           output filename'
   echo '  --dir-save <value>       (optional) directory to save output,'
   echo '                           default=${DIR_IMPORT}'
+  echo 'Output filenames = ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_YYYYmmdd.zip'
   echo ''
   NO_LOG=true
   exit 0
@@ -107,13 +109,24 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+# Check user ID and password ---------------------------------------------------
+if [[ -z ${UP} ]]; then
+  if [[ -f "~/.xnatUP" ]]; then
+    UP=$(cat ~/.xnatUP)
+  else
+    echo "Error [INC ${FCN_NAME}]: a UID and Password must be provided, or ~/.xnatUP must exist containing this information."
+    exit 1
+  fi
+fi    
+
+# make save directory if non standard ------------------------------------------
 if [[ "${DIR_SAVE}" != "${DIR_IMPORT}" ]]; then mkdir -p ${DIR_SAVE}; fi
 
-# use lookup table, as necessary -----------------------------------------------
+# use lookup table if PI and.or project unspecified ----------------------------
 if [[ -z ${PI} ]] |
    [[ -z ${PROJECT} ]]; then
   XNAT_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f xnat_project))
-  for (( i=1; i${#XNAT_LS[@]}; i++ )); do
+  for (( i=1; i<${#XNAT_LS[@]}; i++ )); do
     if [[ "${XNAT_LS[${i}]" == "${XNAT_PROJECT}" ]]; then
       WHICH_PROJECT=${i}
       break
@@ -130,6 +143,7 @@ if [[ -z ${PI} ]] |
 fi
 
 # generate date list if range is given -----------------------------------------
+## default = yesterday only
 if [[ -z ${DOWNLOAD_DATE} ]]; then
   DOWNLOAD_DATE=$(date -d "yesterday 13:00" '+%Y-%m-%d')
 fi
@@ -142,20 +156,21 @@ if [[ "${#DATE_LS[@]}" == "2" ]]; then
 fi
 
 # download scans from specified project and date range -------------------------
-for (( i=0; i${#DATE_LS[@]}; i++ )); do
+for (( i=0; i<${#DATE_LS[@]}; i++ )); do
   URL="https://rpacs.iibi.uiowa.edu/xnat/data/projects/"${XNAT_PROJECT}"/experiments?format=csv"
   curl -X GET -u ${UP} ${URL} --fail --silent --show-error \
-  | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
-  | grep ${DATE_LS[${i}]} \
-  | cut -f1 > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
+    | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
+    | grep ${DATE_LS[${i}]} \
+    | cut -f1 \
+    > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 
   while read PID; do
     URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/"${PID}"/scans/ALL/files?format=zip"
-    curl -X GET -u $UP $URL --fail --silent --show-error > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_sub-"${PID}"_"${DATE_LS[${i}]//-}".zip"
+    curl -X GET -u $UP $URL --fail --silent --show-error \
+      > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_sub-"${PID}"_"${DATE_LS[${i}]//-}".zip"
   done < ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
   rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 done
-
 
 #===============================================================================
 # End of Function
