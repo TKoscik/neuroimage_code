@@ -9,13 +9,7 @@
         "DIR_QC": "/Dedicated/inc_scratch/qc",
         "DIR_PINC": "/Shared/pinc/sharedopt/apps"
     },
-    "hpc_setup": {
-        "hostname": "argon",
-        "command": ["module load stack/2020.2",
-                    "module load jq/1.6_gcc-8.4.0"
-        ]
-    },
-    "software_dependencies": {
+    "software": {
         "OpenBLAS": {
             "hostname": "argon",
             "version": "0.2.19",
@@ -47,8 +41,7 @@
             "version": "7.1.0",
             "command": ["export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${version}",
                         "export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${version}/license.txt",
-                        "source ${FREESURFER_HOME}/FreeSurferEnv.sh"
-            ]
+                        "source ${FREESURFER_HOME}/FreeSurferEnv.sh"]
         },
         "anaconda3": {
             "hostname": "all",

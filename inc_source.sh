@@ -44,13 +44,13 @@ done
 
 # run source files for software dependencies -----------------------------------
 echo "LOADING SOFTWARE DEPENDENCIES:"
-SW_LS=($(jq -r '.software_dependencies | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+SW_LS=($(jq -r '.software | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#SW_LS[@]}; i++ )); do
   unset SW_NAME VERSION CMDS
   SW_NAME=${SW_LS[${i}]}
-  WHICH_HOST=($(jq -r ".software_dependencies.${SW_NAME}.hostname" < ${INIT} | tr -d ' [],"'))
-  VERSION=($(jq -r ".software_dependencies.${SW_NAME}.version" < ${INIT} | tr -d ' [],"'))
-  CMDS=($(jq -r ".software_dependencies.${SW_NAME}.command" < ${INIT} | tr -d ' [],"'))
+  WHICH_HOST=($(jq -r ".software.${SW_NAME}.hostname" < ${INIT} | tr -d ' [],"'))
+  VERSION=($(jq -r ".software.${SW_NAME}.version" < ${INIT} | tr -d ' [],"'))
+  CMDS=($(jq -r ".software.${SW_NAME}.command" < ${INIT} | tr -d ' [],"'))
   if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] |
      [[ "${WHICH_HOST}" == "all" ]]; then
     for (( j=0; j<${#CMDS[@]}; j++ )); do
