@@ -122,8 +122,8 @@ if [[ -n ${REORIENT} ]]; then
         FLS=($(ls ${DIR_SAVE}/*.nii.gz))
         N=${#FLS[@]}
         for (( i=0; i<${N}, i++ )); do
-          CORIENT=$(3dinfo -orient ${FLS[${i}]})
-          if [[ "${CORIENT,,}" != "${REORIENT,,}" ]]; then
+          CUR_ORIENT=$(3dinfo -orient ${FLS[${i}]})
+          if [[ "${CUR_ORIENT,,}" != "${REORIENT,,}" ]]; then
             mv ${FLS[${i}]} ${DIR_SAVE}/temp.nii.gz
             3dresample -orient ${REORIENT,,} -prefix ${FLS[${i}]} -input ${DIR_SAVE}/temp.nii.gz
           fi
