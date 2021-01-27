@@ -129,7 +129,7 @@ for (( i=0; i<${N}; i++ )); do
   N_SCAN=${#DIR_DCM[@]}
 
   for (( j=0; j<${N_SCAN}; j++)) {
-    ${DIR_INC}/dicom/dicom_convert.sh \
+    ${DIR_INC}/dicom/dicomToNifti.sh \
     --dir-input ${DIR_DCM[${j}]} \
     --dir-save ${DIR_SCRATCH} \
     --reorient rpi     
