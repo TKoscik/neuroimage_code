@@ -1,8 +1,8 @@
 #!/bin/bash -e
 #===============================================================================
-# Convert DICOM to NIfTI1, designed to work with automatic XNAT downloads
-# Authors: Timothy R. Koscik, PhD
-# Date: 2021-01-21
+# DICOM download from XNAT
+# Authors: Steve Slevinski, Josh Cochran, Timothy R. Koscik
+# Date: 2021-01-27
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -28,7 +28,7 @@ function egress {
   fi
   LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=${DIR_DB}/log/benchmark_${FCN_NAME}.log
+    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
     if [[ ! -f ${FCN_LOG} ]]; then
       echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
     fi
@@ -46,7 +46,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,\
-dir-input:,dir-save:,dcm-version:,depth:,reorient:,\
+xnat-project:,pi:,project:,dir-project:,dir-save:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -55,21 +55,21 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-INPUT=
-DIR_SAVE=
-DCM_VERSION=
-DEPTH=5
-REORIENT=
+XNAT_PROJECT=
+PI=
+PROJECT=
+DIR_PROJECT=
+DIR_SAVE=${DIR_IMPORT}
 HELP=false
-VERBOSE=0
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --dir-input) DIR_INPUT="$2" ; shift 2 ;;
-    --dcm-version) DCM_VERSION="$2" ; shift 2 ;;
+    --xnat-project) XNAT_PROJECT="$2" ; shift 2 ;;
+    --pi) PI="$2" ; shift 2 ;;
+    --project) PROJECT="$2" ; shift 2 ;;
+    --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -85,14 +85,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --dir-input <value>      directory listing containing dcm files to'
-  echo '                           convert, must be unzipped'
-  echo '  --dir-save <value>       location to save nifti data'
-  echo '  --dcm-version <value>    can use any installed version of dcm2niix'
-  echo '  --depth <value>          how far down directory tree to look for dicom'
-  echo '                           files, default=5'
-  echo '  --reorient <value>       three letter code to reorient image, default=rpi'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --other-inputs <value>   other inputs necessary for function'
+  echo '  --template <value>       name of template to use (if necessary),'
+  echo '                           e.g., HCPICBM'
+  echo '  --space <value>          spacing of template to use, e.g., 1mm'
+  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -101,60 +103,13 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-mkdir -p ${DIR_SAVE}
 
-# parse inputs -----------------------------------------------------------------
-if [[ -d "${INPUT}" ]]; then
-  DIR_DCM=($(find ${INPUT} -type f -name '*.dcm*' -printf '%h\n' | sort -u))
-else
-  FNAME="${INPUT##*/}"
-  FEXT="${FNAME##*.}"
-  if [[ "${FEXT,,}" != "zip" ]];
-    echo "ERROR [INC dicomConvert]: Input must be either a directory or zip file"
-    exit 1
-  fi
-  cp ${INPUT} ${DIR_SAVE}/
-  unzip ${DIR_SAVE}/${FNAME} -qq -d ${DIR_SAVE}
-  DIR_DCM=($(find ${DIR_SAVE} -type f -name '*.dcm*' -printf '%h\n' | sort -u))
-fi
-N_SCAN=${#DIR_DCM[@]}
 
-# convert dicoms ---------------------------------------------------------------
-for (( i=0; i<${N_SCAN}; i++ )); do
-  if [[ -n ${DCM_VERSION} ]];
-    dcm_fcn="${DCM2NIIX}"
-  else
-    KERNEL="$(unname -s)"
-    HARDWARE="$(uname -m)"
-    dcm_fcn="${DIR_PINC}/dcm2niix/${KERNEL}/${HARDWARE}/${VERSION}/dcm2niix"
-  fi
-  dcm_fcn="${dcm_fcn} -b y -d ${DEPTH} -v ${VERBOSE}"
-  dcm_fcn=${dcm_fcn}' -f "%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'
-  dcm_fcn="${dcm_fcn} -o ${DIR_SAVE}/"
-  dcm_fcn="${dcm_fcn} ${DIR_DCM[${i}]}"
-  eval ${dcm_fcn}
-fi
 
-if [[ -n ${REORIENT} ]]; then
-  if [[ "${REORIENT,,}" =~ "r" ]] | [[ "${REORIENT,,}" =~ "l" ]]; then
-    if [[ "${REORIENT,,}" =~ "p" ]] | [[ "${REORIENT,,}" =~ "a" ]]; then
-      if [[ "${REORIENT,,}" =~ "i" ]] | [[ "${REORIENT,,}" =~ "s" ]]; then
-        FLS=($(ls ${DIR_SAVE}/*.nii.gz))
-        N=${#FLS[@]}
-        for (( i=0; i<${N}, i++ )); do
-          CUR_ORIENT=$(3dinfo -orient ${FLS[${i}]})
-          if [[ "${CUR_ORIENT,,}" != "${REORIENT,,}" ]]; then
-            mv ${FLS[${i}]} ${DIR_SAVE}/temp.nii.gz
-            3dresample -orient ${REORIENT,,} -prefix ${FLS[${i}]} -input ${DIR_SAVE}/temp.nii.gz
-          fi
-        done
-      fi
-    fi
-  fi
-fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 
