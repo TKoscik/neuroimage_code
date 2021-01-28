@@ -9,13 +9,21 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
 
+echo "this function is not fully implemented, aborting"
+exit 1
+
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
@@ -27,20 +35,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -50,7 +56,7 @@ OPTS=$(getopt -o hvkl --long prefix:,\
 other-inputs:,template:,space:,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi

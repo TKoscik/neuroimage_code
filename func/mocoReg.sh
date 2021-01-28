@@ -38,11 +38,14 @@
 # -changed the way lack of session variables are handled to be more efficient
 # TODO: Add QC function or source QC script
 #===============================================================================
-
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
@@ -50,6 +53,7 @@ umask 007
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
@@ -61,20 +65,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -84,7 +86,7 @@ OPTS=$(getopt -o hvkl --long prefix:,\
 ts-bold:,target:,template:,space:,\
 dir-save:,dir-scratch:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -97,7 +99,7 @@ TARGET=T1w
 TEMPLATE=
 SPACE=
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/scratch_${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=1
 KEEP=false
@@ -150,8 +152,8 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 if [ -f "${TS_BOLD}" ]; then
   DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
-  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
-  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
+  PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
+  SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
   if [ -z "${PREFIX}" ]; then
     PREFIX=$(${DIR_INC}/bids/get_bidsbase -s -i ${TS_BOLD})
   fi
@@ -169,12 +171,11 @@ mkdir -p ${DIR_SAVE}
 
 # Check if required files exist -----------------------------------------------
 # Set some helper variables depending on whether session is specified
-if [[ -n "${SESSION}" ]]; then
-  DIR_SUBSES=sub-${SUBJECT}/ses-${SESSION}
-  SUBSES=sub-${SUBJECT}_ses-${SESSION}
-else
-  DIR_SUBSES=sub-${SUBJECT}
-  SUBSES=sub-${SUBJECT}
+DIR_SUBSES=sub-${PID}
+SUBSES=sub-${PID}
+if [[ -n "${SID}" ]]; then
+  DIR_SUBSES=${DIR_SUBSES}/ses-${SID}
+  SUBSES=${SUBSES}_ses-${SID}
 fi
 
 # Native anatomical, brain mask, and rigid alignment transform
@@ -233,7 +234,7 @@ N_XFM=${#XFM_NORM[@]}
 NUM_TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f numTR)
 TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f TR)
 # check in here for 4d file.
-if [ "${NUM_TR}" == 1 ]; then
+if [[ "${NUM_TR}" == 1 ]]; then
     echo "Input file is not a 4D file. Aborting."
     exit 1
 fi
