@@ -16,6 +16,7 @@
 [x] inc derivatives to ${DIR_PROJECT}/derivatives/inc
 [ ] update HCP templates (decide if MNI variant)
 [ ] add in ${DIR_TMP} for top level of scratch directory
+[ ] update log strings: LOG_STRING=$(date +"${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
 
 # anatomical workflow ---------------------------------------------------------
 [x] add intensity based labels
