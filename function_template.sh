@@ -64,7 +64,7 @@ OTHER_INPUTS=
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
@@ -116,7 +116,7 @@ fi
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
@@ -127,7 +127,7 @@ DIR_SUBSES="sub-${PID}"
 if [[ -n ${SID} ]]; then
   DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"
 fi
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIR_SUBSES}
 fi
 mkdir -p ${DIR_SCRATCH}
