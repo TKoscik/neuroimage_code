@@ -122,13 +122,13 @@ PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
-  if [[ -n ${SID} ]]; then
+  if [[ -n "${SID}" ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
 
 DIR_SUBSES="sub-${PID}"
-if [[ -n ${SID} ]]; then
+if [[ -n "${SID}" ]]; then
   DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"
 fi
 if [[ -z "${DIR_SAVE}" ]]; then
