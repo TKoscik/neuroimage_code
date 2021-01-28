@@ -114,18 +114,18 @@ fi
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f "ses")
+PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f ses)
 if [ -z "${PREFIX}" ]; then
-  PREFIX="sub-${SUBJECT}"
-  if [[ -n ${SESSION} ]]; then
-    PREFIX="${PREFIX}_ses-${SESSION}"
+  PREFIX="sub-${PID}"
+  if [[ -n ${SID} ]]; then
+    PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
 
-DIR_SUBSES="sub-${SUBJECT}"
-if [[ -n ${SESSION} ]]; then
-  DIR_SUBSES="${DIR_SUBSES}_ses-${SESSION}"
+DIR_SUBSES="sub-${PID}"
+if [[ -n ${SID} ]]; then
+  DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"
 fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIR_SUBSES}
