@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o o:r:p:n:d:f:t:e:c:n \
---long operator:,fcn-name:,proc-start:,proc-end:,exit-code: \
+OPTS=$(getopt --long operator:,dir-project:,pid:,sid:,scan-date:,fcn-name:,proc-start:,proc-end:,exit-code:,notes: \
 -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -17,7 +16,7 @@ SID=
 SCAN_DATE=
 FCN_NAME=
 PROC_START=
-PROC_END=
+PROC_STOP=
 EXIT_CODE=
 NOTES=
 
@@ -38,10 +37,10 @@ while true; do
   esac
 done
 
-LOG_STRING=$(date +"${OPERATOR}\t${SCAN_DATE}\t${FCN_NAME}\t${PROC_START}\t${PROC_END}\t${EXIT_CODE}\t${NOTES}")
+LOG_STRING=$(date +"${OPERATOR}\t${DIR_PROJECT}\t${PID}\t${SID}\t${SCAN_DATE}\t${FCN_NAME}\t${PROC_START}\t${PROC_END}\t${EXIT_CODE}\t${NOTES}")
 FCN_LOG=${DIR_LOG}/qc/${FCN_NAME}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
 if [[ ! -f ${FCN_LOG} ]]; then
-  echo -e 'operator\tscan_date\tfunction\tstart\tend\texit_status\tnotes' > ${FCN_LOG}
+  echo -e 'operator\tdir_project\tparticipant_id\tsession_id\tscan_date\tfunction\tstart\tend\texit_status\tnotes' > ${FCN_LOG}
 fi
 echo -e ${LOG_STRING} >> ${FCN_LOG}
 exit 0
