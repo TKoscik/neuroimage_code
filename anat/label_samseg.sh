@@ -10,15 +10,18 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-HOSTNAME="$(uname -n)"
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
 function egress {
-  if [[ "${HOSTNAME,,}" == *"argon"* ]]; then export OMP_NUM_THREADS=1; fi
   EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
@@ -30,20 +33,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -69,7 +70,7 @@ PALLIDUM_WM=false
 LESION=false
 WM_HYPER=false
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 
 while true; do
@@ -92,7 +93,6 @@ while true; do
   esac
 done
 
-
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
   echo ''
@@ -106,23 +106,27 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --image <value>          comma-separated list of images'
+  echo '  --contrast <value>       x-separated list of contrasts for each image,'
+  echo '                           indicating direction of abnormality.'
+  echo '                           e.g., for T1w and FLAIR, contrast would be 0,1'
+  echo '                           where 1 indicates WM hyperintensities on FLAIR'
+  echo '                           but no specific direction on T1w'
+  echo '  --thresh <value>         probability do assign voxel as a lesion,'
+  echo '                           default=0.3'
+  echo '  --pallidum-wm            whether or not to try and process pallidum'
+  echo '                           separately or treat as a WM structure. Useful'
+  echo '                           when input images have sufficient contrast in'
+  echo '                           pallidal regions'
+  echo '  --lesion                 whether or not to segment WM lesions'
+  echo '  --wm-hyper               whether or not to include a mask of WM'
+  echo '                           hyperintensities in output'
+  echo '  --dir-save <value>       directory to save output'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
 fi
-
-# set OpenMP Threads -----------------------------------------------------------
-#if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
-#  NTHREADS=$(echo "${NSLOTS} / 7" | bc)
-#  if [[ "${NTHREADS}" == "0" ]]; then NTHREADS=1; fi
-#  export OMP_NUM_THREADS=${NTHREADS}
-#fi
 
 #===============================================================================
 # Start of Function
@@ -132,16 +136,14 @@ N_IMAGE=${#IMAGE[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f ses)
 if [ -z "${PREFIX}" ]; then
-  SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
-  PREFIX="sub-${SUBJECT}"
-  SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
+  PREFIX="sub-${PID}"
   if [[ -n ${SESSION} ]]; then
-    PREFIX="${PREFIX}_ses-${SESSION}"
+    PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
-
-
 mkdir -p ${DIR_SCRATCH}
 
 # Set up contrasts if not specified --------------------------------------------
@@ -171,9 +173,6 @@ if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
   samseg_fcn="${samseg_fcn} --threshold ${THRESH}"
 fi
 samseg_fcn="${samseg_fcn} --output ${DIR_SCRATCH}"
-#if [[ "${HOSTNAME,,}" == *"argon"* ]]; then
-#  samseg_fcn="${samseg_fcn} --threads ${NTHREADS}"
-#fi
 echo ${samseg_fcn}
 eval ${samseg_fcn}
 
