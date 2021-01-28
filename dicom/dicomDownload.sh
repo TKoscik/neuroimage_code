@@ -86,7 +86,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --up <value>             "UID:Password"'
+  echo '  --up <value>             "UID:Password" '
   echo '  --xnat-project <value>   (required) name of the project on xnat,'
   echo '                           e.g. "TK_BLACK"'
   echo '  --download-date <value>  (required) date range for data download,'
@@ -114,13 +114,17 @@ if [[ -z ${UP} ]]; then
   if [[ -f "~/.xnatUP" ]]; then
     UP=$(cat ~/.xnatUP)
   else
-    echo "Error [INC ${FCN_NAME}]: a UID and Password must be provided, or ~/.xnatUP must exist containing this information."
+    echo "ERROR [INC:${FCN_NAME}] a UID and Password must be provided, or ~/.xnatUP must exist containing this information."
     exit 1
   fi
+else [[ -f ${UP} ]]; then
+  UP=$(cat ${UP})
 fi    
 
 # make save directory if non standard ------------------------------------------
-if [[ "${DIR_SAVE}" != "${DIR_IMPORT}" ]]; then mkdir -p ${DIR_SAVE}; fi
+if [[ "${DIR_SAVE}" != "${DIR_IMPORT}" ]]; then
+  mkdir -p ${DIR_SAVE}
+fi
 
 # use lookup table if PI and.or project unspecified ----------------------------
 if [[ -z ${PI} ]] |

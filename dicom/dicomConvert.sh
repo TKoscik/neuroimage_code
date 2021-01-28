@@ -59,7 +59,7 @@ INPUT=
 DIR_SAVE=
 DCM_VERSION=
 DEPTH=5
-REORIENT=
+REORIENT=rpi
 HELP=false
 VERBOSE=0
 
@@ -68,8 +68,10 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --dir-input) DIR_INPUT="$2" ; shift 2 ;;
+    --input) INPUT="$2" ; shift 2 ;;
     --dcm-version) DCM_VERSION="$2" ; shift 2 ;;
+    --depth) DEPTH="$2" ; shift 2 ;;
+    --reorient) REORIENT="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -110,7 +112,7 @@ else
   FNAME="${INPUT##*/}"
   FEXT="${FNAME##*.}"
   if [[ "${FEXT,,}" != "zip" ]];
-    echo "ERROR [INC dicomConvert]: Input must be either a directory or zip file"
+    echo "ERROR [INC:${FCN_NAME}] Input must be either a directory or zip file"
     exit 1
   fi
   cp ${INPUT} ${DIR_SAVE}/
