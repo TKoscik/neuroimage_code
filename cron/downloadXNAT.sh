@@ -10,27 +10,18 @@ DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
 KERNEL="$(unname -s)"
 HARDWARE="$(uname -m)"
-if [[ "${HARDWARE,,}" == "argon" ]]; then
-  HPC_Q=${QUEUE}
-  HPC_SLOTS=${NSLOTS}
-else
-  HPC_Q="LOCAL"
-  HPC_SLOTS="NA"
-fi
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 umask 007
 
-# actions on exit, write to logs, clean scratch
-operator, hardware, kernel, hpc queue, hpc slots, start time, end time, exit code
+# actions on exit --------------------------------------------------------------
+## capture time, exit code, write to benchmark log
 function egress {
   EXIT_CODE=$?
-  LOG_STRING=$(date +"${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
-  if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark/${FCN_NAME}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\thardware\tkernel\thpc_queue\thpc_slots\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-  fi
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  ${DIR_INC}/log/logBenchmark.sh \
+    -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+    -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
 }
 trap egress EXIT
 
@@ -43,4 +34,8 @@ for (( i=0; i<${N}; i++ )); do
   ${DIR_INC}/dicom/dicomDownload.sh --xnat-project ${PROJECT_LS[${i}]}
 done
 
-${DIR_INC}/cron/dicomAutoconvert.sh
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
