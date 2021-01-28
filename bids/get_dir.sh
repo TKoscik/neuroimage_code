@@ -7,7 +7,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hi: --long input:,help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -57,6 +57,7 @@ for (( i=0; i<${#temp[@]}; i++ )); do
   DIR_PROJECT="${DIR_PROJECT}/${temp[${i}]}"
 done
 echo ${DIR_PROJECT}
+
 #==============================================================================
 # End of function
 #==============================================================================

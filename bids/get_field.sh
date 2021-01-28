@@ -5,9 +5,10 @@
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-09
 #===============================================================================
+
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hi:f: --long input:,field:,help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -68,6 +69,7 @@ else
 fi
 OUTPUT=(${OUTPUT//./ }) # remove file extensions if present
 echo ${OUTPUT[0]}
+
 #==============================================================================
 # End of function
 #==============================================================================

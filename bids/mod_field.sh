@@ -5,9 +5,10 @@
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-03-09
 #===============================================================================
+
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hmadi:f:v: --long input:,modify,add,delete,field:,value:,help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi

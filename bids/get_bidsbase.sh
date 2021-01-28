@@ -9,7 +9,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hsi: --long input:,strip-mod,help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -61,6 +61,7 @@ if [[ "${STRIP_MOD}" == "true" ]]; then
   OUTPUT=${OUTPUT// /_}
 fi
 echo ${OUTPUT[0]}
+
 #==============================================================================
 # End of function
 #==============================================================================

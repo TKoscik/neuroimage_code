@@ -17,21 +17,17 @@ umask 007
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  LOG_STRING=$(date +"${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
-  if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=${DIR_LOG}/benchmark/${FCN_NAME}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\thardware\tkernel\thpc_queue\thpc_slots\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-  fi
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  ${DIR_INC}/log/logBenchmark.sh \
+    -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+    -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
 }
 trap egress EXIT
 
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o h --long dir-input:,dir-output:,help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
