@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o o:h:k:q:s:f:t:e:c \
+OPTS=$(getopt -o o:r:p:n:d:f:t:e:c:n \
 --long operator:,fcn-name:,proc-start:,proc-end:,exit-code: \
 -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -11,6 +11,9 @@ fi
 eval set -- "$OPTS"
 
 OPERATOR=
+DIR_PROJECT=
+PID=
+SID=
 SCAN_DATE=
 FCN_NAME=
 PROC_START=
@@ -21,6 +24,9 @@ NOTES=
 while true; do
   case "$1" in
     -o | --operator) OPERATOR="$2" ; shift 2 ;;
+    -r | --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
+    -p | --pid) PID="$2" ; shift 2 ;;
+    -n | --sid) SID="$2" ; shift 2 ;;
     -d | --scan-date) SCAN_DATE="$2" ; shift 2 ;;
     -f | --fcn-name) FCN_NAME="$2" ; shift 2 ;;
     -t | --proc-start) PROC_START="$2" ; shift 2 ;;
