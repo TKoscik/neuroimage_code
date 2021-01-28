@@ -52,7 +52,7 @@ trap egress EXIT
 OPTS=$(getopt -o hl --long prefix:,\
 dir-dwi:,dir-project:,dir-save:,\
 help,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi

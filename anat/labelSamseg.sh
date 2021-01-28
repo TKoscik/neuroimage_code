@@ -55,7 +55,7 @@ image:,contrast:,thresh:,\
 pallidum-wm,lesion,wm-hyper,\
 dir-save:,dir-scratch:,\
 help,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -138,7 +138,7 @@ N_IMAGE=${#IMAGE[@]}
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SESSION} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
@@ -177,7 +177,7 @@ echo ${samseg_fcn}
 eval ${samseg_fcn}
 
 # Convert and save segmentation output -----------------------------------------
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAMSEG=${DIR_PROJECT}/derivatives/inc/anat/label/samseg
 else
   DIR_SAMSEG=${DIR_SAVE}
@@ -187,7 +187,7 @@ mri_convert ${DIR_SCRATCH}/seg.mgz ${DIR_SAMSEG}/${PREFIX}_label-samseg.nii.gz
 
 # Output WM Hyperintensity map if requested ------------------------------------
 if [[ "${WM_HYPER}" == "true" ]]; then
-  if [ -z "${DIR_SAVE}" ]; then
+  if [[ -z "${DIR_SAVE}" ]]; then
     DIR_HYPERWM=${DIR_PROJECT}/derivatives/inc/anat/label/hyperWM
   else
     DIR_HYPERWM=${DIR_SAVE}

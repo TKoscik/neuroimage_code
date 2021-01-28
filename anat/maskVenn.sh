@@ -53,7 +53,7 @@ OPTS=$(getopt -o hkl --long prefix:,\
 mask-ls:,label:,\
 dir-save:,dir-scratch:,\
 help,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -114,13 +114,13 @@ N_MASK=${#MASK_LS[@]}
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MASK_LS[0]})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${MASK_LS[0]} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${MASK_LS[0]} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/mask
 fi
 mkdir -p ${DIR_SCRATCH}
@@ -137,7 +137,5 @@ mv ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz ${DIR_SAVE}/
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
-
 

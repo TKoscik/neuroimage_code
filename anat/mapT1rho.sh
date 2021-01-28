@@ -52,7 +52,7 @@ OPTS=$(getopt -o hvkl --long prefix:,\
 input:,times:,map-algorithm:,max-time:,threshold:,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -117,14 +117,14 @@ fi
 DIR_PROJECT=$(${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}
 fi
 #mkdir -p ${DIR_SCRATCH}
@@ -148,6 +148,5 @@ ${DIR_INC}/anat/T1rhoMap \
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
 

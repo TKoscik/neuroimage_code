@@ -134,7 +134,7 @@ N_XFM=${#XFM[@]}
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${XFM[0]})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"

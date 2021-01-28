@@ -35,14 +35,6 @@ function egress {
     ${DIR_INC}/log/logBenchmark.sh \
       -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
       -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh \
-      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
-      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
-      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh \
-      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
-      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
-      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -52,7 +44,7 @@ OPTS=`getopt -o h --long \
 project-name:,csv-file:,queue:,\
 dir-save:,\
 help -n 'parse-options' -- "$@"`
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi

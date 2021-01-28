@@ -53,7 +53,7 @@ OPTS=$(getopt -o hvkl --long prefix:,\
 dimension:,image:,mask:,model:,shrink:,patch:,search:,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -127,13 +127,11 @@ fi
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE})
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "sub")
-  SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "ses")
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
   if [ -n "${SID}" ]; then
     DIR_SAVE=${DIR_SAVE}/ses-${SID}

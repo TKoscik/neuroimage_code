@@ -20,6 +20,10 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
@@ -30,6 +34,7 @@ exit 1
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
@@ -41,20 +46,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -64,7 +67,7 @@ OPTS=$(getopt -o hvkl --long prefix:,\
 id-ls:,mod-ls:,dir-project:,mask-name:,mask-dil:,iterations:,resolution:,template:,space:,template-name:,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -79,11 +82,11 @@ MASK_NAME=brain+ANTs
 MASK_DIL=2
 ITERATIONS=0x1x3x2
 RESOLUTION=1x1x1
-TEMPLATE=HCPICBM
+TEMPLATE=HCPYA
 SPACE=1mm
 TEMPLATE_NAME=NULL
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
@@ -124,11 +127,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-save <value>       directory to save output'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -142,8 +141,8 @@ mkdir -p ${DIR_SCRATCH}/coreg
 mkdir -p ${DIR_SCRATCH}/xfm
 mkdir -p ${DIR_SCRATCH}/job
 
-SUBJECT=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id))
-SESSION=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f session_id))
+PID_LS=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id))
+SID_LS=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f session_id))
 PROJECT=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f project))
 DIRECTORY=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f directory))
 ## probably need to adjust this to add masks
@@ -158,7 +157,7 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
     if [[ "${DIR_PROJECT}" == "NULL" ]]; then
         for (( i=1; i<${N_SUB}; i++ )); do
           SUB_PREFIX=sub-${SUBJECT[${i}]}
-          if [ -n "${SESSION}" ]; then
+          if [[ -n "${SESSION}" ]]; then
             SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
           fi
           for (( j=1; j<${N_MOD}; j++ )); do
@@ -170,7 +169,7 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
   else
     for (( i=1; i<${N_SUB}; i++ )); do
       SUB_PREFIX=sub-${SUBJECT[${i}]}
-      if [ -n "${SESSION}" ]; then
+      if [[ -n "${SESSION}" ]]; then
         SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
       fi
       for (( j=1; j<${N_MOD}; j++ )); do
@@ -182,7 +181,7 @@ if [[ "${DIRECTORY}" == "NULL" ]]; then
 else
   for (( i=1; i<${N_SUB}; i++ )); do
     SUB_PREFIX=sub-${SUBJECT[${i}]}
-    if [ -n "${SESSION}" ]; then
+    if [[ -n "${SESSION}" ]]; then
       SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
     fi
     for (( j=1; j<${N_MOD}; j++ )); do
@@ -198,7 +197,7 @@ for k in {0..4}; do
   for (( j=0; j<${ITERATIONS[${k}]}; j++ ))
     for (( i=1; i<${N_SUB}; i++ )); do
       SUB_PREFIX=sub-${SUBJECT[${i}]}
-      if [ -n "${SESSION}" ]; then
+      if [[ -n "${SESSION}" ]]; then
         SUB_PREFIX=${SUB_PREFIX}_ses-${SESSION[${i}]}
       fi
       unset HOLD_LS

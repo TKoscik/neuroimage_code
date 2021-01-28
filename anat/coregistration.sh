@@ -250,17 +250,17 @@ do
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MOVING[0]})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[0]} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[0]} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${MOVING[0]})
 fi
 
 # setup directories
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/reg_${TO}
 fi
 
 DIR_XFM=${DIR_PROJECT}/derivatives/inc/anat/sub-${PID}
-if [ -n "${SID}" ]; then
+if [[ -n "${SID}" ]]; then
   DIR_XFM=${DIR_XFM}/ses-${SID}
 fi
 mkdir -p ${DIR_SCRATCH}
@@ -515,7 +515,5 @@ fi
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
-
 

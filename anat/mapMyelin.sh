@@ -140,7 +140,7 @@ fi
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
@@ -160,7 +160,7 @@ cp ${LABEL} ${DIR_SCRATCH}/label.nii.gz
 gunzip ${DIR_SCRATCH}/*.gz
 
 # create save directory
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/myelin_${SPACE_LAB}
 fi
 mkdir -p ${DIR_SAVE}

@@ -10,6 +10,10 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
@@ -17,6 +21,7 @@ umask 007
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
@@ -28,20 +33,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -54,7 +57,7 @@ weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 no-gm,urad:,do-t2,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -76,7 +79,7 @@ NO_GM=false
 URAD=30
 DO_T2=false
 DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -140,7 +143,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           [FWHM,wienerNoise,binNumber]'
   echo '                           default=[0.15,0.01,200]'
   echo '  --dir-save <value>       directory to save output,'
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}/ses-${SESSION}'
+  echo '                           default: ${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -158,17 +161,17 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "ses")
-if [ -z "${PREFIX}" ]; then
+PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f ses)
+if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  if [ -n "${SESSION}" ]; then
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}/ses-${SESSION}
+if [[ -z "${DIR_SAVE}" ]]; then
+  if [[ -n "${SID}" ]]; then
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}
   else
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${SUBJECT}
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
   fi
 fi
 mkdir -p ${DIR_SCRATCH}
@@ -234,16 +237,16 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
 fi
 
 # gather modality for output
-MOD=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f "modality")
+MOD=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f modality)
 
 if [[ "${METHOD,,}" == "n4" ]]; then
   n4_fcn="N4BiasFieldCorrection"
   n4_fcn="${n4_fcn} -d ${DIM}"
   n4_fcn="${n4_fcn} -i ${IMAGE[0]}"
-  if [ -n "${MASK}" ]; then
+  if [[ -n "${MASK}" ]]; then
     n4_fcn="${n4_fcn} -x ${MASK}"
   fi
-  if [ -n "${WEIGHT}" ]; then
+  if [[ -n "${WEIGHT}" ]]; then
     n4_fcn="${n4_fcn} -w ${WEIGHT}"
   fi
   n4_fcn="${n4_fcn} -r ${RESCALE}"

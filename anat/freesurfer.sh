@@ -52,7 +52,7 @@ trap egress EXIT
 OPTS=$(getopt -o h --long \
 t1:,t2:,version:,\
 help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -100,7 +100,7 @@ fi
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f ses)
-if [ -z "${PREFIX}" ]; then
+if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${T1})
 fi
 mkdir -p ${DIR_PROJECT}/derivatives/freesurfer/subject_dir
