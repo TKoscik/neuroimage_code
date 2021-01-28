@@ -126,21 +126,19 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-if [[ -f "${TS_BOLD}" ]]; then
-  DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
-  PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
-  SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
-  if [[ -z "${PREFIX}" ]]; then
-    PREFIX="sub-${PID}"
-    if [[ -n ${SID} ]]; then
-      PREFIX="${PREFIX}_ses-${SID}"
-    fi
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+if [[ -z "${PREFIX}" ]]; then
+  PREFIX="sub-${PID}"
+  if [[ -n "${SID}" ]]; then
+    PREFIX="${PREFIX}_ses-${SID}"
   fi
-else
+fi
+if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. aborting."
   exit 1
 fi
-
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/resid_${TEMPLATE}+${SPACE}
 fi

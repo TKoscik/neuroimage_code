@@ -108,12 +108,10 @@ fi
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
 PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
 SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
-
 if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
-
 DIR_SUBSES="sub-${PID}"
 if [[ -n ${SID} ]]; then
   DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"

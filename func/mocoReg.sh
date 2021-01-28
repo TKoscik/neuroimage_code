@@ -150,47 +150,41 @@ fi
 # Start of Function
 #==============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
-  PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
-  SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
-  if [ -z "${PREFIX}" ]; then
-    PREFIX=$(${DIR_INC}/bids/get_bidsbase -s -i ${TS_BOLD})
-  fi
-else
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
-
-# Set DIR_SAVE variable
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${PREFIX}" ]]; then
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase -s -i ${TS_BOLD})
+fi
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
 fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
-
-# Check if required files exist -----------------------------------------------
-# Set some helper variables depending on whether session is specified
 DIR_SUBSES=sub-${PID}
 SUBSES=sub-${PID}
 if [[ -n "${SID}" ]]; then
   DIR_SUBSES=${DIR_SUBSES}/ses-${SID}
   SUBSES=${SUBSES}_ses-${SID}
 fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
 
 # Native anatomical, brain mask, and rigid alignment transform
 ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${SUBSES}*${TARGET}.nii.gz))
 ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${SUBSES}*mask-brain*.nii.gz))
 XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}/${SUBSES}*from-${TARGET}+raw_to-${TEMPLATE}*.mat))
-if [[ -z ${ANAT} ]]; then
+if [[ -z "${ANAT}" ]]; then
   echo "Native anatomical not found, aborting."
   exit 1
 fi
-if [[ -z ${ANAT_MASK} ]]; then
+if [[ -z "${ANAT_MASK}" ]]; then
   echo "Native anatomical mask not found, aborting."
   exit 1
 fi
-if [[ -n ${XFM_ALIGN} ]]; then
+if [[ -n "${XFM_ALIGN}" ]]; then
   INIT_XFM=${XFM_ALIGN}
 else
   echo "Alignment registration not found, continuing."
@@ -202,10 +196,10 @@ fi
 DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}
 unset XFM_LS XFM_ARG XFM_NORM
 XFM_LS=($(ls ${DIR_XFM}/*native_to-${TEMPLATE}* 2>/dev/null))
-if [[ -z ${XFM_LS} ]]; then
+if [[ -z "${XFM_LS}" ]]; then
   # note: the line below is for backward compatibility with slightly different naming scheme
   XFM_LS=($(ls ${DIR_XFM}/*${TARGET}+rigid_to-${TEMPLATE}* 2>/dev/null))
-  if [[ -z ${XFM_LS} ]]; then
+  if [[ -z "${XFM_LS}" ]]; then
     echo "Normalization transform(s) not found, aborting"
     exit 1
   fi
@@ -220,12 +214,12 @@ for (( i=0; i<${#XFM_LS[@]}; i++ )); do
   if [[ "${XFM_ARG,,}" == "syn" ]]; then XFM_SYN=${XFM_LS[${i}]}; fi
   if [[ "${XFM_ARG,,}" == "stack" ]]; then XFM_STACK=${XFM_LS[${i}]}; fi
 done
-if [[ -n ${XFM_STACK} ]]; then 
+if [[ -n "${XFM_STACK}" ]]; then 
   XFM_NORM=${XFM_STACK}
 else
-  if [[ -n ${XFM_SYN} ]]; then XFM_NORM+=(${XFM_SYN}); fi
-  if [[ -n ${XFM_AFFINE} ]]; then XFM_NORM+=(${XFM_AFFINE}); fi
-  if [[ -n ${XFM_RIGID} ]]; then XFM_NORM+=(${XFM_RIGID}); fi
+  if [[ -n "${XFM_SYN}" ]]; then XFM_NORM+=(${XFM_SYN}); fi
+  if [[ -n "${XFM_AFFINE}" ]]; then XFM_NORM+=(${XFM_AFFINE}); fi
+  if [[ -n "${XFM_RIGID}" ]]; then XFM_NORM+=(${XFM_RIGID}); fi
 fi
 N_XFM=${#XFM_NORM[@]}
 
@@ -235,8 +229,8 @@ NUM_TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f numTR)
 TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f TR)
 # check in here for 4d file.
 if [[ "${NUM_TR}" == 1 ]]; then
-    echo "Input file is not a 4D file. Aborting."
-    exit 1
+  echo "Input file is not a 4D file. Aborting."
+  exit 1
 fi
 
 # Motion correction -----------------------------------------------------------

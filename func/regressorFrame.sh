@@ -68,7 +68,6 @@ HELP=false
 VERBOSE=1
 KEEP=false
 
-
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
@@ -112,14 +111,14 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD})
-PID=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "sub")
-SID=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f "ses")
-if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${TS_BOLD})
-fi
+PID=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f sub)
+SID=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f ses)
 if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
+fi
+if [ -z "${PREFIX}" ]; then
+  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${TS_BOLD})
 fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
@@ -134,8 +133,6 @@ ANAT_DIR=${DIR_PROJECT}/derivatives/inc/anat
 REGRESSION_TOP=${FUNC_DIR}/regressors
 maskDir=${FUNC_DIR}/mask
 
-
-# Check if required files exist -----------------------------------------------
 # Set some helper variables depending on whether session is specified
 DIR_SUBSES=sub-${PID}
 SUBSES=sub-${PID}
@@ -143,7 +140,6 @@ if [[ -n "${SID}" ]]; then
   DIR_SUBSES=${DIR_SUBSES}/ses-${SID}
   SUBSES=sub-${SUBSES}_ses-${SID}
 fi
-
 
 #EPI data
 #Motion Parameter directory

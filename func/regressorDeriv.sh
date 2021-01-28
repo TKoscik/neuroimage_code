@@ -65,7 +65,7 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --regressor) OTHER_INPUTS="$2" ; shift 2 ;;
+    --regressor) REGRESSOR="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -91,6 +91,9 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${REGRESSOR})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${REGRESSOR} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${REGRESSOR} -f ses)
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=$(dirname ${REGRESSOR})
 fi

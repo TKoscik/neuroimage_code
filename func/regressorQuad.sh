@@ -91,6 +91,9 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${REGRESSOR})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${REGRESSOR} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${REGRESSOR} -f ses)
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=$(dirname ${REGRESSOR})
 fi
