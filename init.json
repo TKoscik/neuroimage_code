@@ -23,18 +23,18 @@
         "afni": {
             "hostname": "all",
             "version": "18.2.04",
-            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}",
+            "command": ["source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${VERSION}",
                         "export AFNI_NIFTI_TYPE_WARN=NO"]
         },
         "ants": {
             "hostname": "all",
             "version": "2.3.1",
-            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}"]
+            "command": ["source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${VERSION}"]
         },
         "fsl": {
             "hostname": "all",
             "version": "6.0.1_multicore",
-            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}"]
+            "command": ["source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${VERSION}"]
         },
         "freesurfer": {
             "hostname": "all",
