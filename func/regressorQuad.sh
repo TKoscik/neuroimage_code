@@ -49,8 +49,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long regressor:,dir-save:,\
-help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hl --long regressor:,dir-save:,help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -61,7 +60,6 @@ eval set -- "$OPTS"
 REGRESSOR=
 DIR_SAVE=
 HELP=false
-VERBOSE=0
 
 while true; do
   case "$1" in
@@ -93,7 +91,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=$(dirname ${REGRESSOR})
 fi
 mkdir -p ${DIR_SAVE}

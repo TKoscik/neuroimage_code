@@ -61,12 +61,10 @@ eval set -- "$OPTS"
 PREFIX=
 TS_BOLD=
 LABEL=
-DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-NO_LOG=false
 TEMPLATE=
 SPACE=
+DIR_SAVE=
 
 while true; do
   case "$1" in
@@ -111,26 +109,28 @@ fi
 # Start of function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-if [ -f "${TS_BOLD}" ]; then
-  DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
-  if [ -z "${PREFIX}" ]; then
-    PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${TS_BOLD})
-  fi
-  if [ -z "${TEMPLATE}" ] | [ -z "${SPACE}" ]; then
-    TEMPLATE_SPACE=$(${DIR_INC}/bids/get_space.sh -i ${TS_BOLD})
-    TEMP=(${TEMPLATE_SPACE//+/ })
-    TEMPLATE=${TEMP[0]}
-    SPACE=${TEMP[1]}
-  else
-    TEMPLATE_SPACE=${TEMPLATE}+${SPACE}
-  fi
-else
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/func/ts_${TEMPLATE_SPACE}+${LABEL}
+if [[ -z "${PREFIX}" ]]; then
+  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${TS_BOLD})
+fi
+if [[ -z "${TEMPLATE}" ]] | [[ -z "${SPACE}" ]]; then
+  TEMPLATE_SPACE=$(${DIR_INC}/bids/get_space.sh -i ${TS_BOLD})
+  TEMP=(${TEMPLATE_SPACE//+/ })
+  TEMPLATE=${TEMP[0]}
+  SPACE=${TEMP[1]}
+else
+  TEMPLATE_SPACE=${TEMPLATE}+${SPACE}
+fi
+
+if [[ -z "${DIR_SAVE}" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/ts_${TEMPLATE_SPACE}+${LABEL}
 fi
 mkdir -p ${DIR_SAVE}
 
