@@ -20,21 +20,11 @@ umask 007
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
-  if [[ "${KEEP}" == "false" ]]; then
-    if [[ -n ${DIR_SCRATCH} ]]; then
-      if [[ -d ${DIR_SCRATCH} ]]; then
-        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          rm -R ${DIR_SCRATCH}
-        else
-          rmdir ${DIR_SCRATCH}
-        fi
-      fi
-    fi
-  fi
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh \
-      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
-      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
   fi
 }
 trap egress EXIT

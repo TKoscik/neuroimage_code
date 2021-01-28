@@ -21,17 +21,21 @@ function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh \
-      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
-      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
-    ${DIR_INC}/log/logQC.sh \
-    -o ${OPERATOR} 
-SCAN_DATE=
-FCN_NAME=
-PROC_START=
-PROC_END=
-EXIT_CODE=
-NOTES=
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logQC.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
+    --notes ${NOTES}
   fi
 }
 trap egress EXIT
