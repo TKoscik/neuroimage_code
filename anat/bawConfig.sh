@@ -9,6 +9,10 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
@@ -27,20 +31,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -61,8 +63,6 @@ PROJECT_NAME=
 CSV_FILE=
 DIR_SAVE=
 QUEUE=
-DIR_INC=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Shared/nopoulos/nimg_core/templates_human
 HELP=false
 
 
@@ -77,9 +77,6 @@ while true; do
     * ) break ;;
   esac
 done
-### NOTE: DIR_CODE, DIR_PINCSOURCE may be deprecated and possibly replaced
-#         by DIR_INC for version 0.0.0.0. Specifying the directory may
-#         not be necessary, once things are sourced
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -94,8 +91,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --csv-file <value>       csv file, full path'
   echo '  --queue <value>          ARGON queues to submit to'
   echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-inc <value>        directory where INC tools are stored,'
-  echo '                           default: ${DIR_INC}'
   echo ''
   NO_LOG=true
   exit 0

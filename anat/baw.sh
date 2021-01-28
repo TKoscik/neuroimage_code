@@ -27,20 +27,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh \
+      -d ${DIR_PROJECT} -p ${PID} -n ${SID} \
+      -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
+      -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -65,7 +63,6 @@ QUEUE=UI,CCOM
 DIR_SAVE=
 HELP=false
 ALL=false
-DIR_INC=/Shared/inc_scratch/code
 
 while true; do
   case "$1" in
@@ -110,8 +107,8 @@ fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "ses")
+PID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "sub")
+SID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "ses")
 if [ -z "${PREFIX}" ]; then
   PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${T1})
 fi
@@ -120,7 +117,7 @@ CSV=${DIR_PROJECT}/code/baw.csv
 CONFIGFILE=${DIR_PROJECT}/code/${PROJECT_NAME}.config
 
 if [[ ! -f "${CONFIGFILE}" ]]; then
-  ${DIR_INC}/anat/baw_config.sh \
+  ${DIR_INC}/anat/bawConfig.sh \
     --project-name ${PROJECT_NAME} \
     --csv-file ${CSV} \
     --dir-save ${DIR_PROJECT}/derivatives/baw \
@@ -143,23 +140,20 @@ done
 
 IMAGES=$(IFS=, ; echo "${IMAGES[*]}")
 
-
-echo '"'${PROJECT_NAME}'","sub-'${SUBJECT}'","ses-'${SESSION}'","{'${IMAGES}'}"' >> ${CSV}
+echo '"'${PROJECT_NAME}'","sub-'${PID}'","ses-'${SID}'","{'${IMAGES}'}"' >> ${CSV}
 
 #sort -u ${CSV} -o ${CSV}
 if [[ "${ALL}" == "true" ]]; then
   SESID=all
 else
-  SESID=ses-${SESSION}
+  SESID=ses-${SID}
 fi
 
-export PATH=/Shared/pinc/sharedopt/apps/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
-bash ${DIR_INC}/anat/runbaw.sh -p 1 -s ${SESID} -r ${RUNTYPE} -c ${CONFIGFILE}
-
+export PATH=${DIR_PINC}/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
+bash ${DIR_INC}/anat/bawRun.sh -p 1 -s ${SESID} -r ${RUNTYPE} -c ${CONFIGFILE}
 
 #===============================================================================
 # End of Function
 #===============================================================================
-
 exit 0
 

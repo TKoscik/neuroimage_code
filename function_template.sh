@@ -32,7 +32,6 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
     ${DIR_INC}/log/logBenchmark.sh \
       -o ${OPERATOR} -h ${HARDWARE} -k ${KERNEL} -q ${HPC_Q} -s ${HPC_SLOTS} \
       -f ${FCN_NAME} -t ${PROC_START} -e ${PROC_STOP} -x ${EXIT_CODE}
