@@ -164,7 +164,7 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
 gunzip ${DIR_SCRATCH}/*.gz
 
 # fit a Gaussian mixture model to get initial values for k-means
-INIT_VALUES=($(Rscript ${DIR_INC}/anat/histogram_peaks_GMM.R \
+INIT_VALUES=($(Rscript ${DIR_INC}/anat/histogramPeaksGMM.R \
   ${DIR_SCRATCH}/temp.nii \
   ${DIR_SCRATCH}/mask.nii \
   ${DIR_SCRATCH} \
