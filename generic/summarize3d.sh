@@ -8,6 +8,10 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
@@ -15,6 +19,7 @@ umask 007
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
     if [[ -n ${DIR_SCRATCH} ]]; then
       if [[ -d ${DIR_SCRATCH} ]]; then
@@ -26,20 +31,18 @@ function egress {
       fi
     fi
   fi
-  LOG_STRING=$(date +"${OPERATOR}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
   if [[ "${NO_LOG}" == "false" ]]; then
-    FCN_LOG=/Shared/inc_scratch/log/benchmark_${FCN_NAME}.log
-    if [[ ! -f ${FCN_LOG} ]]; then
-      echo -e 'operator\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
-    fi
-    echo -e ${LOG_STRING} >> ${FCN_LOG}
-    if [[ -v ${DIR_PROJECT} ]]; then
-      PROJECT_LOG=${DIR_PROJECT}/log/${PREFIX}.log
-      if [[ ! -f ${PROJECT_LOG} ]]; then
-        echo -e 'operator\tfunction\tstart\tend\texit_status' > ${PROJECT_LOG}
-      fi
-      echo -e ${LOG_STRING} >> ${PROJECT_LOG}
-    fi
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
   fi
 }
 trap egress EXIT
@@ -49,7 +52,7 @@ OPTS=$(getopt -o hvla --long prefix:,\
 label:,value:,stats:,lut:,no-append,\
 dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -63,7 +66,7 @@ STATS=volume
 LUT=
 DIR_SAVE=
 NO_APPEND=false
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
@@ -115,7 +118,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [[ -z ${VALUE} ]]; then
+if [[ -z "${VALUE}" ]]; then
   TRG_FILE=${LABEL}
 else
   TRG_FILE=${VALUE}
@@ -124,17 +127,17 @@ fi
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TRG_FILE})
 PROJECT=$(${DIR_INC}/bids/get_project.sh -i ${TRG_FILE})
-SUBJECT=$(${DIR_INC}/bids/get_field.sh -i ${TRG_FILE} -f "sub")
-SESSION=$(${DIR_INC}/bids/get_field.sh -i ${TRG_FILE} -f "ses")
+PID=$(${DIR_INC}/bids/get_field.sh -i ${TRG_FILE} -f "sub")
+SID=$(${DIR_INC}/bids/get_field.sh -i ${TRG_FILE} -f "ses")
 if [ -z "${PREFIX}" ]; then
-  PREFIX="sub-${SUBJECT}"
-  if [[ -n ${SESSION} ]]; then
-    PREFIX="${PREFIX}_ses-${SESSION}"
+  PREFIX="sub-${PID}"
+  if [[ -n ${SID} ]]; then
+    PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
 mkdir -p ${DIR_SCRATCH}
 
-if [ -z "${LUT}" ]; then
+if [[ -z "${LUT}" ]]; then
   LUT=${DIR_INC}/lut/lut-baw+brain.tsv
 fi
 
@@ -168,19 +171,19 @@ WHICH_SYS=$(uname --nodename)
 if grep -q "argon" <<< "${WHICH_SYS,,}"; then
   module load R
 fi
-Rscript ${DIR_INC}/generic/summarize_3d.R \
+Rscript ${DIR_INC}/generic/summarize3d.R \
   ${DIR_SCRATCH}/${PREFIX}_tempSummary.tsv \
   ${STATS_LS} \
   ${PIXDIM} \
   ${LUT}
 
 # Setup save directories -------------------------------------------------------
-if [ -z "${VALUE}" ]; then
+if [[ -z "${VALUE}" ]]; then
   MOD=volume
 else
   MOD=$(${DIR_INC}/bids/get_field.sh -i ${VALUE} -f "modality")
 fi
-if [ -z "${DIR_SAVE}" ]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/summary
 fi
 mkdir -p ${DIR_SAVE}
@@ -193,8 +196,7 @@ HEADER=(${HEADER///})
 HEADER=("${HEADER[@]:1}")
 HEADER=(${HEADER[@]// /\t})
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  echo "participant_id session_id summary_date measure ${HEADER[@]}" >> ${SUMMARY_FILE}
-  sed -i s/" "/"\t"/g ${SUMMARY_FILE}
+  echo -e "participant_id\tsession_id\tsummary_date\tmeasure\t${HEADER[@]}" >> ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not

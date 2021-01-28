@@ -1,12 +1,12 @@
 #!/bin/bash -e
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# Wrapper to extract some basic info from NIfTI headers
+# Authors: Timothy R. Koscik, PhD
+# Date: 2021-01-28
 #===============================================================================
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hif --long image:,field:,help -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -64,4 +64,5 @@ echo ${OUT}
 #===============================================================================
 # End of Function
 #===============================================================================
+exit 0
 
