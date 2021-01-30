@@ -59,19 +59,21 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-BG=/Shared/koscikt_scratch/toHOME/HCPYA_700um_T1w.nii.gz
+DIR_LOCAL=/Shared/koscikt_scratch/toLSS
+
+BG=${DIR_LOCAL}/HCPYA_700um_T1w.nii.gz
 BG_THRESH=0.02,0.98
 BG_COLOR="#000000,#ffffff"
+BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-head.nii.gz
 
-ROI=/Shared/koscikt_scratch/toHOME/HCPYA_700um_mask-brain.nii.gz
-ROI_LEVELS=1
-ROI_COLORS="#c800c8"
-ROI_OUTLINE="false"
-ROI_THICKNESS=1
+FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
+FG_THRESH=0.02,0.98
+FG_COLOR="timbow"
+FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
 
-OVERLAY=/Shared/koscikt_scratch/toHOME/overlay_masked.nii.gz
-OVERLAY_THRESH=0.02,0.98
-OVERLAY_COLOR="timbow"
+ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
+ROI_LEVELS=1:26
+ROI_COLORS="randomTimbow"
 
 # ------------------------------------------------------------------------------
 # 3x5 montage layout, with 5 slices from each plane: 
@@ -79,13 +81,13 @@ OVERLAY_COLOR="timbow"
 # slices are selected according to the formula (TOTAL_SLICES - (CTR_OFFSET*TOTAL_SLICES))/(NSLICES+2)[2:(NSLICES-1)]
 # if the CTR_OFFSET is too small or too large, slices out of range will reduce the number of slices included
 IMG_LAYOUT="5:x;5:y;5:z"
-CTR_OFFSET=0,0,0
+SLICE_OFFSET=0,0,0
 
 # ------------------------------------------------------------------------------
 # 3 plane layout:
-# a single slice from each plane, offset by 10% from the center
+# a single slice from each plane, offset by 1 slice from the center
 #IMG_LAYOUT="1:x,1:y,1:z"
-#CTR_OFFSET=0.1,0.1,0.1
+#SLICE_OFFSET=1,1,1
 
 # ------------------------------------------------------------------------------
 # single plane montage layout, 5x5 axial: 
@@ -97,56 +99,81 @@ LABEL_SLICE="true"
 LABEL_LR="true"
 LABEL_CBAR="true"
 
-DIR_SAVE=
-DIR_SCRATCH=/Shared/inc_scratch/${OPERATOR}_${DATE_SUFFIX}
-HELP=false
-VERBOSE=0
+####
 
-while true; do
-  case "$1" in
-    -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
-    -l | --no-log) NO_LOG=true ; shift ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    -- ) shift ; break ;;
-    * ) break ;;
-  esac
+
+FG=(${FG//,/ })
+FG_THRESH=(${FG_THRESH//;/ })
+FG_COLOR=(${FG_COLOR//;/ })
+FG_MASK=(${FG_MASK//,/ })
+
+# Find image extent ------------------------------------------------------------
+unset XLIM YLIM ZLIM
+XLIM=(9999 0)
+YLIM=(9999 0)
+ZLIM=(9999 0)
+unset CHK_LS
+if [[ -n ${FG_MASK} ]] | [[ -n ${ROI} ]]; then
+  if [[ -n ${FG_MASK} ]]; then
+    CHK_LS=(${CHK_LS[@]} ${FG_MASK[@]})    
+  fi
+  if [[ -n ${ROI} ]]; then
+    CHK_LS=(${CHK_LS[@]} ${ROI[@]})
+  fi
+elif [[ -n ${FG} ]]; then
+  CHK_LS=(${CHK_LS[@]} ${FG[@]})
+elif [[ -n ${BG_MASK} ]]; then
+  CHK_LS=(${CHK_LS[@]} ${BG_MASK})
+else
+  CHK_LS=(${CHK_LS[@]} ${BG[@]})
+fi
+for (( i=0; i<${#CHK_LS[@]}; i++ )); do
+  unset BB BBX BBX BBZ
+  BB=$(3dAutobox -extent -input ${CHK_LS[${i}]} 2>&1)
+  BBX=$(echo ${BB} | sed -e 's/.*x=\(.*\) y=.*/\1/')
+  BBY=$(echo ${BB} | sed -e 's/.*y=\(.*\) z=.*/\1/')
+  BBZ=$(echo ${BB} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
+  BBX=(${BBX//../ }); BBY=(${BBY//../ }); BBZ=(${BBZ//../ })
+  if [[ "${BBX[0]}" < "${XLIM[0]}" ]]; then XLIM[0]=${BBX[0]}; fi
+  if [[ "${BBY[0]}" < "${YLIM[0]}" ]]; then YLIM[0]=${BBY[0]}; fi
+  if [[ "${BBZ[0]}" < "${ZLIM[0]}" ]]; then ZLIM[0]=${BBZ[0]}; fi
+  if [[ "${BBX[1]}" > "${XLIM[1]}" ]]; then XLIM[1]=${BBX[1]}; fi
+  if [[ "${BBY[1]}" > "${YLIM[1]}" ]]; then YLIM[1]=${BBY[1]}; fi
+  if [[ "${BBZ[1]}" > "${ZLIM[1]}" ]]; then ZLIM[1]=${BBZ[1]}; fi
 done
 
-# Usage Help -------------------------------------------------------------------
-if [[ "${HELP}" == "true" ]]; then
-  echo ''
-  echo '------------------------------------------------------------------------'
-  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
-  echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
-  echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
-  echo ''
-  NO_LOG=true
-  exit 0
+# Get image dimensions ---------------------------------------------------------
+unset IMGDIMS
+IMGDIMS=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${BG}))
+IMGDIMS=(${IMGDIMS[@]:1:3})
+
+# convert dimension limits to a proportion of max ------------------------------
+XLIM[0]=$(echo "scale=4; ${XLIM[0]}/${IMGDIMS[0]}" | bc -l)
+XLIM[1]=$(echo "scale=4; ${XLIM[1]}/${IMGDIMS[0]}" | bc -l)
+YLIM[0]=$(echo "scale=4; ${YLIM[0]}/${IMGDIMS[1]}" | bc -l)
+YLIM[1]=$(echo "scale=4; ${YLIM[1]}/${IMGDIMS[1]}" | bc -l)
+ZLIM[0]=$(echo "scale=4; ${ZLIM[0]}/${IMGDIMS[2]}" | bc -l)
+ZLIM[1]=$(echo "scale=4; ${ZLIM[1]}/${IMGDIMS[2]}" | bc -l)
+
+# add in desired slice offsets (i.e., to avoid middle slice) -------------------
+SLICE_OFFSET=(${SLICE_OFFSET//, /})
+SLICE_PCT+=$(echo "scale=4; 1/${IMGDIMS[0]}" | bc -l)
+SLICE_PCT+=$(echo "scale=4; 1/${IMGDIMS[1]}" | bc -l)
+SLICE_PCT+=$(echo "scale=4; 1/${IMGDIMS[2]}" | bc -l)
+if [[ "${SLICE_OFFSET[0]}" != "0" ]]; then
+  XLIM[0]=$(echo "scale=4; ${XLIM[0]}+${SLICE_PCT}" | bc -l)
+  XLIM[1]=$(echo "scale=4; ${XLIM[1]}+${SLICE_PCT}" | bc -l)
+fi
+if [[ "${SLICE_OFFSET[1]}" != "0" ]]; then
+  YLIM[0]=$(echo "scale=4; ${YLIM[0]}+${SLICE_PCT}" | bc -l)
+  YLIM[1]=$(echo "scale=4; ${YLIM[1]}+${SLICE_PCT}" | bc -l)
+fi
+if [[ "${SLICE_OFFSET[2]}" != "0" ]]; then
+  ZLIM[0]=$(echo "scale=4; ${ZLIM[0]}+${SLICE_PCT}" | bc -l)
+  ZLIM[1]=$(echo "scale=4; ${ZLIM[1]}+${SLICE_PCT}" | bc -l)
 fi
 
-#===============================================================================
-# Start of Function
-#===============================================================================
-# find number of slices in each plane ------------------------------------------
+# Figure out number slices for each orientation --------------------------------
 NX=0
 NY=0
 NZ=0
@@ -160,26 +187,159 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
      if [[ "${TEMP[1]}" =~ "z" ]]; then NZ=$((${NZ}+${TEMP[0]})); fi
   done
 done
+
+# calculate slice positions as proportion of total extent of each plane --------
 DX=$((${NX}+2))
 DX=$(echo "scale=4; 1/${DX}" | bc -l)
-X=($(seq 0 ${DX} 1))
+X=($(seq ${XLIM[0]} ${DX} ${XLIM[1]}))
 X=(${X[@]:1:${NX}})
+
 DY=$((${NY}+2))
 DY=$(echo "scale=4; 1/${DY}" | bc -l)
-Y=($(seq 0 ${DY} 1))
+Y=($(seq ${YLIM[0]} ${DY} ${YLIM[1]}))
 Y=(${Y[@]:1:${NY}})
+
 DZ=$((${NZ}+2))
 DZ=$(echo "scale=4; 1/${DZ}" | bc -l)
-Z=($(seq 0 ${DZ} 1))
+Z=($(seq ${ZLIM[0]} ${DZ} ${ZLIM[1]}))
 Z=(${Z[@]:1:${NZ}})
 
-# check if all images in same space
+# check if all images in same space --------------------------------------------
+CHK_FIELD=("dim" "pixdim" "quatern_b" "quatern_c" "quatern_d" "qoffset_x" "qoffset_y" "qoffset_z" "srow_x" "srow_y" "srow_z")
+if [[ -n ${FG_MASK} ]]; then
+  for (( i=0; i<${#FG_MASK[@]}; i++ )); do
+    for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
+      unset CHK
+      CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG_MASK[${i}]})
+      if [[ -n ${CHK} ]]; then
+        antsApplyTransforms \
+        -d 3 -n GenericLabel \
+        -i ${FG_MASK[${j}]} \
+        -o ${DIR_SCRATCH}/FG_mask-${j}.nii.gz \
+        -r ${BG}
+        FG_MASK[${j}]="${DIR_SCRATCH}/FG_mask-${j}.nii.gz"
+        break
+      fi
+    done
+  done
+fi
+if [[ -n ${ROI} ]]; then
+  for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
+    unset CHK
+    CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${ROI})
+    if [[ -n ${CHK} ]]; then
+      antsApplyTransforms \
+      -d 3 -n MultiLabel \
+      -i ${ROI} \
+      -o ${DIR_SCRATCH}/ROI.nii.gz \
+      -r ${BG}
+      ROI="${DIR_SCRATCH}/ROI.nii.gz"
+      break
+    fi
+  done
+fi
+if [[ -n ${FG} ]]; then
+  for (( i=0; i<${#FG[@]}; i++ )); do
+    for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
+      unset CHK
+      CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG[${i}]})
+      if [[ -n ${CHK} ]]; then
+        antsApplyTransforms \
+        -d 3 -n Linear \
+        -i ${FG[${j}]} \
+        -o ${DIR_SCRATCH}/FG_${j}.nii.gz \
+        -r ${BG}
+        FG[${j}]="${DIR_SCRATCH}/FG_${j}.nii.gz"
+        break
+      fi
+    done
+  done
+fi
 
-# get slices
+# apply masks ------------------------------------------------------------------
+if [[ -n ${BG_MASK} ]]; then
+  fslmaths ${BG} -mas ${BG_MASK} ${DIR_SCRATCH}/BG_mask.nii.gz
+  BG=${DIR_SCRATCH}/BG_masked.nii.gz
+fi
+for (( i=0; i<${#FG[@]}; i++ )); do
+  if [[ -n ${FG_MASK} ]] & [[ "${FG_MASK[${i}]}" != "null" ]]; then
+    fslmaths ${FG[${i}]} -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${j}_masked.nii.gz
+    FG[${i}]=${DIR_SCRATCH}/FG_${j}_masked.nii.gz
+  fi
+done
 
-fslmaths HCPYA_700um_T2w.nii.gz -thr 15000 -uthr 25000 overlay_masked.nii.gz
-overlay 0 0 HCPYA_700um_T1w.nii.gz -a overlay_masked.nii.gz 15000 25000 overlay_render.nii.gz
-slicer overlay_render.nii.gz -u -l /Shared/koscikt_scratch/toHOME/timbow.lut -x 0.505 mid_sag.png -y 0.5 mid_cor.png -z 0.5 mid_axi.png
+# setup ROIs -------------------------------------------------------------------
+if [[ -n ${ROI} ]]; then
+  ROI_LEVELS=(${ROI_LEVELS//,/ })
+  unset ROI_VALS
+  for (( i=0; i<${#ROI_LEVELS[@]}; i++ ));
+    if [[ "${ROI_LEVELS[${i}]}" =~ ":" ]]; then
+      TEMP=(${ROI_LEVELS[${i}]//:/ })
+      ROI_VALS+=($(seq ${TEMP[0]} ${TEMP[1]}))
+    else
+      ROI_VALS+=(${ROI_LEVELS[${i}]})
+    fi
+  done
+  fslmaths ${ROI} -mul 0 ${DIR_SCRATCH}/ROI.nii.gz
+  for (( i=0; i<${#ROI_VALS[@]}; i++ )); do
+    fslmaths ${ROI} \
+    -thr ${ROI_VALS[${i}]} 
+    -uthr ${ROI_VALS[${i}]} \
+    -bin -mul ${i} \
+    -add ${DIR_SCRATCH}/ROI.nii.gz \
+    ${DIR_SCRATCH}/ROI.nii.gz
+  done
+  ROI=${DIR_SCRATCH}/ROI.nii.gz
+  fslmaths ${ROI} -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
+  fslmaths ${ROI} -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz ${ROI}
+fi
+
+# Make image -------------------------------------------------------------------
+BG_THRESH=(${BG_THRESH//,/ })
+ol_fcn="overlay 0 0 ${BG} ${BG_THRESH[0]} ${BG_THRESH[1]}"
+if [[ -n ${FG} ]]; then
+  for (( i=0; i<${#FG[@]}; i++ )); do
+    unset TEMP_THRESH
+    TEMP_THRESH=(${FG_THRESH[${i}]//,/ })
+    ol_fcn="${ol_fcn} ${FG[${i}]} ${TEMP_THRESH[0]} ${TEMP_THRESH[1]}"
+  done
+fi
+if [[ -n ${ROI} ]]; then
+  ol_fcn="${ol_fcn} ${ROI} 0 1"
+fi
+ol_fcn="${ol_fcn} ${DIR_SCRATCH}/OVERLAY.nii.gz"
+eval ${ol_fcn}
+
+# get slices -------------------------------------------------------------------
+for (( i=0; i<${#X[@]}; i++ )); do
+  slicer ${DIR_SCRATCH}/OVERLAY.nii.gz \
+    -u -l ${DIR_SCRATCH}/temp.lut \
+    -x ${X[${i}]} ${DIR_SCRATCH}/X${i}.png
+    if [[ "${LABEL_SLICE}" == "true" ]]; then
+      SLICE_NUM=$(echo "scale=0; ${X[${i}]}/${SLICE_PCT[0]" | bc -l)
+      ###Convert coordinate to mm?
+      mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' \
+        -pointsize 14 -gravity NorthWest -annotate +10+10 "x=${SLICE_NUM}" \
+        ${DIR_SCRATCH}/X${i}.png
+    fi
+done
+for (( i=0; i<${#Y[@]}; i++ )); do
+  slicer ${DIR_SCRATCH}/OVERLAY.nii.gz \
+    -u -l ${DIR_SCRATCH}/temp.lut \
+    -y ${Y[${i}]} ${DIR_SCRATCH}/Y${i}.png
+done
+for (( i=0; i<${#Z[@]}; i++ )); do
+  slicer ${DIR_SCRATCH}/OVERLAY.nii.gz \
+    -u -l ${DIR_SCRATCH}/temp.lut \
+    -z ${Z[${i}]} ${DIR_SCRATCH}/Z${i}.png
+done
+    
+
+
+slicer overlay_render.nii.gz -u -l /Shared/koscikt_scratch/toHOME/timbow.lut -x 0.505 mid_sag.png -y 0.5 
+
+
+mid_cor.png -z 0.5 mid_axi.png
 mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' -pointsize 14 -gravity NorthWest -annotate +10+10 "x=125" mid_sag.png
 
 mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' -pointsize 14 -gravity NorthWest -annotate +10+10 "y=345" mid_cor.png
