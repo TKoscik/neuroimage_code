@@ -1,4 +1,4 @@
-commandArgs(trailingOnly = TRUE)
+args <- commandArgs(trailingOnly = TRUE)
 
 library(ggplot2)
 library(viridis)
