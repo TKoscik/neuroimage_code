@@ -1,3 +1,100 @@
+#!/bin/bash -e
+#===============================================================================
+# Make PNG images of brains, suitable for publication.
+# -flexible overlay, color, and layout options
+# Authors: Timothy R. Koscik, PhD
+# Date: 2021-02-04
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvl --long \
+bg-nii:,bg-mask:,bg-thresh:,bg-color:,bg-direction:,bg-cbar,\
+fg-nii:,fg-mask:,fg-thresh:,fg-color:,fg-direction:,fg-cbar,\
+roi-nii:,roi-levels:,roi-color:,roi-direction:,roi-cbar,\
+image-layout:,ctr-offset:,\
+label-slice,label-mm,label-lr,\
+color-panel:,color-text:,font-name:,font-size:,file-name:,
+dir-save:,dir-scratch:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [[ $? != 0 ]]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+BG=${DIR_LOCAL}/HCPYA_700um_T1w.nii.gz
+BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
+BG_THRESH=2,98
+BG_COLOR="#010101,#ffffff"
+BG_ORDER="normal"
+BG_CBAR="false"
+
+FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
+FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-bg.nii.gz
+FG_THRESH=2,98
+FG_COLOR="timbow"
+FG_ORDER="normal"
+FG_CBAR="true"
+
+ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
+ROI_LEVELS=1:32
+ROI_COLOR="timbow"
+ROI_ORDER="random"
+ROI_CBAR="false"
+
+LABEL_SLICE="true"
+LABEL_MM="true"
+LABEL_LR="true"
+COLOR_PANEL="#FFFFFF"
+COLOR_TEXT="#000000"
+FONT_NAME=NimbusSans-Regular
+FONT_SIZE=14
+DIR_SAVE=${DIR_SCRATCH}
+IMAGE_NAME="image_final"
+
+LAYOUT=1:x,1:y,1:z
+OFFSET=1,0,0
+
+# DEBUG values -----------------------------------------------------------------
 sg Research-INC_img_core
 module load R
 source /Shared/pinc/sharedopt/apps/sourcefiles/afni_source.sh
@@ -5,7 +102,6 @@ source /Shared/pinc/sharedopt/apps/sourcefiles/ants_source.sh
 source /Shared/pinc/sharedopt/apps/sourcefiles/fsl_source.sh
 DIR_INC=/Shared/inc_scratch/code
 DIR_TEMPLATE=/Dedicated/inc_database/templates
-
 DIR_LOCAL=/Shared/koscikt_scratch/toLSS
 DIR_SCRATCH=/Shared/koscikt_scratch/toLSS
 
@@ -13,7 +109,7 @@ BG=${DIR_LOCAL}/HCPYA_700um_T1w.nii.gz
 BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
 BG_THRESH=2,98
 BG_COLOR="#010101,#ffffff"
-BG_COLOR_ORDER="normal"
+BG_ORDER="normal"
 BG_FIDELITY=200
 BG_CBAR="false"
 
@@ -40,6 +136,96 @@ FONT_NAME=NimbusSans-Regular
 FONT_SIZE=14
 DIR_SAVE=${DIR_SCRATCH}
 IMAGE_NAME="image_final"
+
+# ------------------------------------------------------------------------------
+
+DIR_SAVE=
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    --bg-nii) BG="$2" ; shift 2 ;;
+    --bg-mask) BG_MASK="$2" ; shift 2 ;;
+    --bg-thresh) BG_THRESH="$2" ; shift 2 ;;
+    --bg-color) BG_COLOR="$2" ; shift 2 ;;
+    --bg-order) BG_ORDER="$2" ; shift 2 ;;
+    --bg-cbar) BG_CBAR=true ; shift ;;
+    --fg-nii) FG="$2" ; shift 2 ;;
+    --fg-mask) FG_MASK="$2" ; shift 2 ;;
+    --fg-thresh) FG_THRESH="$2" ; shift 2 ;;
+    --fg-color) FG_COLOR="$2" ; shift 2 ;;
+    --fg-order) FG_ORDER="$2" ; shift 2 ;;
+    --fg-cbar) FG_CBAR=true ; shift ;;
+    --roi-nii) ROI="$2" ; shift 2 ;;
+    --roi-level) ROI_LEVEL="$2" ; shift 2 ;;
+    --roi-color) ROI_COLOR="$2" ; shift 2 ;;
+    --roi-order) ROI_ORDER="$2" ; shift 2 ;;
+    --roi-cbar) ROI_CBAR="$2" ; shift 2 ;;
+    --layout) LAYOUT="$2" ; shift 2 ;;
+    --offset) OFFSET="$2" ; shift 2 ;;
+    --label-slice) LABEL_SLICE="$2" ; shift 2 ;;
+    --label-mm) LABEL_MM="$2" ; shift 2 ;;
+    --label-lr) LABEL_LR="$2" ; shift 2 ;;
+    --color-panel) COLOR_PANEL="$2" ; shift 2 ;;
+    --color-text) COLOR_TEXT="$2" ; shift 2 ;;
+    --font-name) FONT_NAME="$2" ; shift 2 ;;
+    --font-size) FONT_SIZE="$2" ; shift 2 ;;
+    --file-name) FILE_NAME="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo "Usage: ${FCN_NAME}"
+  echo '  -h | --help              display command help'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --layout                 a string identifying the number of'
+  echo '                           slices, slice plane, rows and columns'
+  echo '    Layouts are specifed by using delimiters:'
+  echo '    (;) row delimiter'
+  echo '    (,) column delimiter'
+  echo '    (:) number and plane delimiter'
+  echo '        Applied in row -> column -> plane order'
+  echo '    See examples below'
+  echo '  --dir-save <value>       directory to save output'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo ''
+  echo ' Example Layouts:'
+  echo ' (1) 3 slices, 1 from each plane in a horizontal array:'
+  echo '     offset 1 slice from center'
+  echo '     >>  --layout 1:x,1:y,1:z'
+  echo '     >>  --offset 1,1,1'
+  echo ' (2) single plane, 5x5 axial montage layout:'
+  echo '     >>  --layout 5:z;5:z;5:z;5:z;5:z'
+  echo '     >>  --offset 0,0,0'
+  echo ' (3) 3x5 montage layout, single plane in each row:'
+  echo '     - row 1: 5 slices in x-plane'
+  echo '     - row 2: 5 slices in y-plane'
+  echo '     - row 3: 5 slices in z-plane'
+  echo '     >>  --layout 5:x;5:y;5:z'
+  echo '     >>  --offset 0,0,0'
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+
+
+
+
 
 # ------------------------------------------------------------------------------
 # 3x5 montage layout, with 5 slices from each plane: 
