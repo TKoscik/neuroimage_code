@@ -94,6 +94,9 @@ IMAGE_NAME="image_final"
 LAYOUT=1:x,1:y,1:z
 OFFSET=1,0,0
 
+DIR_SAVE=
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+
 # DEBUG values -----------------------------------------------------------------
 sg Research-INC_img_core
 module load R
@@ -110,7 +113,6 @@ BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
 BG_THRESH=2,98
 BG_COLOR="#010101,#ffffff"
 BG_ORDER="normal"
-BG_FIDELITY=200
 BG_CBAR="false"
 
 FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
@@ -118,7 +120,6 @@ FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-bg.nii.gz
 FG_THRESH=2,98
 FG_COLOR="timbow"
 FG_ORDER="normal"
-FG_FIDELITY=200
 FG_CBAR="true"
 
 ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
@@ -135,10 +136,7 @@ COLOR_TEXT="#000000"
 FONT_NAME=NimbusSans-Regular
 FONT_SIZE=14
 IMAGE_NAME="image_final"
-
-DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
-
+# -----------------------------------
 
 while true; do
   case "$1" in
