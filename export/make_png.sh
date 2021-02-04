@@ -117,14 +117,14 @@ FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
 FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-bg.nii.gz
 FG_THRESH=2,98
 FG_COLOR="timbow"
-FG_COLOR_ORDER="normal"
+FG_ORDER="normal"
 FG_FIDELITY=200
 FG_CBAR="true"
 
 ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
 ROI_LEVELS=1:32
 ROI_COLOR="timbow"
-ROI_COLOR_ORDER="random"
+ROI_ORDER="random"
 ROI_CBAR="false"
 
 LABEL_SLICE="true"
@@ -134,13 +134,12 @@ COLOR_PANEL="#FFFFFF"
 COLOR_TEXT="#000000"
 FONT_NAME=NimbusSans-Regular
 FONT_SIZE=14
-DIR_SAVE=${DIR_SCRATCH}
 IMAGE_NAME="image_final"
-
-# ------------------------------------------------------------------------------
 
 DIR_SAVE=
 DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+
+
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
@@ -328,7 +327,7 @@ for (( i=0; i<${#CHK_LS[@]}; i++ )); do
   BB=$(3dAutobox -extent -input ${CHK_LS[${i}]} 2>&1)
   BBX=$(echo ${BB} | sed -e 's/.*x=\(.*\) y=.*/\1/')
   BBY=$(echo ${BB} | sed -e 's/.*y=\(.*\) z=.*/\1/')
-  BBZ=$(echo ${BB} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
+  BBZ=$(echo ${BB} | sed -e 's/.*z=\(.*\) Extent.*/\1/')*****'
   BBX=(${BBX//../ }); BBY=(${BBY//../ }); BBZ=(${BBZ//../ })
   if [[ ${BBX[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BBX[0]}; fi
   if [[ ${BBY[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BBY[0]}; fi
