@@ -1,79 +1,45 @@
-#!/bin/bash -e
-#===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
-#===============================================================================
-PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
-FCN_NAME=($(basename "$0"))
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
-OPERATOR=$(whoami)
-KERNEL="$(unname -s)"
-HARDWARE="$(uname -m)"
-HPC_Q=${QUEUE}
-HPC_SLOTS=${NSLOTS}
-KEEP=false
-NO_LOG=false
-umask 007
+sg Research-INC_img_core
+module load R
+source /Shared/pinc/sharedopt/apps/sourcefiles/afni_source.sh
+source /Shared/pinc/sharedopt/apps/sourcefiles/ants_source.sh
+source /Shared/pinc/sharedopt/apps/sourcefiles/fsl_source.sh
+DIR_INC=/Shared/inc_scratch/code
+DIR_TEMPLATE=/Dedicated/inc_database/templates
 
-# actions on exit, write to logs, clean scratch
-function egress {
-  EXIT_CODE=$?
-  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-  if [[ "${KEEP}" == "false" ]]; then
-    if [[ -n ${DIR_SCRATCH} ]]; then
-      if [[ -d ${DIR_SCRATCH} ]]; then
-        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          rm -R ${DIR_SCRATCH}
-        else
-          rmdir ${DIR_SCRATCH}
-        fi
-      fi
-    fi
-  fi
-  if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-  fi
-}
-trap egress EXIT
-
-# Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
-other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [[ $? != 0 ]]; then
-  echo "Failed parsing options" >&2
-  exit 1
-fi
-eval set -- "$OPTS"
-
-# Set default values for function ---------------------------------------------
 DIR_LOCAL=/Shared/koscikt_scratch/toLSS
+DIR_SCRATCH=/Shared/koscikt_scratch/toLSS
 
 BG=${DIR_LOCAL}/HCPYA_700um_T1w.nii.gz
-BG_THRESH=0.02,0.98
-BG_COLOR="#000000,#ffffff"
-BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-head.nii.gz
+BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
+BG_THRESH=2,98
+BG_COLOR="#010101,#ffffff"
+BG_COLOR_ORDER="normal"
+BG_FIDELITY=200
+BG_CBAR="false"
 
 FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
-FG_THRESH=0.02,0.98
+FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-bg.nii.gz
+FG_THRESH=2,98
 FG_COLOR="timbow"
-FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
+FG_COLOR_ORDER="normal"
+FG_FIDELITY=200
+FG_CBAR="true"
 
 ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
-ROI_LEVELS=1:26
-ROI_COLORS="randomTimbow"
+ROI_LEVELS=1:32
+ROI_COLOR="timbow"
+ROI_COLOR_ORDER="random"
+ROI_CBAR="false"
+
+LABEL_SLICE="true"
+LABEL_MM="true"
+LABEL_LR="true"
+COLOR_PANEL="#FFFFFF"
+COLOR_TEXT="#000000"
+FONT_NAME=NimbusSans-Regular
+FONT_SIZE=14
+DIR_SAVE=${DIR_SCRATCH}
+IMAGE_NAME="image_final"
 
 # ------------------------------------------------------------------------------
 # 3x5 montage layout, with 5 slices from each plane: 
@@ -95,18 +61,62 @@ SLICE_OFFSET=0,0,0
 #IMG_LAYOUT="5:z;5:z;5:z;5:z;5:z"
 #CTR_OFFSET=0,0,0
 
-LABEL_SLICE="true"
-LABEL_LR="true"
-LABEL_CBAR="true"
-
 ####
-
-
+# parse foreground parameters --------------------------------------------------
 FG=(${FG//,/ })
+FG_MASK=(${FG_MASK//,/ })
 FG_THRESH=(${FG_THRESH//;/ })
 FG_COLOR=(${FG_COLOR//;/ })
-FG_MASK=(${FG_MASK//,/ })
+FG_COLOR_ORDER=(${FG_COLOR_ORDER//,/ })
+FG_FIDELITY=(${FG_FIDELITY//;/ })
+FG_CBAR=(${FG_CBAR//,/ })
 
+# Get image informtation -------------------------------------------------------
+unset DIMS PIXDIM ORIGIN
+DIMS=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${BG}))
+DIMS=(${DIMS[@]:1:3})
+PIXDIM=($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${BG}))
+PIXDIM=(${PIXDIM[@]:1:3})
+ORIGIN+=($(nifti_tool -disp_hdr -field qoffset_x -quiet -infiles ${BG}))
+ORIGIN+=($(nifti_tool -disp_hdr -field qoffset_y -quiet -infiles ${BG}))
+ORIGIN+=($(nifti_tool -disp_hdr -field qoffset_z -quiet -infiles ${BG}))
+ORIENT=($(3dinfo -orient ${BG}))
+
+## use mm only if image is in known standard space -----------------------------
+if [[ "${LABEL_MM}" == "true" ]]; then
+  LABEL_MM="false"
+  STD_LS=($(ls ${DIR_TEMPLATE}))
+  STD_LS=("${STD_LS[@]/code}")
+  STD_LS=("${STD_LS[@]/xfm}")
+  for (( i=0; i<${#STD_LS[@]}; i++ )); do
+    if [[ "${BG}" == *"${STD_LS[${i}]}"* ]]; then
+      LABEL_MM="true"
+      break
+    fi
+  done
+  if [[ "${LABEL_MM}" == "true" ]]; then
+    echo "MESSAGE [INC:${FCN_NAME}] using mm coordinate labels"
+  else
+    echo "MESSAGE [INC:${FCN_NAME}] using voxel coordinate labels"
+  fi
+fi
+
+# Figure out number slices for each orientation --------------------------------
+NX=0
+NY=0
+NZ=0
+ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
+for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
+  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
+  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
+     TEMP=(${COL_LAYOUT[${j}]//\:/ })
+     if [[ "${TEMP[1]}" =~ "x" ]]; then NX=$((${NX}+${TEMP[0]})); fi
+     if [[ "${TEMP[1]}" =~ "y" ]]; then NY=$((${NY}+${TEMP[0]})); fi
+     if [[ "${TEMP[1]}" =~ "z" ]]; then NZ=$((${NZ}+${TEMP[0]})); fi
+  done
+done
+
+# Calculate slices to plot =====================================================
 # Find image extent ------------------------------------------------------------
 unset XLIM YLIM ZLIM
 XLIM=(9999 0)
@@ -134,78 +144,96 @@ for (( i=0; i<${#CHK_LS[@]}; i++ )); do
   BBY=$(echo ${BB} | sed -e 's/.*y=\(.*\) z=.*/\1/')
   BBZ=$(echo ${BB} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
   BBX=(${BBX//../ }); BBY=(${BBY//../ }); BBZ=(${BBZ//../ })
-  if [[ "${BBX[0]}" < "${XLIM[0]}" ]]; then XLIM[0]=${BBX[0]}; fi
-  if [[ "${BBY[0]}" < "${YLIM[0]}" ]]; then YLIM[0]=${BBY[0]}; fi
-  if [[ "${BBZ[0]}" < "${ZLIM[0]}" ]]; then ZLIM[0]=${BBZ[0]}; fi
-  if [[ "${BBX[1]}" > "${XLIM[1]}" ]]; then XLIM[1]=${BBX[1]}; fi
-  if [[ "${BBY[1]}" > "${YLIM[1]}" ]]; then YLIM[1]=${BBY[1]}; fi
-  if [[ "${BBZ[1]}" > "${ZLIM[1]}" ]]; then ZLIM[1]=${BBZ[1]}; fi
+  if [[ ${BBX[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BBX[0]}; fi
+  if [[ ${BBY[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BBY[0]}; fi
+  if [[ ${BBZ[0]} -lt ${ZLIM[0]} ]]; then ZLIM[0]=${BBZ[0]}; fi
+  if [[ ${BBX[1]} -gt ${XLIM[1]} ]]; then XLIM[1]=${BBX[1]}; fi
+  if [[ ${BBY[1]} -gt ${YLIM[1]} ]]; then YLIM[1]=${BBY[1]}; fi
+  if [[ ${BBZ[1]} -gt ${ZLIM[1]} ]]; then ZLIM[1]=${BBZ[1]}; fi
 done
-
-# Get image dimensions ---------------------------------------------------------
-unset IMGDIMS
-IMGDIMS=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${BG}))
-IMGDIMS=(${IMGDIMS[@]:1:3})
-
-# convert dimension limits to a proportion of max ------------------------------
-XLIM[0]=$(echo "scale=4; ${XLIM[0]}/${IMGDIMS[0]}" | bc -l)
-XLIM[1]=$(echo "scale=4; ${XLIM[1]}/${IMGDIMS[0]}" | bc -l)
-YLIM[0]=$(echo "scale=4; ${YLIM[0]}/${IMGDIMS[1]}" | bc -l)
-YLIM[1]=$(echo "scale=4; ${YLIM[1]}/${IMGDIMS[1]}" | bc -l)
-ZLIM[0]=$(echo "scale=4; ${ZLIM[0]}/${IMGDIMS[2]}" | bc -l)
-ZLIM[1]=$(echo "scale=4; ${ZLIM[1]}/${IMGDIMS[2]}" | bc -l)
 
 # add in desired slice offsets (i.e., to avoid middle slice) -------------------
-SLICE_OFFSET=(${SLICE_OFFSET//, /})
-SLICE_PCT+=$(echo "scale=4; 1/${IMGDIMS[0]}" | bc -l)
-SLICE_PCT+=$(echo "scale=4; 1/${IMGDIMS[1]}" | bc -l)
-SLICE_PCT+=$(echo "scale=4; 1/${IMGDIMS[2]}" | bc -l)
-if [[ "${SLICE_OFFSET[0]}" != "0" ]]; then
-  XLIM[0]=$(echo "scale=4; ${XLIM[0]}+${SLICE_PCT}" | bc -l)
-  XLIM[1]=$(echo "scale=4; ${XLIM[1]}+${SLICE_PCT}" | bc -l)
+SLICE_OFFSET=(${SLICE_OFFSET//,/ })
+XLIM[0]=$((${XLIM[0]}+${SLICE_OFFSET[0]}))
+XLIM[1]=$((${XLIM[1]}+${SLICE_OFFSET[0]}))
+YLIM[0]=$((${YLIM[0]}+${SLICE_OFFSET[1]}))
+YLIM[1]=$((${YLIM[1]}+${SLICE_OFFSET[1]}))
+YLIM[0]=$((${YLIM[0]}+${SLICE_OFFSET[2]}))
+YLIM[1]=$((${YLIM[1]}+${SLICE_OFFSET[2]}))
+## check if limits exceed dims
+if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
+if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[0]}=1; fi
+if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[0]}=1; fi
+if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi
+if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi
+if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
+
+# find number of possible slices -----------------------------------------------
+DX=$((${XLIM[1]}-${XLIM[0]}))
+DY=$((${YLIM[1]}-${YLIM[0]}))
+DZ=$((${ZLIM[1]}-${ZLIM[0]}))
+
+# grab 2 extra slices, if possible, and toss to avoid edges --------------------
+TX=$((${NX}+1))
+if [[ ${DX} -gt ${TX} ]]; then
+  SX=$((${DX}/${TX}))
+  X_VOX=($(seq ${XLIM[0]} ${SX} ${XLIM[1]}))
+  X_VOX=(${X_VOX[@]:1:${NX}})
+else
+  X_VOX=($(seq ${XLIM[0]} 1 ${XLIM[1]}))
 fi
-if [[ "${SLICE_OFFSET[1]}" != "0" ]]; then
-  YLIM[0]=$(echo "scale=4; ${YLIM[0]}+${SLICE_PCT}" | bc -l)
-  YLIM[1]=$(echo "scale=4; ${YLIM[1]}+${SLICE_PCT}" | bc -l)
+TY=$((${NY}+1))
+if [[ ${DY} -gt ${TY} ]]; then
+  SY=$((${DY}/${TY}))
+  Y_VOX=($(seq ${YLIM[0]} ${SY} ${YLIM[1]}))
+  Y_VOX=(${Y_VOX[@]:1:${NY}})
+else
+  Y_VOX=($(seq ${YLIM[0]} 1 ${YLIM[1]}))
 fi
-if [[ "${SLICE_OFFSET[2]}" != "0" ]]; then
-  ZLIM[0]=$(echo "scale=4; ${ZLIM[0]}+${SLICE_PCT}" | bc -l)
-  ZLIM[1]=$(echo "scale=4; ${ZLIM[1]}+${SLICE_PCT}" | bc -l)
+TZ=$((${NZ}+1))
+if [[ ${DZ} -gt ${TZ} ]]; then
+  SZ=$((${DZ}/${TZ}))
+  Z_VOX=($(seq ${ZLIM[0]} ${SZ} ${ZLIM[1]}))
+  Z_VOX=(${Z_VOX[@]:1:${NZ}})
+else
+  Z_VOX=($(seq ${ZLIM[0]} 1 ${ZLIM[1]}))
 fi
 
-# Figure out number slices for each orientation --------------------------------
-NX=0
-NY=0
-NZ=0
-ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
-for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
-  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
-  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
-     TEMP=(${COL_LAYOUT[${j}]//\:/ })
-     if [[ "${TEMP[1]}" =~ "x" ]]; then NX=$((${NX}+${TEMP[0]})); fi
-     if [[ "${TEMP[1]}" =~ "y" ]]; then NY=$((${NY}+${TEMP[0]})); fi
-     if [[ "${TEMP[1]}" =~ "z" ]]; then NZ=$((${NZ}+${TEMP[0]})); fi
-  done
+# convert slices to proportion of max ------------------------------------------
+unset X_PCT Y_PCT Z_PCT
+NX=${#X_VOX[@]}
+NY=${#Y_VOX[@]}
+NZ=${#Z_VOX[@]}
+for (( i=0; i<${NX}; i++ )); do
+  X_PCT+=($(echo "scale=4; ${X_VOX[${i}]}/${DIMS[0]}" | bc -l))
+done
+for (( i=0; i<${NY}; i++ )); do
+  Y_PCT+=($(echo "scale=4; ${Y_VOX[${i}]}/${DIMS[0]}" | bc -l))
+done
+for (( i=0; i<${NZ}; i++ )); do
+  Z_PCT+=($(echo "scale=4; ${Z_VOX[${i}]}/${DIMS[0]}" | bc -l))
 done
 
-# calculate slice positions as proportion of total extent of each plane --------
-DX=$((${NX}+2))
-DX=$(echo "scale=4; 1/${DX}" | bc -l)
-X=($(seq ${XLIM[0]} ${DX} ${XLIM[1]}))
-X=(${X[@]:1:${NX}})
-
-DY=$((${NY}+2))
-DY=$(echo "scale=4; 1/${DY}" | bc -l)
-Y=($(seq ${YLIM[0]} ${DY} ${YLIM[1]}))
-Y=(${Y[@]:1:${NY}})
-
-DZ=$((${NZ}+2))
-DZ=$(echo "scale=4; 1/${DZ}" | bc -l)
-Z=($(seq ${ZLIM[0]} ${DZ} ${ZLIM[1]}))
-Z=(${Z[@]:1:${NZ}})
-
+#===============================================================================
 # check if all images in same space --------------------------------------------
 CHK_FIELD=("dim" "pixdim" "quatern_b" "quatern_c" "quatern_d" "qoffset_x" "qoffset_y" "qoffset_z" "srow_x" "srow_y" "srow_z")
+if [[ -n ${FG} ]]; then
+  for (( i=0; i<${#FG[@]}; i++ )); do
+    for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
+      unset CHK
+      CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG[${i}]})
+      if [[ -n ${CHK} ]]; then
+        antsApplyTransforms \
+          -d 3 -n Linear \
+          -i ${FG[${i}]} \
+          -o ${DIR_SCRATCH}/FG_${i}.nii.gz \
+          -r ${BG}
+        FG[${i}]="${DIR_SCRATCH}/FG_${i}.nii.gz"
+        break
+      fi
+    done
+  done
+fi
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${#FG_MASK[@]}; i++ )); do
     for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
@@ -213,11 +241,11 @@ if [[ -n ${FG_MASK} ]]; then
       CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG_MASK[${i}]})
       if [[ -n ${CHK} ]]; then
         antsApplyTransforms \
-        -d 3 -n GenericLabel \
-        -i ${FG_MASK[${j}]} \
-        -o ${DIR_SCRATCH}/FG_mask-${j}.nii.gz \
-        -r ${BG}
-        FG_MASK[${j}]="${DIR_SCRATCH}/FG_mask-${j}.nii.gz"
+          -d 3 -n GenericLabel \
+          -i ${FG_MASK[${i}]} \
+          -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz \
+          -r ${BG}
+        FG_MASK[${i}]="${DIR_SCRATCH}/FG_mask-${i}.nii.gz"
         break
       fi
     done
@@ -229,130 +257,462 @@ if [[ -n ${ROI} ]]; then
     CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${ROI})
     if [[ -n ${CHK} ]]; then
       antsApplyTransforms \
-      -d 3 -n MultiLabel \
-      -i ${ROI} \
-      -o ${DIR_SCRATCH}/ROI.nii.gz \
-      -r ${BG}
+        -d 3 -n MultiLabel \
+        -i ${ROI} \
+        -o ${DIR_SCRATCH}/ROI.nii.gz \
+        -r ${BG}
       ROI="${DIR_SCRATCH}/ROI.nii.gz"
       break
     fi
   done
 fi
+
+# Make Background ==============================================================
+HILO=(${BG_THRESH//,/ })
+if [[ -n ${BG_MASK} ]]; then
+  LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
+  HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
+else
+  LO=$(fslstats ${BG} -p ${HILO[0]})
+  HI=$(fslstats ${BG} -p ${HILO[1]})
+fi
+
+## apply mask
+if [[ -n ${BG_MASK} ]]; then
+  fslmaths ${BG} -mas ${BG_MASK} ${DIR_SCRATCH}/BG.nii.gz
+  BG=${DIR_SCRATCH}/BG.nii.gz
+fi
+
+## generate color bar
+Rscript ${DIR_INC}/export/make_colors.R \
+  "palette" ${BG_COLOR} \
+  "n" ${BG_FIDELITY} \
+  "order" ${BG_COLOR_ORDER} \
+  "bg" ${COLOR_PANEL} \
+  "dir.save" ${DIR_SCRATCH} \
+  "prefix" "CBAR_BG"
+  
+### add labels to color bar
+if [[ "${BG_CBAR}" == "true" ]]; then
+  TTXT=$(printf "%0.2f\n" ${LO})
+  mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+    -gravity Center -annotate 90x90+0+225 "${TTXT}" \
+    ${DIR_SCRATCH}/CBAR_BG.png
+  TTXT=$(printf "%0.2f\n" ${HI})
+  mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+    -gravity Center -annotate 90x90+0-225 "${TTXT}" \
+    ${DIR_SCRATCH}/CBAR_BG.png
+fi
+
+## generate slice PNGs
+for (( i=0; i<${NX}; i++ )); do
+  slicer ${BG} \
+    -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
+    -i ${LO} ${HI} \
+    -x ${X_PCT[${i}]} ${DIR_SCRATCH}/X${i}.png
+  if [[ "${COLOR_PANEL}" != "#000000" ]]; then
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz 1 ${DIR_SCRATCH}/X${i}.png
+  fi
+  if [[ "${LABEL_SLICE}" == "true" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      LABEL_X=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
+      LABEL_X=$(echo "scale=2; ${LABEL_X}-${X_VOX[${i}]}" | bc -l)
+      LABEL_X=$(echo "scale=2; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
+      LABEL_X="${LABEL_X}mm"
+    else
+      LABEL_X=${X_VOX[${i}]}
+    fi
+    LABEL_X="x=${LABEL_X}"
+    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -gravity NorthWest -annotate +10+10 "${LABEL_X}" \
+      ${DIR_SCRATCH}/X${i}.png
+  fi
+done
+for (( i=0; i<${NY}; i++ )); do
+  slicer ${BG} \
+    -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
+    -i ${LO} ${HI} \
+    -y ${Y_PCT[${i}]} ${DIR_SCRATCH}/Y${i}.png
+  if [[ "${COLOR_PANEL}" != "#000000" ]]; then
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Y${i}.png
+  fi
+  if [[ "${LABEL_SLICE}" == "true" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      LABEL_Y=$(echo "scale=2; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
+      LABEL_Y=$(echo "scale=2; ${LABEL_Y}-${Y_VOX[${i}]}" | bc -l)
+      LABEL_Y=$(echo "scale=2; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
+      LABEL_Y="${LABEL_Y}mm"
+    else
+      LABEL_Y=${Y_VOX[${i}]}
+    fi
+    LABEL_Y="y=${LABEL_Y}"
+    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+       -gravity NorthWest -annotate +10+10 "${LABEL_Y}" \
+      ${DIR_SCRATCH}/Y${i}.png
+  fi
+done
+for (( i=0; i<${NZ}; i++ )); do
+  slicer ${BG} \
+    -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
+    -i ${LO} ${HI} \
+    -z ${Z_PCT[${i}]} ${DIR_SCRATCH}/Z${i}.png
+  if [[ "${COLOR_PANEL}" != "#000000" ]]; then
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Z${i}.png
+  fi
+  if [[ "${LABEL_SLICE}" == "true" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      LABEL_Z=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
+      LABEL_Z=$(echo "scale=2; ${LABEL_Z}-${Z_VOX[${i}]}" | bc -l)
+      LABEL_Z=$(echo "scale=2; ${LABEL_Z}*${PIXDIM[0]}" | bc -l)
+      LABEL_Z="${LABEL_Z}mm"
+    else
+      LABEL_Z=${Z_VOX[${i}]}
+    fi
+    LABEL_Z="z=${LABEL_Z}"
+    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -gravity NorthWest -annotate +10+10 "${LABEL_Z}" \
+      ${DIR_SCRATCH}/Z${i}.png
+  fi
+done
+
+# Add Foreground Overlays ======================================================
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
-    for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
-      unset CHK
-      CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG[${i}]})
-      if [[ -n ${CHK} ]]; then
-        antsApplyTransforms \
-        -d 3 -n Linear \
-        -i ${FG[${j}]} \
-        -o ${DIR_SCRATCH}/FG_${j}.nii.gz \
-        -r ${BG}
-        FG[${j}]="${DIR_SCRATCH}/FG_${j}.nii.gz"
-        break
+    unset HILO LO HI
+    HILO=(${FG_THRESH[${i}]//,/ })
+    if [[ -n ${FG_MASK} ]]; then
+      if [[ "${FG_MASK[${i}]}" != "null" ]]; then
+        LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
+        HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
+      else
+        LO=$(fslstats ${BG} -p ${HILO[0]})
+        HI=$(fslstats ${BG} -p ${HILO[1]})
       fi
+    else
+      LO=$(fslstats ${BG} -p ${HILO[0]})
+      HI=$(fslstats ${BG} -p ${HILO[1]})
+    fi
+
+    ## apply mask
+    if [[ -n ${BG_MASK} ]]; then
+      if [[ "${FG_MASK[${i}]}" != "null" ]]; then
+        fslmaths ${FG[${i}]} -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}.nii.gz
+        FG[${i}]=${DIR_SCRATCH}/FG_${i}.nii.gz
+      fi
+    fi
+
+    ## generate color bar
+    Rscript ${DIR_INC}/export/make_colors.R \
+      "palette" ${FG_COLOR[${i}]} \
+      "n" ${FG_FIDELITY[${i}]} \
+      "order" ${FG_COLOR_ORDER[${i}]} \
+      "bg" ${COLOR_PANEL} \
+      "dir.save" ${DIR_SCRATCH} \
+      "prefix" "CBAR_FG_${i}"
+  
+    ### add labels to color bar
+    if [[ "${BG_CBAR}" == "true" ]]; then
+      TTXT=$(printf "%0.2f\n" ${LO})
+      mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+        -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+        -gravity Center -annotate 90x90+0+225 "${TTXT}" \
+        ${DIR_SCRATCH}/CBAR_FG_${i}.png
+      TTXT=$(printf "%0.2f\n" ${HI})
+      mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+        -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+        -gravity Center -annotate 90x90+0-225 "${TTXT}" \
+        ${DIR_SCRATCH}/CBAR_FG_${i}.png
+    fi
+
+    ## generate slice PNGs
+    for (( x=0; x<${NX}; x++ )); do
+      slicer ${FG[${i}]} \
+        -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
+        -i ${LO} ${HI} \
+        -x ${X_PCT[${x}]} ${DIR_SCRATCH}/temp.png
+      convert ${DIR_SCRATCH}/temp.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
+      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/X${x}.png ${DIR_SCRATCH}/X${x}.png     
+    done
+    for (( y=0; y<${NY}; y++ )); do
+      slicer ${FG[${i}]} \
+        -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
+        -i ${LO} ${HI} \
+        -y ${Y_PCT[${y}]} ${DIR_SCRATCH}/temp.png
+      convert ${DIR_SCRATCH}/temp.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
+      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Y${y}.png ${DIR_SCRATCH}/Y${y}.png   
+    done
+    for (( z=0; z<${NY}; z++ )); do
+      slicer ${FG[${i}]} \
+        -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
+        -i ${LO} ${HI} \
+        -z ${Z_PCT[${z}]} ${DIR_SCRATCH}/temp.png
+      convert ${DIR_SCRATCH}/temp.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
+      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Z${z}.png ${DIR_SCRATCH}/Z${z}.png   
     done
   done
 fi
 
-# apply masks ------------------------------------------------------------------
-if [[ -n ${BG_MASK} ]]; then
-  fslmaths ${BG} -mas ${BG_MASK} ${DIR_SCRATCH}/BG_mask.nii.gz
-  BG=${DIR_SCRATCH}/BG_masked.nii.gz
-fi
-for (( i=0; i<${#FG[@]}; i++ )); do
-  if [[ -n ${FG_MASK} ]] & [[ "${FG_MASK[${i}]}" != "null" ]]; then
-    fslmaths ${FG[${i}]} -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${j}_masked.nii.gz
-    FG[${i}]=${DIR_SCRATCH}/FG_${j}_masked.nii.gz
-  fi
-done
-
-# setup ROIs -------------------------------------------------------------------
+# Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
+  # gather just desired ROIs ---------------------------
   ROI_LEVELS=(${ROI_LEVELS//,/ })
-  unset ROI_VALS
-  for (( i=0; i<${#ROI_LEVELS[@]}; i++ ));
+  fslmaths ${ROI} -thr 0 -uthr 0 ${DIR_SCRATCH}/ROI.nii.gz
+  for (( i=0; i<${#ROI_LEVELS[@]}; i++ )); do
     if [[ "${ROI_LEVELS[${i}]}" =~ ":" ]]; then
-      TEMP=(${ROI_LEVELS[${i}]//:/ })
-      ROI_VALS+=($(seq ${TEMP[0]} ${TEMP[1]}))
+      TCUT=(${ROI_LEVELS[${i}]//\:/ })
+      fslmaths ${ROI} -thr ${TCUT[0]} -uthr ${TCUT[1]} \
+        -add ${DIR_SCRATCH}/ROI.nii.gz \
+        ${DIR_SCRATCH}/ROI.nii.gz
     else
-      ROI_VALS+=(${ROI_LEVELS[${i}]})
+      fslmaths ${ROI} -thr ${ROI_LEVELS[${i}]} -uthr ${ROI_LEVELS[${i}]} \
+        -add ${DIR_SCRATCH}/ROI.nii.gz \
+        ${DIR_SCRATCH}/ROI.nii.gz
     fi
   done
-  fslmaths ${ROI} -mul 0 ${DIR_SCRATCH}/ROI.nii.gz
-  for (( i=0; i<${#ROI_VALS[@]}; i++ )); do
-    fslmaths ${ROI} \
-    -thr ${ROI_VALS[${i}]} 
-    -uthr ${ROI_VALS[${i}]} \
-    -bin -mul ${i} \
-    -add ${DIR_SCRATCH}/ROI.nii.gz \
-    ${DIR_SCRATCH}/ROI.nii.gz
-  done
+  LabelClustersUniquely 3 ${DIR_SCRATCH}/ROI.nii.gz ${DIR_SCRATCH}/ROI.nii.gz 0
   ROI=${DIR_SCRATCH}/ROI.nii.gz
+  
+  # convert to outlines ------------------------------
   fslmaths ${ROI} -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
   fslmaths ${ROI} -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz ${ROI}
-fi
 
-# Make image -------------------------------------------------------------------
-BG_THRESH=(${BG_THRESH//,/ })
-ol_fcn="overlay 0 0 ${BG} ${BG_THRESH[0]} ${BG_THRESH[1]}"
-if [[ -n ${FG} ]]; then
-  for (( i=0; i<${#FG[@]}; i++ )); do
-    unset TEMP_THRESH
-    TEMP_THRESH=(${FG_THRESH[${i}]//,/ })
-    ol_fcn="${ol_fcn} ${FG[${i}]} ${TEMP_THRESH[0]} ${TEMP_THRESH[1]}"
+  ## generate color bar
+  Rscript ${DIR_INC}/export/make_colors.R \
+    "palette" ${ROI_COLOR} \
+    "n" ${N_ROI} \
+    "order" ${ROI_COLOR_ORDER} \
+    "bg" ${COLOR_PANEL} \
+    "dir.save" ${DIR_SCRATCH} \
+    "prefix" "CBAR_ROI"
+
+  ## generate slice PNGs
+  for (( x=0; x<${NX}; x++ )); do
+    slicer ${ROI} \
+      -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
+      -i 1 ${N_ROI} \
+      -x ${X_PCT[${x}]} ${DIR_SCRATCH}/temp.png
+      convert ${DIR_SCRATCH}/temp.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
+      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/X${x}.png ${DIR_SCRATCH}/X${x}.png       
+  done
+  for (( y=0; y<${NY}; y++ )); do
+    slicer ${ROI} \
+      -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
+      -i 1 ${N_ROI} \
+      -y ${Y_PCT[${y}]} ${DIR_SCRATCH}/temp.png
+      convert ${DIR_SCRATCH}/temp.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
+      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Y${y}.png ${DIR_SCRATCH}/Y${y}.png    
+  done
+  for (( z=0; z<${NZ}; z++ )); do
+    slicer ${ROI} \
+      -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
+      -i 1 ${N_ROI} \
+      -z ${Z_PCT[${z}]} ${DIR_SCRATCH}/temp.png
+      convert ${DIR_SCRATCH}/temp.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
+      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Z${x}.png ${DIR_SCRATCH}/Z${x}.png    
   done
 fi
-if [[ -n ${ROI} ]]; then
-  ol_fcn="${ol_fcn} ${ROI} 0 1"
+
+# merge PNGs according to prescribed layout ====================================
+# add laterality label if desired ----------------------------------------------
+XCOUNT=0
+YCOUNT=0
+ZCOUNT=0
+ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
+for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
+  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
+  montage_fcn="montage"    
+  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
+     TEMP=(${COL_LAYOUT[${j}]//\:/ })
+     if [[ "${TEMP[1]}" =~ "x" ]]; then
+       for (( k=0; k<${TEMP[0]}; k++ )); do
+         montage_fcn="${montage_fcn} ${DIR_SCRATCH}/X${XCOUNT}.png"
+         XCOUNT=$((${XCOUNT}+1))
+       done
+     fi
+     if [[ "${TEMP[1]}" =~ "y" ]]; then
+       for (( k=0; k<${TEMP[0]}; k++ )); do
+         montage_fcn="${montage_fcn} ${DIR_SCRATCH}/Y${YCOUNT}.png"
+         YCOUNT=$((${YCOUNT}+1))
+       done
+     fi
+     if [[ "${TEMP[1]}" =~ "z" ]]; then
+       for (( k=0; k<${TEMP[0]}; k++ )); do
+         montage_fcn="${montage_fcn} ${DIR_SCRATCH}/Z${ZCOUNT}.png"
+         ZCOUNT=$((${ZCOUNT}+1))
+       done
+     fi
+  done
+  png_fcn=${montage_fcn}' -tile x1 -geometry +0+0 -gravity center -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/image_row${i}.png'
+  eval ${png_fcn}
+done
+
+FLS=($(ls ${DIR_SCRATCH}/image_row*.png))
+montage_fcn="montage ${DIR_SCRATCH}/image_row0.png"
+for (( i=1; i<${#FLS[@]}; i++ )); do
+  montage_fcn="${montage_fcn} ${FLS[${i}]}"
+done
+montage_fcn=${montage_fcn}' -tile 1x -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/image_col.png'
+eval ${montage_fcn}
+
+# add color bars
+unset CBAR_LS CBAR_COUNT
+CBAR_COUNT=0
+if [[ "${BG_CBAR}" == "true" ]]; then
+  CBAR_COUNT=$((${CBAR_COUNT}+1))
+  CBAR_LS+=("${DIR_SCRATCH}/CBAR_BG.png")
 fi
-ol_fcn="${ol_fcn} ${DIR_SCRATCH}/OVERLAY.nii.gz"
-eval ${ol_fcn}
-
-# get slices -------------------------------------------------------------------
-for (( i=0; i<${#X[@]}; i++ )); do
-  slicer ${DIR_SCRATCH}/OVERLAY.nii.gz \
-    -u -l ${DIR_SCRATCH}/temp.lut \
-    -x ${X[${i}]} ${DIR_SCRATCH}/X${i}.png
-    if [[ "${LABEL_SLICE}" == "true" ]]; then
-      SLICE_NUM=$(echo "scale=0; ${X[${i}]}/${SLICE_PCT[0]" | bc -l)
-      ###Convert coordinate to mm?
-      mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' \
-        -pointsize 14 -gravity NorthWest -annotate +10+10 "x=${SLICE_NUM}" \
-        ${DIR_SCRATCH}/X${i}.png
+CBAR_TEMP=(${FG_CBAR//,/ })
+for (( i=0; i<${#FLS[@]}; i++ )); do
+  if [[ "${#CBAR_TEMP}" == "1" ]]; then
+    if [[ "${CBAR_TEMP}" == "true" ]]; then
+      CBAR_COUNT=$((${CBAR_COUNT}+1))
+      WHICH_CBAR=$((${i}+2))
+      CBAR_LS+=("${DIR_SCRATCH}/CBAR_FG_${i}.png")
     fi
+  else
+    if [[ "${CBAR_TEMP[${i}]}" == "true" ]]; then
+      CBAR_COUNT=$((${CBAR_COUNT}+1))
+      WHICH_CBAR=$((${i}+2))
+      CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
+    fi
+  fi
 done
-for (( i=0; i<${#Y[@]}; i++ )); do
-  slicer ${DIR_SCRATCH}/OVERLAY.nii.gz \
-    -u -l ${DIR_SCRATCH}/temp.lut \
-    -y ${Y[${i}]} ${DIR_SCRATCH}/Y${i}.png
+if [[ -n ${ROI} ]]; then
+  if [[ "${ROI_CBAR}" == "true" ]]; then
+    CBAR_COUNT=$((${CBAR_COUNT}+1))
+    TLS=($(ls ${DIR_SCRATCH}/cbar*))
+    WHICH_CBAR=${#TLS[@]}
+    CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
+  fi
+fi
+
+if [[ "${CBAR_COUNT}" > "0" ]]; then  
+  montage_fcn="montage ${DIR_SCRATCH}/image_col.png"
+  for (( i=0; i<${CBAR_COUNT}; i++ )); do
+    montage_fcn="${montage_fcn} ${CBAR_LS[${i}]}"
+  done
+  montage_fcn=${montage_fcn}' -tile x1 -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/${IMAGE_NAME}.png'
+  eval ${montage_fcn}
+else
+  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${IMAGE_NAME}.png
+fi
+
+if [[ "${LABEL_LR}" == "true" ]]; then
+  if [[ "${ORIENT,,}" == *"r"* ]]; then
+  #&#8596
+    TTXT="R <-> L"
+  else
+    TTXT="L <-> R"
+  fi
+  mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+    -gravity SouthWest -annotate +10+10 "${TTXT}" \
+    ${DIR_SCRATCH}/${IMAGE_NAME}.png
+fi
+
+
+# move final png file
+mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
+
+exit 0
+
+
+########################
+ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
+for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
+  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
+  png_fcn="pngappend"    
+  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
+     TEMP=(${COL_LAYOUT[${j}]//\:/ })
+     if [[ "${TEMP[1]}" =~ "x" ]]; then
+       for (( k=0; k<${TEMP[0]}; k++ )); do
+         png_fcn="${png_fcn} ${DIR_SCRATCH}/X${XCOUNT}.png + 0"
+         XCOUNT=$((${XCOUNT}+1))
+       done
+     fi
+     if [[ "${TEMP[1]}" =~ "y" ]]; then
+       for (( k=0; k<${TEMP[0]}; k++ )); do
+         png_fcn="${png_fcn} ${DIR_SCRATCH}/Y${YCOUNT}.png + 0"
+         YCOUNT=$((${YCOUNT}+1))
+       done
+     fi
+     if [[ "${TEMP[1]}" =~ "z" ]]; then
+       for (( k=0; k<${TEMP[0]}; k++ )); do
+         png_fcn="${png_fcn} ${DIR_SCRATCH}/Z${ZCOUNT}.png + 0"
+         ZCOUNT=$((${ZCOUNT}+1))
+       done
+     fi
+  done
+  png_fcn=${png_fcn::-3}
+  png_fcn="${png_fcn} ${DIR_SCRATCH}/image_row${i}.png"
+  eval ${png_fcn}
 done
-for (( i=0; i<${#Z[@]}; i++ )); do
-  slicer ${DIR_SCRATCH}/OVERLAY.nii.gz \
-    -u -l ${DIR_SCRATCH}/temp.lut \
-    -z ${Z[${i}]} ${DIR_SCRATCH}/Z${i}.png
+
+FLS=($(ls ${DIR_SCRATCH}/image_row*.png))
+png_fcn="pngappend ${DIR_SCRATCH}/image_row0.png"
+for (( i=1; i<${#FLS[@]}; i++ )); do
+  png_fcn="${png_fcn} - 0 ${FLS[${i}]}"
 done
-    
+png_fcn="${png_fcn} ${DIR_SCRATCH}/image_col.png"
+eval ${png_fcn}
 
+# add color bars
+unset CBAR_LS CBAR_COUNT
+CBAR_COUNT=0
+if [[ "${BG_CBAR}" == "true" ]]; then
+  CBAR_COUNT=$((${CBAR_COUNT}+1))
+  CBAR_LS+=("${DIR_SCRATCH}/cbar${CBAR_COUNT}.png")
+fi
+CBAR_TEMP=(${FG_CBAR//,/ })
+for (( i=0; i<${#FLS[@]}; i++ )); do
+  if [[ "${#CBAR_TEMP}" == "1" ]]; then
+    if [[ "${CBAR_TEMP}" == "true" ]]; then
+      CBAR_COUNT=$((${CBAR_COUNT}+1))
+      WHICH_CBAR=$((${i}+2))
+      CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
+    fi
+  else
+    if [[ "${CBAR_TEMP[${i}]}" == "true" ]]; then
+      CBAR_COUNT=$((${CBAR_COUNT}+1))
+      WHICH_CBAR=$((${i}+2))
+      CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
+    fi
+  fi
+done
+if [[ -n ${ROI} ]]; then
+  if [[ "${ROI_CBAR}" == "true" ]]; then
+    CBAR_COUNT=$((${CBAR_COUNT}+1))
+    TLS=($(ls ${DIR_SCRATCH}/cbar*))
+    WHICH_CBAR=${#TLS[@]}
+    CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
+  fi
+fi
 
-slicer overlay_render.nii.gz -u -l /Shared/koscikt_scratch/toHOME/timbow.lut -x 0.505 mid_sag.png -y 0.5 
+if [[ "${CBAR_COUNT}" > "0" ]]; then  
+  png_fcn="pngappend ${DIR_SCRATCH}/image_col.png"
+  for (( i=0; i<${CBAR_COUNT}; i++ )); do
+    png_fcn="${png_fcn} + 0 ${CBAR_LS[${i}]}"
+  done
+  png_fcn="${png_fcn} ${DIR_SCRATCH}/${IMAGE_NAME}.png"
+  eval ${png_fcn}
+else
+  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${IMAGE_NAME}.png
+fi
 
+# move final png file
+mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
 
-mid_cor.png -z 0.5 mid_axi.png
-mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' -pointsize 14 -gravity NorthWest -annotate +10+10 "x=125" mid_sag.png
-
-mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' -pointsize 14 -gravity NorthWest -annotate +10+10 "y=345" mid_cor.png
-mogrify -font NimbusSans-Regular -fill gray250 -undercolor '#00000000' -pointsize 14 -gravity SouthWest -annotate +10+10 "R" mid_cor.png
-
-mogrify -font NimbusSans-Regular -fill white -undercolor '#00000000' -pointsize 14 -gravity NorthWest -annotate +10+10 "z=125" mid_axi.png
-mogrify -font NimbusSans-Regular -fill gray50 -undercolor '#00000000' -pointsize 14 -gravity SouthWest -annotate +10+10 "R" mid_axi.png
-
-pngappend mid_sag.png + 0 mid_cor.png + 0 mid_axi.png merged.png
-
-#===============================================================================
-# End of Function
-#===============================================================================
 exit 0
 
 
