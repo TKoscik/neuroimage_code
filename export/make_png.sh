@@ -978,6 +978,8 @@ else
   mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${IMAGE_NAME}.png
 fi
 
+#*(*********************************add R-l labels)
+
 # move final png file
 mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
 
