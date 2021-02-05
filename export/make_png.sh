@@ -64,7 +64,7 @@ bg-nii:,bg-mask:,bg-thresh:,bg-color:,bg-direction:,bg-vol:,bg-cbar,\
 fg-nii:,fg-mask:,fg-thresh:,fg-color:,fg-direction:,fg-vol:,fg-cbar,\
 roi-nii:,roi-levels:,roi-color:,roi-direction:,roi-vol:,roi-cbar,\
 image-layout:,ctr-offset:,bg-lim,no-slice-label,label-voxel,no-lr-label,\
-color-panel:,color-text:,font-name:,font-size:,\
+color-panel:,color-text:,font-name:,font-size:,max-pixels:,edge-fuzz\
 dir-save:,file-name:,keep-slice,keep-cbar,\
 dir-scratch:,help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -76,8 +76,8 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 BG=
 BG_MASK=
-BG_THRESH=2,98
-BG_COLOR="#010101,#ffffff"
+BG_THRESH=0,100
+BG_COLOR="#010101,#FFFFFF"
 BG_ORDER="normal"
 BG_CBAR="false"
 BG_VOL=1
@@ -107,6 +107,8 @@ COLOR_PANEL="#000000"
 COLOR_TEXT="#FFFFFF"
 FONT_NAME=NimbusSans-Regular
 FONT_SIZE=14
+MAX_PIXELS=500
+EDGE_FUZZ=5
 
 FILE_NAME=
 DIR_SAVE=
@@ -149,6 +151,8 @@ while true; do
     --color-text) COLOR_TEXT="$2" ; shift 2 ;;
     --font-name) FONT_NAME="$2" ; shift 2 ;;
     --font-size) FONT_SIZE="$2" ; shift 2 ;;
+    --max-pixels) MAX_PIXELS="$2" ; shift 2 ;;
+    --edge-fuzz) EDGE_FUZZ="$2" ; shift 2 ;;
     --file-name) FILE_NAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -440,54 +444,46 @@ fi
 
 #===============================================================================
 # check if all images in same space --------------------------------------------
-CHK_FIELD=("dim" "pixdim" "quatern_b" "quatern_c" "quatern_d" "qoffset_x"\
- "qoffset_y" "qoffset_z" "srow_x" "srow_y" "srow_z")
+FIELD_CHK="dim,pixdim,quatern_b,quatern_c,quatern_d,qoffset_x,qoffset_y,qoffset_z,srow_x,srow_y,srow_z"
+if [[ -n ${BG_MASK} ]]; then
+  unset SPACE_CHK
+  SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${BG_MASK} -f ${FIELD_CHK})
+  if [[ "${SPACE_CHK}" == "false" ]]; then
+    antsApplyTransforms -d 3 -n GenericLabel \
+      -i ${BG_MASK} -o ${DIR_SCRATCH}/BG_mask.nii.gz -r ${BG}
+    BG_MASK="${DIR_SCRATCH}/BG_mask.nii.gz"
+  fi
+fi
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
-    for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
-      unset CHK
-      CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG[${i}]})
-      if [[ -n ${CHK} ]]; then
-        antsApplyTransforms \
-          -d 3 -n Linear \
-          -i ${FG[${i}]} \
-          -o ${DIR_SCRATCH}/FG_${i}.nii.gz \
-          -r ${BG}
-        FG[${i}]="${DIR_SCRATCH}/FG_${i}.nii.gz"
-        break
-      fi
-    done
+    unset SPACE_CHK
+    SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
+    if [[ "${SPACE_CHK}" == "false" ]]; then
+      antsApplyTransforms -d 3 -n Linear \
+        -i ${FG[${i}]} -o ${DIR_SCRATCH}/FG_${i}.nii.gz -r ${BG}
+      FG[${i}]="${DIR_SCRATCH}/FG_${i}.nii.gz"
+    fi
   done
 fi
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${#FG_MASK[@]}; i++ )); do
-    for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
-      unset CHK
-      CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${FG_MASK[${i}]})
-      if [[ -n ${CHK} ]]; then
-        antsApplyTransforms \
-          -d 3 -n GenericLabel \
-          -i ${FG_MASK[${i}]} \
-          -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz \
-          -r ${BG}
-        FG_MASK[${i}]="${DIR_SCRATCH}/FG_mask-${i}.nii.gz"
-        break
-      fi
-    done
+    unset SPACE_CHK
+    SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
+    if [[ "${SPACE_CHK}" == "false" ]]; then
+      antsApplyTransforms -d 3 -n GenericLabel \
+        -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${BG}
+      FG_MASK[${i}]="${DIR_SCRATCH}/FG_mask-${i}.nii.gz"
+    fi
   done
 fi
 if [[ -n ${ROI} ]]; then
-  for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
-    unset CHK
-    CHK=$(nifti_tool -diff_hdr -field ${CHK_FIELD[${j}]} -infiles ${BG} ${ROI})
-    if [[ -n ${CHK} ]]; then
-      antsApplyTransforms \
-        -d 3 -n MultiLabel \
-        -i ${ROI} \
-        -o ${DIR_SCRATCH}/ROI.nii.gz \
-        -r ${BG}
-      ROI="${DIR_SCRATCH}/ROI.nii.gz"
-      break
+  for (( i=0; i<${#ROI[@]}; i++ )); do
+    unset SPACE_CHK
+    SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
+    if [[ "${SPACE_CHK}" == "false" ]]; then
+      antsApplyTransforms -d 3 -n MultiLabel \
+        -i ${ROI[${i}]} -o ${DIR_SCRATCH}/ROI_${i}.nii.gz -r ${BG}
+      ROI[${i}]="${DIR_SCRATCH}/ROI_${i}.nii.gz"
     fi
   done
 fi
@@ -511,8 +507,8 @@ fi
 ## generate color bar
 Rscript ${DIR_INC}/export/make_colors.R \
   "palette" ${BG_COLOR} \
-  "n" ${BG_FIDELITY} \
-  "order" ${BG_COLOR_ORDER} \
+  "n" "200" \
+  "order" ${BG_ORDER} \
   "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} \
   "prefix" "CBAR_BG"
@@ -532,76 +528,38 @@ if [[ "${BG_CBAR}" == "true" ]]; then
 fi
 
 ## generate slice PNGs
+slice_fcn="slicer ${BG} -u -l ${DIR_SCRATCH}/CBAR_BG.lut -i ${LO} ${HI}"
 for (( i=0; i<${NX}; i++ )); do
-  slicer ${BG} \
-    -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
-    -i ${LO} ${HI} \
-    -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}.png
+  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}.png"
+done
+for (( i=0; i<${NY}; i++ )); do
+  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}.png"
+done
+for (( i=0; i<${NZ}; i++ )); do
+  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}.png"
+done
+eval ${slice_fcn}
+
+# post processing on slices ---------------
+for (( i=0; i<${NX}; i++ )); do
+  ## resample slices to have max dimension of 500 pixels
+  convert ${DIR_SCRATCH}/X${i}.png -resize ${MAX_PIXELS} ${DIR_SCRATCH}/X${i}.png
+  ## recolor background as necessary
+  ## *****this should be replaced with utilization of the background mask to control the transparency, such that dark patches are not accidentally made transparent
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz 1 ${DIR_SCRATCH}/X${i}.png
-  fi
-  if [[ "${LABEL_SLICE}" == "true" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
-      LABEL_X=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
-      LABEL_X=$(echo "scale=2; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
-      LABEL_X=$(echo "scale=2; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
-      LABEL_X="${LABEL_X}mm"
-    else
-      LABEL_X=${XVOX[${i}]}
-    fi
-    LABEL_X="x=${LABEL_X}"
-    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-      -gravity NorthWest -annotate +10+10 "${LABEL_X}" \
-      ${DIR_SCRATCH}/X${i}.png
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz ${EDGE_FUZZ} ${DIR_SCRATCH}/X${i}.png
   fi
 done
 for (( i=0; i<${NY}; i++ )); do
-  slicer ${BG} \
-    -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
-    -i ${LO} ${HI} \
-    -y ${Y_PCT[${i}]} ${DIR_SCRATCH}/Y${i}.png
+  convert ${DIR_SCRATCH}/Y${i}.png -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Y${i}.png
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Y${i}.png
-  fi
-  if [[ "${LABEL_SLICE}" == "true" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
-      LABEL_Y=$(echo "scale=2; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
-      LABEL_Y=$(echo "scale=2; ${LABEL_Y}-${Y_VOX[${i}]}" | bc -l)
-      LABEL_Y=$(echo "scale=2; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
-      LABEL_Y="${LABEL_Y}mm"
-    else
-      LABEL_Y=${Y_VOX[${i}]}
-    fi
-    LABEL_Y="y=${LABEL_Y}"
-    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-       -gravity NorthWest -annotate +10+10 "${LABEL_Y}" \
-      ${DIR_SCRATCH}/Y${i}.png
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz ${EDGE_FUZZ} ${DIR_SCRATCH}/Y${i}.png
   fi
 done
 for (( i=0; i<${NZ}; i++ )); do
-  slicer ${BG} \
-    -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
-    -i ${LO} ${HI} \
-    -z ${Z_PCT[${i}]} ${DIR_SCRATCH}/Z${i}.png
+  convert ${DIR_SCRATCH}/Z${i}.png -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Z${i}.png
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Z${i}.png
-  fi
-  if [[ "${LABEL_SLICE}" == "true" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
-      LABEL_Z=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
-      LABEL_Z=$(echo "scale=2; ${LABEL_Z}-${Z_VOX[${i}]}" | bc -l)
-      LABEL_Z=$(echo "scale=2; ${LABEL_Z}*${PIXDIM[0]}" | bc -l)
-      LABEL_Z="${LABEL_Z}mm"
-    else
-      LABEL_Z=${Z_VOX[${i}]}
-    fi
-    LABEL_Z="z=${LABEL_Z}"
-    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-      -gravity NorthWest -annotate +10+10 "${LABEL_Z}" \
-      ${DIR_SCRATCH}/Z${i}.png
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz ${EDGE_FUZZ} ${DIR_SCRATCH}/Z${i}.png
   fi
 done
 
@@ -610,32 +568,25 @@ if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
     unset HILO LO HI
     HILO=(${FG_THRESH[${i}]//,/ })
-    if [[ -n ${FG_MASK} ]]; then
-      if [[ "${FG_MASK[${i}]}" != "null" ]]; then
-        LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
-        HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
-      else
-        LO=$(fslstats ${BG} -p ${HILO[0]})
-        HI=$(fslstats ${BG} -p ${HILO[1]})
-      fi
-    else
+    if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
       LO=$(fslstats ${BG} -p ${HILO[0]})
       HI=$(fslstats ${BG} -p ${HILO[1]})
+    else
+      LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
+      HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
     fi
 
     ## apply mask
-    if [[ -n ${BG_MASK} ]]; then
-      if [[ "${FG_MASK[${i}]}" != "null" ]]; then
-        fslmaths ${FG[${i}]} -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}.nii.gz
-        FG[${i}]=${DIR_SCRATCH}/FG_${i}.nii.gz
-      fi
+    if [[ -n ${FG_MASK} ]] && [[ "${FG_MASK[${i}]}" != "null" ]]; then
+      fslmaths ${FG[${i}]} -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}.nii.gz
+      FG[${i}]=${DIR_SCRATCH}/FG_${i}.nii.gz
     fi
 
     ## generate color bar
     Rscript ${DIR_INC}/export/make_colors.R \
       "palette" ${FG_COLOR[${i}]} \
-      "n" ${FG_FIDELITY[${i}]} \
-      "order" ${FG_COLOR_ORDER[${i}]} \
+      "n" 200 \
+      "order" ${FG_ORDER[${i}]} \
       "bg" ${COLOR_PANEL} \
       "dir.save" ${DIR_SCRATCH} \
       "prefix" "CBAR_FG_${i}"
@@ -654,99 +605,191 @@ if [[ -n ${FG} ]]; then
         ${DIR_SCRATCH}/CBAR_FG_${i}.png
     fi
 
-    ## generate slice PNGs
-    for (( x=0; x<${NX}; x++ )); do
-      slicer ${FG[${i}]} \
-        -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
-        -i ${LO} ${HI} \
-        -x ${XPCT[${x}]} ${DIR_SCRATCH}/temp.png
-      convert ${DIR_SCRATCH}/temp.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
-      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/X${x}.png ${DIR_SCRATCH}/X${x}.png     
+    ## generate slice PNGs - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    slice_fcn="slicer ${FG[${i}]}"
+    slice_fcn="${slice_fcn} -u "
+    slice_fcn="${slice_fcn} -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut"
+    slice_fcn="${slice_fcn} -i ${LO} ${HI}"
+    for (( j=0; j<${NX}; j++ )); do
+      slice_fcn="${slice_fcn} -x ${XPCT[${j}]} ${DIR_SCRATCH}/X${j}_FG_${i}.png"
     done
-    for (( y=0; y<${NY}; y++ )); do
-      slicer ${FG[${i}]} \
-        -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
-        -i ${LO} ${HI} \
-        -y ${Y_PCT[${y}]} ${DIR_SCRATCH}/temp.png
-      convert ${DIR_SCRATCH}/temp.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
-      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Y${y}.png ${DIR_SCRATCH}/Y${y}.png   
+    for (( j=0; j<${NY}; j++ )); do
+      slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
     done
-    for (( z=0; z<${NY}; z++ )); do
-      slicer ${FG[${i}]} \
-        -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
-        -i ${LO} ${HI} \
-        -z ${Z_PCT[${z}]} ${DIR_SCRATCH}/temp.png
-      convert ${DIR_SCRATCH}/temp.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
-      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Z${z}.png ${DIR_SCRATCH}/Z${z}.png   
+    for (( j=0; j<${NZ}; j++ )); do
+      slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
+    done
+    eval ${slice_fcn}
+
+    ## set background transparency and overlay on background - - - - - - - - - -
+    for (( j=0; j<${NX}; j++ )); do
+      convert ${DIR_SCRATCH}/X${j}_FG_${i}.png \
+        -resize ${MAX_PIXELS} ${DIR_SCRATCH}/X${j}_FG_${i}.png
+      convert ${DIR_SCRATCH}/X${j}_FG_${i}.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" \
+        ${DIR_SCRATCH}/X${j}_FG_${i}.png 
+      composite ${DIR_SCRATCH}/X${j}_FG_${i}.png \
+        ${DIR_SCRATCH}/X${j}.png \
+        ${DIR_SCRATCH}/X${j}.png     
+    done
+    for (( j=0; j<${NY}; j++ )); do
+      convert ${DIR_SCRATCH}/Y${j}_FG_${i}.png \
+        -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Y${j}_FG_${i}.png
+      convert ${DIR_SCRATCH}/Y${j}_FG_${i}.png \
+        -transparent "${COLOR_PANEL}" -transparent "#000000" \
+        ${DIR_SCRATCH}/Y${j}_FG_${i}.png 
+      composite ${DIR_SCRATCH}/Y${j}_FG_${i}.png \
+        ${DIR_SCRATCH}/Y${j}.png \
+        ${DIR_SCRATCH}/Y${j}.png  
+    done
+    for (( j=0; j<${NZ}; j++ )); do
+      convert ${DIR_SCRATCH}/Z${j}_FG_${i}.png \
+        -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Z${j}_FG_${i}.png
+      convert ${DIR_SCRATCH}/Z${j}_FG_${i}.png \
+        -transparent "${COLOR_PANEL}" \
+        -transparent "#000000" \
+        ${DIR_SCRATCH}/Z${j}_FG_${i}.png 
+      composite ${DIR_SCRATCH}/Z${j}_FG_${i}.png \
+        ${DIR_SCRATCH}/Z${j}.png \
+        ${DIR_SCRATCH}/Z${j}.png   
     done
   done
 fi
 
 # Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
-  # gather just desired ROIs ---------------------------
-  ROI_LEVELS=(${ROI_LEVELS//,/ })
-  fslmaths ${ROI} -thr 0 -uthr 0 ${DIR_SCRATCH}/ROI.nii.gz
-  for (( i=0; i<${#ROI_LEVELS[@]}; i++ )); do
-    if [[ "${ROI_LEVELS[${i}]}" =~ ":" ]]; then
-      TCUT=(${ROI_LEVELS[${i}]//\:/ })
-      fslmaths ${ROI} -thr ${TCUT[0]} -uthr ${TCUT[1]} \
-        -add ${DIR_SCRATCH}/ROI.nii.gz \
-        ${DIR_SCRATCH}/ROI.nii.gz
-    else
-      fslmaths ${ROI} -thr ${ROI_LEVELS[${i}]} -uthr ${ROI_LEVELS[${i}]} \
-        -add ${DIR_SCRATCH}/ROI.nii.gz \
-        ${DIR_SCRATCH}/ROI.nii.gz
-    fi
-  done
-  LabelClustersUniquely 3 ${DIR_SCRATCH}/ROI.nii.gz ${DIR_SCRATCH}/ROI.nii.gz 0
-  ROI=${DIR_SCRATCH}/ROI.nii.gz
-  
-  # convert to outlines ------------------------------
-  fslmaths ${ROI} -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
-  fslmaths ${ROI} -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz ${ROI}
-
-  ## generate color bar
-  Rscript ${DIR_INC}/export/make_colors.R \
-    "palette" ${ROI_COLOR} \
-    "n" ${N_ROI} \
-    "order" ${ROI_COLOR_ORDER} \
-    "bg" ${COLOR_PANEL} \
-    "dir.save" ${DIR_SCRATCH} \
-    "prefix" "CBAR_ROI"
-
-  ## generate slice PNGs
-  for (( x=0; x<${NX}; x++ )); do
-    slicer ${ROI} \
-      -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
-      -i 1 ${N_ROI} \
-      -x ${XPCT[${x}]} ${DIR_SCRATCH}/temp.png
-      convert ${DIR_SCRATCH}/temp.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
-      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/X${x}.png ${DIR_SCRATCH}/X${x}.png       
-  done
-  for (( y=0; y<${NY}; y++ )); do
-    slicer ${ROI} \
-      -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
-      -i 1 ${N_ROI} \
-      -y ${Y_PCT[${y}]} ${DIR_SCRATCH}/temp.png
-      convert ${DIR_SCRATCH}/temp.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
-      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Y${y}.png ${DIR_SCRATCH}/Y${y}.png    
-  done
-  for (( z=0; z<${NZ}; z++ )); do
-    slicer ${ROI} \
-      -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
-      -i 1 ${N_ROI} \
-      -z ${Z_PCT[${z}]} ${DIR_SCRATCH}/temp.png
-      convert ${DIR_SCRATCH}/temp.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
-      composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/Z${x}.png ${DIR_SCRATCH}/Z${x}.png    
+  ROI_MERGE=${DIR_SCRATCH}/ROI.nii.gz
+  fslmaths ${BG} -thr 0 -uthr 0 ${ROI_MERGE}
+  ROI_N=0
+  for (( i=0; i<${#ROI[@]}; i++ )); do
+    unset ROI_VALS TVALS
+    TEMP_ROI_LS=(${ROI_LEVELS[${i}//,/ })
+    for (( j=0; j<${#TEMP_ROI_LS[@]}; j++ )); do
+      unset TEMP_ROI_VALS
+      TEMP_ROI_VALS=(${TEMP_ROI_LS[${j}]//\:/ }) 
+      if [[ ${#TEMP_ROI_VALS[@]} -gt 1 ]]; then
+        ROI_VALS+=($(seq ${TEMP_ROI_VALS[0]} ${TEMP_ROI_VALS[1]}))
+      else
+        ROI_VALS+=(${TEMP_ROI_VALS[0]})
+      fi
+    done
+    
+    for (( j=0; j<${#ROI_VALS[@]}; j++ )); do
+      ROI_N=$((${ROI_N}+1))
+      fslmaths ${ROI[${i}]} -thr ${ROI_VALS[${j}]} -uthr ${ROI_VALS[${j}]} \
+        -bin -mul ${ROI_N} ${DIR_SCRATCH}/ROI_temp.nii.gz
+      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
+      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz \
+        -add ${ROI_MERGE} ${ROI_MERGE}
+    done
   done
 fi
+
+## generate color bar
+Rscript ${DIR_INC}/export/make_colors.R \
+  "palette" ${ROI_COLOR} \
+  "n" ${ROI_N} \
+  "order" ${ROI_ORDER} \
+  "bg" ${COLOR_PANEL} \
+  "dir.save" ${DIR_SCRATCH} \
+  "prefix" "CBAR_ROI"
+
+slice_fcn="slicer ${ROI_MERGE} -u -l ${DIR_SCRATCH}/CBAR_ROI.lut -i 0 ${ROI_N}"
+for (( i=0; i<${NX}; i++ )); do
+  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROI.png"
+done
+for (( i=0; i<${NY}; i++ )); do
+  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_ROI.png"
+done
+for (( i=0; i<${NZ}; i++ )); do
+  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_ROI.png"
+done
+eval ${slice_fcn}
+
+for (( i=0; i<${NX}; i++ )); do
+  convert ${DIR_SCRATCH}/X${i}_ROI.png \
+    -resize ${MAX_PIXELS} ${DIR_SCRATCH}/X${i}_ROI.png
+  convert ${DIR_SCRATCH}/X${i}_ROI.png \
+    -transparent "${COLOR_PANEL}" -transparent "#000000" \
+    ${DIR_SCRATCH}/X${i}_ROI.png 
+  composite ${DIR_SCRATCH}/X${i}_ROI.png \
+    ${DIR_SCRATCH}/X${i}.png \
+    ${DIR_SCRATCH}/X${i}.png     
+done
+for (( i=0; i<${NY}; i++ )); do
+  convert ${DIR_SCRATCH}/Y${i}_ROI.png \
+    -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Y${i}_ROI.png
+  convert ${DIR_SCRATCH}/Y${i}_ROI.png \
+    -transparent "${COLOR_PANEL}" -transparent "#000000" \
+    ${DIR_SCRATCH}/Y${i}_ROI.png 
+  composite ${DIR_SCRATCH}/Y${i}_ROI.png \
+    ${DIR_SCRATCH}/Y${i}.png \
+    ${DIR_SCRATCH}/Y${i}.png  
+done
+for (( i=0; i<${NZ}; i++ )); do
+  convert ${DIR_SCRATCH}/Z${i}_ROI.png \
+    -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Z${i}_ROI.png
+  convert ${DIR_SCRATCH}/Z${i}_ROI.png \
+    -transparent "${COLOR_PANEL}" \
+    -transparent "#000000" \
+    ${DIR_SCRATCH}/Z${i}_ROI.png 
+  composite ${DIR_SCRATCH}/Z${i}_ROI.png \
+    ${DIR_SCRATCH}/Z${i}.png \
+    ${DIR_SCRATCH}/Z${i}.png   
+done
+
+#*** Add labels after FG and ROIs are composited
+for (( i=0; i<${NX}; i++ )); do
+  if [[ "${LABEL_SLICE}" == "true" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      LABEL_X=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
+      LABEL_X=$(echo "scale=2; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
+      LABEL_X=$(echo "scale=2; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
+      LABEL_X="${LABEL_X}mm"
+    else
+      LABEL_X=${XVOX[${i}]}
+    fi
+    LABEL_X="x=${LABEL_X}"
+    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -gravity NorthWest -annotate +10+10 "${LABEL_X}" \
+      ${DIR_SCRATCH}/X${i}.png
+  fi
+done
+for (( i=0; i<${NY}; i++ )); do
+  if [[ "${LABEL_SLICE}" == "true" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      LABEL_Y=$(echo "scale=2; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
+      LABEL_Y=$(echo "scale=2; ${LABEL_Y}-${YVOX[${i}]}" | bc -l)
+      LABEL_Y=$(echo "scale=2; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
+      LABEL_Y="${LABEL_Y}mm"
+    else
+      LABEL_Y=${YVOX[${i}]}
+    fi
+    LABEL_Y="y=${LABEL_Y}"
+    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -gravity NorthWest -annotate +10+10 "${LABEL_Y}" \
+      ${DIR_SCRATCH}/Y${i}.png
+  fi
+done
+for (( i=0; i<${NX}; i++ )); do
+  if [[ "${LABEL_SLICE}" == "true" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      LABEL_Z=$(echo "scale=2; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
+      LABEL_Z=$(echo "scale=2; ${LABEL_Z}-${ZVOX[${i}]}" | bc -l)
+      LABEL_Z=$(echo "scale=2; ${LABEL_Z}*${PIXDIM[2]}" | bc -l)
+      LABEL_Z="${LABEL_Z}mm"
+    else
+      LABEL_Z=${ZVOX[${i}]}
+    fi
+    LABEL_Z="z=${LABEL_Z}"
+    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -gravity NorthWest -annotate +10+10 "${LABEL_Z}" \
+      ${DIR_SCRATCH}/Z${i}.png
+  fi
+done
 
 # merge PNGs according to prescribed layout ====================================
 # add laterality label if desired ----------------------------------------------

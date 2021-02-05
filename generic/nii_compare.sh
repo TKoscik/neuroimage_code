@@ -55,7 +55,7 @@ for (( i=0; i<${#FIELD[@]}; i++ )); do
 done
 info_fcn="${info_fcn} -infiles ${IMAGE1} ${IMAGE2})"
 
-if [[ -n "${DIFF_CHK}" ]]; then
+if [[ -z "${DIFF_CHK}" ]]; then
   echo "true";
 else
   echo "false"
