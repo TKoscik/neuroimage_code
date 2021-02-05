@@ -60,9 +60,9 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long \
-bg-nii:,bg-mask:,bg-thresh:,bg-color:,bg-direction:,bg-cbar,\
-fg-nii:,fg-mask:,fg-thresh:,fg-color:,fg-direction:,fg-cbar,\
-roi-nii:,roi-levels:,roi-color:,roi-direction:,roi-cbar,\
+bg-nii:,bg-mask:,bg-thresh:,bg-color:,bg-direction:,bg-vol:,bg-cbar,\
+fg-nii:,fg-mask:,fg-thresh:,fg-color:,fg-direction:,fg-vol:,fg-cbar,\
+roi-nii:,roi-levels:,roi-color:,roi-direction:,roi-vol:,roi-cbar,\
 image-layout:,ctr-offset:,bg-lim,no-slice-label,label-voxel,no-lr-label,\
 color-panel:,color-text:,font-name:,font-size:,\
 dir-save:,file-name:,keep-slice,keep-cbar,\
@@ -80,6 +80,7 @@ BG_THRESH=2,98
 BG_COLOR="#010101,#ffffff"
 BG_ORDER="normal"
 BG_CBAR="false"
+BG_VOL=1
 
 FG=
 FG_MASK=
@@ -87,16 +88,18 @@ FG_THRESH=0,100
 FG_COLOR="timbow"
 FG_ORDER="normal"
 FG_CBAR="true"
+FG_VOL=1
 
 ROI=
 ROI_LEVEL=
 ROI_COLOR="#FF69B4"
 ROI_ORDER="random"
 ROI_CBAR="false"
+ROI_VOL=1
 
 LAYOUT=1:x,1:y,1:z
 OFFSET=1,0,0
-BG_LIM="false"
+LIMITS=
 LABEL_SLICE="true"
 LABEL_MM="true"
 LABEL_LR="true"
@@ -121,20 +124,24 @@ while true; do
     --bg-thresh) BG_THRESH="$2" ; shift 2 ;;
     --bg-color) BG_COLOR="$2" ; shift 2 ;;
     --bg-order) BG_ORDER="$2" ; shift 2 ;;
+    --bg-vol) BG_VOL="$2" ; shift 2 ;;
     --bg-cbar) BG_CBAR="true" ; shift ;;
     --fg-nii) FG="$2" ; shift 2 ;;
     --fg-mask) FG_MASK="$2" ; shift 2 ;;
     --fg-thresh) FG_THRESH="$2" ; shift 2 ;;
     --fg-color) FG_COLOR="$2" ; shift 2 ;;
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
+    --fg-vol) FG_VOL="$2" ; shift 2 ;;
     --fg-cbar) FG_CBAR="true" ; shift ;;
     --roi-nii) ROI="$2" ; shift 2 ;;
     --roi-level) ROI_LEVEL="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
+    --roi-vol) ROI_VOL="$2" ; shift 2 ;;
     --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
     --layout) LAYOUT="$2" ; shift 2 ;;
     --offset) OFFSET="$2" ; shift 2 ;;
+    --limits) LIMITS="$2" ; shift 2 ;;
     --label-slice) LABEL_SLICE="$2" ; shift 2 ;;
     --label-mm) LABEL_MM="$2" ; shift 2 ;;
     --label-lr) LABEL_LR="$2" ; shift 2 ;;
@@ -230,6 +237,8 @@ ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
 
+OFFSET=(${OFFSET//,/ })
+
 # Get image informtation -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
 DIMS=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f voxels))
@@ -272,102 +281,167 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
 done
 
 # Calculate slices to plot =====================================================
-# Find image extent ------------------------------------------------------------
-unset XLIM YLIM ZLIM CHK_LS
-XLIM=(9999 0); YLIM=(9999 0); ZLIM=(9999 0)
-if [[ -n ${ROI} ]]; then
-  CHK_LS=(${CHK_LS[@]} ${ROI[@]})
-elif [[ -n ${FG_MASK} ]]; then
-  CHK_LS=(${CHK_LS[@]} ${FG_MASK[@]})    
-elif [[ -n ${FG} ]]; then
-  CHK_LS=(${CHK_LS[@]} ${FG[@]})
-elif [[ -n ${BG_MASK} ]]; then
-  CHK_LS=(${CHK_LS[@]} ${BG_MASK})
+# parse variable tol determine image limits ------------------------------------
+if [[ -z "${LIMITS}" ]]; then
+  if [[ -n ${ROI} ]]; then 
+    LIM_CHK=(${LIM_CHK[@]} ${ROI[@]})
+  elif [[ -n ${FG_MASK} ]]; then
+    LIM_CHK=(${LIM_CHK[@]} ${FG_MASK[@]})    
+  elif [[ -n ${FG} ]]; then
+    LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
+  elif [[ -n ${BG_MASK} ]]; then
+    LIM_CHK=(${LIM_CHK[@]} ${BG_MASK})
+  else
+    LIM_CHK=(${LIM_CHK[@]} ${BG})
+  fi
+elif [[ "${LIMITS^^}" == "BG" ]]; then
+  LIM_CHK=(${LIM_CHK[@]} ${BG})
+elif [[ "${LIMITS^^}" == "BG_MASK" ]]; then
+  LIM_CHK=(${LIM_CHK[@]} ${BG_MASK})
+elif [[ "${LIMITS^^}" == *"FG"* ]]; then
+  TEMP=(${LIMITS//;/ })
+  if [[ "${TEMP[0]}" == "FG" ]]; then
+    LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
+  elif  [[ "${TEMP[0]}" == "FG_MASK" ]]; then
+    LIM_CHK=(${LIM_CHK[@]} ${FG_MASK[@]})
+  fi
+  if [[ ${#TEMP[@]} -gt 1 ]]; then
+    LIM_CHK=${LIM_CHK[${#TEMP[@]}]}
+  fi
+elif [[ "${LIMITS^^}" == *"ROI"* ]]; then
+  TEMP=(${LIMITS//;/ })
+  LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
+  if [[ ${#TEMP[@]} -gt 1 ]]; then
+    LIM_CHK=${LIM_CHK[${#TEMP[@]}]}
+  fi
 else
-  CHK_LS=(${CHK_LS[@]} ${BG[@]})
-fi
-for (( i=0; i<${#CHK_LS[@]}; i++ )); do
-  unset BB BBX BBX BBZ
-  BB=$(3dAutobox -extent -input ${CHK_LS[${i}]} 2>&1)
-  BBX=$(echo ${BB} | sed -e 's/.*x=\(.*\) y=.*/\1/')
-  BBY=$(echo ${BB} | sed -e 's/.*y=\(.*\) z=.*/\1/')
-  BBZ=$(echo ${BB} | sed -e 's/.*z=\(.*\) Extent.*/\1/')*****'
-  BBX=(${BBX//../ }); BBY=(${BBY//../ }); BBZ=(${BBZ//../ })
-  if [[ ${BBX[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BBX[0]}; fi
-  if [[ ${BBY[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BBY[0]}; fi
-  if [[ ${BBZ[0]} -lt ${ZLIM[0]} ]]; then ZLIM[0]=${BBZ[0]}; fi
-  if [[ ${BBX[1]} -gt ${XLIM[1]} ]]; then XLIM[1]=${BBX[1]}; fi
-  if [[ ${BBY[1]} -gt ${YLIM[1]} ]]; then YLIM[1]=${BBY[1]}; fi
-  if [[ ${BBZ[1]} -gt ${ZLIM[1]} ]]; then ZLIM[1]=${BBZ[1]}; fi
-done
-
-# add in desired slice offsets (i.e., to avoid middle slice) -------------------
-SLICE_OFFSET=(${SLICE_OFFSET//,/ })
-XLIM[0]=$((${XLIM[0]}+${SLICE_OFFSET[0]}))
-XLIM[1]=$((${XLIM[1]}+${SLICE_OFFSET[0]}))
-YLIM[0]=$((${YLIM[0]}+${SLICE_OFFSET[1]}))
-YLIM[1]=$((${YLIM[1]}+${SLICE_OFFSET[1]}))
-YLIM[0]=$((${YLIM[0]}+${SLICE_OFFSET[2]}))
-YLIM[1]=$((${YLIM[1]}+${SLICE_OFFSET[2]}))
-
-## check if limits exceed dims
-if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
-if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[0]}=1; fi
-if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[0]}=1; fi
-if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi
-if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi
-if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
-
-# calculate slices to use ------------------------------------------------------
-## evenly spaced in desired ROI
-DX=$((${XLIM[1]}-${XLIM[0]}))
-DY=$((${YLIM[1]}-${YLIM[0]}))
-DZ=$((${ZLIM[1]}-${ZLIM[0]}))
-
-# grab 2 extra slices, if possible, and toss to avoid edges --------------------
-TX=$((${NX}+1))
-if [[ ${DX} -gt ${TX} ]]; then
-  SX=$((${DX}/${TX}))
-  X_VOX=($(seq ${XLIM[0]} ${SX} ${XLIM[1]}))
-  X_VOX=(${X_VOX[@]:1:${NX}})
-else
-  X_VOX=($(seq ${XLIM[0]} 1 ${XLIM[1]}))
-fi
-TY=$((${NY}+1))
-if [[ ${DY} -gt ${TY} ]]; then
-  SY=$((${DY}/${TY}))
-  Y_VOX=($(seq ${YLIM[0]} ${SY} ${YLIM[1]}))
-  Y_VOX=(${Y_VOX[@]:1:${NY}})
-else
-  Y_VOX=($(seq ${YLIM[0]} 1 ${YLIM[1]}))
-fi
-TZ=$((${NZ}+1))
-if [[ ${DZ} -gt ${TZ} ]]; then
-  SZ=$((${DZ}/${TZ}))
-  Z_VOX=($(seq ${ZLIM[0]} ${SZ} ${ZLIM[1]}))
-  Z_VOX=(${Z_VOX[@]:1:${NZ}})
-else
-  Z_VOX=($(seq ${ZLIM[0]} 1 ${ZLIM[1]}))
+  LIMITS_TEMP=(${LIMITS//;/ })
 fi
 
-# convert slices to proportion of max ------------------------------------------
-unset X_PCT Y_PCT Z_PCT
-NX=${#X_VOX[@]}
-NY=${#Y_VOX[@]}
-NZ=${#Z_VOX[@]}
-for (( i=0; i<${NX}; i++ )); do
-  X_PCT+=($(echo "scale=4; ${X_VOX[${i}]}/${DIMS[0]}" | bc -l))
-done
-for (( i=0; i<${NY}; i++ )); do
-  Y_PCT+=($(echo "scale=4; ${Y_VOX[${i}]}/${DIMS[0]}" | bc -l))
-done
-for (( i=0; i<${NZ}; i++ )); do
-  Z_PCT+=($(echo "scale=4; ${Z_VOX[${i}]}/${DIMS[0]}" | bc -l))
-done
+## calculate X slices ----------------------------------------------------------
+if [[ ${NX} > 0 ]]; then
+  unset XLIM XVOX XPCT RANGE TN SLICEGAP
+  XLIM=(9999 0)
+  if [[ -n "${LIM_CHK}" ]]; then
+    for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
+      unset BB_STR BB
+      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
+      BB=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')*****'
+      BB=(${BB//../ });
+      if [[ ${BB[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BB[0]}; fi      
+      if [[ ${BB[1]} -gt ${XLIM[1]} ]]; then XLIM[1]=${BB[1]}; fi
+    done
+  else
+    XLIM=(${LIMITS_TEMP[0]//,/ })
+  fi
+  ## add in desired slice offset
+  XLIM[0]=$((${XLIM[0]}+${OFFSET[0]}))
+  XLIM[1]=$((${XLIM[1]}+${OFFSET[0]}))
+  ## constrain limits to image boundaries
+  if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
+  if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi
+  ## calculate slices to use - - - - - - - - - - - - - - - - - - - - - - - - - -
+  ### get edge slices if possible, and toss to avoid edges of image/roi
+  ### constrain to desired slice number, or fewer if slices unavailable
+  RANGE=$((${XLIM[1]}-${XLIM[0]}))
+  TN=$((${NX}+1))
+  STEP=1
+  if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
+  XVOX=($(seq ${XLIM[0]} ${STEP} ${XLIM[1]}))
+  if [[ ${#XVOX[@]} -gt ${NX} ]]; then
+    XVOX=(${XVOX[@]:1:${NX}})
+  fi
+  NX=${#XVOX[@]}
+  ### calculate X as percentage of image extent (for FSL slicer)
+  for (( i=0; i<${NX}; i++ )); do
+    XPCT+=($(echo "scale=4; ${XVOX[${i}]}/${DIMS[0]}" | bc -l))
+  done
+fi
+
+## calculate Y slices ----------------------------------------------------------
+if [[ ${NY} > 0 ]]; then
+  unset YLIM YVOX YPCT RANGE STEP TN
+  YLIM=(9999 0)
+  if [[ -n "${LIM_CHK}" ]]; then
+    for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
+      unset BB_STR BB
+      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
+      BB==$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')*****'
+      BB=(${BB//../ });
+      if [[ ${BB[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BB[0]}; fi      
+      if [[ ${BB[1]} -gt ${YLIM[1]} ]]; then YLIM[1]=${BB[1]}; fi
+    done
+  else
+    YLIM=(${LIMITS_TEMP[0]//,/ })
+  fi
+  ## add in desired slice offset
+  YLIM[0]=$((${YLIM[0]}+${OFFSET[1]}))
+  YLIM[1]=$((${YLIM[1]}+${OFFSET[1]}))
+  ## constrain limits to image boundaries
+  if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[1]}=1; fi
+  if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi
+  ## calculate slices to use - - - - - - - - - - - - - - - - - - - - - - - - - -
+  ### get edge slices if possible, and toss to avoid edges of image/roi
+  ### constrain to desired slice number, or fewer if slices unavailable
+  RANGE=$((${YLIM[1]}-${YLIM[0]}))
+  TN=$((${NY}+1))
+  STEP=1
+  if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
+  YVOX=($(seq ${YLIM[0]} ${STEP} ${YLIM[1]}))
+  if [[ ${#YVOX[@]} -gt ${NY} ]]; then
+    YVOX=(${YVOX[@]:1:${NY}})
+  fi
+  NX=${#YVOX[@]}
+  ### calculate X as percentage of image extent (for FSL slicer)
+  for (( i=0; i<${NY}; i++ )); do
+    YPCT+=($(echo "scale=4; ${YVOX[${i}]}/${DIMS[1]}" | bc -l))
+  done
+fi
+
+## calculate Z slices ----------------------------------------------------------
+if [[ ${NZ} > 0 ]]; then
+  unset ZLIM ZVOX ZPCT RANGE STEP TN
+  ZLIM=(9999 0)
+  if [[ -n "${LIM_CHK}" ]]; then
+    for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
+      unset BB_STR BB
+      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
+      BB=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')*****'
+      BB=(${BB//../ });
+      if [[ ${BB[0]} -lt ${ZLIM[0]} ]]; then ZLIM[0]=${BB[0]}; fi      
+      if [[ ${BB[1]} -gt ${ZLIM[1]} ]]; then ZLIM[1]=${BB[1]}; fi
+    done
+  else
+    ZLIM=(${LIMITS_TEMP[0]//,/ })
+  fi
+  ## add in desired slice offset
+  ZLIM[0]=$((${ZLIM[0]}+${OFFSET[2]}))
+  ZLIM[1]=$((${ZLIM[1]}+${OFFSET[2]}))
+  ## constrain limits to image boundaries
+  if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[2]}=1; fi
+  if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
+  ## calculate slices to use - - - - - - - - - - - - - - - - - - - - - - - - - -
+  ### get edge slices if possible, and toss to avoid edges of image/roi
+  ### constrain to desired slice number, or fewer if slices unavailable
+  RANGE=$(({ZLIM[1]}-${ZLIM[0]}))
+  TN=$((${NZ}+1))
+  STEP=1
+  if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
+  ZVOX=($(seq ${ZLIM[0]} ${STEP} ${ZLIM[1]}))
+  if [[ ${#ZVOX[@]} -gt ${NZ} ]]; then
+    ZVOX=(${ZVOX[@]:1:${NZ}})
+  fi
+  NZ=${#ZVOX[@]}
+  ### calculate X as percentage of image extent (for FSL slicer)
+  for (( i=0; i<${NZ}; i++ )); do
+    ZPCT+=($(echo "scale=4; ${ZVOX[${i}]}/${DIMS[2]}" | bc -l))
+  done
+fi
 
 #===============================================================================
 # check if all images in same space --------------------------------------------
-CHK_FIELD=("dim" "pixdim" "quatern_b" "quatern_c" "quatern_d" "qoffset_x" "qoffset_y" "qoffset_z" "srow_x" "srow_y" "srow_z")
+CHK_FIELD=("dim" "pixdim" "quatern_b" "quatern_c" "quatern_d" "qoffset_x"\
+ "qoffset_y" "qoffset_z" "srow_x" "srow_y" "srow_z")
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
     for (( j=0; j<${#CHK_FIELD[@]}; j++ )); do
@@ -462,18 +536,18 @@ for (( i=0; i<${NX}; i++ )); do
   slicer ${BG} \
     -u -l ${DIR_SCRATCH}/CBAR_BG.lut \
     -i ${LO} ${HI} \
-    -x ${X_PCT[${i}]} ${DIR_SCRATCH}/X${i}.png
+    -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}.png
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
     mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz 1 ${DIR_SCRATCH}/X${i}.png
   fi
   if [[ "${LABEL_SLICE}" == "true" ]]; then
     if [[ "${LABEL_MM}" == "true" ]]; then
       LABEL_X=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
-      LABEL_X=$(echo "scale=2; ${LABEL_X}-${X_VOX[${i}]}" | bc -l)
+      LABEL_X=$(echo "scale=2; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
       LABEL_X=$(echo "scale=2; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
       LABEL_X="${LABEL_X}mm"
     else
-      LABEL_X=${X_VOX[${i}]}
+      LABEL_X=${XVOX[${i}]}
     fi
     LABEL_X="x=${LABEL_X}"
     mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
@@ -585,7 +659,7 @@ if [[ -n ${FG} ]]; then
       slicer ${FG[${i}]} \
         -u -l ${DIR_SCRATCH}/CBAR_FG_${i}.lut \
         -i ${LO} ${HI} \
-        -x ${X_PCT[${x}]} ${DIR_SCRATCH}/temp.png
+        -x ${XPCT[${x}]} ${DIR_SCRATCH}/temp.png
       convert ${DIR_SCRATCH}/temp.png \
         -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
       composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/X${x}.png ${DIR_SCRATCH}/X${x}.png     
@@ -649,7 +723,7 @@ if [[ -n ${ROI} ]]; then
     slicer ${ROI} \
       -u -l ${DIR_SCRATCH}/CBAR_ROI.lut \
       -i 1 ${N_ROI} \
-      -x ${X_PCT[${x}]} ${DIR_SCRATCH}/temp.png
+      -x ${XPCT[${x}]} ${DIR_SCRATCH}/temp.png
       convert ${DIR_SCRATCH}/temp.png \
         -transparent "${COLOR_PANEL}" -transparent "#000000" ${DIR_SCRATCH}/temp.png
       composite ${DIR_SCRATCH}/temp.png ${DIR_SCRATCH}/X${x}.png ${DIR_SCRATCH}/X${x}.png       
