@@ -44,23 +44,30 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+unset OUTPUT
 if [[ "${FIELD,,}" == "origin" ]]; then
-  OUT=$(PrintHeader ${IMAGE} 0)
+  OUTPUT+=($(nifti_tool -disp_hdr -field qoffset_x -quiet -infiles ${IMAGE}))
+  OUTPUT+=($(nifti_tool -disp_hdr -field qoffset_y -quiet -infiles ${IMAGE}))
+  OUTPUT+=($(nifti_tool -disp_hdr -field qoffset_z -quiet -infiles ${IMAGE}))
+elif [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
+  OUTPUT($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
+  OUTPUT=(${OUTPUT[@]:1:3})
+elif [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
+  OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
+  OUTPUT=(${OUTPUT[@]:1:3})
+elif [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
+  OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
+  OUTPUT=(${OUTPUT[@]:4:1})
+elif [[ "${FIELD,,}" == "tr" ]]; then
+  OUTPUT($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
+  OUTPUT=(${OUTPUT[@]:4:1})
+elif [[ "${FIELD,,}" == "orient" ]] || [[ "${FIELD,,}" == "orientation" ]]; then
+  OUTPUT=($(3dinfo -orient ${IMAGE}))
+else
+  OUTPUT($(nifti_tool -disp_hdr -field ${FIELD} -quiet -infiles ${IMAGE}))
 fi
-if [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
-  OUT=$(PrintHeader ${IMAGE} 1)
-fi
-if [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
-  OUT=$(PrintHeader ${IMAGE} 2)
-fi
-if [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
-  OUT=$(PrintHeader ${IMAGE} | grep Dimens | cut -d ',' -f 4 | cut -d ']' -f 1)
-fi
-if [[ "${FIELD,,}" == "tr" ]]; then
-  OUT=$(PrintHeader ${IMAGE} | grep "Voxel Spac" | cut -d ',' -f 4 | cut -d ']' -f 1)
-fi
+echo ${OUTPUT}
 
-echo ${OUT}
 #===============================================================================
 # End of Function
 #===============================================================================

@@ -36,10 +36,12 @@ function egress {
     ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n ${DIR_PROJECT} ]]; then
+      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    fi
   fi
 }
 trap egress EXIT
@@ -49,11 +51,10 @@ OPTS=$(getopt -o hvl --long \
 bg-nii:,bg-mask:,bg-thresh:,bg-color:,bg-direction:,bg-cbar,\
 fg-nii:,fg-mask:,fg-thresh:,fg-color:,fg-direction:,fg-cbar,\
 roi-nii:,roi-levels:,roi-color:,roi-direction:,roi-cbar,\
-image-layout:,ctr-offset:,\
-label-slice,label-mm,label-lr,\
-color-panel:,color-text:,font-name:,font-size:,file-name:,
-dir-save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+image-layout:,ctr-offset:,bg-lim,no-slice-label,label-voxel,no-lr-label,\
+color-panel:,color-text:,font-name:,font-size:,\
+dir-save:,file-name:,keep-slice,keep-cbar,\
+dir-scratch:,help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -61,105 +62,65 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-BG=${DIR_LOCAL}/HCPYA_700um_T1w.nii.gz
-BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
+BG=
+BG_MASK=
 BG_THRESH=2,98
 BG_COLOR="#010101,#ffffff"
 BG_ORDER="normal"
 BG_CBAR="false"
 
-FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
-FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-bg.nii.gz
-FG_THRESH=2,98
+FG=
+FG_MASK=
+FG_THRESH=0,100
 FG_COLOR="timbow"
 FG_ORDER="normal"
 FG_CBAR="true"
 
-ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
-ROI_LEVELS=1:32
-ROI_COLOR="timbow"
+ROI=
+ROI_LEVEL=
+ROI_COLOR="#FF69B4"
 ROI_ORDER="random"
 ROI_CBAR="false"
-
-LABEL_SLICE="true"
-LABEL_MM="true"
-LABEL_LR="true"
-COLOR_PANEL="#FFFFFF"
-COLOR_TEXT="#000000"
-FONT_NAME=NimbusSans-Regular
-FONT_SIZE=14
-DIR_SAVE=${DIR_SCRATCH}
-IMAGE_NAME="image_final"
 
 LAYOUT=1:x,1:y,1:z
 OFFSET=1,0,0
-
-DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
-
-# DEBUG values -----------------------------------------------------------------
-sg Research-INC_img_core
-module load R
-source /Shared/pinc/sharedopt/apps/sourcefiles/afni_source.sh
-source /Shared/pinc/sharedopt/apps/sourcefiles/ants_source.sh
-source /Shared/pinc/sharedopt/apps/sourcefiles/fsl_source.sh
-DIR_INC=/Shared/inc_scratch/code
-DIR_TEMPLATE=/Dedicated/inc_database/templates
-DIR_LOCAL=/Shared/koscikt_scratch/toLSS
-DIR_SCRATCH=/Shared/koscikt_scratch/toLSS
-
-BG=${DIR_LOCAL}/HCPYA_700um_T1w.nii.gz
-BG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-brain.nii.gz
-BG_THRESH=2,98
-BG_COLOR="#010101,#ffffff"
-BG_ORDER="normal"
-BG_CBAR="false"
-
-FG=${DIR_LOCAL}/HCPYA_700um_T2w.nii.gz
-FG_MASK=${DIR_LOCAL}/HCPYA_700um_mask-bg.nii.gz
-FG_THRESH=2,98
-FG_COLOR="timbow"
-FG_ORDER="normal"
-FG_CBAR="true"
-
-ROI=${DIR_LOCAL}/HCPYA_700um_label-bg.nii.gz
-ROI_LEVELS=1:32
-ROI_COLOR="timbow"
-ROI_ORDER="random"
-ROI_CBAR="false"
-
+BG_LIM="false"
 LABEL_SLICE="true"
 LABEL_MM="true"
 LABEL_LR="true"
-COLOR_PANEL="#FFFFFF"
-COLOR_TEXT="#000000"
+COLOR_PANEL="#000000"
+COLOR_TEXT="#FFFFFF"
 FONT_NAME=NimbusSans-Regular
 FONT_SIZE=14
-IMAGE_NAME="image_final"
-# -----------------------------------
+
+FILE_NAME=
+DIR_SAVE=
+KEEP_SLICE="false"
+KEEP_CBAR="false"
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 
 while true; do
   case "$1" in
-    -h | --help) HELP=true ; shift ;;
+    -h | --help) HELP="true" ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -l | --no-log) NO_LOG=true ; shift ;;
+    -l | --no-log) NO_LOG="true" ; shift ;;
     --bg-nii) BG="$2" ; shift 2 ;;
     --bg-mask) BG_MASK="$2" ; shift 2 ;;
     --bg-thresh) BG_THRESH="$2" ; shift 2 ;;
     --bg-color) BG_COLOR="$2" ; shift 2 ;;
     --bg-order) BG_ORDER="$2" ; shift 2 ;;
-    --bg-cbar) BG_CBAR=true ; shift ;;
+    --bg-cbar) BG_CBAR="true" ; shift ;;
     --fg-nii) FG="$2" ; shift 2 ;;
     --fg-mask) FG_MASK="$2" ; shift 2 ;;
     --fg-thresh) FG_THRESH="$2" ; shift 2 ;;
     --fg-color) FG_COLOR="$2" ; shift 2 ;;
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
-    --fg-cbar) FG_CBAR=true ; shift ;;
+    --fg-cbar) FG_CBAR="true" ; shift ;;
     --roi-nii) ROI="$2" ; shift 2 ;;
     --roi-level) ROI_LEVEL="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
-    --roi-cbar) ROI_CBAR="$2" ; shift 2 ;;
+    --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
     --layout) LAYOUT="$2" ; shift 2 ;;
     --offset) OFFSET="$2" ; shift 2 ;;
     --label-slice) LABEL_SLICE="$2" ; shift 2 ;;
@@ -172,6 +133,8 @@ while true; do
     --file-name) FILE_NAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --keep-slice) KEEP_SLICE="true" ; shift ;;
+    --keep-cbar) KEEP_CBAR="true" ; shift ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -219,51 +182,48 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+# set default filename
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${BG})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${BG} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${BG} -f ses)
+if [[ -z "${FILE_NAME}" ]]; then
+  if [[ -n "${PID}" ]]; then
+    FILE_NAME="sub-${PID}"
+    if [[ -n "${SID}" ]]; then
+      FILE_NAME="${FILE_NAME}_ses-${SID}"
+    fi
+  else
+    FILE_NAME="overlay"
+  fi
+  FILE_NAME="${FILE_NAME}_${DATE_SUFFIX}"
+fi
 
+# set default save directory
+if [[ -n "${DIR_SAVE}" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/overlay_png
+fi
+mkdir -p ${DIR_SAVE}
 
-
-
-
-# ------------------------------------------------------------------------------
-# 3x5 montage layout, with 5 slices from each plane: 
-# row 1: 5 slices in x-plane, row 2: 5 slices in y-plane, row 3: 5 slices in z-plane
-# slices are selected according to the formula (TOTAL_SLICES - (CTR_OFFSET*TOTAL_SLICES))/(NSLICES+2)[2:(NSLICES-1)]
-# if the CTR_OFFSET is too small or too large, slices out of range will reduce the number of slices included
-IMG_LAYOUT="5:x;5:y;5:z"
-SLICE_OFFSET=0,0,0
-
-# ------------------------------------------------------------------------------
-# 3 plane layout:
-# a single slice from each plane, offset by 1 slice from the center
-#IMG_LAYOUT="1:x,1:y,1:z"
-#SLICE_OFFSET=1,1,1
-
-# ------------------------------------------------------------------------------
-# single plane montage layout, 5x5 axial: 
-# if a plane appears in multiple rows slices will be calculated based on the total number of slices desired from that plane
-#IMG_LAYOUT="5:z;5:z;5:z;5:z;5:z"
-#CTR_OFFSET=0,0,0
-
-####
-# parse foreground parameters --------------------------------------------------
-FG=(${FG//,/ })
-FG_MASK=(${FG_MASK//,/ })
+# parse parameters for FG and ROIs ---------------------------------------------
+FG=(${FG//;/ })
+FG_MASK=(${FG_MASK//;/ })
 FG_THRESH=(${FG_THRESH//;/ })
 FG_COLOR=(${FG_COLOR//;/ })
-FG_COLOR_ORDER=(${FG_COLOR_ORDER//,/ })
-FG_FIDELITY=(${FG_FIDELITY//;/ })
-FG_CBAR=(${FG_CBAR//,/ })
+FG_ORDER=(${FG_COLOR_ORDER//;/ })
+FG_CBAR=(${FG_CBAR//;/ })
+
+ROI=(${ROI//;/ })
+ROI_LEVEL=(${ROI_LEVEL//;/ })
+ROI_COLOR=(${ROI_COLOR//;/ })
+ROI_ORDER=(${ROI_ORDER//;/ })
+ROI_CBAR=(${ROI_CBAR//;/ })
 
 # Get image informtation -------------------------------------------------------
-unset DIMS PIXDIM ORIGIN
-DIMS=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${BG}))
-DIMS=(${DIMS[@]:1:3})
-PIXDIM=($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${BG}))
-PIXDIM=(${PIXDIM[@]:1:3})
-ORIGIN+=($(nifti_tool -disp_hdr -field qoffset_x -quiet -infiles ${BG}))
-ORIGIN+=($(nifti_tool -disp_hdr -field qoffset_y -quiet -infiles ${BG}))
-ORIGIN+=($(nifti_tool -disp_hdr -field qoffset_z -quiet -infiles ${BG}))
-ORIENT=($(3dinfo -orient ${BG}))
+unset DIMS PIXDIM ORIGIN ORIENT
+DIMS=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f voxels))
+PIXDIM=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f spacing))
+ORIGIN=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f origin))
+ORIENT=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f orient))
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_MM}" == "true" ]]; then
@@ -277,17 +237,17 @@ if [[ "${LABEL_MM}" == "true" ]]; then
       break
     fi
   done
-  if [[ "${LABEL_MM}" == "true" ]]; then
-    echo "MESSAGE [INC:${FCN_NAME}] using mm coordinate labels"
-  else
-    echo "MESSAGE [INC:${FCN_NAME}] using voxel coordinate labels"
+  if [[ "${VERBOSE}" == "1" ]]; then
+    if [[ "${LABEL_MM}" == "true" ]]; then
+      echo "MESSAGE [INC:${FCN_NAME}] using mm coordinate labels"
+    else
+      echo "MESSAGE [INC:${FCN_NAME}] using voxel coordinate labels"
+    fi
   fi
 fi
 
 # Figure out number slices for each orientation --------------------------------
-NX=0
-NY=0
-NZ=0
+NX=0; NY=0; NZ=0
 ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
 for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
   COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
@@ -301,18 +261,12 @@ done
 
 # Calculate slices to plot =====================================================
 # Find image extent ------------------------------------------------------------
-unset XLIM YLIM ZLIM
-XLIM=(9999 0)
-YLIM=(9999 0)
-ZLIM=(9999 0)
-unset CHK_LS
-if [[ -n ${FG_MASK} ]] | [[ -n ${ROI} ]]; then
-  if [[ -n ${FG_MASK} ]]; then
-    CHK_LS=(${CHK_LS[@]} ${FG_MASK[@]})    
-  fi
-  if [[ -n ${ROI} ]]; then
-    CHK_LS=(${CHK_LS[@]} ${ROI[@]})
-  fi
+unset XLIM YLIM ZLIM CHK_LS
+XLIM=(9999 0); YLIM=(9999 0); ZLIM=(9999 0)
+if [[ -n ${ROI} ]]; then
+  CHK_LS=(${CHK_LS[@]} ${ROI[@]})
+elif [[ -n ${FG_MASK} ]]; then
+  CHK_LS=(${CHK_LS[@]} ${FG_MASK[@]})    
 elif [[ -n ${FG} ]]; then
   CHK_LS=(${CHK_LS[@]} ${FG[@]})
 elif [[ -n ${BG_MASK} ]]; then
@@ -343,6 +297,7 @@ YLIM[0]=$((${YLIM[0]}+${SLICE_OFFSET[1]}))
 YLIM[1]=$((${YLIM[1]}+${SLICE_OFFSET[1]}))
 YLIM[0]=$((${YLIM[0]}+${SLICE_OFFSET[2]}))
 YLIM[1]=$((${YLIM[1]}+${SLICE_OFFSET[2]}))
+
 ## check if limits exceed dims
 if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
 if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[0]}=1; fi
@@ -351,7 +306,8 @@ if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi
 if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi
 if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
 
-# find number of possible slices -----------------------------------------------
+# calculate slices to use ------------------------------------------------------
+## evenly spaced in desired ROI
 DX=$((${XLIM[1]}-${XLIM[0]}))
 DY=$((${YLIM[1]}-${YLIM[0]}))
 DZ=$((${ZLIM[1]}-${ZLIM[0]}))
