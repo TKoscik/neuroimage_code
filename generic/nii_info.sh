@@ -59,7 +59,7 @@ elif [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${F
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:4:1})
 elif [[ "${FIELD,,}" == "tr" ]]; then
-  OUTPUT($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
+  OUTPUT=($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:4:1})
 elif [[ "${FIELD,,}" == "orient" ]] || [[ "${FIELD,,}" == "orientation" ]]; then
   OUTPUT=($(3dinfo -orient ${IMAGE}))
