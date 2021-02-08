@@ -4,7 +4,7 @@
 HOSTNAME="$(uname -n)"
 HOSTNAME=(${HOSTNAME//-/ })
 HOSTNAME=${HOSTNAME[0],,}
-KERNEL="$(unname -s)"
+KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
 
 # set version number for INC code ----------------------------------------------
@@ -18,7 +18,7 @@ echo "Setting up Iowa Neuroimage Processing Core Software version ${VERSION}"
 #DIR_INIT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 #INIT=/Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${VERSION}/init.json
 INIT=/Shared/inc_scratch/dev_code/init.json
-if [[ -f ${INIT} ]]; then
+if [[ ! -f ${INIT} ]]; then
   echo "file not found: ${INIT}"
   exit 1
 fi
