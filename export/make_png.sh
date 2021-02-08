@@ -252,41 +252,46 @@ ORIGIN=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f origin))
 ORIENT=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f orient))
 
 ## use mm only if image is in known standard space -----------------------------
-if [[ "${LABEL_MM}" == "true" ]]; then
-  LABEL_MM="false"
+if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
+   [[ "${LABEL_USE_VOX}" == "false" ]]; then
+  LABEL_USE_VOX="true"
+  MSG="MESSAGE [INC:${FCN_NAME}] using voxel coordinate labels"
   STD_LS=($(ls ${DIR_TEMPLATE}))
-  STD_LS=("${STD_LS[@]/code}")
-  STD_LS=("${STD_LS[@]/xfm}")
   for (( i=0; i<${#STD_LS[@]}; i++ )); do
     if [[ "${BG}" == *"${STD_LS[${i}]}"* ]]; then
-      LABEL_MM="true"
+      LABEL_USE_VOX="false"
+      MSG="MESSAGE [INC:${FCN_NAME}] using mm coordinate labels"
       break
     fi
   done
-  if [[ "${VERBOSE}" == "1" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
-      echo "MESSAGE [INC:${FCN_NAME}] using mm coordinate labels"
-    else
-      echo "MESSAGE [INC:${FCN_NAME}] using voxel coordinate labels"
-    fi
-  fi
 fi
+if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
 
 # Figure out number slices for each orientation --------------------------------
+### *** is PLANE useful and necessary?
 NX=0; NY=0; NZ=0
-ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
+ROW_LAYOUT=(${LAYOUT//\;/ })
 for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
   COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
   for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
-     TEMP=(${COL_LAYOUT[${j}]//\:/ })
-     if [[ "${TEMP[1]}" =~ "x" ]]; then NX=$((${NX}+${TEMP[0]})); fi
-     if [[ "${TEMP[1]}" =~ "y" ]]; then NY=$((${NY}+${TEMP[0]})); fi
-     if [[ "${TEMP[1]}" =~ "z" ]]; then NZ=$((${NZ}+${TEMP[0]})); fi
+    TEMP=(${COL_LAYOUT[${j}]//\:/ })
+    if [[ "${TEMP[1]}" =~ "x" ]]; then
+      NX=$((${NX}+${TEMP[0]}))
+      PLANE+=("X")
+    fi
+    if [[ "${TEMP[1]}" =~ "y" ]]; then
+      NY=$((${NY}+${TEMP[0]}))
+      PLANE+=("Y")
+    fi
+    if [[ "${TEMP[1]}" =~ "z" ]]; then
+      NZ=$((${NZ}+${TEMP[0]}))
+      PLANE+=("Z")
+    fi
   done
 done
 
 # Calculate slices to plot =====================================================
-# parse variable tol determine image limits ------------------------------------
+# parse variable to determine image limits ------------------------------------
 if [[ -z "${LIMITS}" ]]; then
   if [[ -n ${ROI} ]]; then 
     LIM_CHK=(${LIM_CHK[@]} ${ROI[@]})
@@ -323,31 +328,53 @@ else
   LIMITS_TEMP=(${LIMITS//;/ })
 fi
 
-## calculate X slices ----------------------------------------------------------
+## calculate slices in each plane ----------------------------------------------
+## (1) find bounding box within image
+## (2) add in desired offset
+## (3) constrain limits to image boundaries
+## (4) calculate slices to use
+### (4a) get edge slices if possible, and toss to avoid edges of image/roi
+### (4b) constrain to desired slice number, or fewer if slices unavailable
+## (5) convert to percentage of image width for FSL slicer
+
+## (1) find bounding box within image - - - - - - - - - - - - - - - - - - - - -
+unset XLIM YLIM ZLIM
+XLIM=(9999 0)
+YLIM=(9999 0)
+ZLIM=(9999 0)
+if [[ -n "${LIM_CHK}" ]]; then
+  for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
+    unset BB_STR BB
+    BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
+    BBX=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')
+    BBY=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')
+    BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
+    #'#************************************remove prevents bad code highlighting
+    BBX=(${BBX//../ });
+    BBY=(${BBY//../ });
+    BBZ=(${BBZ//../ });
+    if [[ ${BBX[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BBX[0]}; fi
+    if [[ ${BBX[1]} -gt ${XLIM[1]} ]]; then XLIM[1]=${BBX[1]}; fi
+    if [[ ${BBY[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BBY[0]}; fi
+    if [[ ${BBY[1]} -gt ${YLIM[1]} ]]; then YLIM[1]=${BBY[1]}; fi
+    if [[ ${BBZ[0]} -lt ${ZLIM[0]} ]]; then ZLIM[0]=${BBZ[0]}; fi
+    if [[ ${BBZ[1]} -gt ${ZLIM[1]} ]]; then ZLIM[1]=${BBZ[1]}; fi
+  done
+else
+  XLIM=(${LIMITS_TEMP[0]//,/ })
+  YLIM=(${LIMITS_TEMP[1]//,/ })
+  ZLIM=(${LIMITS_TEMP[2]//,/ })
+fi
+
+## calculate X slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NX} > 0 ]]; then
-  unset XLIM XVOX XPCT RANGE TN SLICEGAP
-  XLIM=(9999 0)
-  if [[ -n "${LIM_CHK}" ]]; then
-    for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
-      unset BB_STR BB
-      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
-      BB=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')*****'
-      BB=(${BB//../ });
-      if [[ ${BB[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BB[0]}; fi      
-      if [[ ${BB[1]} -gt ${XLIM[1]} ]]; then XLIM[1]=${BB[1]}; fi
-    done
-  else
-    XLIM=(${LIMITS_TEMP[0]//,/ })
-  fi
-  ## add in desired slice offset
+  unset XVOX XPCT RANGE TN STEP
+
   XLIM[0]=$((${XLIM[0]}+${OFFSET[0]}))
   XLIM[1]=$((${XLIM[1]}+${OFFSET[0]}))
-  ## constrain limits to image boundaries
   if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
   if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi
-  ## calculate slices to use - - - - - - - - - - - - - - - - - - - - - - - - - -
-  ### get edge slices if possible, and toss to avoid edges of image/roi
-  ### constrain to desired slice number, or fewer if slices unavailable
+  
   RANGE=$((${XLIM[1]}-${XLIM[0]}))
   TN=$((${NX}+1))
   STEP=1
@@ -357,37 +384,21 @@ if [[ ${NX} > 0 ]]; then
     XVOX=(${XVOX[@]:1:${NX}})
   fi
   NX=${#XVOX[@]}
-  ### calculate X as percentage of image extent (for FSL slicer)
+  
   for (( i=0; i<${NX}; i++ )); do
     XPCT+=($(echo "scale=4; ${XVOX[${i}]}/${DIMS[0]}" | bc -l))
   done
 fi
 
-## calculate Y slices ----------------------------------------------------------
+## calculate Y slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NY} > 0 ]]; then
-  unset YLIM YVOX YPCT RANGE STEP TN
-  YLIM=(9999 0)
-  if [[ -n "${LIM_CHK}" ]]; then
-    for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
-      unset BB_STR BB
-      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
-      BB==$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')*****'
-      BB=(${BB//../ });
-      if [[ ${BB[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BB[0]}; fi      
-      if [[ ${BB[1]} -gt ${YLIM[1]} ]]; then YLIM[1]=${BB[1]}; fi
-    done
-  else
-    YLIM=(${LIMITS_TEMP[0]//,/ })
-  fi
-  ## add in desired slice offset
+  unset YVOX YPCT RANGE STEP TN
+
   YLIM[0]=$((${YLIM[0]}+${OFFSET[1]}))
   YLIM[1]=$((${YLIM[1]}+${OFFSET[1]}))
-  ## constrain limits to image boundaries
   if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[1]}=1; fi
   if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi
-  ## calculate slices to use - - - - - - - - - - - - - - - - - - - - - - - - - -
-  ### get edge slices if possible, and toss to avoid edges of image/roi
-  ### constrain to desired slice number, or fewer if slices unavailable
+  
   RANGE=$((${YLIM[1]}-${YLIM[0]}))
   TN=$((${NY}+1))
   STEP=1
@@ -397,38 +408,22 @@ if [[ ${NY} > 0 ]]; then
     YVOX=(${YVOX[@]:1:${NY}})
   fi
   NX=${#YVOX[@]}
-  ### calculate X as percentage of image extent (for FSL slicer)
+  
   for (( i=0; i<${NY}; i++ )); do
     YPCT+=($(echo "scale=4; ${YVOX[${i}]}/${DIMS[1]}" | bc -l))
   done
 fi
 
-## calculate Z slices ----------------------------------------------------------
+## calculate Z slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NZ} > 0 ]]; then
-  unset ZLIM ZVOX ZPCT RANGE STEP TN
-  ZLIM=(9999 0)
-  if [[ -n "${LIM_CHK}" ]]; then
-    for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
-      unset BB_STR BB
-      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
-      BB=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')*****'
-      BB=(${BB//../ });
-      if [[ ${BB[0]} -lt ${ZLIM[0]} ]]; then ZLIM[0]=${BB[0]}; fi      
-      if [[ ${BB[1]} -gt ${ZLIM[1]} ]]; then ZLIM[1]=${BB[1]}; fi
-    done
-  else
-    ZLIM=(${LIMITS_TEMP[0]//,/ })
-  fi
-  ## add in desired slice offset
+  unset ZVOX ZPCT RANGE STEP TN
+
   ZLIM[0]=$((${ZLIM[0]}+${OFFSET[2]}))
   ZLIM[1]=$((${ZLIM[1]}+${OFFSET[2]}))
-  ## constrain limits to image boundaries
   if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[2]}=1; fi
   if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
-  ## calculate slices to use - - - - - - - - - - - - - - - - - - - - - - - - - -
-  ### get edge slices if possible, and toss to avoid edges of image/roi
-  ### constrain to desired slice number, or fewer if slices unavailable
-  RANGE=$(({ZLIM[1]}-${ZLIM[0]}))
+
+  RANGE=$((${ZLIM[1]}-${ZLIM[0]}))
   TN=$((${NZ}+1))
   STEP=1
   if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
@@ -437,7 +432,7 @@ if [[ ${NZ} > 0 ]]; then
     ZVOX=(${ZVOX[@]:1:${NZ}})
   fi
   NZ=${#ZVOX[@]}
-  ### calculate X as percentage of image extent (for FSL slicer)
+
   for (( i=0; i<${NZ}; i++ )); do
     ZPCT+=($(echo "scale=4; ${ZVOX[${i}]}/${DIMS[2]}" | bc -l))
   done
@@ -513,7 +508,7 @@ Rscript ${DIR_INC}/export/make_colors.R \
   "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} \
   "prefix" "CBAR_BG"
-  
+
 ### add labels to color bar
 if [[ "${BG_CBAR}" == "true" ]]; then
   TTXT=$(printf "%0.2f\n" ${LO})
@@ -542,25 +537,25 @@ done
 eval ${slice_fcn}
 
 # post processing on slices ---------------
+## (1) resample slices to have max dimension of 500 pixels
+## (2) recolor background as necessary
+## *****this should be replaced with utilization of the background mask to control the transparency, such that dark patches are not accidentally made transparent
 for (( i=0; i<${NX}; i++ )); do
-  ## resample slices to have max dimension of 500 pixels
-  convert ${DIR_SCRATCH}/X${i}.png -resize ${MAX_PIXELS} ${DIR_SCRATCH}/X${i}.png
-  ## recolor background as necessary
-  ## *****this should be replaced with utilization of the background mask to control the transparency, such that dark patches are not accidentally made transparent
+  convert ${DIR_SCRATCH}/X${i}.png -resize ${MAX_PIXELS}x${MAX_PIXELS} ${DIR_SCRATCH}/X${i}.png
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz ${EDGE_FUZZ} ${DIR_SCRATCH}/X${i}.png
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/X${i}.png
   fi
 done
 for (( i=0; i<${NY}; i++ )); do
-  convert ${DIR_SCRATCH}/Y${i}.png -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Y${i}.png
+  convert ${DIR_SCRATCH}/Y${i}.png -resize ${MAX_PIXELS}x${MAX_PIXELS} ${DIR_SCRATCH}/Y${i}.png
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz ${EDGE_FUZZ} ${DIR_SCRATCH}/Y${i}.png
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Y${i}.png
   fi
 done
 for (( i=0; i<${NZ}; i++ )); do
-  convert ${DIR_SCRATCH}/Z${i}.png -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Z${i}.png
+  convert ${DIR_SCRATCH}/Z${i}.png -resize ${MAX_PIXELS}x${MAX_PIXELS} ${DIR_SCRATCH}/Z${i}.png
   if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" -fuzz ${EDGE_FUZZ} ${DIR_SCRATCH}/Z${i}.png
+    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Z${i}.png
   fi
 done
 
@@ -661,10 +656,11 @@ fi
 if [[ -n ${ROI} ]]; then
   ROI_MERGE=${DIR_SCRATCH}/ROI.nii.gz
   fslmaths ${BG} -thr 0 -uthr 0 ${ROI_MERGE}
+  for (( i=0; i<${#ROI[@]}; i++ )); do
   ROI_N=0
   for (( i=0; i<${#ROI[@]}; i++ )); do
     unset ROI_VALS TVALS
-    TEMP_ROI_LS=(${ROI_LEVELS[${i}//,/ })
+    TEMP_ROI_LS=(${ROI_LEVEL[${i}]//,/ })
     for (( j=0; j<${#TEMP_ROI_LS[@]}; j++ )); do
       unset TEMP_ROI_VALS
       TEMP_ROI_VALS=(${TEMP_ROI_LS[${j}]//\:/ }) 
@@ -679,8 +675,10 @@ if [[ -n ${ROI} ]]; then
       ROI_N=$((${ROI_N}+1))
       fslmaths ${ROI[${i}]} -thr ${ROI_VALS[${j}]} -uthr ${ROI_VALS[${j}]} \
         -bin -mul ${ROI_N} ${DIR_SCRATCH}/ROI_temp.nii.gz
-      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
-      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz \
+      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz \
+        -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
+      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz \
+        -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz \
         -add ${ROI_MERGE} ${ROI_MERGE}
     done
   done
@@ -739,10 +737,10 @@ for (( i=0; i<${NZ}; i++ )); do
     ${DIR_SCRATCH}/Z${i}.png   
 done
 
-#*** Add labels after FG and ROIs are composited
+# Add labels after FG and ROIs are composited
 for (( i=0; i<${NX}; i++ )); do
-  if [[ "${LABEL_SLICE}" == "true" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
+  if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
+    if [[ "${LABEL_USE_VOX}" == "false" ]]; then
       LABEL_X=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
       LABEL_X=$(echo "scale=2; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
       LABEL_X=$(echo "scale=2; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
@@ -758,8 +756,8 @@ for (( i=0; i<${NX}; i++ )); do
   fi
 done
 for (( i=0; i<${NY}; i++ )); do
-  if [[ "${LABEL_SLICE}" == "true" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
+  if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
+    if [[ "${LABEL_USE_VOX}" == "false" ]]; then
       LABEL_Y=$(echo "scale=2; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
       LABEL_Y=$(echo "scale=2; ${LABEL_Y}-${YVOX[${i}]}" | bc -l)
       LABEL_Y=$(echo "scale=2; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
@@ -775,8 +773,8 @@ for (( i=0; i<${NY}; i++ )); do
   fi
 done
 for (( i=0; i<${NX}; i++ )); do
-  if [[ "${LABEL_SLICE}" == "true" ]]; then
-    if [[ "${LABEL_MM}" == "true" ]]; then
+  if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
+    if [[ "${LABEL_USE_VOX}" == "false" ]]; then
       LABEL_Z=$(echo "scale=2; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
       LABEL_Z=$(echo "scale=2; ${LABEL_Z}-${ZVOX[${i}]}" | bc -l)
       LABEL_Z=$(echo "scale=2; ${LABEL_Z}*${PIXDIM[2]}" | bc -l)
@@ -797,7 +795,7 @@ done
 XCOUNT=0
 YCOUNT=0
 ZCOUNT=0
-ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
+ROW_LAYOUT=(${LAYOUT//\;/ })
 for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
   COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
   montage_fcn="montage"    
@@ -827,54 +825,50 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
 done
 
 FLS=($(ls ${DIR_SCRATCH}/image_row*.png))
-montage_fcn="montage ${DIR_SCRATCH}/image_row0.png"
-for (( i=1; i<${#FLS[@]}; i++ )); do
-  montage_fcn="${montage_fcn} ${FLS[${i}]}"
-done
-montage_fcn=${montage_fcn}' -tile 1x -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/image_col.png'
-eval ${montage_fcn}
-
-# add color bars
-unset CBAR_LS CBAR_COUNT
-CBAR_COUNT=0
-if [[ "${BG_CBAR}" == "true" ]]; then
-  CBAR_COUNT=$((${CBAR_COUNT}+1))
-  CBAR_LS+=("${DIR_SCRATCH}/CBAR_BG.png")
-fi
-CBAR_TEMP=(${FG_CBAR//,/ })
-for (( i=0; i<${#FLS[@]}; i++ )); do
-  if [[ "${#CBAR_TEMP}" == "1" ]]; then
-    if [[ "${CBAR_TEMP}" == "true" ]]; then
-      CBAR_COUNT=$((${CBAR_COUNT}+1))
-      WHICH_CBAR=$((${i}+2))
-      CBAR_LS+=("${DIR_SCRATCH}/CBAR_FG_${i}.png")
-    fi
-  else
-    if [[ "${CBAR_TEMP[${i}]}" == "true" ]]; then
-      CBAR_COUNT=$((${CBAR_COUNT}+1))
-      WHICH_CBAR=$((${i}+2))
-      CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
-    fi
-  fi
-done
-if [[ -n ${ROI} ]]; then
-  if [[ "${ROI_CBAR}" == "true" ]]; then
-    CBAR_COUNT=$((${CBAR_COUNT}+1))
-    TLS=($(ls ${DIR_SCRATCH}/cbar*))
-    WHICH_CBAR=${#TLS[@]}
-    CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
-  fi
-fi
-
-if [[ "${CBAR_COUNT}" > "0" ]]; then  
-  montage_fcn="montage ${DIR_SCRATCH}/image_col.png"
-  for (( i=0; i<${CBAR_COUNT}; i++ )); do
-    montage_fcn="${montage_fcn} ${CBAR_LS[${i}]}"
+if [[ ${#FLS[@]} -gt 1 ]]; then
+  montage_fcn="montage ${DIR_SCRATCH}/image_row0.png"
+  for (( i=1; i<${#FLS[@]}; i++ )); do
+    montage_fcn="${montage_fcn} ${FLS[${i}]}"
   done
-  montage_fcn=${montage_fcn}' -tile x1 -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/${IMAGE_NAME}.png'
+  montage_fcn=${montage_fcn}' -tile 1x -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/image_col.png'
   eval ${montage_fcn}
 else
-  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${IMAGE_NAME}.png
+  mv ${DIR_SCRATCH}/image_row0.png ${DIR_SCRATCH}/image_col.png
+fi
+
+# add color bars
+unset CBAR_LS
+if [[ "${BG_CBAR}" == "true" ]]; then
+  CBAR_LS+=("${DIR_SCRATCH}/CBAR_BG.png")
+fi
+if [[ -n ${FG} ]]; then
+  TLS=($(ls ${DIR_SCRATCH}/CBAR_FG*.png))
+  TBOOL=(${FG_CBAR//,/ })
+  for (( i=0; i<${#TLS[@]}; i++ )); do
+    if [[ "${TBOOL[${i}]}" == "true" ]]; then
+      CBAR_LS+=("${TLS[${i}]}")
+    fi
+  done
+fi
+if [[ -n ${ROI} ]]; then
+  TLS=($(ls ${DIR_SCRATCH}/CBAR_ROI*.png))
+  TBOOL=(${ROI_CBAR//,/ })
+  for (( i=0; i<${#TLS[@]}; i++ )); do
+    if [[ "${TBOOL[${i}]}" == "true" ]]; then
+      CBAR_LS+=("${TLS[${i}]}")
+    fi
+  done
+fi
+
+if [[ ${#CBAR_LS[@]} -gt 0 ]]; then  
+  montage_fcn="montage ${DIR_SCRATCH}/image_col.png"
+  for (( i=0; i<${#CBAR_LS[@]}; i++ )); do
+    montage_fcn="${montage_fcn} ${CBAR_LS[${i}]}"
+  done
+  montage_fcn=${montage_fcn}' -tile x1 -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/${FILE_NAME}.png'
+  eval ${montage_fcn}
+else
+  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${FILE_NAME}.png
 fi
 
 if [[ "${LABEL_LR}" == "true" ]]; then
