@@ -64,7 +64,7 @@ elif [[ "${FIELD,,}" == "tr" ]]; then
 elif [[ "${FIELD,,}" == "orient" ]] || [[ "${FIELD,,}" == "orientation" ]]; then
   OUTPUT=($(3dinfo -orient ${IMAGE}))
 else
-  OUTPUT($(nifti_tool -disp_hdr -field ${FIELD} -quiet -infiles ${IMAGE}))
+  OUTPUT=($(nifti_tool -disp_hdr -field ${FIELD} -quiet -infiles ${IMAGE}))
 fi
 echo ${OUTPUT}
 
