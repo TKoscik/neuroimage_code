@@ -100,9 +100,10 @@ ROI_VOL=1
 LAYOUT=1:x,1:y,1:z
 OFFSET=1,0,0
 LIMITS=
-LABEL_SLICE="true"
-LABEL_MM="true"
-LABEL_LR="true"
+# LIMITS=("BG", "BG_MASK", "FG", "FG;#", "FG_MASK", "FG_MASK;#", "ROI", "ROI;#", "10,100;13,130;45,150", "NA,NA;NA,NA;10:100")
+LABEL_NO_SLICE="false"
+LABEL_USE_VOX="false"
+LABEL_NO_LR="false"
 COLOR_PANEL="#000000"
 COLOR_TEXT="#FFFFFF"
 FONT_NAME=NimbusSans-Regular
@@ -144,9 +145,9 @@ while true; do
     --layout) LAYOUT="$2" ; shift 2 ;;
     --offset) OFFSET="$2" ; shift 2 ;;
     --limits) LIMITS="$2" ; shift 2 ;;
-    --label-slice) LABEL_SLICE="$2" ; shift 2 ;;
-    --label-mm) LABEL_MM="$2" ; shift 2 ;;
-    --label-lr) LABEL_LR="$2" ; shift 2 ;;
+    --label-noslice) LABEL_NO_SLICE="true" ; shift ;;
+    --label-mm) LABEL_USE_VOX="true" ; shift ;;
+    --label-lr) LABEL_NO_LR="true" ; shift ;;
     --color-panel) COLOR_PANEL="$2" ; shift 2 ;;
     --color-text) COLOR_TEXT="$2" ; shift 2 ;;
     --font-name) FONT_NAME="$2" ; shift 2 ;;
@@ -879,9 +880,9 @@ fi
 if [[ "${LABEL_LR}" == "true" ]]; then
   if [[ "${ORIENT,,}" == *"r"* ]]; then
   #&#8596
-    TTXT="R <-> L"
+    TTXT="R \u8596 L"
   else
-    TTXT="L <-> R"
+    TTXT="L \u8596 R"
   fi
   mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
     -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
