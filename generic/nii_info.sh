@@ -50,7 +50,7 @@ if [[ "${FIELD,,}" == "origin" ]]; then
   OUTPUT+=($(nifti_tool -disp_hdr -field qoffset_y -quiet -infiles ${IMAGE}))
   OUTPUT+=($(nifti_tool -disp_hdr -field qoffset_z -quiet -infiles ${IMAGE}))
 elif [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
-  OUTPUT($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
+  OUTPUT=($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:1:3})
 elif [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
