@@ -24,6 +24,7 @@ color.palette <- character(0)
 color.n <- 200
 color.order <- "normal"
 color.bg <- "#000000"
+no.png <- FALSE
 dir.save <- "~"
 prefix <- NULL
 
@@ -36,6 +37,8 @@ for (i in seq(1,length(args))) {
     color.order <- args[i+1]
   } else if (args[i] %in% c("bg", "background")) {
     color.bg <- args[i+1]
+  } else if (args[i] %in% c("plot", "png")) {
+    no.png <- FALSE
   } else if (args[i] %in% c("dir.save")) {
     dir.save <- args[i+1]
   } else if (args[i] %in% c("prefix")) {
@@ -113,22 +116,19 @@ if (color.order %in% c("r", "rand", "random")) {
 if (color.order %in% c("rev", "reverse", "inverse")) {
   color.ls <- rev(color.ls)
 }
-  
-plotf <- data.frame(x=rep(1,color.n),
-                    y=1:color.n,
-                    val=color.ls)
-color.bar <- ggplot(plotf, aes(x=x,y=y,fill=val)) +
-  theme_void() +
-  geom_raster(fill=plotf$val) +
-  theme(legend.position="none",
-        plot.margin = margin(1, 0.1, 1, 0.1, "cm"),
-        plot.background = element_rect(fill=color.bg, coilor=color.bg))
-ggsave(filename = paste0(prefix, ".png"),
-       path = dir.save,
-       plot = color.bar,
-       device = "png",
-       width=0.5, height=5, units = "cm",
-       dpi = 320)
+
+if (no.png == FALSE) {
+  plotf <- data.frame(x=rep(1,color.n), y=1:color.n, val=color.ls)
+  color.bar <- ggplot(plotf, aes(x=x,y=y,fill=val)) +
+    theme_void() +
+    geom_raster(fill=plotf$val) +
+    theme(legend.position="none",
+          plot.margin = margin(1, 0.1, 1, 0.1, "cm"),
+          plot.background = element_rect(fill=color.bg, coilor=color.bg))
+ ggsave(filename = paste0(prefix, ".png"),
+        path = dir.save, plot = color.bar,
+        device = "png", width=0.5, height=5, units = "cm", dpi = 320)
+}
 
 color.rgb <- format(t(col2rgb(color.ls))/255, digits=4)
 color.bg <- format(t(col2rgb(color.bg))/255, digits=4)

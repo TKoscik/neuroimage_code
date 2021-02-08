@@ -484,30 +484,30 @@ if [[ -n ${ROI} ]]; then
   done
 fi
 
-# Make Background ==============================================================
-HILO=(${BG_THRESH//,/ })
-if [[ -n ${BG_MASK} ]]; then
-  LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
-  HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
-else
-  LO=$(fslstats ${BG} -p ${HILO[0]})
-  HI=$(fslstats ${BG} -p ${HILO[1]})
-fi
+# make panel background ========================================================
+for (( i=0; i<${NX}; i++ )); do
+  convert -size ${MAX_PIXELS}x${MAX_PIXELS} canvas:${COLOR_PANEL} \
+    ${DIR_SCRATCH}/X${i}.png
+done
+for (( i=0; i<${NY}; i++ )); do
+  convert -size ${MAX_PIXELS}x${MAX_PIXELS} canvas:${COLOR_PANEL} \
+    ${DIR_SCRATCH}/Y${i}.png
+done
+for (( i=0; i<${NZ}; i++ )); do
+  convert -size ${MAX_PIXELS}x${MAX_PIXELS} canvas:${COLOR_PANEL} \
+    ${DIR_SCRATCH}/Z${i}.png
+done
 
-## apply mask
-if [[ -n ${BG_MASK} ]]; then
-  fslmaths ${BG} -mas ${BG_MASK} ${DIR_SCRATCH}/BG.nii.gz
-  BG=${DIR_SCRATCH}/BG.nii.gz
-fi
-
-## generate color bar
+# Generate color bars =========================================================
 Rscript ${DIR_INC}/export/make_colors.R \
-  "palette" ${BG_COLOR} \
-  "n" "200" \
-  "order" ${BG_ORDER} \
-  "bg" ${COLOR_PANEL} \
-  "dir.save" ${DIR_SCRATCH} \
-  "prefix" "CBAR_BG"
+  "palette" ${BG_COLOR} "n" 200 \
+  "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
+  "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
+if [[ -n ${BG_MASK} ]] || [[ -n ${FG_MASK} ]] || [[ -n ${ROI} ]]; then
+  Rscript ${DIR_INC}/export/make_colors.R \
+    "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
+    "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
+fi
 
 ### add labels to color bar
 if [[ "${BG_CBAR}" == "true" ]]; then
@@ -523,41 +523,87 @@ if [[ "${BG_CBAR}" == "true" ]]; then
     ${DIR_SCRATCH}/CBAR_BG.png
 fi
 
+# Make Background ==============================================================
+## generate color bar
+
+
 ## generate slice PNGs
+HILO=(${BG_THRESH//,/ })
+if [[ -n ${BG_MASK} ]]; then
+  LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
+  HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
+else
+  LO=$(fslstats ${BG} -p ${HILO[0]})
+  HI=$(fslstats ${BG} -p ${HILO[1]})
+fi
+
 slice_fcn="slicer ${BG} -u -l ${DIR_SCRATCH}/CBAR_BG.lut -i ${LO} ${HI}"
 for (( i=0; i<${NX}; i++ )); do
-  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}.png"
+  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_BG.png"
 done
 for (( i=0; i<${NY}; i++ )); do
-  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}.png"
+  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_BG.png"
 done
 for (( i=0; i<${NZ}; i++ )); do
-  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}.png"
+  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_BG.png"
 done
 eval ${slice_fcn}
 
-# post processing on slices ---------------
-## (1) resample slices to have max dimension of 500 pixels
-## (2) recolor background as necessary
-## *****this should be replaced with utilization of the background mask to control the transparency, such that dark patches are not accidentally made transparent
+# resize images
+TLS=($(ls ${DIR_SCRATCH}/*_BG.png))
+for (( i=0; i<${#TLS[@]}; i++ )); do
+  convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+done
+
+if [[ -n ${BG_MASK} ]]; then
+  slice_fcn="slicer ${BG_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
+  for (( i=0; i<${NX}; i++ )); do
+    slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_BG_MASK.png"
+  done
+  for (( i=0; i<${NY}; i++ )); do
+    slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_BG_MASK.png"
+  done
+  for (( i=0; i<${NZ}; i++ )); do
+    slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_BG_MASK.png"
+  done
+  eval ${slice_fcn}
+
+  # resize
+  TLS=($(ls ${DIR_SCRATCH}/*_BG_MASK.png))
+  for (( i=0; i<${#TLS[@]}; i++ )); do
+    convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+  done
+fi
+
+# composite BG BG_MASK on background
 for (( i=0; i<${NX}; i++ )); do
-  convert ${DIR_SCRATCH}/X${i}.png -resize ${MAX_PIXELS}x${MAX_PIXELS} ${DIR_SCRATCH}/X${i}.png
-  if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/X${i}.png
+  unset comp_fcn
+  comp_fcn="composite ${DIR_SCRATCH}/X${i}_BG.png ${DIR_SCRATCH}/X${i}.png"
+  if [[ -n ${BG_MASK} ]]; then
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}_BG_MASK.png"
   fi
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}.png"
+  eval ${comp_fcn}
 done
 for (( i=0; i<${NY}; i++ )); do
-  convert ${DIR_SCRATCH}/Y${i}.png -resize ${MAX_PIXELS}x${MAX_PIXELS} ${DIR_SCRATCH}/Y${i}.png
-  if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Y${i}.png
+  unset comp_fcn
+  comp_fcn="composite ${DIR_SCRATCH}/Y${i}_BG.png ${DIR_SCRATCH}/Y${i}.png"
+  if [[ -n ${BG_MASK} ]]; then
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}_BG_MASK.png"
   fi
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}.png"
+  eval ${comp_fcn}
 done
 for (( i=0; i<${NZ}; i++ )); do
-  convert ${DIR_SCRATCH}/Z${i}.png -resize ${MAX_PIXELS}x${MAX_PIXELS} ${DIR_SCRATCH}/Z${i}.png
-  if [[ "${COLOR_PANEL}" != "#000000" ]]; then
-    mogrify -fill "${COLOR_PANEL}" -opaque "#000000" ${DIR_SCRATCH}/Z${i}.png
+  unset comp_fcn
+  comp_fcn="composite ${DIR_SCRATCH}/Z${i}_BG.png ${DIR_SCRATCH}/Z${i}.png"
+  if [[ -n ${BG_MASK} ]]; then
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}_BG_MASK.png"
   fi
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}.png"
+  eval ${comp_fcn}
 done
+
 
 # Add Foreground Overlays ======================================================
 if [[ -n ${FG} ]]; then
@@ -572,20 +618,11 @@ if [[ -n ${FG} ]]; then
       HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
     fi
 
-    ## apply mask
-    if [[ -n ${FG_MASK} ]] && [[ "${FG_MASK[${i}]}" != "null" ]]; then
-      fslmaths ${FG[${i}]} -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}.nii.gz
-      FG[${i}]=${DIR_SCRATCH}/FG_${i}.nii.gz
-    fi
-
     ## generate color bar
     Rscript ${DIR_INC}/export/make_colors.R \
-      "palette" ${FG_COLOR[${i}]} \
-      "n" 200 \
-      "order" ${FG_ORDER[${i}]} \
-      "bg" ${COLOR_PANEL} \
-      "dir.save" ${DIR_SCRATCH} \
-      "prefix" "CBAR_FG_${i}"
+      "palette" ${FG_COLOR[${i}]} "n" 200 \
+      "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
+      "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
   
     ### add labels to color bar
     if [[ "${BG_CBAR}" == "true" ]]; then
@@ -616,38 +653,70 @@ if [[ -n ${FG} ]]; then
       slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
     done
     eval ${slice_fcn}
+    # resize images
+    TLS=($(ls ${DIR_SCRATCH}/*_FG_${i}.png))
+    for (( j=0; j<${#TLS[@]}; j++ )); do
+      convert ${TLS[${j}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${j}]}
+    done
+
+    # set foreground mask
+    if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" == "null" ]]; then
+      fslmaths ${FG[${i}]} -thr ${LO} -bin ${DIR_SCRATCH}/FGMASK_${i}.nii.gz
+      FG_MASK[${i}]=${DIR_SCRATCH}/FGMASK_${i}.nii.gz
+    fi
+    
+    if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
+      slice_fcn="slicer ${FG_MASK[${i}]} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
+      for (( j=0; j<${NX}; j++ )); do
+        FTEMP="${DIR_SCRATCH}/X${j}_FGMASK_${i}.png"
+        slice_fcn="${slice_fcn} -x ${XPCT[${j}]} ${FTEMP}"
+      done
+      for (( j=0; j<${NY}; j++ )); do
+        FTEMP="${DIR_SCRATCH}/Y${j}_FGMASK_${i}.png"
+        slice_fcn="${slice_fcn} -y ${YPCT[${j}]} ${FTEMP}"
+      done
+      for (( j=0; j<${NZ}; j++ )); do
+        FTEMP="${DIR_SCRATCH}/Y${j}_FGMASK_${i}.png"
+        slice_fcn="${slice_fcn} -z ${ZPCT[${j}]} ${FTEMP}"
+      done
+      eval ${slice_fcn}
+      # resize
+      TLS=($(ls ${DIR_SCRATCH}/*_FGMASK_${i}.png))
+      for (( j=0; j<${#TLS[@]}; j++ )); do
+        convert ${TLS[${j}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${j}]}
+      done
+    fi
 
     ## set background transparency and overlay on background - - - - - - - - - -
     for (( j=0; j<${NX}; j++ )); do
-      convert ${DIR_SCRATCH}/X${j}_FG_${i}.png \
-        -resize ${MAX_PIXELS} ${DIR_SCRATCH}/X${j}_FG_${i}.png
-      convert ${DIR_SCRATCH}/X${j}_FG_${i}.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" \
-        ${DIR_SCRATCH}/X${j}_FG_${i}.png 
-      composite ${DIR_SCRATCH}/X${j}_FG_${i}.png \
-        ${DIR_SCRATCH}/X${j}.png \
-        ${DIR_SCRATCH}/X${j}.png     
+      unset comp_fcn
+      comp_fcn="composite ${DIR_SCRATCH}/X${j}_FG_${i}.png"
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}.png"
+      if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
+        comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}_FGMASK_${i}.png"
+      fi
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}.png"
+      eval ${comp_fcn}
     done
     for (( j=0; j<${NY}; j++ )); do
-      convert ${DIR_SCRATCH}/Y${j}_FG_${i}.png \
-        -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Y${j}_FG_${i}.png
-      convert ${DIR_SCRATCH}/Y${j}_FG_${i}.png \
-        -transparent "${COLOR_PANEL}" -transparent "#000000" \
-        ${DIR_SCRATCH}/Y${j}_FG_${i}.png 
-      composite ${DIR_SCRATCH}/Y${j}_FG_${i}.png \
-        ${DIR_SCRATCH}/Y${j}.png \
-        ${DIR_SCRATCH}/Y${j}.png  
+      unset comp_fcn
+      comp_fcn="composite ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}.png"
+      if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
+        comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}_FGMASK_${i}.png"
+      fi
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}.png"
+      eval ${comp_fcn}
     done
-    for (( j=0; j<${NZ}; j++ )); do
-      convert ${DIR_SCRATCH}/Z${j}_FG_${i}.png \
-        -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Z${j}_FG_${i}.png
-      convert ${DIR_SCRATCH}/Z${j}_FG_${i}.png \
-        -transparent "${COLOR_PANEL}" \
-        -transparent "#000000" \
-        ${DIR_SCRATCH}/Z${j}_FG_${i}.png 
-      composite ${DIR_SCRATCH}/Z${j}_FG_${i}.png \
-        ${DIR_SCRATCH}/Z${j}.png \
-        ${DIR_SCRATCH}/Z${j}.png   
+    for (( j=0; j<${NX}; j++ )); do
+      unset comp_fcn
+      comp_fcn="composite ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}.png"
+      if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
+        comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}_FGMASK_${i}.png"
+      fi
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}.png"
+      eval ${comp_fcn}
     done
   done
 fi
@@ -705,36 +774,54 @@ for (( i=0; i<${NZ}; i++ )); do
 done
 eval ${slice_fcn}
 
+# resize images
+TLS=($(ls ${DIR_SCRATCH}/*_ROI.png))
+for (( i=0; i<${#TLS[@]}; i++ )); do
+  convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+done
+
+# make ROI mask
+ROI_MASK=${DIR_SCRATCH}/ROI_MASK.nii.gz
+fslmaths ${ROI_MERGE} -bin ${ROI_MASK}
+slice_fcn="slicer ${ROI_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
 for (( i=0; i<${NX}; i++ )); do
-  convert ${DIR_SCRATCH}/X${i}_ROI.png \
-    -resize ${MAX_PIXELS} ${DIR_SCRATCH}/X${i}_ROI.png
-  convert ${DIR_SCRATCH}/X${i}_ROI.png \
-    -transparent "${COLOR_PANEL}" -transparent "#000000" \
-    ${DIR_SCRATCH}/X${i}_ROI.png 
-  composite ${DIR_SCRATCH}/X${i}_ROI.png \
-    ${DIR_SCRATCH}/X${i}.png \
-    ${DIR_SCRATCH}/X${i}.png     
+  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROIMASK.png"
 done
 for (( i=0; i<${NY}; i++ )); do
-  convert ${DIR_SCRATCH}/Y${i}_ROI.png \
-    -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Y${i}_ROI.png
-  convert ${DIR_SCRATCH}/Y${i}_ROI.png \
-    -transparent "${COLOR_PANEL}" -transparent "#000000" \
-    ${DIR_SCRATCH}/Y${i}_ROI.png 
-  composite ${DIR_SCRATCH}/Y${i}_ROI.png \
-    ${DIR_SCRATCH}/Y${i}.png \
-    ${DIR_SCRATCH}/Y${i}.png  
+  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_ROIMASK.png"
 done
 for (( i=0; i<${NZ}; i++ )); do
-  convert ${DIR_SCRATCH}/Z${i}_ROI.png \
-    -resize ${MAX_PIXELS} ${DIR_SCRATCH}/Z${i}_ROI.png
-  convert ${DIR_SCRATCH}/Z${i}_ROI.png \
-    -transparent "${COLOR_PANEL}" \
-    -transparent "#000000" \
-    ${DIR_SCRATCH}/Z${i}_ROI.png 
-  composite ${DIR_SCRATCH}/Z${i}_ROI.png \
-    ${DIR_SCRATCH}/Z${i}.png \
-    ${DIR_SCRATCH}/Z${i}.png   
+  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_ROIMASK.png"
+done
+eval ${slice_fcn}
+
+# resize
+TLS=($(ls ${DIR_SCRATCH}/*_ROIMASK.png))
+for (( i=0; i<${#TLS[@]}; i++ )); do
+  convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+done
+
+# composite BG BG_MASK on background
+for (( i=0; i<${NX}; i++ )); do
+  unset comp_fcn
+  comp_fcn="composite ${DIR_SCRATCH}/X${i}_ROI.png ${DIR_SCRATCH}/X${i}.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}_ROIMASK.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}.png"
+  eval ${comp_fcn}
+done
+for (( i=0; i<${NY}; i++ )); do
+  unset comp_fcn
+  comp_fcn="composite ${DIR_SCRATCH}/Y${i}_ROI.png ${DIR_SCRATCH}/Y${i}.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}_ROIMASK.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}.png"
+  eval ${comp_fcn}
+done
+for (( i=0; i<${NZ}; i++ )); do
+  unset comp_fcn
+  comp_fcn="composite ${DIR_SCRATCH}/Z${i}_ROI.png ${DIR_SCRATCH}/Z${i}.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}_ROIMASK.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}.png"
+  eval ${comp_fcn}
 done
 
 # Add labels after FG and ROIs are composited
