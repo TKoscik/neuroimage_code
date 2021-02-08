@@ -104,8 +104,10 @@ LIMITS=
 LABEL_NO_SLICE="false"
 LABEL_USE_VOX="false"
 LABEL_NO_LR="false"
+LABEL_DECIMAL=1
 COLOR_PANEL="#000000"
 COLOR_TEXT="#FFFFFF"
+COLOR_DECIMAL=2
 FONT_NAME=NimbusSans-Regular
 FONT_SIZE=14
 MAX_PIXELS=500
@@ -235,12 +237,14 @@ FG_THRESH=(${FG_THRESH//;/ })
 FG_COLOR=(${FG_COLOR//;/ })
 FG_ORDER=(${FG_COLOR_ORDER//;/ })
 FG_CBAR=(${FG_CBAR//;/ })
+FG_N=${#FG[@]}
 
 ROI=(${ROI//;/ })
 ROI_LEVEL=(${ROI_LEVEL//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
+ROI_N=${#ROI[@]}
 
 OFFSET=(${OFFSET//,/ })
 
@@ -277,15 +281,12 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
     TEMP=(${COL_LAYOUT[${j}]//\:/ })
     if [[ "${TEMP[1]}" =~ "x" ]]; then
       NX=$((${NX}+${TEMP[0]}))
-      PLANE+=("X")
     fi
     if [[ "${TEMP[1]}" =~ "y" ]]; then
       NY=$((${NY}+${TEMP[0]}))
-      PLANE+=("Y")
     fi
     if [[ "${TEMP[1]}" =~ "z" ]]; then
       NZ=$((${NZ}+${TEMP[0]}))
-      PLANE+=("Z")
     fi
   done
 done
@@ -369,12 +370,10 @@ fi
 ## calculate X slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NX} > 0 ]]; then
   unset XVOX XPCT RANGE TN STEP
-
   XLIM[0]=$((${XLIM[0]}+${OFFSET[0]}))
   XLIM[1]=$((${XLIM[1]}+${OFFSET[0]}))
   if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
-  if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi
-  
+  if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi  
   RANGE=$((${XLIM[1]}-${XLIM[0]}))
   TN=$((${NX}+1))
   STEP=1
@@ -383,8 +382,7 @@ if [[ ${NX} > 0 ]]; then
   if [[ ${#XVOX[@]} -gt ${NX} ]]; then
     XVOX=(${XVOX[@]:1:${NX}})
   fi
-  NX=${#XVOX[@]}
-  
+  NX=${#XVOX[@]}  
   for (( i=0; i<${NX}; i++ )); do
     XPCT+=($(echo "scale=4; ${XVOX[${i}]}/${DIMS[0]}" | bc -l))
   done
@@ -393,12 +391,10 @@ fi
 ## calculate Y slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NY} > 0 ]]; then
   unset YVOX YPCT RANGE STEP TN
-
   YLIM[0]=$((${YLIM[0]}+${OFFSET[1]}))
   YLIM[1]=$((${YLIM[1]}+${OFFSET[1]}))
   if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[1]}=1; fi
-  if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi
-  
+  if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi  
   RANGE=$((${YLIM[1]}-${YLIM[0]}))
   TN=$((${NY}+1))
   STEP=1
@@ -407,8 +403,7 @@ if [[ ${NY} > 0 ]]; then
   if [[ ${#YVOX[@]} -gt ${NY} ]]; then
     YVOX=(${YVOX[@]:1:${NY}})
   fi
-  NX=${#YVOX[@]}
-  
+  NX=${#YVOX[@]}  
   for (( i=0; i<${NY}; i++ )); do
     YPCT+=($(echo "scale=4; ${YVOX[${i}]}/${DIMS[1]}" | bc -l))
   done
@@ -417,12 +412,10 @@ fi
 ## calculate Z slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NZ} > 0 ]]; then
   unset ZVOX ZPCT RANGE STEP TN
-
   ZLIM[0]=$((${ZLIM[0]}+${OFFSET[2]}))
   ZLIM[1]=$((${ZLIM[1]}+${OFFSET[2]}))
   if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[2]}=1; fi
   if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
-
   RANGE=$((${ZLIM[1]}-${ZLIM[0]}))
   TN=$((${NZ}+1))
   STEP=1
@@ -432,7 +425,6 @@ if [[ ${NZ} > 0 ]]; then
     ZVOX=(${ZVOX[@]:1:${NZ}})
   fi
   NZ=${#ZVOX[@]}
-
   for (( i=0; i<${NZ}; i++ )); do
     ZPCT+=($(echo "scale=4; ${ZVOX[${i}]}/${DIMS[2]}" | bc -l))
   done
@@ -498,7 +490,8 @@ for (( i=0; i<${NZ}; i++ )); do
     ${DIR_SCRATCH}/Z${i}.png
 done
 
-# Generate color bars =========================================================
+# Make Background ==============================================================
+## generate color bar
 Rscript ${DIR_INC}/export/make_colors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
@@ -511,21 +504,25 @@ fi
 
 ### add labels to color bar
 if [[ "${BG_CBAR}" == "true" ]]; then
-  TTXT=$(printf "%0.2f\n" ${LO})
-  mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-    -gravity Center -annotate 90x90+0+225 "${TTXT}" \
+  text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
+  eval ${text_fcn}
+  convert -background "transparent" -fill ${COLOR_TEXT} \
+    -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
+  text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
+  eval ${text_fcn}
+  convert -background "transparent" -fill ${COLOR_TEXT} \
+    -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
+  composite -gravity SouthEast \
+    ${DIR_SCRATCH}/LABEL_LO.png \
+    ${DIR_SCRATCH}/CBAR_BG.png \
     ${DIR_SCRATCH}/CBAR_BG.png
-  TTXT=$(printf "%0.2f\n" ${HI})
-  mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-    -gravity Center -annotate 90x90+0-225 "${TTXT}" \
+  composite -gravity NorthEast \
+    ${DIR_SCRATCH}/LABEL_HI.png \
+    ${DIR_SCRATCH}/CBAR_BG.png \
     ${DIR_SCRATCH}/CBAR_BG.png
 fi
-
-# Make Background ==============================================================
-## generate color bar
-
 
 ## generate slice PNGs
 HILO=(${BG_THRESH//,/ })
@@ -558,18 +555,18 @@ done
 if [[ -n ${BG_MASK} ]]; then
   slice_fcn="slicer ${BG_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
   for (( i=0; i<${NX}; i++ )); do
-    slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_BG_MASK.png"
+    slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_BGMASK.png"
   done
   for (( i=0; i<${NY}; i++ )); do
-    slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_BG_MASK.png"
+    slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_BGMASK.png"
   done
   for (( i=0; i<${NZ}; i++ )); do
-    slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_BG_MASK.png"
+    slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_BGMASK.png"
   done
   eval ${slice_fcn}
 
   # resize
-  TLS=($(ls ${DIR_SCRATCH}/*_BG_MASK.png))
+  TLS=($(ls ${DIR_SCRATCH}/*_BGMASK.png))
   for (( i=0; i<${#TLS[@]}; i++ )); do
     convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
   done
@@ -580,7 +577,7 @@ for (( i=0; i<${NX}; i++ )); do
   unset comp_fcn
   comp_fcn="composite ${DIR_SCRATCH}/X${i}_BG.png ${DIR_SCRATCH}/X${i}.png"
   if [[ -n ${BG_MASK} ]]; then
-    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}_BG_MASK.png"
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}_BGMASK.png"
   fi
   comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}.png"
   eval ${comp_fcn}
@@ -589,7 +586,7 @@ for (( i=0; i<${NY}; i++ )); do
   unset comp_fcn
   comp_fcn="composite ${DIR_SCRATCH}/Y${i}_BG.png ${DIR_SCRATCH}/Y${i}.png"
   if [[ -n ${BG_MASK} ]]; then
-    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}_BG_MASK.png"
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}_BGMASK.png"
   fi
   comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}.png"
   eval ${comp_fcn}
@@ -598,7 +595,7 @@ for (( i=0; i<${NZ}; i++ )); do
   unset comp_fcn
   comp_fcn="composite ${DIR_SCRATCH}/Z${i}_BG.png ${DIR_SCRATCH}/Z${i}.png"
   if [[ -n ${BG_MASK} ]]; then
-    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}_BG_MASK.png"
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}_BGMASK.png"
   fi
   comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}.png"
   eval ${comp_fcn}
@@ -625,16 +622,24 @@ if [[ -n ${FG} ]]; then
       "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
   
     ### add labels to color bar
-    if [[ "${BG_CBAR}" == "true" ]]; then
-      TTXT=$(printf "%0.2f\n" ${LO})
-      mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-        -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-        -gravity Center -annotate 90x90+0+225 "${TTXT}" \
+    if [[ "${FG_CBAR[${i}]}" == "true" ]]; then
+      text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
+      eval ${text_fcn}
+      convert -background "transparent" -fill ${COLOR_TEXT} \
+        -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+        caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
+      text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
+      eval ${text_fcn}
+      convert -background "transparent" -fill ${COLOR_TEXT} \
+        -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+        caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
+      composite -gravity SouthEast \
+        ${DIR_SCRATCH}/LABEL_LO.png \
+        ${DIR_SCRATCH}/CBAR_FG_${i}.png \
         ${DIR_SCRATCH}/CBAR_FG_${i}.png
-      TTXT=$(printf "%0.2f\n" ${HI})
-      mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
-        -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-        -gravity Center -annotate 90x90+0-225 "${TTXT}" \
+      composite -gravity NorthEast \
+        ${DIR_SCRATCH}/LABEL_HI.png \
+        ${DIR_SCRATCH}/CBAR_FG_${i}.png \
         ${DIR_SCRATCH}/CBAR_FG_${i}.png
     fi
 
@@ -676,7 +681,7 @@ if [[ -n ${FG} ]]; then
         slice_fcn="${slice_fcn} -y ${YPCT[${j}]} ${FTEMP}"
       done
       for (( j=0; j<${NZ}; j++ )); do
-        FTEMP="${DIR_SCRATCH}/Y${j}_FGMASK_${i}.png"
+        FTEMP="${DIR_SCRATCH}/Z${j}_FGMASK_${i}.png"
         slice_fcn="${slice_fcn} -z ${ZPCT[${j}]} ${FTEMP}"
       done
       eval ${slice_fcn}
@@ -708,7 +713,7 @@ if [[ -n ${FG} ]]; then
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}.png"
       eval ${comp_fcn}
     done
-    for (( j=0; j<${NX}; j++ )); do
+    for (( j=0; j<${NZ}; j++ )); do
       unset comp_fcn
       comp_fcn="composite ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}.png"
@@ -725,9 +730,8 @@ fi
 if [[ -n ${ROI} ]]; then
   ROI_MERGE=${DIR_SCRATCH}/ROI.nii.gz
   fslmaths ${BG} -thr 0 -uthr 0 ${ROI_MERGE}
-  for (( i=0; i<${#ROI[@]}; i++ )); do
-  ROI_N=0
-  for (( i=0; i<${#ROI[@]}; i++ )); do
+  NEW_VAL=0
+  for (( i=0; i<${ROI_N}; i++ )); do
     unset ROI_VALS TVALS
     TEMP_ROI_LS=(${ROI_LEVEL[${i}]//,/ })
     for (( j=0; j<${#TEMP_ROI_LS[@]}; j++ )); do
@@ -741,9 +745,9 @@ if [[ -n ${ROI} ]]; then
     done
     
     for (( j=0; j<${#ROI_VALS[@]}; j++ )); do
-      ROI_N=$((${ROI_N}+1))
+      NEW_VAL=$((${NEW_VAL}+1))
       fslmaths ${ROI[${i}]} -thr ${ROI_VALS[${j}]} -uthr ${ROI_VALS[${j}]} \
-        -bin -mul ${ROI_N} ${DIR_SCRATCH}/ROI_temp.nii.gz
+        -bin -mul ${NEW_VAL} ${DIR_SCRATCH}/ROI_temp.nii.gz
       fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz \
         -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
       fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz \
@@ -751,86 +755,80 @@ if [[ -n ${ROI} ]]; then
         -add ${ROI_MERGE} ${ROI_MERGE}
     done
   done
+
+  ## generate color bar
+  Rscript ${DIR_INC}/export/make_colors.R \
+    "palette" ${ROI_COLOR} "n" ${NEW_VAL} \
+    "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
+    "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_ROI"
+
+  slice_fcn="slicer ${ROI_MERGE} -u -l ${DIR_SCRATCH}/CBAR_ROI.lut -i 0 ${ROI_N}"
+  for (( i=0; i<${NX}; i++ )); do
+    slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROI.png"
+  done
+  for (( i=0; i<${NY}; i++ )); do
+    slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_ROI.png"
+  done
+  for (( i=0; i<${NZ}; i++ )); do
+    slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_ROI.png"
+  done
+  eval ${slice_fcn}
+
+  # resize images
+  TLS=($(ls ${DIR_SCRATCH}/*_ROI.png))
+  for (( i=0; i<${#TLS[@]}; i++ )); do
+    convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+  done
+
+  # make ROI mask
+  ROI_MASK=${DIR_SCRATCH}/ROI_MASK.nii.gz
+  fslmaths ${ROI_MERGE} -bin ${ROI_MASK}
+  slice_fcn="slicer ${ROI_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
+  for (( i=0; i<${NX}; i++ )); do
+    slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROIMASK.png"
+  done
+  for (( i=0; i<${NY}; i++ )); do
+    slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_ROIMASK.png"
+  done
+  for (( i=0; i<${NZ}; i++ )); do
+    slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_ROIMASK.png"
+  done
+  eval ${slice_fcn}
+
+  # resize
+  TLS=($(ls ${DIR_SCRATCH}/*_ROIMASK.png))
+  for (( i=0; i<${#TLS[@]}; i++ )); do
+    convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+  done
+
+  # composite BG BG_MASK on background
+  for (( i=0; i<${NX}; i++ )); do
+    composite ${DIR_SCRATCH}/X${i}_ROI.png \
+      ${DIR_SCRATCH}/X${i}.png \
+      ${DIR_SCRATCH}/X${i}_ROIMASK.png \
+      ${DIR_SCRATCH}/X${i}.png
+  done
+  for (( i=0; i<${NY}; i++ )); do
+    composite ${DIR_SCRATCH}/Y${i}_ROI.png \
+      ${DIR_SCRATCH}/Y${i}.png \
+      ${DIR_SCRATCH}/Y${i}_ROIMASK.png \
+      ${DIR_SCRATCH}/Y${i}.png
+  done
+  for (( i=0; i<${NZ}; i++ )); do
+    composite ${DIR_SCRATCH}/Z${i}_ROI.png \
+      ${DIR_SCRATCH}/Z${i}.png \
+      ${DIR_SCRATCH}/Z${i}_ROIMASK.png \
+      ${DIR_SCRATCH}/Z${i}.png
+  done
 fi
-
-## generate color bar
-Rscript ${DIR_INC}/export/make_colors.R \
-  "palette" ${ROI_COLOR} \
-  "n" ${ROI_N} \
-  "order" ${ROI_ORDER} \
-  "bg" ${COLOR_PANEL} \
-  "dir.save" ${DIR_SCRATCH} \
-  "prefix" "CBAR_ROI"
-
-slice_fcn="slicer ${ROI_MERGE} -u -l ${DIR_SCRATCH}/CBAR_ROI.lut -i 0 ${ROI_N}"
-for (( i=0; i<${NX}; i++ )); do
-  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROI.png"
-done
-for (( i=0; i<${NY}; i++ )); do
-  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_ROI.png"
-done
-for (( i=0; i<${NZ}; i++ )); do
-  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_ROI.png"
-done
-eval ${slice_fcn}
-
-# resize images
-TLS=($(ls ${DIR_SCRATCH}/*_ROI.png))
-for (( i=0; i<${#TLS[@]}; i++ )); do
-  convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
-done
-
-# make ROI mask
-ROI_MASK=${DIR_SCRATCH}/ROI_MASK.nii.gz
-fslmaths ${ROI_MERGE} -bin ${ROI_MASK}
-slice_fcn="slicer ${ROI_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
-for (( i=0; i<${NX}; i++ )); do
-  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROIMASK.png"
-done
-for (( i=0; i<${NY}; i++ )); do
-  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_ROIMASK.png"
-done
-for (( i=0; i<${NZ}; i++ )); do
-  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_ROIMASK.png"
-done
-eval ${slice_fcn}
-
-# resize
-TLS=($(ls ${DIR_SCRATCH}/*_ROIMASK.png))
-for (( i=0; i<${#TLS[@]}; i++ )); do
-  convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
-done
-
-# composite BG BG_MASK on background
-for (( i=0; i<${NX}; i++ )); do
-  unset comp_fcn
-  comp_fcn="composite ${DIR_SCRATCH}/X${i}_ROI.png ${DIR_SCRATCH}/X${i}.png"
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}_ROIMASK.png"
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}.png"
-  eval ${comp_fcn}
-done
-for (( i=0; i<${NY}; i++ )); do
-  unset comp_fcn
-  comp_fcn="composite ${DIR_SCRATCH}/Y${i}_ROI.png ${DIR_SCRATCH}/Y${i}.png"
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}_ROIMASK.png"
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}.png"
-  eval ${comp_fcn}
-done
-for (( i=0; i<${NZ}; i++ )); do
-  unset comp_fcn
-  comp_fcn="composite ${DIR_SCRATCH}/Z${i}_ROI.png ${DIR_SCRATCH}/Z${i}.png"
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}_ROIMASK.png"
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}.png"
-  eval ${comp_fcn}
-done
 
 # Add labels after FG and ROIs are composited
 for (( i=0; i<${NX}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-      LABEL_X=$(echo "scale=2; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
-      LABEL_X=$(echo "scale=2; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
-      LABEL_X=$(echo "scale=2; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
+      LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
+      LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
+      LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
       LABEL_X="${LABEL_X}mm"
     else
       LABEL_X=${XVOX[${i}]}
@@ -845,9 +843,9 @@ done
 for (( i=0; i<${NY}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-      LABEL_Y=$(echo "scale=2; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
-      LABEL_Y=$(echo "scale=2; ${LABEL_Y}-${YVOX[${i}]}" | bc -l)
-      LABEL_Y=$(echo "scale=2; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
+      LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
+      LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Y}-${YVOX[${i}]}" | bc -l)
+      LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
       LABEL_Y="${LABEL_Y}mm"
     else
       LABEL_Y=${YVOX[${i}]}
@@ -862,9 +860,9 @@ done
 for (( i=0; i<${NX}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-      LABEL_Z=$(echo "scale=2; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
-      LABEL_Z=$(echo "scale=2; ${LABEL_Z}-${ZVOX[${i}]}" | bc -l)
-      LABEL_Z=$(echo "scale=2; ${LABEL_Z}*${PIXDIM[2]}" | bc -l)
+      LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
+      LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Z}-${ZVOX[${i}]}" | bc -l)
+      LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Z}*${PIXDIM[2]}" | bc -l)
       LABEL_Z="${LABEL_Z}mm"
     else
       LABEL_Z=${ZVOX[${i}]}
@@ -958,17 +956,16 @@ else
   mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${FILE_NAME}.png
 fi
 
-if [[ "${LABEL_LR}" == "true" ]]; then
+if [[ "${LABEL_NO_LR}" == "false" ]]; then
   if [[ "${ORIENT,,}" == *"r"* ]]; then
-  #&#8596
-    TTXT="R \u8596 L"
+    TTXT="R"
   else
-    TTXT="L \u8596 R"
+    TTXT="L"
   fi
   mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
     -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
     -gravity SouthWest -annotate +10+10 "${TTXT}" \
-    ${DIR_SCRATCH}/${IMAGE_NAME}.png
+    ${DIR_SCRATCH}/${FILE_NAME}.png
 fi
 
 
@@ -976,95 +973,4 @@ fi
 mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
 
 exit 0
-
-
-########################
-ROW_LAYOUT=(${IMG_LAYOUT//\;/ })
-for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
-  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
-  png_fcn="pngappend"    
-  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
-     TEMP=(${COL_LAYOUT[${j}]//\:/ })
-     if [[ "${TEMP[1]}" =~ "x" ]]; then
-       for (( k=0; k<${TEMP[0]}; k++ )); do
-         png_fcn="${png_fcn} ${DIR_SCRATCH}/X${XCOUNT}.png + 0"
-         XCOUNT=$((${XCOUNT}+1))
-       done
-     fi
-     if [[ "${TEMP[1]}" =~ "y" ]]; then
-       for (( k=0; k<${TEMP[0]}; k++ )); do
-         png_fcn="${png_fcn} ${DIR_SCRATCH}/Y${YCOUNT}.png + 0"
-         YCOUNT=$((${YCOUNT}+1))
-       done
-     fi
-     if [[ "${TEMP[1]}" =~ "z" ]]; then
-       for (( k=0; k<${TEMP[0]}; k++ )); do
-         png_fcn="${png_fcn} ${DIR_SCRATCH}/Z${ZCOUNT}.png + 0"
-         ZCOUNT=$((${ZCOUNT}+1))
-       done
-     fi
-  done
-  png_fcn=${png_fcn::-3}
-  png_fcn="${png_fcn} ${DIR_SCRATCH}/image_row${i}.png"
-  eval ${png_fcn}
-done
-
-FLS=($(ls ${DIR_SCRATCH}/image_row*.png))
-png_fcn="pngappend ${DIR_SCRATCH}/image_row0.png"
-for (( i=1; i<${#FLS[@]}; i++ )); do
-  png_fcn="${png_fcn} - 0 ${FLS[${i}]}"
-done
-png_fcn="${png_fcn} ${DIR_SCRATCH}/image_col.png"
-eval ${png_fcn}
-
-# add color bars
-unset CBAR_LS CBAR_COUNT
-CBAR_COUNT=0
-if [[ "${BG_CBAR}" == "true" ]]; then
-  CBAR_COUNT=$((${CBAR_COUNT}+1))
-  CBAR_LS+=("${DIR_SCRATCH}/cbar${CBAR_COUNT}.png")
-fi
-CBAR_TEMP=(${FG_CBAR//,/ })
-for (( i=0; i<${#FLS[@]}; i++ )); do
-  if [[ "${#CBAR_TEMP}" == "1" ]]; then
-    if [[ "${CBAR_TEMP}" == "true" ]]; then
-      CBAR_COUNT=$((${CBAR_COUNT}+1))
-      WHICH_CBAR=$((${i}+2))
-      CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
-    fi
-  else
-    if [[ "${CBAR_TEMP[${i}]}" == "true" ]]; then
-      CBAR_COUNT=$((${CBAR_COUNT}+1))
-      WHICH_CBAR=$((${i}+2))
-      CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
-    fi
-  fi
-done
-if [[ -n ${ROI} ]]; then
-  if [[ "${ROI_CBAR}" == "true" ]]; then
-    CBAR_COUNT=$((${CBAR_COUNT}+1))
-    TLS=($(ls ${DIR_SCRATCH}/cbar*))
-    WHICH_CBAR=${#TLS[@]}
-    CBAR_LS+=("${DIR_SCRATCH}/cbar${WHICH_CBAR}.png")
-  fi
-fi
-
-if [[ "${CBAR_COUNT}" > "0" ]]; then  
-  png_fcn="pngappend ${DIR_SCRATCH}/image_col.png"
-  for (( i=0; i<${CBAR_COUNT}; i++ )); do
-    png_fcn="${png_fcn} + 0 ${CBAR_LS[${i}]}"
-  done
-  png_fcn="${png_fcn} ${DIR_SCRATCH}/${IMAGE_NAME}.png"
-  eval ${png_fcn}
-else
-  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${IMAGE_NAME}.png
-fi
-
-#*(*********************************add R-l labels)
-
-# move final png file
-mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
-
-exit 0
-
 
