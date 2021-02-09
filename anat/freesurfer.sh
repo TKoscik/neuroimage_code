@@ -33,16 +33,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -101,11 +101,11 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f ses)
+DIR_PROJECT=$(getDir -i ${T1})
+PID=$(getField -i ${T1} -f sub)
+SID=$(getField -i ${T1} -f ses)
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${T1})
+  PREFIX=$(getBidsBase -s -i ${T1})
 fi
 mkdir -p ${DIR_PROJECT}/derivatives/freesurfer/subject_dir
 
@@ -126,10 +126,10 @@ if [[ ${N_T2} -gt 0 ]];then
   IMAGES+=(-T2pial)
 fi
 
-export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${VERSION}
-export SUBJECTS_DIR=${DIR_PROJECT}/derivatives/freesurfer/subject_dir
-export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${VERSION}/license.txt
-source ${FREESURFER_HOME}/FreeSurferEnv.sh
+#export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${VERSION}
+#export SUBJECTS_DIR=${DIR_PROJECT}/derivatives/freesurfer/subject_dir
+#export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${VERSION}/license.txt
+#source ${FREESURFER_HOME}/FreeSurferEnv.sh
 recon-all -subject ${PREFIX} ${IMAGES[*]} -all
 
 #===============================================================================

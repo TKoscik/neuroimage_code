@@ -32,17 +32,21 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
@@ -101,9 +105,9 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${B0_IMAGE})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${B0_IMAGE} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${B0_IMAGE} -f ses)
+DIR_PROJECT=$(getDir -i ${B0_IMAGE})
+PID=$(getField -i ${B0_IMAGE} -f sub)
+SID=$(getField -i ${B0_IMAGE} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then

@@ -33,16 +33,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -115,18 +115,18 @@ fi
 #===============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "sub")
-SID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f "ses")
+DIR_PROJECT=$(getDir -i ${T1})
+PID=$(getField -i ${T1} -f "sub")
+SID=$(getField -i ${T1} -f "ses")
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${T1})
+  PREFIX=$(getBidsBase -s -i ${T1})
 fi
 mkdir -p ${DIR_PROJECT}/derivatives/baw
 CSV=${DIR_PROJECT}/code/baw.csv
 CONFIGFILE=${DIR_PROJECT}/code/${PROJECT_NAME}.config
 
 if [[ ! -f "${CONFIGFILE}" ]]; then
-  ${DIR_INC}/anat/bawConfig.sh \
+  bawConfig \
     --project-name ${PROJECT_NAME} \
     --csv-file ${CSV} \
     --dir-save ${DIR_PROJECT}/derivatives/baw \
@@ -159,7 +159,7 @@ else
 fi
 
 export PATH=${DIR_PINC}/anaconda3/Linux/x86_64/4.3.0/bin:$PATH
-bash ${DIR_INC}/anat/bawRun.sh -p 1 -s ${SESID} -r ${RUNTYPE} -c ${CONFIGFILE}
+bash bawRun -p 1 -s ${SESID} -r ${RUNTYPE} -c ${CONFIGFILE}
 
 #===============================================================================
 # End of Function

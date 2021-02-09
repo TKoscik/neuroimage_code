@@ -32,16 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -141,11 +141,11 @@ METHOD=(${METHOD//,/ })
 NUM_METHOD=${#METHOD[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE[0]})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE[0]} -f ses)
+DIR_PROJECT=$(getDir -i ${IMAGE[0]})
+PID=$(getField -i ${IMAGE[0]} -f sub)
+SID=$(getField -i ${IMAGE[0]} -f ses)
 if [[ -z "${PREFIX}" ]]; then 
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE[0]})
+  PREFIX=$(getBidsBase -s -i ${IMAGE[0]})
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then

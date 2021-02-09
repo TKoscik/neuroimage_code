@@ -32,16 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -118,9 +118,9 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_NIMGCORE}/code/bids/get_dir.sh -i ${INPUT})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f ses)
+DIR_PROJECT=$(getDir -i ${INPUT})
+PID=$(getField -i ${INPUT} -f sub)
+SID=$(getField -i ${INPUT} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
@@ -138,7 +138,7 @@ mkdir -p ${DIR_SAVE}
 # Start of Function
 #===============================================================================
 
-${DIR_INC}/anat/T1rhoMap \
+T1rhoMap \
 --inputVolumes ${INPUT} \
 --t1rhoTimes ${TIMES} \
 --mappingAlgorithm ${MAPPING_ALGORITHM} \

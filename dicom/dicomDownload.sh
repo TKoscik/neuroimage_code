@@ -21,7 +21,7 @@ function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
   fi
@@ -113,7 +113,7 @@ fi
 # use lookup table if PI and.or project unspecified ----------------------------
 if [[ -z ${PI} ]] |
    [[ -z ${PROJECT} ]]; then
-  XNAT_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f xnat_project))
+  XNAT_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f xnat_project))
   for (( i=1; i<${#XNAT_LS[@]}; i++ )); do
     if [[ "${XNAT_LS[${i}]" == "${XNAT_PROJECT}" ]]; then
       WHICH_PROJECT=${i}
@@ -121,11 +121,11 @@ if [[ -z ${PI} ]] |
     fi
   done
   if [[ -z ${PI} ]]; then
-    PI_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f pi))
+    PI_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f pi))
     PI="${PI_LS[${WHICH_PROJECT}]}"
   fi
   if [[ -z ${PROJECT} ]]; then
-    PROJECT_LS=($(${DIR_INC}/lut/get_column.sh -i ${DIR_DB}/projects.tsv -f project_name))
+    PROJECT_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f project_name))
     PROJECT="${PROJECT_LS[${WHICH_PROJECT}]}"
   fi
 fi

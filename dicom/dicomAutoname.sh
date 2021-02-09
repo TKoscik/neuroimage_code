@@ -21,7 +21,7 @@ function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
   fi
@@ -93,9 +93,9 @@ DIR_DCM=($(find ${DIR_INPUT} -type f -name '*.dcm*' -printf '%h\n' | sort -u))
 FLS=($(ls ${DIR_INPUT}/*.nii.gz))
 N_FLS=${#FLS[@]}
 
-PI=$(${DIR_INC}/bids/get_field.sh -i ${DIR_INPUT} -f pi)
-PROJECT=$(${DIR_INC}/bids/get_field.sh -i ${DIR_INPUT} -f project)
-PID=$(${DIR_INC}/bids/get_field.sh -i ${DIR_INPUT} -f sub)
+PI=$(getField -i ${DIR_INPUT} -f pi)
+PROJECT=$(getField -i ${DIR_INPUT} -f project)
+PID=$(getField -i ${DIR_INPUT} -f sub)
 FNAME="${FLS[0]##*/}"
 BNAME="${FNAME[0]%%.*}"
 TEMP=(${BNAME//_x-x_/ })

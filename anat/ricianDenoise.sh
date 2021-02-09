@@ -33,16 +33,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -128,11 +128,11 @@ if [[ "${HELP}" == "true" ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${IMAGE})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f ses)
+DIR_PROJECT=$(getDir -i ${IMAGE})
+PID=$(getField -i ${IMAGE} -f sub)
+SID=$(getField -i ${IMAGE} -f ses)
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${IMAGE})
+  PREFIX=$(getBidsBase -s -i ${IMAGE})
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
@@ -148,7 +148,7 @@ mkdir -p ${DIR_SAVE}
 # Rician Denoising
 #===============================================================================
 # gather modailty for output
-MOD=($(${DIR_INC}/bids/get_field.sh -i ${IMAGE} -f "modality"))
+MOD=($(getField -i ${IMAGE} -f "modality"))
 
 # Denoise image
 dn_fcn="DenoiseImage -d ${DIM}"

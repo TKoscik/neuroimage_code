@@ -32,17 +32,21 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
@@ -97,16 +101,15 @@ fi
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 anyfile=$(ls ${DIR_DWI}/sub-*.nii.gz)
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${anyfile[0]})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${anyfile[0]} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${anyfile[0]} -f ses)
+DIR_PROJECT=$(getDir -i ${anyfile[0]})
+PID=$(getField -i ${anyfile[0]} -f sub)
+SID=$(getField -i ${anyfile[0]} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
     PREFIX="${PREFIX}_ses-${SID}"
   fi
 fi
-
 
 # B0 extracter ----------------------------------------------------------------
 DWI=($(ls ${DIR_DWI}/*_dwi.nii.gz))
@@ -118,6 +121,7 @@ for (( i=0; i<${N_DWI}; i++ )); do
   fslsplit ${DWI[${i}]} ${DIR_DWI}/split/${PREFIX}-split-0000 -t
   for j in ${!B0s[@]}; do 
     k=$(echo "(${B0s[${j}]}/10)" | bc)
+    #"######## preserve gitlab highlighting
     if [ ${k} -ne 0 ]; then
       rm ${DIR_DWI}/split/${PREFIX}-split-*000${j}.nii.gz
     fi

@@ -32,16 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -163,7 +163,7 @@ fi
 #===============================================================================
 MOVING=(${MOVING//,/ })
 N=${#MOVING[@]}
-FROM=$(${DIR_INC}/bids/get_space.sh -i ${MOVING[0]})
+FROM=$(getSpace -i ${MOVING[0]})
 
 if [[ "${MOVING_MASK,,}" == "null" ]]; then
   FIXED_MASK=NULL
@@ -173,11 +173,11 @@ if [[ "${FIXED,,}" != "null" ]]; then
   FIXED=(${FIXED//,/ })
   N_FIXED=${#FIXED[@]}
   if [[ "${N_FIXED}" != "${N}" ]]; then exit 1; fi
-  TO=(${DIR_INC}/bids/get_space.sh -i ${FIXED[0]})
+  TO=$(getSpace -i ${FIXED[0]})
 else
   unset FIXED
   for (( i=0; i<${N_MOVING}; i++ )); do
-    MOD=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
+    MOD=$(getField -i ${MOVING[${i}]} -f "modality")
     if [[ "${MOD}" == "T2w" ]]; then
       FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T2w.nii.gz)
     else
@@ -185,7 +185,7 @@ else
     fi
   done
   if [[ "${MOVING_MASK}" != "NULL" ]]; then
-    WHICH_MASK=$(${DIR_INC}/bids/get_field.sh -i ${MOVING_MASK} -f mask)
+    WHICH_MASK=$(getField -i ${MOVING_MASK} -f mask)
     WHICH_MASK=(${WHICH_MASK//+/ })
     WHICH_MASK=${WHICH_MASK[0]}
     if [[ -z ${WHICH_MASK} ]]; then
@@ -222,7 +222,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
     fi
   done
   for (( i=0; i<${N_FIXED}; i++ )); do
-    TMOD=$(${DIR_INC}/bids/get_field.sh -i ${FIXED[${i}]} -f modality)
+    TMOD=$(getField -i ${FIXED[${i}]} -f modality)
     ResampleImage 3 \
       ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_${TMOD}.nii.gz \
       ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${TMOD}.nii.gz \
@@ -232,7 +232,7 @@ if [[ ! -d "${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}" ]]; then
   unset FIXED
   FIXED=${FIXED_NEW}
 
-  WHICH_MASK=$(${DIR_INC}/bids/get_field.sh -i ${FIXED_MASK} -f mask)
+  WHICH_MASK=$(getField -i ${FIXED_MASK} -f mask)
   ResampleImage 3 \
     ${DIR_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_mask-${WHICH_MASK}.nii.gz \
     ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${WHICH_MASK}.nii.gz \
@@ -243,19 +243,19 @@ fi
 # do not use histogram matching if image pairs are mixed modality
 HIST_MATCH=1
 for (( i=0; i<${N_MOVING}; i++ )); do
-  MOD_MOVING=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality")
-  MOD_FIXED=$(${DIR_INC}/bids/get_field.sh -i ${FIXED[${i}]} -f modality)
+  MOD_MOVING=$(getField -i ${MOVING[${i}]} -f "modality")
+  MOD_FIXED=$(getField -i ${FIXED[${i}]} -f modality)
   if [[ "${MOD_FIXED}" != "${MOD_MOVING}" ]]; then
     HIST_MATCH=0
   fi
 do
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MOVING[0]})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[0]} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${MOVING[0]} -f ses)
+DIR_PROJECT=$(getDir -i ${MOVING[0]})
+PID=$(getField -i ${MOVING[0]} -f sub)
+SID=$(getField -i ${MOVING[0]} -f ses)
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${MOVING[0]})
+  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
 fi
 
 # setup directories
@@ -434,7 +434,7 @@ eval ${reg_fcn}
 # Apply registration to all modalities
 for (( i=0; i<${N}; i++ )); do
   unset MOD xfm_fcn OUT_NAME
-  MOD=($(${DIR_INC}/bids/get_field.sh -i ${MOVING[${i}]} -f "modality"))
+  MOD=($(getField -i ${MOVING[${i}]} -f "modality"))
   OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${MOVING[${i}]}"
@@ -455,8 +455,8 @@ if [[ -n ${APPLY_TO} ]]; then
   N_APPLY=${#IMAGE_APPLY[@]}
   for (( i=0; i<${N_APPLY}; i++ )); do
     unset MOD OUT_NAME
-    MOD=($(${DIR_INC}/bids/get_field.sh -i ${IMAGE_APPLY[${i}]} -f "modality"))
-    OUT_BASE=$(${DIR_INC}/bids/get_bidsbase.sh -i ${IMAGE_APPLY[${i}]} -s)
+    MOD=($(getField -i ${IMAGE_APPLY[${i}]} -f "modality"))
+    OUT_BASE=$(getField -i ${IMAGE_APPLY[${i}]} -s)
     OUT_NAME="${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}.nii.gz"
     if [[ -f ${OUT_NAME} ]]; then
       N_TEMP=($(ls ${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}*))

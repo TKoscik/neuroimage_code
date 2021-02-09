@@ -21,23 +21,23 @@ function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       fi
     fi
     if [[ "${FCN_NAME}" == *"QC"* ]]; then
-      ${DIR_INC}/log/logQC.sh --operator ${OPERATOR} \
+      logQC --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
       --notes ${NOTES}
@@ -94,11 +94,11 @@ unset CWD DLS
 DLS=($(ls -dtr ${DIR_QC}/dicomConversion/*))
 while [[ -x ${CWD} ]]; do  
   # check if on IRB
-  PI=$(${DIR_INC}/bids/get_field.sh -i ${DLS[0]} -f pi)
-  PROJECT=$(${DIR_INC}/bids/get_field.sh -i ${DLS[0]} -f project)
-  PI_LS=($(${DIR_INC}/bids/get_column.sh -i ${DIR_DB}/projects.tsv -f pi))
-  PROJECT_LS=($(${DIR_INC}/bids/get_column.sh -i ${DIR_DB}/projects.tsv -f project_name))
-  IRB_LS=($(${DIR_INC}/bids/get_column.sh -i ${DIR_DB}/projects.tsv -f irb_approval))
+  PI=$(getField -i ${DLS[0]} -f pi)
+  PROJECT=$(getField -i ${DLS[0]} -f project)
+  PI_LS=($(getField -i ${DIR_DB}/projects.tsv -f pi))
+  PROJECT_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f project_name))
+  IRB_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f irb_approval))
   IRB="false"
   LUT_MATCH=0
   for (( i=1; i<${#PI[@]}; i++ )); do
@@ -119,12 +119,6 @@ while [[ -x ${CWD} ]]; do
   fi
 done
 
-# remove this bit, will be et with versioning
-DIR_INC=/Shared/inc_scratch/code
-CWD=/Shared/inc_scratch/dcm_qc_test/pi-koscikt_project-exampleProject_sub-10001_ses-64r3jx6y9
-SNAP=/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/3.8.0-20190612/bin/itksnap
-DIR_DCMCONV=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64
-
 # special characters & colors --------------------------------------------------
 R='\033[1;31m'
 G='\033[1;32m'
@@ -135,15 +129,15 @@ Y='\033[1;33m'
 NC='\033[0m'
 
 # Check basic information ------------------------------------------------------
-PI=$(${DIR_INC}/bids/get_field.sh -i ${CWD} -f pi)
-PROJECT=$(${DIR_INC}/bids/get_field.sh -i ${CWD} -f project)
-PID=$(${DIR_INC}/bids/get_field.sh -i ${CWD} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${CWD} -f ses)
+PI=$(getField -i ${CWD} -f pi)
+PROJECT=$(getField -i ${CWD} -f project)
+PID=$(getField -i ${CWD} -f sub)
+SID=$(getField -i ${CWD} -f ses)
 
 # look up project directory ----------------------------------------------------
-PI_LS=($(${DIR_INC}/bids/get_column.sh -i ${DIR_INC}/inc_database/projects.tsv -f pi))
-PROJECT_LS=($(${DIR_INC}/bids/get_column.sh -i ${DIR_INC}/inc_database/projects.tsv -f project_name))
-DIR_LS=($(${DIR_INC}/bids/get_column.sh -i ${DIR_INC}/inc_database/projects.tsv -f project_directory))
+PI_LS=($(getColumn -i ${DIR_INC}/inc_database/projects.tsv -f pi))
+PROJECT_LS=($(getColumn -i ${DIR_INC}/inc_database/projects.tsv -f project_name))
+DIR_LS=($(getColumn -i ${DIR_INC}/inc_database/projects.tsv -f project_directory))
 
 if [[ "${LUT_MATCH}" == "0" ]]; then
   DIR_PROJECT=/Dedicated/inc_database/${PI}/${PROJECT}
@@ -221,21 +215,21 @@ esac
 
 # Set up QC file ---------------------------------------------------------------
 QC_LOG=sub-${PID}_ses-${SID}_dicomConversion.tsv
-DIR_DICOM=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f dir_dicom))
-SERIES_DESC=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f series_description))
-SCAN_DATE=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f scan_date))
-FNAME_ORIG=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f fname_orig))
-FNAME_AUTO=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f fname_auto))
-FNAME_MANUAL=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f fname_manual))
-SUBDIR=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f subdir))
-CHK_VIEW=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f chk_view))
-CHK_ORIENT=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f chk_orient))
-RATE_QUALITY=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f rate_quality))
-QC_ACTION=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f qc_action))
-QC_OPERATOR=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f operator))
-QC_DATE=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f qc_date))
-QC_OPERATOR2=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f operator2))
-QC_DATE2=($(${DIR_INC}/bids/get_column.sh -i ${QC_LOG} -f qc_date2))
+DIR_DICOM=($(getColumn -i ${QC_LOG} -f dir_dicom))
+SERIES_DESC=($(getColumn -i ${QC_LOG} -f series_description))
+SCAN_DATE=($(getColumn -i ${QC_LOG} -f scan_date))
+FNAME_ORIG=($(getColumn -i ${QC_LOG} -f fname_orig))
+FNAME_AUTO=($(getColumnh -i ${QC_LOG} -f fname_auto))
+FNAME_MANUAL=($(getColumn -i ${QC_LOG} -f fname_manual))
+SUBDIR=($(getColumn -i ${QC_LOG} -f subdir))
+CHK_VIEW=($(getColumn -i ${QC_LOG} -f chk_view))
+CHK_ORIENT=($(getColumn -i ${QC_LOG} -f chk_orient))
+RATE_QUALITY=($(getColumn -i ${QC_LOG} -f rate_quality))
+QC_ACTION=($(getColumn -i ${QC_LOG} -f qc_action))
+QC_OPERATOR=($(getColumn -i ${QC_LOG} -f operator))
+QC_DATE=($(getColumn -i ${QC_LOG} -f qc_date))
+QC_OPERATOR2=($(getColumn -i ${QC_LOG} -f operator2))
+QC_DATE2=($(getColumn -i ${QC_LOG} -f qc_date2))
 N=${#FNAME_AUTO[@]}
 
 # reset options for second opinion ---------------------------------------------
@@ -326,7 +320,7 @@ while [[ "${QC_ACTION[@],,}" =~ "second_opinion" ]] |
          echo -e "\t${Y}(${i})${NC} ${AVAIL_DCM2NIIX[${i}]}"
        done
        read -p ">>>>> Enter the desired version: " WHICH_VERSION
-       ${DIR_INC}/dicom/dicom_convert.sh \
+       dicomConvert \
          --dir-input ${DIR_DCM[${j}]} \
          --dir-save ${DIR_SCRATCH} \
          --dcm-version ${AVAIL_DCM2NIIX[${WHICH_VERSION}]} \

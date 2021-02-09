@@ -47,16 +47,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -145,10 +145,10 @@ mkdir -p ${DIR_SCRATCH}/coreg
 mkdir -p ${DIR_SCRATCH}/xfm
 mkdir -p ${DIR_SCRATCH}/job
 
-PID_LS=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f pariticipant_id))
-SID_LS=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f session_id))
-PROJECT=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f project))
-DIRECTORY=($(${DIR_INC}/bids/get_column.sh -i ${ID_LS} -f directory))
+PID_LS=($(getColumn -i ${ID_LS} -f pariticipant_id))
+SID_LS=($(getColumn -i ${ID_LS} -f session_id))
+PROJECT=($(getColumn -i ${ID_LS} -f project))
+DIRECTORY=($(getColumn -i ${ID_LS} -f directory))
 ## probably need to adjust this to add masks
 
 N_SUB=${#SUBJECT[@]}

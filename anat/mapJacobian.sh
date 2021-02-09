@@ -32,16 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -135,9 +135,9 @@ fi
 # Set up BIDs compliant variables and workspace
 XFM=(${XFM//,/ })
 N_XFM=${#XFM[@]}
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${XFM[0]})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f ses)
+DIR_PROJECT=$(getDir -i ${XFM[0]})
+PID=$(getField -i ${XFM[0]} -f sub)
+SID=$(getField -i ${XFM[0]} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
@@ -148,15 +148,15 @@ mkdir -p ${DIR_SCRATCH}
 
 # parse xfm names for FROM and TO
 if [[ "${FROM}" == "NULL" ]]; then
-  FROM=$(${DIR_INC}/bids/get_field.sh -i ${XFM[0]} -f "from")
+  FROM=$(getField -i ${XFM[0]} -f "from")
 fi
 if [[ "${TO}" == "NULL" ]]; then
-  TO=$(${DIR_INC}/bids/get_field.sh -i ${XFM[-1]} -f "to")
+  TO=$(getField -i ${XFM[-1]} -f "to")
 fi
 
 XFM_TEMP=
 for (( i=${N_XFM}-1; i>=0; i-- )); do
-  xfm_temp=$(${DIR_INC}/bids/get_field.sh -i ${XFM[${i}]} -f "xfm")
+  xfm_temp=$(getField -i ${XFM[${i}]} -f "xfm")
   XFM_TEMP+=(${xfm_temp})
 done
 XFM_NAME=$(IFS=+ ; echo "${XFM_TEMP[*]}")

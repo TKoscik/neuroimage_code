@@ -32,16 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -141,9 +141,9 @@ fi
 # Start of function
 #==============================================================================
 # Set up BIDs compliant variables and workspace -------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${T1})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${T1} -f ses)
+DIR_PROJECT=$(getDir -i ${T1})
+PID=$(getField -i ${T1} -f sub)
+SID=$(getField -i ${T1} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
@@ -151,7 +151,7 @@ if [[ -z "${PREFIX}" ]]; then
   fi
 fi
 
-SPACE_LAB=$(${DIR_INC}/bids/get_space.sh -i ${T1})
+SPACE_LAB=$(getSpace -i ${T1})
 if [[ -z ${SPACE_LAB} ]]; then
   SPACE_LAB="map"
 fi
@@ -170,7 +170,7 @@ fi
 mkdir -p ${DIR_SAVE}
 
 # calculate myelin map
-Rscript ${DIR_INC}/anat/mapMyelin.R \
+Rscript mapMyelin.R \
   "t1" ${DIR_SCRATCH}/t1.nii "t2" ${DIR_SCRATCH}/t2.nii \
   "label" ${DIR_SCRATCH}/label.nii "label-values" ${LABEL_VALS} \
   "t1.norms" ${NORM_T1} "t2.norms" ${NORM_T2}

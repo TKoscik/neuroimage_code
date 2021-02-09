@@ -33,16 +33,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
@@ -115,9 +115,9 @@ MASK_LS=(${MASK_LS//,/ })
 N_MASK=${#MASK_LS[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${MASK_LS[0]})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${MASK_LS[0]} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${MASK_LS[0]} -f ses)
+DIR_PROJECT=$(getDir -i ${MASK_LS[0]})
+PID=$(getField -i ${MASK_LS[0]} -f sub)
+SID=$(getField -i ${MASK_LS[0]} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
@@ -134,7 +134,9 @@ mkdir -p ${DIR_SAVE}
 fslmaths ${MASK_LS[0]} -bin ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz
 for (( i=1; i<${N_MASK}; i++ )); do
   MULTIPLIER=$(echo "2^${i}" | bc -l)
-  fslmaths ${MASK_LS[${i}]} -bin -mul ${MULTIPLIER} -add ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz
+  fslmaths ${MASK_LS[${i}]} -bin -mul ${MULTIPLIER} \
+    -add ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz
 done
 mv ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz ${DIR_SAVE}/
 

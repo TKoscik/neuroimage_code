@@ -18,7 +18,7 @@ umask 007
 function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-  ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+  logBenchmark --operator ${OPERATOR} \
   --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
   --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
 }
@@ -88,11 +88,11 @@ for (( i=0, i<${N_ZIP}; i++ )); do
   mkdir -p ${DIR_OUTPUT}/${BNAME}
   mv ${ZIP_LS[${i}]} ${DIR_OUTPUT}/${BNAME}
 
-  ${DIR_INC}/dicom/dicomConvert.sh \
+  dicomConvert \
   --input ${DIR_OUTPUT}/${BNAME}/${FNAME%%.*}.zip \
   --dir-save ${DIR_OUTPUT}/${BNAME}
 
-  ${DIR_INC}/dicom/dicomAutoname.sh \
+  dicomAutoname \
   --dir-input ${DIR_OUTPUT}/${BNAME}
 
   touch ${DIR_OUTPUT}/${BNAME}/.QC_READY
