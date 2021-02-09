@@ -1,8 +1,8 @@
 #!/bin/bash -e
 ===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# generate time series of ROIs
+# Authors: Timothy R. Koscik
+# Date: 2021-02-09
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))

@@ -9,7 +9,6 @@
 [x] change DIR_CODE to DIR_INC
 [x] DIR_TEMPLATE -> /Dedicated/inc_database/templates
 [ ] check help for all files, update with only used and update arguments
-[ ] can egress function be moved to separate function?
 [x] replace backticks with $()
 [x] remove deprecated
 [ ] remove incomplete functions, keep for copy to dev branch after versioning
