@@ -16,60 +16,60 @@
         "OpenBLAS": {
             "hostname": "argon",
             "version": "0.2.19",
-            "command": ["module load ${SW_NAME}/${VERSION}"]
+            "command": {"cmd1": "module load ${SW_NAME}/${SW_VERSION}"}
         },
         "R": {
             "hostname": "argon",
             "version": "3.5.1",
-            "command": ["module load ${SW_NAME}/${VERSION}"]
+            "command": {"cmd1": "module load ${SW_NAME}/${SW_VERSION}"}
         },
         "afni": {
             "hostname": "all",
             "version": "18.2.04",
-            "command": ["source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${VERSION}",
-                        "export AFNI_NIFTI_TYPE_WARN=NO"]
+            "command": {"cmd1": "source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${SW_VERSION}",
+                        "cmd2": "export AFNI_NIFTI_TYPE_WARN=NO"}
         },
         "ants": {
             "hostname": "all",
             "version": "2.3.1",
-            "command": ["source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${VERSION}"]
+            "command": {"cmd1": "source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${SW_VERSION}"}
         },
         "fsl": {
             "hostname": "all",
             "version": "6.0.1_multicore",
-            "command": ["source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${VERSION}"]
+            "command": {"cmd1": "source ${DIR_PINC}/sourcefiles/${SW_NAME}_source.sh ${SW_VERSION}"}
         },
         "freesurfer": {
             "hostname": "all",
             "version": "7.1.0",
-            "command": ["export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${version}",
-                        "export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${version}/license.txt",
-                        "source ${FREESURFER_HOME}/FreeSurferEnv.sh"]
+            "command": {"cmd1": "export FREESURFER_HOME=${DIR_PINC}/freesurfer/Linux/x86_64/${SW_VERSION}",
+                        "cmd2": "export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${SW_VERSION}/license.txt",
+                        "cmd3": "source ${FREESURFER_HOME}/FreeSurferEnv.sh"}
         },
         "anaconda3": {
             "hostname": "all",
             "version": "2019.10",
-            "command": ["source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${VERSION}"]
+            "command": {"cmd1": "source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${SW_VERSION}"}
         },
         "DCM2NIIX": {
             "hostname": "all",
             "version": "1.0.20200331",
-            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/dcm2niix/Linux/x86_64/${VERSION}/dcm2niix"]
+            "command": {"cmd1": "export ${SW_NAME}=${DIR_PINC}/dcm2niix/Linux/x86_64/${SW_VERSION}/dcm2niix"}
         },
         "DSISTUDIO": {
             "hostname": "all",
             "version": "20200122",
-            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/DSI_Studio/Linux/x86_64/${VERSION}/dsi_studio"]
+            "command": {"cmd1": "export ${SW_NAME}=${DIR_PINC}/DSI_Studio/Linux/x86_64/${SW_VERSION}/dsi_studio"}
         },
         "SNAP": {
             "hostname": "all",
             "version": "3.8.0-20190612",
-            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/${VERSION}/bin/itksnap"]
+            "command": {"cmd1": "export ${SW_NAME}=${DIR_PINC}/itk-snap/Linux/x86_64/${SW_VERSION}/bin/itksnap"}
         },
         "SNAPQT": {
             "hostname": "all",
             "version": "3.8.0-qt4-20190612",
-            "command": ["export ${SW_NAME}=/Shared/pinc/sharedopt/apps/itk-snap/Linux/x86_64/${VERSION}/bin/itksnap"]
+            "command": {"cmd1": "export ${SW_NAME}=${DIR_PINC}/itk-snap/Linux/x86_64/${SW_VERSION}/bin/itksnap"}
         }
     }
 }

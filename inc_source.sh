@@ -59,7 +59,7 @@ for (( i=0; i<${#FCN_PATHS[@]}; i++ )); do
     FCN_EXT=${FCN_FILE##*.}
     if [[ "${FCN_EXT,,}" == "sh" ]]; then
       alias "${FCN_NAME}=${FCN_LS[${j}]}"
-    else      
+    else
       alias "${FCN_FILE}=${FCN_LS[${j}]}"
     fi
   done
@@ -69,17 +69,16 @@ done
 echo "LOADING SOFTWARE DEPENDENCIES:"
 SW_LS=($(jq -r '.software | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#SW_LS[@]}; i++ )); do
-  unset SW_NAME SW_VERSION CMDS
+  unset SW_NAME SW_VERSION CMD_LS
   SW_NAME=${SW_LS[${i}]}
   WHICH_HOST=($(jq -r ".software.${SW_NAME}.hostname" < ${INIT} | tr -d ' [],"'))
   SW_VERSION=($(jq -r ".software.${SW_NAME}.version" < ${INIT} | tr -d ' [],"'))
-  CMDS=($(jq -r ".software.${SW_NAME}.command" < ${INIT} | tr -d '[],"'))
-  if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] |
-     [[ "${WHICH_HOST}" == "all" ]]; then
-    for (( j=0; j<${#CMDS[@]}; j++ )); do
-      if [[ "${CMDS}" != "null" ]]; then
-        eval ${CMDS[${j}]}
-        echo "eval ${CMDS[${j}]}"
+  CMD_LS=($(jq -r ".software.${SW_NAME}.command | keys_unsorted" < ${INIT} | tr -d ' [],"'))
+  if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] || [[ "${WHICH_HOST}" == "all" ]]; then
+    for (( j=0; j<${#CMD_LS[@]}; j++ )); do
+      CMD=$(jq -r ".software.${SW_NAME}.command.${CMD_LS[${j}]}" < ${INIT} | tr -d '[],"')
+      if [[ "${CMD}" != "null" ]]; then
+        eval ${CMD}
       fi
     done
   fi
