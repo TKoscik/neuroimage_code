@@ -1,14 +1,24 @@
 {
     "version": "0.0.0.0",
     "export_paths": {
-        "DIR_INC": "/Shared/pinc/sharedopt/apps/inc_tools/Linux/x86_64/${VERSION}",
         "DIR_DB": "/Dedicated/inc_database",
         "DIR_TMP": "/Shared/inc_scratch",
         "DIR_TEMPLATE": "/Dedicated/inc_database/templates",
+        "DIR_LUT": "${DIR_INC}/lut"
         "DIR_IMPORT": "/Dedicated/inc_scratch/import",
         "DIR_QC": "/Dedicated/inc_scratch/qc",
         "DIR_PINC": "/Shared/pinc/sharedopt/apps"
     },
+    "function_alias": [
+        "${DIR_INC}/anat",
+        "${DIR_INC}/cron",
+        "${DIR_INC}/dicom",
+        "${DIR_INC}/dwi",
+        "${DIR_INC}/export",
+        "${DIR_INC}/func",
+        "${DIR_INC}/generic",
+        "${DIR_INC}/log"
+    ],
     "software": {
         "OpenBLAS": {
             "hostname": "argon",
