@@ -32,17 +32,21 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
@@ -108,15 +112,15 @@ fi
 #==============================================================================
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_CODE}/bids/get_dir.sh -i ${TS_BOLD})
-PID=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f sub)
-SID=$(${DIR_CODE}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+DIR_PROJECT=$(getDir -i ${TS_BOLD})
+PID=$(getField -i ${TS_BOLD} -f sub)
+SID=$(getField -i ${TS_BOLD} -f ses)
 if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
 if [ -z "${PREFIX}" ]; then
-  PREFIX=$(${DIR_CODE}/bids/get_bidsbase.sh -s -i ${TS_BOLD})
+  PREFIX=$(getBidsBase -s -i ${TS_BOLD})
 fi
 if [ -z "${DIR_SAVE}" ]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
@@ -155,7 +159,7 @@ fi
 #Round up some information about the input EPI
 epiBase=$(basename ${TS_BOLD} | awk -F"." '{print $1}')
 epiPath=$(dirname ${TS_BOLD})
-numVols=$($ANTSPATH/PrintHeader ${TS_BOLD} 2 | awk -F"x" '{print $NF}')
+numVols=$(niiInfo -i ${TS_BOLD} -f numtr)
 
 #Motion parameters (all mm) for input EPI
 epiPar=${parDir}/${PREFIX}_moco+6.1D
@@ -191,10 +195,13 @@ spikeRegressionSetup()
 
     #Calculate cumulative motion for current TR, preceeding TR
     iSum=$(cat $input | head -n+${i} | tail -n-1 | awk '{ for(y=1; y<=NF;y++) z+=$y; print z; z=0 }')
+    #'################### preserve gitlab highlighting
     jSum=$(cat $input | head -n+${j} | tail -n-1 | awk '{ for(y=1; y<=NF;y++) z+=$y; print z; z=0 }')
+    #'################### preserve gitlab highlighting
 
     #Calculate rms of cumulative motion between TRs
     rmsVal=$(echo ${iSum} ${jSum} | awk '{print sqrt(($1-$2)^2)}')
+    #'################### preserve gitlab highlighting
 
     #If rms is >= 0.25, create a spike regression list (1 for current TR, 0 for all others)
     if (( $(echo "${rmsVal} >= 0.25" | bc -l) )); then
@@ -233,8 +240,8 @@ spikeRegressionSetup()
 
 
   
-numVols=$($ANTSPATH/PrintHeader ${TS_BOLD} 2 | awk -F"x" '{print $NF}')
-trVal=$($ANTSPATH/PrintHeader ${TS_BOLD} 1 | awk -F"x" '{print $NF}')
+numVols=$(niiInfo -i ${TS_BOLD} -f numtr)
+trVal=$(niiInfo -i ${TS_BOLD} -f tr)
 
 #Reformat motion param file from comma-delim to space-delim otherwise fx won't add
 tr "," " " < $epiPar > ${parDir}/friston24/epiPar_space_tmp.1D

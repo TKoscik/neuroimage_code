@@ -32,17 +32,21 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
@@ -109,19 +113,19 @@ fi
 # Start of function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+DIR_PROJECT=$(getDir -i ${TS_BOLD})
+PID=$(getField -i ${TS_BOLD} -f sub)
+SID=$(getField -i ${TS_BOLD} -f ses)
 if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
 
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase.sh -s -i ${TS_BOLD})
+  PREFIX=$(getBidsBase -s -i ${TS_BOLD})
 fi
 if [[ -z "${TEMPLATE}" ]] | [[ -z "${SPACE}" ]]; then
-  TEMPLATE_SPACE=$(${DIR_INC}/bids/get_space.sh -i ${TS_BOLD})
+  TEMPLATE_SPACE=$(getSpace -i ${TS_BOLD})
   TEMP=(${TEMPLATE_SPACE//+/ })
   TEMPLATE=${TEMP[0]}
   SPACE=${TEMP[1]}

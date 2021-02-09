@@ -33,23 +33,23 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      logProject --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
       --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        logSession --operator ${OPERATOR} \
         --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
         --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
         --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       fi
     fi
     if [[ "${FCN_NAME}" == *"QC"* ]]; then
-      ${DIR_INC}/log/logQC.sh --operator ${OPERATOR} \
+      logQC --operator ${OPERATOR} \
       --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} \
       --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
       --notes ${NOTES}
@@ -211,9 +211,9 @@ fi
 # Start of Function
 #===============================================================================
 # set default filename
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${BG})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${BG} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${BG} -f ses)
+DIR_PROJECT=$(getDir -i ${BG})
+PID=$(getField -i ${BG} -f sub)
+SID=$(getField -i ${BG} -f ses)
 if [[ -z "${FILE_NAME}" ]]; then
   if [[ -n "${PID}" ]]; then
     FILE_NAME="sub-${PID}"
@@ -275,10 +275,10 @@ OFFSET=(${OFFSET//,/ })
 
 # Get image informtation -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
-DIMS=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f voxels))
-PIXDIM=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f spacing))
-ORIGIN=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f origin))
-ORIENT=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f orient))
+DIMS=($(niiInfo -i ${BG} -f voxels))
+PIXDIM=($(niiInfo -i ${BG} -f spacing))
+ORIGIN=($(niiInfo -i ${BG} -f origin))
+ORIENT=($(niiInfo -i ${BG} -f orient))
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
@@ -317,7 +317,7 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
 done
 
 # select desired volume from multivolume images --------------------------------
-TV=$(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f vols)
+TV=$(niiInfo -i ${BG} -f vols)
 if [[ ${TV} -gt 1 ]]; then
   if [[ ${BG_VOL} > ${TV} ]]; then
     echo "ERROR [INC:${FCN_NAME}] BG_VOL out of range, <${TV}"
@@ -330,7 +330,7 @@ if [[ ${TV} -gt 1 ]]; then
 fi
 
 if [[ -n ${BG_MASK} ]]; then
-  TV=$(${DIR_INC}/generic/niiInfo.sh -i ${BG_MASK} -f vols)
+  TV=$(niiInfo -i ${BG_MASK} -f vols)
   if [[ ${TV} -gt 1 ]]; then
     if [[ ${BG_MASK_VOL} > ${TV} ]]; then
       echo "ERROR [INC:${FCN_NAME}] BG_MASK_VOL out of range, <${TV}"
@@ -345,7 +345,7 @@ fi
 
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${FG_N}; i++ )); do
-    TV=$(${DIR_INC}/generic/niiInfo.sh -i ${FG[${i}]} -f vols)
+    TV=$(niiInfo -i ${FG[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
       if [[ ${FG_VOL[${i}]} > ${TV} ]]; then
         echo "ERROR [INC:${FCN_NAME}] FG_VOL[${i}] out of range, <${TV}"
@@ -361,7 +361,7 @@ fi
 
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${FG_N}; i++ )); do
-    TV=$(${DIR_INC}/generic/niiInfo.sh -i ${FG_MASK[${i}]} -f vols)
+    TV=$(niiInfo -i ${FG_MASK[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
       if [[ ${FG_MASK_VOL[${i}]} > ${TV} ]]; then
         echo "ERROR [INC:${FCN_NAME}] FG_MASK_VOL[${i}] out of range, <${TV}"
@@ -377,7 +377,7 @@ fi
 
 if [[ -n ${ROI} ]]; then
   for (( i=0; i<${ROI_N}; i++ )); do
-    TV=$(${DIR_INC}/generic/niiInfo.sh -i ${ROI[${i}]} -f vols)
+    TV=$(niiInfo -i ${ROI[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
       if [[ ${ROI_VOL[${i}]} > ${TV} ]]; then
         echo "ERROR [INC:${FCN_NAME}] ROI_VOL[${i}] out of range, <${TV}"
@@ -535,7 +535,7 @@ fi
 FIELD_CHK="dim,pixdim,quatern_b,quatern_c,quatern_d,qoffset_x,qoffset_y,qoffset_z,srow_x,srow_y,srow_z"
 if [[ -n ${BG_MASK} ]]; then
   unset SPACE_CHK
-  SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${BG_MASK} -f ${FIELD_CHK})
+  SPACE_CHK=$(niiCompare -i ${BG} -j ${BG_MASK} -f ${FIELD_CHK})
   if [[ "${SPACE_CHK}" == "false" ]]; then
     antsApplyTransforms -d 3 -n GenericLabel \
       -i ${BG_MASK} -o ${DIR_SCRATCH}/BG_mask.nii.gz -r ${BG}
@@ -545,7 +545,7 @@ fi
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(niiCompare -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n Linear \
         -i ${FG[${i}]} -o ${DIR_SCRATCH}/FG_${i}.nii.gz -r ${BG}
@@ -556,7 +556,7 @@ fi
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${#FG_MASK[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(niiCompare -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n GenericLabel \
         -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${BG}
@@ -567,7 +567,7 @@ fi
 if [[ -n ${ROI} ]]; then
   for (( i=0; i<${#ROI[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(niiCompare -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${ROI[${i}]} -o ${DIR_SCRATCH}/ROI_${i}.nii.gz -r ${BG}
@@ -590,12 +590,12 @@ done
 
 # Make Background ==============================================================
 ## generate color bar
-Rscript ${DIR_INC}/export/makeColors.R \
+Rscript makeColors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
 if [[ -n ${BG_MASK} ]] || [[ -n ${FG_MASK} ]] || [[ -n ${ROI} ]]; then
-  Rscript ${DIR_INC}/export/makeColors.R \
+  Rscript makeColors.R \
     "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
 fi
@@ -714,7 +714,7 @@ if [[ -n ${FG} ]]; then
     fi
 
     ## generate color bar
-    Rscript ${DIR_INC}/export/makeColors.R \
+    Rscript makeColors.R \
       "palette" ${FG_COLOR[${i}]} "n" 200 \
       "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
       "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
@@ -827,7 +827,7 @@ fi
 # Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
   ## edit labels as specified
-  ${DIR_INC}/generic/labelEdit.sh \
+  labelEdit \
   --label ${ROI_CSV} 
   --level ${ROI_LEVEL} \
   --prefix ROI_EDIT \
@@ -837,7 +837,7 @@ if [[ -n ${ROI} ]]; then
   ROI_N=$(fslstats ${DIR_SCRATCH}/ROI_EDIT.nii.gz -p 100)
 
   ## convert ROIs to outlines
-  ${DIR_INC}/generic/labelOutline.sh \
+  labelOutline \
   --label ${DIR_SCRATCH}/ROI_EDIT.nii.gz \
   --prefix ROI_OUTLINE \
   --dir-save ${DIR_SCRATCH}
@@ -846,7 +846,7 @@ if [[ -n ${ROI} ]]; then
   fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
 
   ## generate color bar
-  Rscript ${DIR_INC}/export/makeColors.R \
+  Rscript makeColors.R \
     "palette" ${ROI_COLOR} "n" ${ROI_N} \
     "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_ROI"
@@ -1057,7 +1057,6 @@ if [[ "${LABEL_NO_LR}" == "false" ]]; then
     -gravity SouthWest -annotate +10+10 "${TTXT}" \
     ${DIR_SCRATCH}/${FILE_NAME}.png
 fi
-
 
 # move final png file
 mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/

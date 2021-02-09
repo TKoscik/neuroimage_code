@@ -66,17 +66,21 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
@@ -150,15 +154,15 @@ fi
 # Start of Function
 #==============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+DIR_PROJECT=$(getDir -i ${TS_BOLD})
+PID=$(getField -i ${TS_BOLD} -f sub)
+SID=$(getField -i ${TS_BOLD} -f ses)
 if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(${DIR_INC}/bids/get_bidsbase -s -i ${TS_BOLD})
+  PREFIX=$(getBidsBase -s -i ${TS_BOLD})
 fi
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
@@ -208,7 +212,7 @@ fi
 unset XFM_STACK XFM_RIGID XFM_AFFINE XFM_SYN
 for (( i=0; i<${#XFM_LS[@]}; i++ )); do
   unset XFM_ARG
-  XFM_ARG=$(${DIR_INC}/bids/get_field.sh -i ${XFM_LS[${i}]} -f xfm)
+  XFM_ARG=$(getField -i ${XFM_LS[${i}]} -f xfm)
   if [[ "${XFM_ARG,,}" == "rigid" ]]; then XFM_RIGID=${XFM_LS[${i}]}; fi
   if [[ "${XFM_ARG,,}" == "affine" ]]; then XFM_AFFINE=${XFM_LS[${i}]}; fi
   if [[ "${XFM_ARG,,}" == "syn" ]]; then XFM_SYN=${XFM_LS[${i}]}; fi
@@ -225,8 +229,8 @@ N_XFM=${#XFM_NORM[@]}
 
 # Motion Correction + registration ============================================
 # Get timeseries info ---------------------------------------------------------
-NUM_TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f numTR)
-TR=$(${DIR_INC}/generic/nii_info.sh -i ${TS_BOLD} -f TR)
+NUM_TR=$(niiInfo -i ${TS_BOLD} -f numTR)
+TR=$(niiInfo -i ${TS_BOLD} -f TR)
 # check in here for 4d file.
 if [[ "${NUM_TR}" == 1 ]]; then
   echo "Input file is not a 4D file. Aborting."

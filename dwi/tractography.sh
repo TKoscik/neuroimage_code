@@ -134,18 +134,18 @@ mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # Create the src file ----------------------------------------------------------
-${DIR_DSISTUDIO}/dsi_studio --action=src \
+${DSISTUDIO} --action=src \
 --source=${DWI_FILE} \
 --bvec=${BVEC} \
 --bval=${BVAL} \
 --output=${DIR_SCRATCH}/${PREFIX}.src.gz
 
 # QC src file ------------------------------------------------------------------
-${DIR_DSISTUDIO}/dsi_studio --action=qc \
+${DIR_DSISTUDIO} --action=qc \
 --source=${DIR_SCRATCH}
 
 # Image reconstruction ---------------------------------------------------------
-${DIR_DSISTUDIO}/dsi_studio --action=rec \
+${DIR_DSISTUDIO} --action=rec \
 --source=${DIR_SCRATCH}/${PREFIX}.src.gz \
 --method=1 \
 --mask=${BRAIN_MASK}
