@@ -60,11 +60,11 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long \
-bg-nii:,bg-mask:,bg-thresh:,bg-color:,bg-direction:,bg-vol:,bg-cbar,\
-fg-nii:,fg-mask:,fg-thresh:,fg-color:,fg-direction:,fg-vol:,fg-cbar,\
-roi-nii:,roi-levels:,roi-color:,roi-direction:,roi-vol:,roi-cbar,\
-image-layout:,ctr-offset:,bg-lim,no-slice-label,label-voxel,no-lr-label,\
-color-panel:,color-text:,font-name:,font-size:,max-pixels:,edge-fuzz\
+bg:,bg-vol:,bg-mask:,bg-mask-vol:,bg-thresh:,bg-color:,bg-direction:,bg-cbar,\
+fg:,fg-vol:,fg-mask:,fg-mask-vol:,fg-thresh:,fg-color:,fg-direction:,fg-cbar,\
+roi:,roi-vol:,roi-level:,roi-color:,roi-direction:,roi-cbar,\
+image-layout:,ctr-offset:,bg-lim,no-slice-label,use-vox-label,no-lr-label,label-decimal:,\
+color-panel:,color-text:,color-decimal:,font-name:,font-size:,max-pixels:,\
 dir-save:,file-name:,keep-slice,keep-cbar,\
 dir-scratch:,help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -81,6 +81,7 @@ BG_COLOR="#010101,#FFFFFF"
 BG_ORDER="normal"
 BG_CBAR="false"
 BG_VOL=1
+BG_MASK_VOL=1
 
 FG=
 FG_MASK=
@@ -89,6 +90,7 @@ FG_COLOR="timbow"
 FG_ORDER="normal"
 FG_CBAR="true"
 FG_VOL=1
+FG_MASK_VOL=1
 
 ROI=
 ROI_LEVEL=
@@ -109,9 +111,8 @@ COLOR_PANEL="#000000"
 COLOR_TEXT="#FFFFFF"
 COLOR_DECIMAL=2
 FONT_NAME=NimbusSans-Regular
-FONT_SIZE=14
+FONT_SIZE=18
 MAX_PIXELS=500
-EDGE_FUZZ=5
 
 FILE_NAME=
 DIR_SAVE=
@@ -147,15 +148,16 @@ while true; do
     --layout) LAYOUT="$2" ; shift 2 ;;
     --offset) OFFSET="$2" ; shift 2 ;;
     --limits) LIMITS="$2" ; shift 2 ;;
-    --label-noslice) LABEL_NO_SLICE="true" ; shift ;;
-    --label-mm) LABEL_USE_VOX="true" ; shift ;;
-    --label-lr) LABEL_NO_LR="true" ; shift ;;
+    --no-slice-label) LABEL_NO_SLICE="true" ; shift ;;
+    --use-vox-label) LABEL_USE_VOX="true" ; shift ;;
+    --no-lr-label) LABEL_NO_LR="true" ; shift ;;
+    --label-decimal) LABEL_DECIMAL="$2" ; shift 2 ;;
     --color-panel) COLOR_PANEL="$2" ; shift 2 ;;
     --color-text) COLOR_TEXT="$2" ; shift 2 ;;
+    --color-decimal) COLOR_DECIMAL="$2" ; shift 2 ;;
     --font-name) FONT_NAME="$2" ; shift 2 ;;
     --font-size) FONT_SIZE="$2" ; shift 2 ;;
     --max-pixels) MAX_PIXELS="$2" ; shift 2 ;;
-    --edge-fuzz) EDGE_FUZZ="$2" ; shift 2 ;;
     --file-name) FILE_NAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -232,19 +234,42 @@ mkdir -p ${DIR_SAVE}
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
+FG_VOL=(${FG_VOL//;/ })
 FG_MASK=(${FG_MASK//;/ })
+FG_MASK_VOL=(${FG_MASK_VOL//;/ })
 FG_THRESH=(${FG_THRESH//;/ })
 FG_COLOR=(${FG_COLOR//;/ })
 FG_ORDER=(${FG_COLOR_ORDER//;/ })
 FG_CBAR=(${FG_CBAR//;/ })
 FG_N=${#FG[@]}
+if [[ ${FG_N} -gt 1 ]]; then
+  if [[ ${#FG_VOL[@]} -eq 1 ]]; then
+    for (( i=0; i<${FG_N} )); do
+      FG_VOL[${i}]=(${FG_VOL[0]})
+    done
+  fi
+  if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
+    for (( i=0; i<${FG_N} )); do
+      FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
+    done
+  fi
+fi
 
-ROI=(${ROI//;/ })
-ROI_LEVEL=(${ROI_LEVEL//;/ })
+ROI_CSV=${ROI//;/,}
+ROI_VOL=(${ROI_VOL//;/ })
+#ROI=(${ROI//;/ })
+#ROI_LEVEL=(${ROI_LEVEL//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
 ROI_N=${#ROI[@]}
+if [[ ${ROI_N} -gt 1 ]]; then
+  if [[ ${#ROI_VOL[@]} -eq 1 ]]; then
+    for (( i=0; i<${ROI_N} )); do
+      ROI_VOL[${i}]=(${ROI_VOL[0]})
+    done
+  fi
+fi
 
 OFFSET=(${OFFSET//,/ })
 
@@ -290,6 +315,81 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
     fi
   done
 done
+
+# select desired volume from multivolume images --------------------------------
+TV=$(${DIR_INC}/generic/nii_info.sh -i ${BG} -f vols)
+if [[ ${TV} -gt 1 ]]; then
+  if [[ ${BG_VOL} > ${TV} ]]; then
+    echo "ERROR [INC:${FCN_NAME}] BG_VOL out of range, <${TV}"
+    exit 1
+  else
+    WHICH_VOL=$((${BG_VOL}-1))
+    fslroi ${BG} ${DIR_SCRATCH}/BG.nii.gz ${WHICH_VOL} 1
+    BG=${DIR_SCRATCH}/BG.nii.gz
+  fi
+fi
+
+if [[ -n ${BG_MASK} ]]; then
+  TV=$(${DIR_INC}/generic/nii_info.sh -i ${BG_MASK} -f vols)
+  if [[ ${TV} -gt 1 ]]; then
+    if [[ ${BG_MASK_VOL} > ${TV} ]]; then
+      echo "ERROR [INC:${FCN_NAME}] BG_MASK_VOL out of range, <${TV}"
+      exit 1
+    else
+      WHICH_VOL=$((${BG_MASK_VOL}-1))
+      fslroi ${BG_MASK} ${DIR_SCRATCH}/BG_MASK.nii.gz ${WHICH_VOL} 1
+      BG_MASK=${DIR_SCRATCH}/BG_MASK.nii.gz
+    fi
+  fi
+fi
+
+if [[ -n ${FG} ]]; then
+  for (( i=0; i<${FG_N}; i++ )); do
+    TV=$(${DIR_INC}/generic/nii_info.sh -i ${FG[${i}]} -f vols)
+    if [[ ${TV} -gt 1 ]]; then
+      if [[ ${FG_VOL[${i}]} > ${TV} ]]; then
+        echo "ERROR [INC:${FCN_NAME}] FG_VOL[${i}] out of range, <${TV}"
+        exit 1
+      else
+        WHICH_VOL=$((${FG_VOL[${i}]}-1))
+        fslroi ${FG[${i}]} ${DIR_SCRATCH}/FG_${i}.nii.gz ${WHICH_VOL} 1
+        FG[${i}]=${DIR_SCRATCH}/FG_${i}.nii.gz
+      fi
+    fi
+  done
+fi
+
+if [[ -n ${FG_MASK} ]]; then
+  for (( i=0; i<${FG_N}; i++ )); do
+    TV=$(${DIR_INC}/generic/nii_info.sh -i ${FG_MASK[${i}]} -f vols)
+    if [[ ${TV} -gt 1 ]]; then
+      if [[ ${FG_MASK_VOL[${i}]} > ${TV} ]]; then
+        echo "ERROR [INC:${FCN_NAME}] FG_MASK_VOL[${i}] out of range, <${TV}"
+        exit 1
+      else
+        WHICH_VOL=$((${FG_MASK_VOL[${i}]}-1))
+        fslroi ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_MASK_${i}.nii.gz ${WHICH_VOL} 1
+        FG_MASK[${i}]=${DIR_SCRATCH}/FG_MASK_${i}.nii.gz
+      fi
+    fi
+  done
+fi
+
+if [[ -n ${ROI} ]]; then
+  for (( i=0; i<${ROI_N}; i++ )); do
+    TV=$(${DIR_INC}/generic/nii_info.sh -i ${ROI[${i}]} -f vols)
+    if [[ ${TV} -gt 1 ]]; then
+      if [[ ${ROI_VOL[${i}]} > ${TV} ]]; then
+        echo "ERROR [INC:${FCN_NAME}] ROI_VOL[${i}] out of range, <${TV}"
+        exit 1
+      else
+        WHICH_VOL=$((${ROI_VOL[${i}]}-1))
+        fslroi ${ROI[${i}]} ${DIR_SCRATCH}/ROI_${i}.nii.gz ${WHICH_VOL} 1
+        ROI[${i}]=${DIR_SCRATCH}/ROI_${i}.nii.gz
+      fi
+    fi
+  done
+fi
 
 # Calculate slices to plot =====================================================
 # parse variable to determine image limits ------------------------------------
@@ -350,7 +450,7 @@ if [[ -n "${LIM_CHK}" ]]; then
     BBX=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')
     BBY=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')
     BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
-    #'#************************************remove prevents bad code highlighting
+    #'#************************************ prevents bad code highlighting
     BBX=(${BBX//../ });
     BBY=(${BBY//../ });
     BBZ=(${BBZ//../ });
@@ -477,17 +577,15 @@ if [[ -n ${ROI} ]]; then
 fi
 
 # make panel background ========================================================
+RESIZE_STR="${MAX_PIXELS}x${MAX_PIXELS}"
 for (( i=0; i<${NX}; i++ )); do
-  convert -size ${MAX_PIXELS}x${MAX_PIXELS} canvas:${COLOR_PANEL} \
-    ${DIR_SCRATCH}/X${i}.png
+  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/X${i}.png
 done
 for (( i=0; i<${NY}; i++ )); do
-  convert -size ${MAX_PIXELS}x${MAX_PIXELS} canvas:${COLOR_PANEL} \
-    ${DIR_SCRATCH}/Y${i}.png
+  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/Y${i}.png
 done
 for (( i=0; i<${NZ}; i++ )); do
-  convert -size ${MAX_PIXELS}x${MAX_PIXELS} canvas:${COLOR_PANEL} \
-    ${DIR_SCRATCH}/Z${i}.png
+  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/Z${i}.png
 done
 
 # Make Background ==============================================================
@@ -549,7 +647,7 @@ eval ${slice_fcn}
 # resize images
 TLS=($(ls ${DIR_SCRATCH}/*_BG.png))
 for (( i=0; i<${#TLS[@]}; i++ )); do
-  convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+  convert ${TLS[${i}]} -resize ${RESIZE_STR} ${TLS[${i}]}
 done
 
 if [[ -n ${BG_MASK} ]]; then
@@ -568,7 +666,7 @@ if [[ -n ${BG_MASK} ]]; then
   # resize
   TLS=($(ls ${DIR_SCRATCH}/*_BGMASK.png))
   for (( i=0; i<${#TLS[@]}; i++ )); do
-    convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+    convert ${TLS[${i}]} -resize ${RESIZE_STR} ${TLS[${i}]}
   done
 fi
 
@@ -661,7 +759,7 @@ if [[ -n ${FG} ]]; then
     # resize images
     TLS=($(ls ${DIR_SCRATCH}/*_FG_${i}.png))
     for (( j=0; j<${#TLS[@]}; j++ )); do
-      convert ${TLS[${j}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${j}]}
+      convert ${TLS[${j}]} -resize ${RESIZE_STR} ${TLS[${j}]}
     done
 
     # set foreground mask
@@ -688,7 +786,7 @@ if [[ -n ${FG} ]]; then
       # resize
       TLS=($(ls ${DIR_SCRATCH}/*_FGMASK_${i}.png))
       for (( j=0; j<${#TLS[@]}; j++ )); do
-        convert ${TLS[${j}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${j}]}
+        convert ${TLS[${j}]} -resize ${RESIZE_STR} ${TLS[${j}]}
       done
     fi
 
@@ -728,41 +826,34 @@ fi
 
 # Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
-  ROI_MERGE=${DIR_SCRATCH}/ROI.nii.gz
-  fslmaths ${BG} -thr 0 -uthr 0 ${ROI_MERGE}
-  NEW_VAL=0
-  for (( i=0; i<${ROI_N}; i++ )); do
-    unset ROI_VALS TVALS
-    TEMP_ROI_LS=(${ROI_LEVEL[${i}]//,/ })
-    for (( j=0; j<${#TEMP_ROI_LS[@]}; j++ )); do
-      unset TEMP_ROI_VALS
-      TEMP_ROI_VALS=(${TEMP_ROI_LS[${j}]//\:/ }) 
-      if [[ ${#TEMP_ROI_VALS[@]} -gt 1 ]]; then
-        ROI_VALS+=($(seq ${TEMP_ROI_VALS[0]} ${TEMP_ROI_VALS[1]}))
-      else
-        ROI_VALS+=(${TEMP_ROI_VALS[0]})
-      fi
-    done
-    
-    for (( j=0; j<${#ROI_VALS[@]}; j++ )); do
-      NEW_VAL=$((${NEW_VAL}+1))
-      fslmaths ${ROI[${i}]} -thr ${ROI_VALS[${j}]} -uthr ${ROI_VALS[${j}]} \
-        -bin -mul ${NEW_VAL} ${DIR_SCRATCH}/ROI_temp.nii.gz
-      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz \
-        -edge -bin ${DIR_SCRATCH}/ROI_mask-edge.nii.gz
-      fslmaths ${DIR_SCRATCH}/ROI_temp.nii.gz \
-        -mas ${DIR_SCRATCH}/ROI_mask-edge.nii.gz \
-        -add ${ROI_MERGE} ${ROI_MERGE}
-    done
-  done
+  ## edit labels as specified
+  ${DIR_INC}/generic/label_edit.sh \
+  --label ${ROI_CSV} 
+  --level ${ROI_LEVEL} \
+  --prefix ROI_EDIT \
+  --dir-save ${DIR_SCRATCH}
+
+  ## total number of ROIs
+  ROI_N=$(fslstats ${DIR_SCRATCH}/ROI_EDIT.nii.gz -p 100)
+
+  ## convert ROIs to outlines
+  ${DIR_INC}/generic/label_outline.sh \
+  --label ${DIR_SCRATCH}/ROI_EDIT.nii.gz \
+  --prefix ROI_OUTLINE \
+  --dir-save ${DIR_SCRATCH}
+  
+  ## make ROI mask
+  fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
 
   ## generate color bar
   Rscript ${DIR_INC}/export/make_colors.R \
-    "palette" ${ROI_COLOR} "n" ${NEW_VAL} \
+    "palette" ${ROI_COLOR} "n" ${ROI_N} \
     "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_ROI"
 
-  slice_fcn="slicer ${ROI_MERGE} -u -l ${DIR_SCRATCH}/CBAR_ROI.lut -i 0 ${ROI_N}"
+  ## get slices
+  slice_fcn="slicer ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz"
+  slice_fcn="${slice_fcn} -u -l ${DIR_SCRATCH}/CBAR_ROI.lut -i 0 ${ROI_N}"
   for (( i=0; i<${NX}; i++ )); do
     slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROI.png"
   done
@@ -774,16 +865,15 @@ if [[ -n ${ROI} ]]; then
   done
   eval ${slice_fcn}
 
-  # resize images
+  ## resize images
   TLS=($(ls ${DIR_SCRATCH}/*_ROI.png))
   for (( i=0; i<${#TLS[@]}; i++ )); do
-    convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+    convert ${TLS[${i}]} -resize ${RESIZE_STR} ${TLS[${i}]}
   done
 
-  # make ROI mask
-  ROI_MASK=${DIR_SCRATCH}/ROI_MASK.nii.gz
-  fslmaths ${ROI_MERGE} -bin ${ROI_MASK}
-  slice_fcn="slicer ${ROI_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
+  ## get slices for overlay mask
+  slice_fcn="slicer ${DIR_SCRATCH}/ROI_MASK.nii.gz"
+  slice_fcn="${slice_fcn} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
   for (( i=0; i<${NX}; i++ )); do
     slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_ROIMASK.png"
   done
@@ -795,13 +885,13 @@ if [[ -n ${ROI} ]]; then
   done
   eval ${slice_fcn}
 
-  # resize
+  ## resize overlay mask
   TLS=($(ls ${DIR_SCRATCH}/*_ROIMASK.png))
   for (( i=0; i<${#TLS[@]}; i++ )); do
-    convert ${TLS[${i}]} -resize ${MAX_PIXELS}x${MAX_PIXELS} ${TLS[${i}]}
+    convert ${TLS[${i}]} -resize ${RESIZE_STR} ${TLS[${i}]}
   done
 
-  # composite BG BG_MASK on background
+  ## composite BG BG_MASK on background
   for (( i=0; i<${NX}; i++ )); do
     composite ${DIR_SCRATCH}/X${i}_ROI.png \
       ${DIR_SCRATCH}/X${i}.png \

@@ -55,7 +55,7 @@ elif [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
 elif [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:1:3})
-elif [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
+elif [[ "${FIELD,,}" == "vols" ]] || [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:4:1})
 elif [[ "${FIELD,,}" == "tr" ]]; then
@@ -66,7 +66,7 @@ elif [[ "${FIELD,,}" == "orient" ]] || [[ "${FIELD,,}" == "orientation" ]]; then
 else
   OUTPUT=($(nifti_tool -disp_hdr -field ${FIELD} -quiet -infiles ${IMAGE}))
 fi
-echo ${OUTPUT}
+echo ${OUTPUT[@]}
 
 #===============================================================================
 # End of Function
