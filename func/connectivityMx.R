@@ -7,3 +7,5 @@ for (i in 1:length(args)) {
     show.plot <- TRUE
   }
 }
+
+df <- read.csv()
