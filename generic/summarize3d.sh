@@ -32,17 +32,21 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    logBenchmark --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
@@ -125,10 +129,10 @@ else
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TRG_FILE})
-PROJECT=$(${DIR_INC}/bids/get_project.sh -i ${TRG_FILE})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${TRG_FILE} -f "sub")
-SID=$(${DIR_INC}/bids/get_field.sh -i ${TRG_FILE} -f "ses")
+DIR_PROJECT=$(getDir -i ${TRG_FILE})
+PROJECT=$(getProject -i ${TRG_FILE})
+PID=$(getField -i ${TRG_FILE} -f "sub")
+SID=$(getField -i ${TRG_FILE} -f "ses")
 if [ -z "${PREFIX}" ]; then
   PREFIX="sub-${PID}"
   if [[ -n ${SID} ]]; then
@@ -171,7 +175,7 @@ WHICH_SYS=$(uname --nodename)
 if grep -q "argon" <<< "${WHICH_SYS,,}"; then
   module load R
 fi
-Rscript ${DIR_INC}/generic/summarize3d.R \
+Rscript summarize3d.R \
   ${DIR_SCRATCH}/${PREFIX}_tempSummary.tsv \
   ${STATS_LS} \
   ${PIXDIM} \
@@ -181,13 +185,13 @@ Rscript ${DIR_INC}/generic/summarize3d.R \
 if [[ -z "${VALUE}" ]]; then
   MOD=volume
 else
-  MOD=$(${DIR_INC}/bids/get_field.sh -i ${VALUE} -f "modality")
+  MOD=$(getField -i ${VALUE} -f "modality")
 fi
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/summary
 fi
 mkdir -p ${DIR_SAVE}
-LABEL_NAME=($(${DIR_INC}/bids/get_field.sh -i ${LABEL} -f "label"))
+LABEL_NAME=($(getField -i ${LABEL} -f "label"))
 SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.tsv
 
 # Check if summary file exists and create if not

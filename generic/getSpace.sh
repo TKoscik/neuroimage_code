@@ -48,7 +48,7 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-SPACE=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f reg)
+SPACE=$(getField -i ${INPUT} -f reg)
 if [[ -z ${SPACE} ]]; then
   DIR_INPUT=($(dirname ${INPUT}))
   if [[ "${DIR_INPUT,,}" == *"reg_"* ]]; then

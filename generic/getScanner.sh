@@ -62,8 +62,8 @@ fi
 #===============================================================================
 if [[ "${ALL}" == "true" ]]; then
   PARTICIPANT_TSV=${DIR_PROJECT}/participants.tsv
-  PID=($(${DIR_INC}/bids/get_column.sh -i ${PARTICIPANT_TSV} -f participant_id))
-  SID=($(${DIR_INC}/bids/get_column.sh -i ${PARTICIPANT_TSV} -f session_id))
+  PID=($(getColumn -i ${PARTICIPANT_TSV} -f participant_id))
+  SID=($(getColumn -i ${PARTICIPANT_TSV} -f session_id))
   PID=("${PID[@]:1}")
   SID=("${SID[@]:1}")
 else
