@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #===============================================================================
-# Convert set of labels to outline of regions
-# Authors: Timothy R. Koscik, PhD
+# Merge label Files, with unique, sequential new numbers
+# Authors: Timothy R. Koscik, Phd
 # Date: 2021-02-08
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
@@ -58,9 +58,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long \
-roi:,levels:,file-name:,\
-dir-save:,dir-scratch:,\
+OPTS=$(getopt -o hvkl --long label:,level:,\
+prefix:,dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -69,25 +68,20 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
+LABEL=
+LEVEL=
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
 DIR_SAVE=
 DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    --label) LABEL="$2" ; shift 2 ;;
+    --level) LEVEL="$2" ; shift 2 ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -122,34 +116,58 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${INPUT})
-PID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f sub)
-SID=$(${DIR_INC}/bids/get_field.sh -i ${INPUT} -f ses)
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX="sub-${PID}"
-  if [[ -n "${SID}" ]]; then
-    PREFIX="${PREFIX}_ses-${SID}"
-  fi
-fi
+LABEL=(${LABEL//,/ })
+N_LABEL=${#LABEL[@]}
+LEVEL=(${LEVEL//;/ })
 
-DIR_SUBSES="sub-${PID}"
-if [[ -n "${SID}" ]]; then
-  DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"
-fi
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${LABEL[0]})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${LABEL[0]} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${LABEL[0]} -f ses)
+
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIR_SUBSES}
+  DIR_SAVE=$(dirname ${LABEL[0]})
+fi
+mkdir -p ${DIR_SAVE}
+if [[ -z "${PREFIX}" ]]; then
+  TLS=($(ls ${DIR_SAVE}/label_edit*))
+  PREFIX=label_edit_${#TLS[@]}
 fi
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
 
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+# intialize output
+MERGED=${DIR_SCRATCH}/${PREFIX}.nii.gz
+fslmaths ${LABEL[0]} -mul 0 ${MERGED}
+LABEL_TEMP=${DIR_SCRATCH}/label_temp.nii.gz
+MASK_TEMP=${DIR_SCRATCH}/mask_temp.nii.gz
+
+# loop over label Files
+for (( i=0; i<${N_LABEL}; i++ )); do
+  TLEVEL=(${LEVEL[${i}]//, })
+  TN=${#TLEVEL[@]}
+  for (( j=0; j<${TN}; j++ )); do
+    MAX_LABEL=$(fslstats ${MERGED} -p 100)
+    if [[ "${TLEVEL[${j}],,}" == "all" ]]; then
+      LabelClustersUniquely 3 ${LABEL[${i}]} ${LABEL_TEMP} 0
+      fslmaths ${LABEL_TEMP} -bin ${MASK_TEMP}
+      fslmaths ${LABEL_TEMP} -add ${MAX_LABEL} -mas ${MASK_TEMP} -add ${MERGED} ${MERGED}
+    elif [[ "${TLEVEL[${j}]}" == *":"* ]]; then
+      TRANGE=(${TLEVEL[${j}]//\:/ })
+      fslmaths ${LABEL[${i}]} -thr ${TRANGE[0]} -uthr ${TRANGE[0]} ${LABEL_TEMP}
+      LabelClustersUniquely 3 ${LABEL_TEMP} ${LABEL_TEMP} 0
+      fslmaths ${LABEL_TEMP} -bin ${MASK_TEMP}
+      fslmaths ${LABEL_TEMP} -add ${MAX_LABEL} -mas ${MASK_TEMP} -add ${MERGED} ${MERGED}
+    else
+      fslmaths ${LABEL[${i}]} -thr ${TLEVEL[${j}]} -uthr ${TLEVEL[${j}]} -bin ${LABEL_TEMP}
+      fslmaths ${LABEL_TEMP} -add ${MAX_LABEL} -mas ${LABEL_TEMP} -add ${MAX_LABEL} -add ${MERGED} ${MERGED}
+    fi
+  done
+done
+
+mv ${MERGED} ${DIR_SAVE}/${FILE_NAME}.nii.gz
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
-
 
