@@ -47,6 +47,24 @@ for (( i=0; i<${#PATH_VARS[@]}; i++ )); do
   echo -e "\t${PATH_VARS[${i}]}=${PATH_STR}"
 done
 
+# set function aliases ---------------------------------------------------------
+echo "SETTING FUNCTION ALIASES"
+FCN_PATHS=($(jq -r '.function_alias' < ${INIT} | tr -d ' [],"'))
+for (( i=0; i<${#FCN_PATHS[@]}; i++ )); do
+  echo -e "\t${FCN_PATHS[${i}]}"
+  FCN_LS=($(ls ${DIR_INC}/${FCN_PATHS[${i}]}/*))
+  for (( j=0; j<${#FCN_LS[@]}; j++ )); do
+    FCN_FILE=$(basename ${FCN_LS[${j}]})
+    FCN_NAME=${FCN_FILE%%.*}
+    FCN_EXT=${FCN_FILE##*.}
+    if [[ "${FCN_EXT,,}" == "sh" ]]; then
+      alias "${FCN_NAME}=${FCN_LS[${j}]}"
+    else      
+      alias "${FCN_FILE}=${FCN_LS[${j}]}"
+    fi
+  done
+done
+
 # run source files for software dependencies -----------------------------------
 echo "LOADING SOFTWARE DEPENDENCIES:"
 SW_LS=($(jq -r '.software | keys_unsorted' < ${INIT} | tr -d ' [],"'))
