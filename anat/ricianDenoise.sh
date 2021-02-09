@@ -127,6 +127,9 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
+#===============================================================================
+# Rician Denoising
+#===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMAGE})
 PID=$(getField -i ${IMAGE} -f sub)
@@ -144,9 +147,6 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-#===============================================================================
-# Rician Denoising
-#===============================================================================
 # gather modailty for output
 MOD=($(getField -i ${IMAGE} -f "modality"))
 

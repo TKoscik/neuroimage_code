@@ -263,7 +263,7 @@ if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/reg_${TO}
 fi
 
-DIR_XFM=${DIR_PROJECT}/derivatives/inc/anat/sub-${PID}
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/sub-${PID}
 if [[ -n "${SID}" ]]; then
   DIR_XFM=${DIR_XFM}/ses-${SID}
 fi

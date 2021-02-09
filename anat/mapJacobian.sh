@@ -196,7 +196,7 @@ CreateJacobianDeterminantImage 3 \
 
 # keep stack xfm if desired
 if [[ "${KEEP}" == "true" ]]; then
-  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm
+  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${PREFIX//_/\/}
   mkdir -p ${DIR_XFM}
   mv ${DIR_SCRATCH}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz ${DIR_XFM}/
 fi

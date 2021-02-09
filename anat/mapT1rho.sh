@@ -117,6 +117,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo ''
 fi
 
+#===============================================================================
+# Start of Function
+#===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${INPUT})
 PID=$(getField -i ${INPUT} -f sub)
@@ -129,14 +132,11 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
+  if [[ -n ${SID} ]]; then
+  DIR_SAVE=${DIR_SAVE}/ses-${SID}
 fi
-#mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
-
-#===============================================================================
-# Start of Function
-#===============================================================================
 
 T1rhoMap \
 --inputVolumes ${INPUT} \

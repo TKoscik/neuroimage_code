@@ -172,10 +172,9 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
   if [[ -n "${SID}" ]]; then
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}
-  else
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
+    DIR_SAVE=${DIR_SAVE}/ses-${SID}
   fi
 fi
 mkdir -p ${DIR_SCRATCH}
