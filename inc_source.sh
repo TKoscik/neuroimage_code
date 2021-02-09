@@ -73,7 +73,7 @@ for (( i=0; i<${#SW_LS[@]}; i++ )); do
   SW_NAME=${SW_LS[${i}]}
   WHICH_HOST=($(jq -r ".software.${SW_NAME}.hostname" < ${INIT} | tr -d ' [],"'))
   SW_VERSION=($(jq -r ".software.${SW_NAME}.version" < ${INIT} | tr -d ' [],"'))
-  CMDS=($(jq -r ".software.${SW_NAME}.command" < ${INIT} | tr -d ' [],"'))
+  CMDS=($(jq -r ".software.${SW_NAME}.command" < ${INIT} | tr -d '[],"'))
   if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] |
      [[ "${WHICH_HOST}" == "all" ]]; then
     for (( j=0; j<${#CMDS[@]}; j++ )); do
