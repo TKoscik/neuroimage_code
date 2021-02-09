@@ -1,16 +1,14 @@
 #!/bin/bash -x
 
-
 #===============================================================================
 # Functional Timeseries - Spike Regression via Framewise Displacement Measures
 #-------------------------------------------------------------------------------
 # by Lauren Hopkins (lauren-hopkins@uiowa.edu)
-
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-KERNEL="$(unname -s)"
+KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
 HPC_Q=${QUEUE}
 HPC_SLOTS=${NSLOTS}
