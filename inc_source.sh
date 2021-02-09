@@ -77,8 +77,9 @@ for (( i=0; i<${#SW_LS[@]}; i++ )); do
   if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] |
      [[ "${WHICH_HOST}" == "all" ]]; then
     for (( j=0; j<${#CMDS[@]}; j++ )); do
-      if [[ "${CMD}" != "null" ]]; then
-        eval ${CMD[${j}]}
+      if [[ "${CMDS}" != "null" ]]; then
+        eval ${CMDS[${j}]}
+        echo "eval ${CMDS[${j}]}"
       fi
     done
   fi
