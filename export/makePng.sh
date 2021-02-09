@@ -125,21 +125,21 @@ while true; do
     -h | --help) HELP="true" ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG="true" ; shift ;;
-    --bg-nii) BG="$2" ; shift 2 ;;
+    --bg) BG="$2" ; shift 2 ;;
     --bg-mask) BG_MASK="$2" ; shift 2 ;;
     --bg-thresh) BG_THRESH="$2" ; shift 2 ;;
     --bg-color) BG_COLOR="$2" ; shift 2 ;;
     --bg-order) BG_ORDER="$2" ; shift 2 ;;
     --bg-vol) BG_VOL="$2" ; shift 2 ;;
     --bg-cbar) BG_CBAR="true" ; shift ;;
-    --fg-nii) FG="$2" ; shift 2 ;;
+    --fg) FG="$2" ; shift 2 ;;
     --fg-mask) FG_MASK="$2" ; shift 2 ;;
     --fg-thresh) FG_THRESH="$2" ; shift 2 ;;
     --fg-color) FG_COLOR="$2" ; shift 2 ;;
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
     --fg-vol) FG_VOL="$2" ; shift 2 ;;
     --fg-cbar) FG_CBAR="true" ; shift ;;
-    --roi-nii) ROI="$2" ; shift 2 ;;
+    --roi) ROI="$2" ; shift 2 ;;
     --roi-level) ROI_LEVEL="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
@@ -275,10 +275,10 @@ OFFSET=(${OFFSET//,/ })
 
 # Get image informtation -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
-DIMS=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f voxels))
-PIXDIM=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f spacing))
-ORIGIN=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f origin))
-ORIENT=($(${DIR_INC}/generic/nii_info.sh -i ${BG} -f orient))
+DIMS=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f voxels))
+PIXDIM=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f spacing))
+ORIGIN=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f origin))
+ORIENT=($(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f orient))
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
@@ -317,7 +317,7 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
 done
 
 # select desired volume from multivolume images --------------------------------
-TV=$(${DIR_INC}/generic/nii_info.sh -i ${BG} -f vols)
+TV=$(${DIR_INC}/generic/niiInfo.sh -i ${BG} -f vols)
 if [[ ${TV} -gt 1 ]]; then
   if [[ ${BG_VOL} > ${TV} ]]; then
     echo "ERROR [INC:${FCN_NAME}] BG_VOL out of range, <${TV}"
@@ -330,7 +330,7 @@ if [[ ${TV} -gt 1 ]]; then
 fi
 
 if [[ -n ${BG_MASK} ]]; then
-  TV=$(${DIR_INC}/generic/nii_info.sh -i ${BG_MASK} -f vols)
+  TV=$(${DIR_INC}/generic/niiInfo.sh -i ${BG_MASK} -f vols)
   if [[ ${TV} -gt 1 ]]; then
     if [[ ${BG_MASK_VOL} > ${TV} ]]; then
       echo "ERROR [INC:${FCN_NAME}] BG_MASK_VOL out of range, <${TV}"
@@ -345,7 +345,7 @@ fi
 
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${FG_N}; i++ )); do
-    TV=$(${DIR_INC}/generic/nii_info.sh -i ${FG[${i}]} -f vols)
+    TV=$(${DIR_INC}/generic/niiInfo.sh -i ${FG[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
       if [[ ${FG_VOL[${i}]} > ${TV} ]]; then
         echo "ERROR [INC:${FCN_NAME}] FG_VOL[${i}] out of range, <${TV}"
@@ -361,7 +361,7 @@ fi
 
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${FG_N}; i++ )); do
-    TV=$(${DIR_INC}/generic/nii_info.sh -i ${FG_MASK[${i}]} -f vols)
+    TV=$(${DIR_INC}/generic/niiInfo.sh -i ${FG_MASK[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
       if [[ ${FG_MASK_VOL[${i}]} > ${TV} ]]; then
         echo "ERROR [INC:${FCN_NAME}] FG_MASK_VOL[${i}] out of range, <${TV}"
@@ -377,7 +377,7 @@ fi
 
 if [[ -n ${ROI} ]]; then
   for (( i=0; i<${ROI_N}; i++ )); do
-    TV=$(${DIR_INC}/generic/nii_info.sh -i ${ROI[${i}]} -f vols)
+    TV=$(${DIR_INC}/generic/niiInfo.sh -i ${ROI[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
       if [[ ${ROI_VOL[${i}]} > ${TV} ]]; then
         echo "ERROR [INC:${FCN_NAME}] ROI_VOL[${i}] out of range, <${TV}"
@@ -535,7 +535,7 @@ fi
 FIELD_CHK="dim,pixdim,quatern_b,quatern_c,quatern_d,qoffset_x,qoffset_y,qoffset_z,srow_x,srow_y,srow_z"
 if [[ -n ${BG_MASK} ]]; then
   unset SPACE_CHK
-  SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${BG_MASK} -f ${FIELD_CHK})
+  SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${BG_MASK} -f ${FIELD_CHK})
   if [[ "${SPACE_CHK}" == "false" ]]; then
     antsApplyTransforms -d 3 -n GenericLabel \
       -i ${BG_MASK} -o ${DIR_SCRATCH}/BG_mask.nii.gz -r ${BG}
@@ -545,7 +545,7 @@ fi
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n Linear \
         -i ${FG[${i}]} -o ${DIR_SCRATCH}/FG_${i}.nii.gz -r ${BG}
@@ -556,7 +556,7 @@ fi
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${#FG_MASK[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n GenericLabel \
         -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${BG}
@@ -567,7 +567,7 @@ fi
 if [[ -n ${ROI} ]]; then
   for (( i=0; i<${#ROI[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(${DIR_INC}/generic/nii_compare.sh -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(${DIR_INC}/generic/niiCompare.sh -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${ROI[${i}]} -o ${DIR_SCRATCH}/ROI_${i}.nii.gz -r ${BG}
@@ -590,12 +590,12 @@ done
 
 # Make Background ==============================================================
 ## generate color bar
-Rscript ${DIR_INC}/export/make_colors.R \
+Rscript ${DIR_INC}/export/makeColors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
 if [[ -n ${BG_MASK} ]] || [[ -n ${FG_MASK} ]] || [[ -n ${ROI} ]]; then
-  Rscript ${DIR_INC}/export/make_colors.R \
+  Rscript ${DIR_INC}/export/makeColors.R \
     "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
 fi
@@ -714,7 +714,7 @@ if [[ -n ${FG} ]]; then
     fi
 
     ## generate color bar
-    Rscript ${DIR_INC}/export/make_colors.R \
+    Rscript ${DIR_INC}/export/makeColors.R \
       "palette" ${FG_COLOR[${i}]} "n" 200 \
       "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
       "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
@@ -827,7 +827,7 @@ fi
 # Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
   ## edit labels as specified
-  ${DIR_INC}/generic/label_edit.sh \
+  ${DIR_INC}/generic/labelEdit.sh \
   --label ${ROI_CSV} 
   --level ${ROI_LEVEL} \
   --prefix ROI_EDIT \
@@ -837,7 +837,7 @@ if [[ -n ${ROI} ]]; then
   ROI_N=$(fslstats ${DIR_SCRATCH}/ROI_EDIT.nii.gz -p 100)
 
   ## convert ROIs to outlines
-  ${DIR_INC}/generic/label_outline.sh \
+  ${DIR_INC}/generic/labelOutline.sh \
   --label ${DIR_SCRATCH}/ROI_EDIT.nii.gz \
   --prefix ROI_OUTLINE \
   --dir-save ${DIR_SCRATCH}
@@ -846,7 +846,7 @@ if [[ -n ${ROI} ]]; then
   fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
 
   ## generate color bar
-  Rscript ${DIR_INC}/export/make_colors.R \
+  Rscript ${DIR_INC}/export/makeColors.R \
     "palette" ${ROI_COLOR} "n" ${ROI_N} \
     "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_ROI"
