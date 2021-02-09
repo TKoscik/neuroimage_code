@@ -50,14 +50,18 @@ function egress {
     ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
   fi
 }
 trap egress EXIT
