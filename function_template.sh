@@ -36,19 +36,19 @@ function egress {
     --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} \
     --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
+      logProject.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
       --pid ${PID} --sid ${SID} --hardware ${HARDWARE} --kernel ${KERNEL} \
       --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} \
       --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
+        logSession.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
         --pid ${PID} --sid ${SID} --hardware ${HARDWARE} --kernel ${KERNEL} \
         --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} \
         --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       fi
     fi
     if [[ "${FCN_NAME}" == *"QC"* ]]; then
-      ${DIR_INC}/log/logQC.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
+      logQC.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
       --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} --fcn-name ${FCN_NAME} \
       --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
       --notes ${NOTES}
@@ -74,7 +74,7 @@ OTHER_INPUTS=
 TEMPLATE=HCPICBM
 SPACE=1mm
 DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 

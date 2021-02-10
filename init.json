@@ -3,6 +3,7 @@
         "INC_DB": "/Dedicated/inc_database",
         "INC_TMP": "/Dedicated/inc_scratch",
         "INC_SCRATCH": "/Shared/inc_scratch",
+        "INC_LOG": "${INC_DB}/log",
         "INC_TEMPLATE": "${INC_DB}/templates",
         "INC_R": "${DIR_INC}/R",
         "INC_LUT": "${DIR_INC}/lut",
