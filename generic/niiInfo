@@ -5,7 +5,7 @@
 # Date: 2021-01-28
 #===============================================================================
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hif --long image:,field:,help -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hi:f: --long image:,field:,help -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
