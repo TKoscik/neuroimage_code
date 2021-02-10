@@ -50,15 +50,19 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-LOG_STRING=$(date +"${OPERATOR}\t${PID}\t${SID}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
 if [[ ! -d "${DIR_PROJECT}/log" ]]; then
   mkdir -p ${DIR_PROJECT}/log
 fi
+
+LOG_STRING=$(date +"${OPERATOR}\t${PID}\t${SID}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
+
 FCN_LOG=${DIR_PROJECT}/log/sub-${PID}_ses-${SID}.log
+
 if [[ ! -f ${FCN_LOG} ]]; then
   echo -e 'operator\tparticipant_id\tsession_id\thardware\tkernel\thpc_queue\thpc_slots\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
 fi
 echo -e ${LOG_STRING} >> ${FCN_LOG}
+
 exit 0
 
 

@@ -120,7 +120,7 @@ if [[ ! -f "${TS_BOLD}" ]]; then
 fi
 DIR_SUBSES="sub-${PID}"
 if [[ -n ${SID} ]]; then
-  DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"
+  DIR_SUBSES="${DIR_SUBSES}/ses-${SID}"
 fi
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${TS_BOLD})
