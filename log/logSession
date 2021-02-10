@@ -36,14 +36,14 @@ while true; do
     -s | --hpc-slots) HPC_SLOTS="$2" ; shift 2 ;;
     -f | --fcn-name) FCN_NAME="$2" ; shift 2 ;;
     -t | --proc-start) PROC_START="$2" ; shift 2 ;;
-    -e | --proc-end) PROC_END="$2" ; shift 2 ;;
+    -e | --proc-stop) PROC_STOP="$2" ; shift 2 ;;
     -c | --exit-code) EXIT_CODE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
 done
 
-LOG_STRING=$(date +"${OPERATOR}\t${PID}\t${SID}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t${PROC_END}\t${EXIT_CODE}")
+LOG_STRING=$(date +"${OPERATOR}\t${PID}\t${SID}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
 if [[ ! -d "${DIR_PROJECT}/log" ]]; then
   mkdir -p ${DIR_PROJECT}/log
 fi
