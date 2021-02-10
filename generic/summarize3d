@@ -70,7 +70,7 @@ STATS=volume
 LUT=
 DIR_SAVE=
 NO_APPEND=false
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
@@ -99,7 +99,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
@@ -142,7 +141,7 @@ fi
 mkdir -p ${DIR_SCRATCH}
 
 if [[ -z "${LUT}" ]]; then
-  LUT=${DIR_INC}/lut/lut-baw+brain.tsv
+  LUT=${INC_LUT}/lut-baw+brain.tsv
 fi
 
 STATS_LS=${STATS}
@@ -175,7 +174,7 @@ WHICH_SYS=$(uname --nodename)
 if grep -q "argon" <<< "${WHICH_SYS,,}"; then
   module load R
 fi
-Rscript summarize3d.R \
+Rscript ${INC_R}/summarize3d.R \
   ${DIR_SCRATCH}/${PREFIX}_tempSummary.tsv \
   ${STATS_LS} \
   ${PIXDIM} \
