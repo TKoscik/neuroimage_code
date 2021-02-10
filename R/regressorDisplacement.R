@@ -19,7 +19,7 @@ abs.disp <- sqrt(rowSums(tf))
 # write output
 write.table(abs.disp,
   file=paste0(dir.save, basename(base.name), "_FD+abs.1D"),
-  quotes=F, row.names=F, col.names=F, sep=" ")
+  quote=F, row.names=F, col.names=F, sep=" ")
 
 # relative displacement
 tf <- df
