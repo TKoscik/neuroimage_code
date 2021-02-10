@@ -9,7 +9,7 @@ if (length(args) == 2) {
   dir.save <- dirname(input)
 }
 
-df <- read.csv(input, header=FALSE)
+df <- read.csv(input, header=FALSE, sep="\t")
 
 # reorder for AFNI, from "rot1 rot2 rot3 trans1 trans2 trans3" ==> "rot3 rot1 rot2 trans3 trans1 trans2"
 df <- df[ ,c(2,3,1,5,6,4)]
@@ -25,4 +25,4 @@ radius <- 50
 df[ ,1:3] <- df[ ,1:3] * radius
 
 # write output
-write.table(df, file=paste0(dir.save, "/", basename(file_path_sans_ext(input)), "+mm.1D"), quote=F, row.names=F, col.names=F, sep=" ")
+write.table(df, file=paste0(dir.save, "/", basename(file_path_sans_ext(input)), "+mm.1D"), quote=F, row.names=F, col.names=F, sep="\t")

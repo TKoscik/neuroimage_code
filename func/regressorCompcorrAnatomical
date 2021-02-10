@@ -140,6 +140,9 @@ cat ${DIR_SCRATCH}/${PREFIX}_acompcorr_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}
 cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
 cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
 
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
+
 mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_REGRESSORS}/
 mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_REGRESSORS}/
 
