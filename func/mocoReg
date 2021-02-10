@@ -358,6 +358,10 @@ rm ${MERGE_LS[@]}
 # Move files to appropriate locations -----------------------------------------
 DIR_REGRESSOR=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIR_SUBSES}
 mkdir -p ${DIR_REGRESSOR}
+
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
+
 mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/
 mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/
 
