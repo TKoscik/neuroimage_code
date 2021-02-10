@@ -59,7 +59,7 @@ done
 echo "EXPORTING PATHS:"
 FCN_PATHS=($(jq -r '.export_paths' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#FCN_PATHS[@]}; i++ )); do
-  export PATH=${PATH}:${FCN_PATHS[${i}]}
+  export PATH=${PATH}:${DIR_INC}/${FCN_PATHS[${i}]}
   echo -e "\t${FCN_PATHS[${i}]}"
 done
 
@@ -88,5 +88,5 @@ done
 #Rscript ${DIR_INC}/r_setup.R
 echo "INC CODE version ${INC_VERSION^^} has been setup."
 echo "If you haven't setup your R environment, please run:"
-echo "Rscript ${DIR_INC}/r_setup.R"
+echo "Rscript ${DIR_INC}/R/r_setup.R"
 

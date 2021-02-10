@@ -9,14 +9,14 @@
         "DIR_PINC": "/Shared/pinc/sharedopt/apps"
     },
     "export_paths": [
-        "${DIR_INC}/anat",
-        "${DIR_INC}/cron",
-        "${DIR_INC}/dicom",
-        "${DIR_INC}/dwi",
-        "${DIR_INC}/export",
-        "${DIR_INC}/func",
-        "${DIR_INC}/generic",
-        "${DIR_INC}/log"
+        "anat",
+        "cron",
+        "dicom",
+        "dwi",
+        "export",
+        "func",
+        "generic",
+        "log"
     ],
     "software": {
         "OpenBLAS": {
