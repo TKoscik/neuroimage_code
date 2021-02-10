@@ -2,7 +2,7 @@
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt --long dir-project:,operator:,pid:,sid:,hardware:,kernel:,hpc-q:,hpc-slots:,fcn-name:,proc-start:,proc-stop:,exit-code: -n 'parse-options' -- "$@")
-if [ $? != 0 ]; then
+if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi

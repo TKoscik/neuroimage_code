@@ -17,7 +17,7 @@ NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
-function egress (
+function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
@@ -36,6 +36,7 @@ function egress (
     --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
     --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
+      echo ${DIR_PROJECT}
       logProject --operator ${OPERATOR} --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
         logSession --operator ${OPERATOR} \
@@ -45,7 +46,7 @@ function egress (
       fi
     fi
   fi
-)
+}
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
