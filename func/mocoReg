@@ -179,7 +179,7 @@ mkdir -p ${DIR_SAVE}
 # Native anatomical, brain mask, and rigid alignment transform
 ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${SUBSES}*${TARGET}.nii.gz))
 ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${SUBSES}*mask-brain*.nii.gz))
-XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}/${SUBSES}*from-${TARGET}+raw_to-${TEMPLATE}*.mat))
+XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}/${SUBSES}*from-native_to-${TEMPLATE}*.mat))
 if [[ -z "${ANAT}" ]]; then
   echo "Native anatomical not found, aborting."
   exit 1
