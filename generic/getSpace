@@ -19,7 +19,6 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 INPUT=
-DIR_INC=/Shared/inc_scratch/code
 HELP=false
 
 while true; do

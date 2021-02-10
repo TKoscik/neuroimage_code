@@ -20,8 +20,8 @@ FIELD=
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -i | --image) IMAGE1="$2" ; shift 2 ;;
-    -j | --image) IMAGE2="$2" ; shift 2 ;;
+    -i | --image1) IMAGE1="$2" ; shift 2 ;;
+    -j | --image2) IMAGE2="$2" ; shift 2 ;;
     -f | --field) FIELD="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
