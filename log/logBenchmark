@@ -35,6 +35,9 @@ while true; do
 done
 
 LOG_STRING=$(date +"${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
+
+echo ${LOG_STRING}
+
 FCN_LOG=${INC_LOG}/benchmark/${FCN_NAME}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
 if [[ ! -f ${FCN_LOG} ]]; then
   echo -e 'operator\thardware\tkernel\thpc_queue\thpc_slots\tfunction\tstart\tend\texit_status' > ${FCN_LOG}
