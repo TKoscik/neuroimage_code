@@ -18,7 +18,7 @@ df <- df[ ,c(2,3,1,5,6,4)]
 df[ ,c(1:3,6)] <- df[ ,c(1:3,6)] * -1
 
 # convert to degrees from radians
-df[ ,1:3] <- (df[ ,1:3] * 180) / pi()
+df[ ,1:3] <- (df[ ,1:3] * 180) / pi
 
 # Convert rotations to mm per Power et. al. 2012 (radius of 50mm)
 radius <- 50
