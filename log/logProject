@@ -20,6 +20,7 @@ FCN_NAME=
 PROC_START=
 PROC_STOP=
 EXIT_CODE=
+echo "${DIR_PROJECT} @ START"
 
 while true; do
   case "$1" in
@@ -39,9 +40,11 @@ while true; do
     * ) break ;;
   esac
 done
+echo "${DIR_PROJECT} @ INPUT"
 
 # write to log within project
 LOG_STRING=$(date +"${PID}\t${SID}\t${FCN_NAME}\t${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
+
 if [[ ! -d "${DIR_PROJECT}/log" ]]; then
   mkdir -p ${DIR_PROJECT}/log
 fi
