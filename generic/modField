@@ -37,12 +37,10 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -i | --input <value>     BIDs compliant filepath'
   echo '  -m | --modify            modify an existing flag'
