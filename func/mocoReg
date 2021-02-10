@@ -176,28 +176,29 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-# Native anatomical, brain mask, and rigid alignment transform
+# Native anatomical, brain mask, and rigid alignment transform - - - - - - - - -
 ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${SUBSES}*${TARGET}.nii.gz))
-ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${SUBSES}*mask-brain*.nii.gz))
-XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}/${SUBSES}*from-native_to-${TEMPLATE}*.mat))
 if [[ -z "${ANAT}" ]]; then
   echo "Native anatomical not found, aborting."
   exit 1
 fi
+
+ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${SUBSES}*mask-brain*.nii.gz))
 if [[ -z "${ANAT_MASK}" ]]; then
   echo "Native anatomical mask not found, aborting."
   exit 1
 fi
+
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}
+XFM_ALIGN=($(ls ${DIR_XFM}/${SUBSES}*from-native_to-${TEMPLATE}*_xfm-rigid.mat))
 if [[ -n "${XFM_ALIGN}" ]]; then
   INIT_XFM=${XFM_ALIGN}
 else
   echo "Alignment registration not found, continuing."
   INIT_XFM=[${ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
-  #  exit 1
 fi
 
-# Find transforms
-DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}
+# Find transforms - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 unset XFM_LS XFM_ARG XFM_NORM
 XFM_LS=($(ls ${DIR_XFM}/*native_to-${TEMPLATE}* 2>/dev/null))
 if [[ -z "${XFM_LS}" ]]; then
@@ -238,7 +239,7 @@ if [[ "${NUM_TR}" == 1 ]]; then
 fi
 
 # Motion correction -----------------------------------------------------------
-# pad image for better registration
+# pad image for better registration - - - - - - - - - - - - - - - - - - - - - -
 fslsplit ${TS_BOLD} ${DIR_SCRATCH}/vol -t
 for (( i=0; i<${NUM_TR}; i++ )); do
   VOL_NUM=$(printf "%04d" ${i})
@@ -249,10 +250,11 @@ fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold+pad.nii.gz ${MERGE_LS[@]} ${TR}
 TS_BOLD=${DIR_SCRATCH}/${PREFIX}_bold+pad.nii.gz
 rm ${MERGE_LS[@]}
 
-# calculate mean BOLD
+# calculate mean BOLD - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 
-# Rigid registration to mean BOLD, to refine any large motions out of average
+# Rigid registration to mean BOLD - - - - - - - - - - - - - - - - - - - - - - -
+## to refine any large motions out of average
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NUM_TR} -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
@@ -264,7 +266,7 @@ cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_mo
 rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
 
-# Affine registration to mean BOLD
+# Affine registration to mean BOLD - - - - - - - - - - - - - - - - - - - - - - -
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NUM_TR} -l 1 -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_affine_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
@@ -277,8 +279,10 @@ rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 
 # get brain mask of mean BOLD -------------------------------------------------
-bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
-mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
+mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 
 # Registration to subject space -----------------------------------------------
 antsRegistration \
@@ -298,14 +302,14 @@ antsRegistration \
   -c [40x20x0,1e-7,8] -f 4x2x1 -s 2x1x0vox \
   -x [${ANAT_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]
 
-# collapse transforms to deformation field
+# collapse transforms to deformation field - - - - - - - - - - - - - - - - - - -
 antsApplyTransforms -d 3 \
   -o [${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz,1] \
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz \
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat \
   -r ${ANAT}
 
-# Push mean bold to template --------------------------------------------------
+# Push mean bold to template ---------------------------------------------------
 unset xfm_fcn
 xfm_fcn="antsApplyTransforms -d 3"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz"
@@ -314,10 +318,10 @@ for (( i=0; i<${N_XFM}; i++ )); do
   xfm_fcn="${xfm_fcn} -t ${XFM_NORM}"
 done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz"
-xfm_fcn="${xfm_fcn} -r ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz"
+xfm_fcn="${xfm_fcn} -r ${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz"
 eval ${xfm_fcn}
 
-# apply to brain mask as well
+# apply to brain mask as well - - - - - - - - - - - - - - - - - - - - - - - - - 
 unset xfm_fcn
 xfm_fcn="antsApplyTransforms -d 3 -n NearestNeighbor"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz"
@@ -326,7 +330,7 @@ for (( i=0; i<${N_XFM}; i++ )); do
   xfm_fcn="${xfm_fcn} -t ${XFM_NORM}"
 done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_stack.nii.gz"
-xfm_fcn="${xfm_fcn} -r ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz"
+xfm_fcn="${xfm_fcn} -r ${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz"
 eval ${xfm_fcn}
 
 # redo motion correction to normalized mean bold ------------------------------
@@ -344,7 +348,8 @@ antsMotionCorr \
 fslsplit ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz ${DIR_SCRATCH}/vol -t
 for (( i=0; i<${NUM_TR}; i++ )); do
   VOL_NUM=$(printf "%04d" ${i})
-  ImageMath 3 ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz PadImage ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz -5
+  ImageMath 3 ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz \
+    PadImage ${DIR_SCRATCH}/vol${VOL_NUM}.nii.gz -5
 done
 MERGE_LS=($(ls ${DIR_SCRATCH}/vol*))
 fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}

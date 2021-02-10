@@ -1,0 +1,5 @@
+2021-02-09  Timothy R. Koscik   <timothy-koscik@uiowa.edu>
+    * inc_source.sh: debug and finalize installation
+    * remove file extensions from .sh files for ease of use
+    * initial dev_code git pull to argon
+
