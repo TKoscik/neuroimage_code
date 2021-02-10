@@ -51,7 +51,18 @@ echo "EXPORTING VARIABLES:"
 VAR_NAME=($(jq -r '.export_vars | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#VAR_NAME[@]}; i++ )); do
   VAR_VAL=($(jq -r ".export_vars.${VAR_NAME[${i}]}" < ${INIT} | tr -d ' [],"'))
-  export ${VAR_NAME[${i}]}=${VAR_VAL}
+  if [[ "${VAR_VAL}" == *'${DIR_INC}'* ]]; then
+    TVAL=$(basename ${VAR_VAL})
+    export ${VAR_NAME[${i}]}=${DIR_INC}/${TVAL}
+  elif [[ "${VAR_VAL}" == *'${INC_DB}'* ]]; then
+    TVAL=$(basename ${VAR_VAL})
+    export ${VAR_NAME[${i}]}=${INC_DB}/${TVAL}
+  elif [[ "${VAR_VAL}" == *'${INC_SCRATCH}'* ]]; then
+    TVAL=$(basename ${VAR_VAL})
+    export ${VAR_NAME[${i}]}=${INC_SCRATCH}/${TVAL}
+  else
+    export ${VAR_NAME[${i}]}=${VAR_VAL}
+  fi
   echo -e "\t${VAR_NAME[${i}]}=${VAR_VAL}"
 done
 
@@ -60,7 +71,7 @@ echo "EXPORTING PATHS:"
 FCN_PATHS=($(jq -r '.export_paths' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#FCN_PATHS[@]}; i++ )); do
   export PATH=${PATH}:${DIR_INC}/${FCN_PATHS[${i}]}
-  echo -e "\t${FCN_PATHS[${i}]}"
+  echo -e "\t${DIR_INC}/${FCN_PATHS[${i}]}"
 done
 
 # run source files for software dependencies -----------------------------------
