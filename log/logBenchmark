@@ -1,10 +1,7 @@
 #!/bin/bash
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt --long operator:,hardware:,kernel:,\
-hpc-q:,hpc-slots:,\
-fcn-name:,proc-start:,proc-stop:,exit-code: \
--n 'parse-options' -- "$@")
+OPTS=$(getopt --long operator:,hardware:,kernel:,hpc-q:,hpc-slots:,fcn-name:,proc-start:,proc-stop:,exit-code: -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
