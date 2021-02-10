@@ -371,6 +371,10 @@ mkdir -p ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
   ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
 
+mkdir -p ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}_mean
+mv ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
+  ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}_mean/${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold.nii.gz
+
 if [[ "${KEEP}" == "true" ]]; then
   mkdir -p ${DIR_PROJECT}/derivatives/inc/func/prep/${DIR_SUBSES}
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/func/prep/${DIR_SUBSES}/
