@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/bin/bash -e
+
+function egress {
+  EXIT_CODE=$?
+  if [[ ${EXIT_CODE} -ne 0 ]]; then
+    "ERROR [INC Setup]: INPC software was not setup properly."
+  fi
+}
+trap egress EXIT
 
 # Set system variables ---------------------------------------------------------
 HOSTNAME="$(uname -n)"
@@ -8,22 +16,22 @@ KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
 
 # set version number for INC code ----------------------------------------------
-VERSION="$1"
-if [[ -z ${VERSION} ]]; then
-  VERSION="dev"
+INC_VERSION="$1"
+if [[ -z ${INC_VERSION} ]]; then
+  INC_VERSION="dev"
 fi
 
 # locate init.json -------------------------------------------------------------
-if [[ "${VERSION}" == "dev" ]]; then
+if [[ "${INC_VERSION}" == "dev" ]]; then
   INIT=/Shared/inc_scratch/dev_code/init.json
 else
-  INIT=/Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${VERSION}/init.json
+  INIT=/Shared/pinc/sharedopt/apps/inc/${KERNEL}/${HARDWARE}/${INC_VERSION}/init.json
 fi
 if [[ ! -f ${INIT} ]]; then
   echo "file not found: ${INIT}"
   exit 1
 fi
-echo "Setting up Iowa Neuroimage Processing Core Software - Version ${VERSION^^}"
+echo "Setting up Iowa Neuroimage Processing Core Software - Version ${INC_VERSION^^}"
 export DIR_INC=$(dirname ${INIT})
 
 # load JQ to read init info from JSON ------------------------------------------
@@ -39,30 +47,20 @@ if [[ ! -x "$(command -v jq)" ]]; then
 fi
 
 # export directories -----------------------------------------------------------
-echo "EXPORTING DIRECTORIES:"
-PATH_VARS=($(jq -r '.export_paths | keys_unsorted' < ${INIT} | tr -d ' [],"'))
-for (( i=0; i<${#PATH_VARS[@]}; i++ )); do
-  PATH_STR=($(jq -r ".export_paths.${PATH_VARS[${i}]}" < ${INIT} | tr -d ' [],"'))
-  export ${PATH_VARS[${i}]}=${PATH_STR}
-  echo -e "\t${PATH_VARS[${i}]}=${PATH_STR}"
+echo "EXPORTING VARIABLES:"
+VAR_NAME=($(jq -r '.export_vars | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+for (( i=0; i<${#VAR_NAME[@]}; i++ )); do
+  VAR_VAL=($(jq -r ".export_vars.${VAR_NAME[${i}]}" < ${INIT} | tr -d ' [],"'))
+  export ${VAR_NAME[${i}]}=${VAR_VAL}
+  echo -e "\t${VAR_NAME[${i}]}=${VAR_VAL}"
 done
 
 # set function aliases ---------------------------------------------------------
-echo "SETTING FUNCTION ALIASES"
-FCN_PATHS=($(jq -r '.function_alias' < ${INIT} | tr -d ' [],"'))
+echo "EXPORTING PATHS:"
+FCN_PATHS=($(jq -r '.export_paths' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#FCN_PATHS[@]}; i++ )); do
+  export PATH=${PATH}:${FCN_PATHS[${i}]}
   echo -e "\t${FCN_PATHS[${i}]}"
-  FCN_LS=($(ls ${DIR_INC}/${FCN_PATHS[${i}]}/*))
-  for (( j=0; j<${#FCN_LS[@]}; j++ )); do
-    FCN_FILE=$(basename ${FCN_LS[${j}]})
-    FCN_NAME=${FCN_FILE%%.*}
-    FCN_EXT=${FCN_FILE##*.}
-    if [[ "${FCN_EXT,,}" == "sh" ]]; then
-      alias "${FCN_NAME}=${FCN_LS[${j}]}"
-    else
-      alias "${FCN_FILE}=${FCN_LS[${j}]}"
-    fi
-  done
 done
 
 # run source files for software dependencies -----------------------------------
@@ -88,7 +86,7 @@ done
 # setup R packages -------------------------------------------------------------
 # run manually for now
 #Rscript ${DIR_INC}/r_setup.R
-echo "INC CODE version ${VERSION^^} has been setup."
+echo "INC CODE version ${INC_VERSION^^} has been setup."
 echo "If you haven't setup your R environment, please run:"
 echo "Rscript ${DIR_INC}/r_setup.R"
 

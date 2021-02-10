@@ -1,6 +1,5 @@
 {
-    "version": "0.0.0.0",
-    "export_paths": {
+    "export_vars": {
         "DIR_DB": "/Dedicated/inc_database",
         "DIR_TMP": "/Shared/inc_scratch",
         "DIR_TEMPLATE": "/Dedicated/inc_database/templates",
@@ -9,8 +8,15 @@
         "DIR_QC": "/Dedicated/inc_scratch/qc",
         "DIR_PINC": "/Shared/pinc/sharedopt/apps"
     },
-    "function_alias": [
-        "anat", "cron", "dicom", "dwi", "export", "func", "generic", "log"
+    "export_paths": [
+        "${DIR_INC}/anat",
+        "${DIR_INC}/cron",
+        "${DIR_INC}/dicom",
+        "${DIR_INC}/dwi",
+        "${DIR_INC}/export",
+        "${DIR_INC}/func",
+        "${DIR_INC}/generic",
+        "${DIR_INC}/log"
     ],
     "software": {
         "OpenBLAS": {
@@ -45,11 +51,6 @@
             "command": {"cmd1": "export FREESURFER_HOME=${DIR_PINC}/freesurfer/Linux/x86_64/${SW_VERSION}",
                         "cmd2": "export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${SW_VERSION}/license.txt",
                         "cmd3": "source ${FREESURFER_HOME}/FreeSurferEnv.sh"}
-        },
-        "anaconda3": {
-            "hostname": "all",
-            "version": "2019.10",
-            "command": {"cmd1": "source ${DIR_PINC}/sourecfiles/${SW_NAME}_source.sh ${SW_VERSION}"}
         },
         "DCM2NIIX": {
             "hostname": "all",
