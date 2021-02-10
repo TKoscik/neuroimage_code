@@ -50,12 +50,13 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-# write to log within project
-LOG_STRING=$(date +"${PID}\t${SID}\t${FCN_NAME}\t${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
-
 if [[ ! -d "${DIR_PROJECT}/log" ]]; then
   mkdir -p ${DIR_PROJECT}/log
 fi
+
+# write to log within project
+LOG_STRING=$(date +"${PID}\t${SID}\t${FCN_NAME}\t${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
+
 FCN_LOG=${DIR_PROJECT}/log/project.log
 if [[ ! -f ${FCN_LOG} ]]; then
   echo -e 'participant_id\tsession_id\tfunction\toperator\thardware\tkernel\thpc_queue\thpc_slots\tstart\tend\texit_status' > ${FCN_LOG}
@@ -68,6 +69,7 @@ if [[ -z ${PROJECT} ]]; then
   TEMP=${DIR_PROJECT::-1}
   PROJECT=${TEMP##*/}
 fi
+
 MAIN_LOG=${INC_LOG}/project/project-${PROJECT}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
 if [[ ! -f ${FCN_LOG} ]]; then
   echo -e 'dir_project\tparticipant_id\tsession_id\toperator\thardware\tkernel\thpc_queue\thpc_slots\tfunction\tstart\tend\texit_status' > ${FCN_LOG}

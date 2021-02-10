@@ -46,14 +46,18 @@ if [[ "${HELP}" == "true" ]]; then
   exit 0
 fi
 
-LOG_STRING=$(date +"${OPERATOR}\t${DIR_PROJECT}\t${PID}\t${SID}\t${SCAN_DATE}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}\t${NOTES}")
-FCN_LOG=${INC_LOG}/qc/${FCN_NAME}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
 if [[ ! -d "${INC_LOG}/qc" ]]; then
   mkdir -p ${INC_LOG}/qc
 fi
+
+LOG_STRING=$(date +"${OPERATOR}\t${DIR_PROJECT}\t${PID}\t${SID}\t${SCAN_DATE}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}\t${NOTES}")
+
+FCN_LOG=${INC_LOG}/qc/${FCN_NAME}_$(date +FY%Y)Q$((($(date +%-m)-1)/3+1)).log
+
 if [[ ! -f ${FCN_LOG} ]]; then
   echo -e 'operator\tdir_project\tparticipant_id\tsession_id\tscan_date\tfunction\tstart\tend\texit_status\tnotes' > ${FCN_LOG}
 fi
 echo -e ${LOG_STRING} >> ${FCN_LOG}
+
 exit 0
 
