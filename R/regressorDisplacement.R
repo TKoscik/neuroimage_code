@@ -18,7 +18,7 @@ tf[ ,4:6] <- tf[ ,4:6]^2
 abs.disp <- sqrt(rowSums(tf))
 # write output
 write.table(abs.disp,
-  filename=paste0(dir.save, basename(base.name), "_FD+abs.1D"),
+  file=paste0(dir.save, basename(base.name), "_FD+abs.1D"),
   quotes=F, row.names=F, col.names=F, sep=" ")
 
 # relative displacement
@@ -31,19 +31,19 @@ tf[ ,4:6] <- tf[ ,4:6]^2
 rel.disp <- sqrt(rowSums(tf))
 # write output
 write.table(rel.disp,
-  filename=paste0(dir.save, basename(base.name), "_FD+rel.1D"),
+  file=paste0(dir.save, basename(base.name), "_FD+rel.1D"),
   quotes=F, row.names=F, col.names=F, sep=" ")
 
 # root mean square of cumulative displacement
 rms.disp <- cumsum(sqrt(rel.disp)^2)
 # write output
 write.table(cum.disp,
-  filename=paste0(dir.save, basename(base.name), "_FD+rms.1D"),
+  file=paste0(dir.save, basename(base.name), "_FD+rms.1D"),
   quotes=F, row.names=F, col.names=F, sep=" ")
 
 # spike
 spikes <- (cum.disp > spike.thresh) * 1
 # write output
 write.table(spikes,
-  filename=paste0(dir.save, basename(base.name), "_spike.1D"),
+  file=paste0(dir.save, basename(base.name), "_spike.1D"),
   quotes=F, row.names=F, col.names=F, sep=" ")
