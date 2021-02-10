@@ -3,7 +3,11 @@ args <- commandArgs(trailingOnly = TRUE)
 library(tools)
 
 input <- args[1]
-dir.save <- args[2]
+if (length(args) == 2) {
+  dir.save <- args[2]
+} else {
+  dir.save <- dirname(input)
+}
 
 df <- read.csv(input, header=FALSE)
 

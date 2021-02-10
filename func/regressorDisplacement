@@ -105,7 +105,7 @@ if [[ -z "${DIR_SAVE}" ]]; then
 fi
 mkdir -p ${DIR_SAVE}
 
-Rscript ${INC_R}/regressorFD.R ${REGRESSOR} ${DIR_SAVE} ${THRESHOLD}
+Rscript ${INC_R}/regressorDisplacement.R ${REGRESSOR} ${DIR_SAVE} ${THRESHOLD}
 
 #===============================================================================
 # End of Function

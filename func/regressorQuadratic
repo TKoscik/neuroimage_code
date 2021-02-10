@@ -103,7 +103,7 @@ if [[ -z "${DIR_SAVE}" ]]; then
 fi
 mkdir -p ${DIR_SAVE}
 
-Rscript ${INC_R}/regressorQuad.R ${REGRESSOR} ${DIR_SAVE}
+Rscript ${INC_R}/regressorQuadratic.R ${REGRESSOR} ${DIR_SAVE}
 
 #===============================================================================
 # End of Function
