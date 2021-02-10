@@ -28,7 +28,7 @@ trap egress EXIT
 #===============================================================================
 # Start of Function
 #===============================================================================
-PROJECT_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f xnat_project))
+PROJECT_LS=($(getColumn -i ${INC_DB}/projects.tsv -f xnat_project))
 N=${#PROJECT[@]}
 for (( i=0; i<${N}; i++ )); do
   dicomDownload --xnat-project ${PROJECT_LS[${i}]}

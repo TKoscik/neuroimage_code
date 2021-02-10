@@ -73,7 +73,7 @@ GEOM=0
 FROM=NULL
 TO=NULL
 DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
@@ -172,7 +172,7 @@ mkdir -p ${DIR_SAVE}
 if [[ "${N_XFM}" > 1 ]]; then
   if [[ "${REF_IMAGE}" == "NULL" ]]; then
     TEMP=(${TO//+/ })
-    REF_IMAGE=${DIR_TEMPLATE}/${TEMP[0]}/${TEMP[1]}/${TEMP[0]}_${TEMP[1]}_T1w.nii.gz
+    REF_IMAGE=${INC_TEMPLATE}/${TEMP[0]}/${TEMP[1]}/${TEMP[0]}_${TEMP[1]}_T1w.nii.gz
   fi
   xfm_fcn="antsApplyTransforms"
   xfm_fcn="${xfm_fcn} -d 3 -v ${VERBOSE}"

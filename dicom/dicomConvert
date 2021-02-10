@@ -112,7 +112,7 @@ for (( i=0; i<${N_SCAN}; i++ )); do
   else
     KERNEL="$(unname -s)"
     HARDWARE="$(uname -m)"
-    dcm_fcn="${DIR_PINC}/dcm2niix/${KERNEL}/${HARDWARE}/${VERSION}/dcm2niix"
+    dcm_fcn="${PINCAPP}/dcm2niix/${KERNEL}/${HARDWARE}/${VERSION}/dcm2niix"
   fi
   dcm_fcn="${dcm_fcn} -b y -d ${DEPTH} -v ${VERBOSE}"
   dcm_fcn=${dcm_fcn}' -f "%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'

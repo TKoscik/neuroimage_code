@@ -71,7 +71,7 @@ SPATIAL_FILTER="NULL"
 FILTER_RADIUS=1
 TEMPLATE="OASIS"
 DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 
@@ -177,15 +177,15 @@ for (( i=0; i<${NUM_METHOD}; i++ )); do
   # run ANTs brain extraction -------------------------------------------------
   if [[ "${METHOD[${i}],,}" == "ants" ]]; then
     echo ">>>Running ANTs Brain Extraction"
-    DIR_TEMPLATE=${DIR_TEMPLATE}/${TEMPLATE}
+    DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}
     ants_fcn="antsBrainExtraction.sh"
     ants_fcn="${ants_fcn} -d 3"
     for (( j=0; j<${NUM_IMAGE}; j++ )); do
       ants_fcn="${ants_fcn} -a ${IMAGE[${j}]}"
     done
-    ants_fcn="${ants_fcn} -e ${DIR_TEMPLATE}/T_template0.nii.gz"
-    ants_fcn="${ants_fcn} -m ${DIR_TEMPLATE}/T_template0_BrainCerebellumProbabilityMask.nii.gz"
-    ants_fcn="${ants_fcn} -f ${DIR_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
+    ants_fcn="${ants_fcn} -e ${INC_TEMPLATE}/T_template0.nii.gz"
+    ants_fcn="${ants_fcn} -m ${INC_TEMPLATE}/T_template0_BrainCerebellumProbabilityMask.nii.gz"
+    ants_fcn="${ants_fcn} -f ${INC_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
     ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/ants-bex_"
     eval ${ants_fcn}
     

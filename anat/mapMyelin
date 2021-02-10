@@ -71,7 +71,7 @@ LABEL_VALS="1x2x3"
 NORM_T1="0.1x1.45x2.45x3.55x3.765794"
 NORM_T2="0.1x1.95x3.1x4.5x6.738198"
 DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 
 while true; do
@@ -170,7 +170,7 @@ fi
 mkdir -p ${DIR_SAVE}
 
 # calculate myelin map
-Rscript mapMyelin.R \
+Rscript ${INC_R}/mapMyelin.R \
   "t1" ${DIR_SCRATCH}/t1.nii "t2" ${DIR_SCRATCH}/t2.nii \
   "label" ${DIR_SCRATCH}/label.nii "label-values" ${LABEL_VALS} \
   "t1.norms" ${NORM_T1} "t2.norms" ${NORM_T2}

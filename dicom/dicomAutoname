@@ -39,9 +39,9 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 DIR_INPUT=
-LUT_JSON=${DIR_INC}/lut/series_description.json
-DIR_SCRATCH=${DIR_TMP}/dicomConversion_${DATE_SUFFIX}
-DIR_SAVE=${DIR_QC}/dicomConversion
+LUT_JSON=${INC_LUT}/series_description.json
+DIR_SCRATCH=${INC_SCRATCH}/dicomConversion_${DATE_SUFFIX}
+DIR_SAVE=${INC_QC}/dicomConversion
 HELP=false
 VERBOSE=0
 

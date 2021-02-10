@@ -34,8 +34,8 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-DIR_INPUT=${DIR_IMPORT}
-DIR_OUTPUT=${DIR_QC}/dicomConversion
+DIR_INPUT=${INC_IMPORT}
+DIR_OUTPUT=${INC_QC}/dicomConversion
 
 while true; do
   case "$1" in

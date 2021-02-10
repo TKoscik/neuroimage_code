@@ -78,7 +78,7 @@ MRF=[0.1,1x1x1]
 USE_RANDOM=1
 POSTERIOR_FORM=Socrates[0]
 DIR_SAVE=
-DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -171,7 +171,7 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
 gunzip ${DIR_SCRATCH}/*.gz
 
 # fit a Gaussian mixture model to get initial values for k-means
-INIT_VALUES=($(Rscript histogramPeaksGMM.R \
+INIT_VALUES=($(Rscript ${INC_R}/histogramPeaksGMM.R \
   ${DIR_SCRATCH}/temp.nii \
   ${DIR_SCRATCH}/mask.nii \
   ${DIR_SCRATCH} \

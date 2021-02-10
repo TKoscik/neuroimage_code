@@ -44,7 +44,7 @@ XNAT_PROJECT=
 DOWNLOAD_DATE=
 PI=
 PROJECT=
-DIR_SAVE=${DIR_IMPORT}
+DIR_SAVE=${INC_IMPORT}
 HELP=false
 
 while true; do
@@ -106,14 +106,14 @@ else [[ -f ${UP} ]]; then
 fi    
 
 # make save directory if non standard ------------------------------------------
-if [[ "${DIR_SAVE}" != "${DIR_IMPORT}" ]]; then
+if [[ "${DIR_SAVE}" != "${INC_IMPORT}" ]]; then
   mkdir -p ${DIR_SAVE}
 fi
 
 # use lookup table if PI and.or project unspecified ----------------------------
 if [[ -z ${PI} ]] |
    [[ -z ${PROJECT} ]]; then
-  XNAT_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f xnat_project))
+  XNAT_LS=($(getColumn -i ${INC_DB}/projects.tsv -f xnat_project))
   for (( i=1; i<${#XNAT_LS[@]}; i++ )); do
     if [[ "${XNAT_LS[${i}]" == "${XNAT_PROJECT}" ]]; then
       WHICH_PROJECT=${i}
@@ -121,11 +121,11 @@ if [[ -z ${PI} ]] |
     fi
   done
   if [[ -z ${PI} ]]; then
-    PI_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f pi))
+    PI_LS=($(getColumn -i ${INC_DB}/projects.tsv -f pi))
     PI="${PI_LS[${WHICH_PROJECT}]}"
   fi
   if [[ -z ${PROJECT} ]]; then
-    PROJECT_LS=($(getColumn -i ${DIR_DB}/projects.tsv -f project_name))
+    PROJECT_LS=($(getColumn -i ${INC_DB}/projects.tsv -f project_name))
     PROJECT="${PROJECT_LS[${WHICH_PROJECT}]}"
   fi
 fi
