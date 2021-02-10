@@ -25,6 +25,4 @@ radius <- 50
 df[ ,1:3] <- df[ ,1:3] * radius
 
 # write output
-write.table(df,
-  filename=paste0(dir.save, basename(file_path_sans_ext(input)), "+mm.1D"),
-  quotes=F, row.names=F, col.names=F, sep=" ")
+write.table(df, filename=paste0(dir.save, "/", basename(file_path_sans_ext(input)), "+mm.1D"), quotes=F, row.names=F, col.names=F, sep=" ")
