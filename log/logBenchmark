@@ -20,7 +20,7 @@ EXIT_CODE=
 
 while true; do
   case "$1" in
-    -h) HELP="true" ; shift ;;
+    -h | --help) HELP=true ; shift ;;
     --operator) OPERATOR="$2" ; shift 2 ;;
     --hardware) HARDWARE="$2" ; shift 2 ;;
     --kernel) KERNEL="$2" ; shift 2 ;;
@@ -34,6 +34,15 @@ while true; do
     * ) break ;;
   esac
 done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  exit 0
+fi
 
 LOG_STRING=$(date +"${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t${PROC_STOP}\t${EXIT_CODE}")
 
