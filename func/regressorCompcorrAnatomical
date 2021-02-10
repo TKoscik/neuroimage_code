@@ -17,7 +17,7 @@ NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
-function egress {
+function egress (
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${KEEP}" == "false" ]]; then
@@ -45,7 +45,7 @@ function egress {
       fi
     fi
   fi
-}
+)
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
