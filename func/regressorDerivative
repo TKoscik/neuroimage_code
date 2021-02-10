@@ -1,7 +1,6 @@
 #!/bin/bash -e
-
 #===============================================================================
-# Create quadratic regressors
+# create derivative of regressor from 1D file
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-10-08
 #===============================================================================
@@ -53,7 +52,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long regressor:,dir-save:,help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hl --long regressor:,dir-save:,\
+help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -69,7 +69,7 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --regressor) OTHER_INPUTS="$2" ; shift 2 ;;
+    --regressor) REGRESSOR="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -103,10 +103,11 @@ if [[ -z "${DIR_SAVE}" ]]; then
 fi
 mkdir -p ${DIR_SAVE}
 
-Rscript ${INC_R}/regressorQuad.R ${REGRESSOR} ${DIR_SAVE}
+Rscript ${INC_R}/regressorDerivative.R ${REGRESSOR} ${DIR_SAVE}
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

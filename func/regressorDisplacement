@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #===============================================================================
-# create derivative of regressor from 1D file
+# Calculate Framewise Displacement
 # Authors: Timothy R. Koscik, PhD
 # Date: 2020-10-08
 #===============================================================================
@@ -52,7 +52,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long regressor:,dir-save:,\
+OPTS=$(getopt -o hl --long regressor:,threshold:,dir-save:,\
 help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -62,6 +62,7 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 REGRESSOR=
+THRESHOLD=0.25
 DIR_SAVE=
 HELP=false
 
@@ -70,6 +71,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --regressor) REGRESSOR="$2" ; shift 2 ;;
+    --threshold) THRESHOLD="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -103,11 +105,10 @@ if [[ -z "${DIR_SAVE}" ]]; then
 fi
 mkdir -p ${DIR_SAVE}
 
-Rscript ${INC_R}/regressorDeriv.R ${REGRESSOR} ${DIR_SAVE}
+Rscript ${INC_R}/regressorDisplacement.R ${REGRESSOR} ${DIR_SAVE} ${THRESHOLD}
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
-
 
