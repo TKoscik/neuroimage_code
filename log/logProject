@@ -9,7 +9,7 @@ fi
 eval set -- "$OPTS"
 
 OPERATOR=
-DIR_PROJECT=
+#DIR_PROJECT=
 PID=
 SID=
 HARDWARE=
