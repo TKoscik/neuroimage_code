@@ -6,8 +6,8 @@ input <- args[1]
 dir.save <- args[2]
 spike.thresh <- args[3]
 
-base.name <- unlist(strsplit(input), split="_")
-base.name <- paste(base.name[1:(length(base.name-1))], collapse="_")
+base.name <- unlist(strsplit(input, split="_"))
+base.name <- paste(base.name[1:(length(base.name)-1)], collapse="_")
 
 df <- read.csv(input, header=FALSE, sep="\t")
 
@@ -32,18 +32,20 @@ rel.disp <- sqrt(rowSums(tf))
 # write output
 write.table(rel.disp,
   file=paste0(dir.save, "/", basename(base.name), "_FD+rel.1D"),
-  quotes=F, row.names=F, col.names=F, sep="\t")
+  quote=F, row.names=F, col.names=F, sep="\t")
 
 # root mean square of cumulative displacement
 rms.disp <- cumsum(sqrt(rel.disp)^2)
 # write output
-write.table(cum.disp,
+write.table(rms.disp,
   file=paste0(dir.save, "/", basename(base.name), "_FD+rms.1D"),
-  quotes=F, row.names=F, col.names=F, sep="\t")
+  quote=F, row.names=F, col.names=F, sep="\t")
 
 # spike
-spikes <- (cum.disp > spike.thresh) * 1
+spikes <- (rms.disp > spike.thresh) * 1
 # write output
 write.table(spikes,
   file=paste0(dir.save, "/", basename(base.name), "_spike.1D"),
-  quotes=F, row.names=F, col.names=F, sep="\t")
+  quote=F, row.names=F, col.names=F, sep="\t")
+
+
