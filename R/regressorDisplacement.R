@@ -6,6 +6,7 @@ spike.thresh <- 0.25
 radius <- 50 # Framewise displacement, as per Power, et al. 2012 (radius ~50mm)
 
 for (i in 1:length(args)) {
+  print(args[i])
   if (file.exists(args[i])) {
     input <- args[i]
   } else if (dir.exists(args[i])) {
@@ -22,11 +23,6 @@ if (is.null(input)) {
 if (is.null(dir.save)) {
   dir.save <- dirname(input)
 }
-
-print(input)
-print(dir.save)
-print(spike.thresh)
-print(radius)
 
 library(tools)
 
