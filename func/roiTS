@@ -142,7 +142,7 @@ mkdir -p ${DIR_SAVE}
 fslmeants \
   -i ${TS_BOLD} \
   -o ${DIR_SAVE}/${PREFIX}_ts-${TEMPLATE_SPACE}+${LABEL}.csv \
-  --label=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_label-${LABEL}.nii.gz
+  --label=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_label-${LABEL}.nii.gz
 sed -i s/"  "/","/g ${DIR_SAVE}/${PREFIX}_ts-${TEMPLATE_SPACE}+${LABEL}.csv
 sed -i s/",$"//g ${DIR_SAVE}/${PREFIX}_ts-${TEMPLATE_SPACE}+${LABEL}.csv
 
