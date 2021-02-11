@@ -7,7 +7,7 @@ dir.save <- args[2]
 spike.thresh <- args[3]
 
 base.name <- unlist(strsplit(input, split="_"))
-base.name <- paste(base.name[1:(length(base.name-1))], collapse="_")
+base.name <- paste(base.name[1:(length(base.name)-1)], collapse="_")
 
 df <- read.csv(input, header=FALSE, sep="\t")
 
