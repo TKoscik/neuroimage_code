@@ -91,6 +91,7 @@ FG_ORDER="normal"
 FG_CBAR="true"
 FG_VOL=1
 FG_MASK_VOL=1
+FG_ALPHA=50
 
 ROI=
 ROI_LEVEL=
@@ -793,7 +794,8 @@ if [[ -n ${FG} ]]; then
     ## set background transparency and overlay on background - - - - - - - - - -
     for (( j=0; j<${NX}; j++ )); do
       unset comp_fcn
-      comp_fcn="composite ${DIR_SCRATCH}/X${j}_FG_${i}.png"
+      comp_fcn="composite -blend ${FG_ALPHA}x100"
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
         comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}_FGMASK_${i}.png"
@@ -803,7 +805,8 @@ if [[ -n ${FG} ]]; then
     done
     for (( j=0; j<${NY}; j++ )); do
       unset comp_fcn
-      comp_fcn="composite ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
+      comp_fcn="composite -blend ${FG_ALPHA}x100"
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
         comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}_FGMASK_${i}.png"
@@ -813,7 +816,8 @@ if [[ -n ${FG} ]]; then
     done
     for (( j=0; j<${NZ}; j++ )); do
       unset comp_fcn
-      comp_fcn="composite ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
+      comp_fcn="composite -blend ${FG_ALPHA}x100"
+      comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
         comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}_FGMASK_${i}.png"

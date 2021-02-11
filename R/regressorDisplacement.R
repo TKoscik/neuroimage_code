@@ -48,4 +48,3 @@ write.table(spikes,
   file=paste0(dir.save, "/", basename(base.name), "_spike.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
-
