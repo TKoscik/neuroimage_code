@@ -23,6 +23,11 @@ if (is.null(dir.save)) {
   dir.save <- dirname(input)
 }
 
+print(input)
+print(dir.save)
+print(spike.thresh)
+print(radius)
+
 library(tools)
 
 # setup file names -------------------------------------------------------------
@@ -62,6 +67,6 @@ write.table(RMS, file=paste0(file.prefix, "_RMS.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # calculate spikes -------------------------------------------------------------
-spike <- (RMS > thresh) * 1
+spike <- (RMS > spike.thresh) * 1
 write.table(spike, file=paste0(file.prefix, "_spike.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
