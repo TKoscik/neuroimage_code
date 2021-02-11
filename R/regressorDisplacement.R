@@ -32,18 +32,19 @@ rel.disp <- sqrt(rowSums(tf))
 # write output
 write.table(rel.disp,
   file=paste0(dir.save, "/", basename(base.name), "_FD+rel.1D"),
-  quotes=F, row.names=F, col.names=F, sep="\t")
+  quote=F, row.names=F, col.names=F, sep="\t")
 
 # root mean square of cumulative displacement
 rms.disp <- cumsum(sqrt(rel.disp)^2)
 # write output
 write.table(cum.disp,
   file=paste0(dir.save, "/", basename(base.name), "_FD+rms.1D"),
-  quotes=F, row.names=F, col.names=F, sep="\t")
+  quote=F, row.names=F, col.names=F, sep="\t")
 
 # spike
 spikes <- (cum.disp > spike.thresh) * 1
 # write output
 write.table(spikes,
   file=paste0(dir.save, "/", basename(base.name), "_spike.1D"),
-  quotes=F, row.names=F, col.names=F, sep="\t")
+  quote=F, row.names=F, col.names=F, sep="\t")
+
