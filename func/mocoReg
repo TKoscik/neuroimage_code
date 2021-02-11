@@ -362,8 +362,8 @@ mkdir -p ${DIR_REGRESSOR}
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
 
-mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/
-mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/
+mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+6.1D
+mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+12.1D
 
 mkdir -p ${DIR_PROJECT}/derivatives/inc/func/mask
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
