@@ -6,11 +6,12 @@ spike.thresh <- 0.25
 radius <- 50 # Framewise displacement, as per Power, et al. 2012 (radius ~50mm)
 
 for (i in 1:length(args)) {
-  if (file.exists(args[i])) {
-    input <- args[i]
-    print(input)
-  } else if (dir.exists(args[i])) {
-    dir.save <- args[i]
+  if (file.exists(args[i])) { # for some dumb reason this considers directories files
+    if (!dir.exists(args[i])) {
+      input <- args[i]
+    } else {
+      dir.save <- args[i]
+    }
   } else if (grepl("spike", args[i])) {
     spike.thresh <- as.numeric(unlist(strsplit(args[i], split="="))[2])
   } else if (grepl("rad", args[i])) {
