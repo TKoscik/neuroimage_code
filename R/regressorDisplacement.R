@@ -54,7 +54,7 @@ write.table(df, file=paste0(file.prefix, "_RD+mm.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # get framewise displacement ---------------------------------------------------
-FD <- rowSums(abs(tf))
+FD <- rowSums(abs(df))
 write.table(FD, file=paste0(file.prefix, "_FD.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
