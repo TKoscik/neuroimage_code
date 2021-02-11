@@ -1,50 +1,67 @@
 args <- commandArgs(trailingOnly = TRUE)
 
+input <- NULL
+dir.save <- NULL
+spike.thresh <- 0.25
+radius <- 50 # Framewise displacement, as per Power, et al. 2012 (radius ~50mm)
+
+for (i in 1:length(args)) {
+  if (file.exists(args[i])) {
+    input <- args[i]
+  } else if (dir.exists(args[i])) {
+    dir.save <- args[i]
+  } else if (grepl("spike", args[i])) {
+    spike.thresh <- as.numeric(unlist(strsplit(args[i], split="="))[2])
+  } else if (grepl("rad", args[i])) {
+    radius <- as.numeric(unlist(strsplit(args[i], split="="))[2])
+  }
+}
+if (is.null(input)) {
+  error("ERROR: [INC regressorDisplacement.R] input 1D file must be provided")
+}
+if (is.null(dir.save)) {
+  dir.save <- dirname(input)
+}
+
 library(tools)
 
-input <- args[1]
-dir.save <- args[2]
-spike.thresh <- args[3]
-
+# setup file names -------------------------------------------------------------
 base.name <- unlist(strsplit(input, split="_"))
 base.name <- paste(base.name[1:(length(base.name)-1)], collapse="_")
+file.prefix <- paste0(dir.save, "/", basename(base.name))
 
+# load input 1D file -----------------------------------------------------------
 df <- read.csv(input, header=FALSE, sep="\t")
-
-# absolute displacement
-tf <- df
-tf[ ,1:3] <- 0.2*80^2 * ((cos(tf[ ,1:3]) - 1)^2 + (sin(tf[ ,1:3]))^2)
-tf[ ,4:6] <- tf[ ,4:6]^2
-abs.disp <- sqrt(rowSums(tf))
-# write output
-write.table(abs.disp,
-  file=paste0(dir.save, "/", basename(base.name), "_FD+abs.1D"),
-  quote=F, row.names=F, col.names=F, sep="\t")
-
-# relative displacement
-tf <- df
-for (i in 1:ncol(tf)) {
-  tf[,i] <- c(0, diff(tf[,1]))
+if (ncol(df) != 6) {
+  error("ERROR [INC regressorDisplacement.R] expecting 6 DOF motion parameters")
 }
-tf[ ,1:3] <- 0.2*80^2 * ((cos(tf[ ,1:3]) - 1)^2 + (sin(tf[ ,1:3]))^2)
-tf[ ,4:6] <- tf[ ,4:6]^2
-rel.disp <- sqrt(rowSums(tf))
-# write output
-write.table(rel.disp,
-  file=paste0(dir.save, "/", basename(base.name), "_FD+rel.1D"),
+
+# Calculate displacement for each vector----------------------------------------
+## convert radians to degrees - - - - - - - - - - - - - - - - - - - - - - - - - 
+df[ ,1:3] <- (df[ ,1:3] * 180) / pi
+# calculate rotational distance specified - - - - - - - - - - - - - - - - - - - 
+df[ ,1:3] <- 2 * pi * radius * (df[ ,1:3] / 360)
+# write displacement in mm file - - - - - - - - - - - - - - - - - - - - - - - - 
+write.table(df, file=paste0(file.prefix, "_AD+mm.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
-# root mean square of cumulative displacement
-rms.disp <- cumsum(sqrt(rel.disp)^2)
-# write output
-write.table(rms.disp,
-  file=paste0(dir.save, "/", basename(base.name), "_FD+rms.1D"),
+# calculate change in displacement between timepoints --------------------------
+for (i in 1:ncol(df)) { df[ ,i] <- c(0, diff(df[ ,i])) }
+# write relative displacement in mm file - - - - - - - - - - - - - - - - - - - -
+write.table(df, file=paste0(file.prefix, "_RD+mm.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
-# spike
-spikes <- (rms.disp > spike.thresh) * 1
-# write output
-write.table(spikes,
-  file=paste0(dir.save, "/", basename(base.name), "_spike.1D"),
+# get framewise displacement ---------------------------------------------------
+FD <- rowSums(abs(tf))
+write.table(FD, file=paste0(file.prefix, "_FD.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
+# calculate RMS ----------------------------------------------------------------
+RMS <- sqrt(c(0,diff(FD))^2)
+write.table(RMS, file=paste0(file.prefix, "_RMS.1D"),
+  quote=F, row.names=F, col.names=F, sep="\t")
+
+# calculate spikes -------------------------------------------------------------
+spike <- (RMS > thresh) * 1
+write.table(spike, file=paste0(file.prefix, "_spike.1D"),
+  quote=F, row.names=F, col.names=F, sep="\t")
