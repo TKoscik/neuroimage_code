@@ -93,15 +93,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
   echo '  --template <value>       name of template to use, e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --label <value>          Name of label - NOT PATH'
-  echo '                           e.g., WBCXN'
+  echo '  --label <value>          Name of label - NOT PATH, e.g., WBCXN'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo ''
   NO_LOG=true
@@ -123,7 +119,7 @@ fi
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${TS_BOLD})
 fi
-if [[ -z "${TEMPLATE}" ]] | [[ -z "${SPACE}" ]]; then
+if [[ -z "${TEMPLATE}" ]] || [[ -z "${SPACE}" ]]; then
   TEMPLATE_SPACE=$(getSpace -i ${TS_BOLD})
   TEMP=(${TEMPLATE_SPACE//+/ })
   TEMPLATE=${TEMP[0]}
