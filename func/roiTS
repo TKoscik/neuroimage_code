@@ -64,10 +64,10 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 TS_BOLD=
-LABEL=
-HELP=false
 TEMPLATE=
 SPACE=
+LABEL=
+HELP=false
 DIR_SAVE=
 
 while true; do
@@ -76,9 +76,9 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
-    --label) LABEL="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
+    --label) LABEL="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -91,7 +91,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --group <value>          group permissions for project,'
