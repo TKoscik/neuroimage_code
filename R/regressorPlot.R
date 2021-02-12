@@ -1,343 +1,399 @@
 args <- commandArgs(trailingOnly = TRUE)
 
+regressor.ls <- unlist(strsplit(args[1], split=","))
+if (length(args) > 1) {
+  for (i = 2:length(args)) {
+    if (grepl("docorr", args[i])) {
+      do.corr <- as.logical(unlist(strsplit(args[i], split="=")))
+    } else {
+      dir.save <- args[i]
+    }
+  }
+}
+
 library(tools)
 library(ggplot2)
 library(viridis)
 library(reshape2)
 
-timbow <- colorRampPalette(c("#440154FF", "#482878FF", "#3E4A89FF", 
-"#31688EFF", "#26828EFF", "#1F9E89FF", "#35B779FF", "#6DCD59FF", "#B4DE2CFF", "#FDE725FF", "#F8E125FF", "#FDC926FF", "#FDB32FFF", "#FA9E3BFF", "#F58B47FF", "#ED7953FF", "#E3685FFF", "#D8576BFF", "#CC4678FF"))
+timbow <- colorRampPalette(c("#440154FF", "#482878FF", "#3E4A89FF", "#31688EFF",
+  "#26828EFF", "#1F9E89FF", "#35B779FF", "#6DCD59FF", "#B4DE2CFF", "#FDE725FF",
+  "#F8E125FF", "#FDC926FF", "#FDB32FFF", "#FA9E3BFF", "#F58B47FF", "#ED7953FF",
+  "#E3685FFF", "#D8576BFF", "#CC4678FF"))
 
-regressor.ls <- unlist(strsplit(args[i], split=","))
+theme_obj <- theme(legend.title = element_blank(),
+                   legend.text = element_text(size=8, margin=margin(0,0,0,0)),
+                   legend.position = c(1.05, 0.5),
+                   legend.spacing.y = unit(0, "cm"),
+                   legend.key.height = unit(0,"lines"),
+                   strip.text.y = element_text(angle=0, size=10),
+                   strip.placement = "inside",
+                   axis.line.y = element_line(),
+                   axis.text.y = element_text(size=8),
+                   axis.text.x = element_blank(),
+                   plot.title = element_text(size=10),
+                   plot.subtitle = element_text(size=10),
+                   plot.title.position = "plot")
 
-group.ls <- character(0)
-color.ls <- character(0)
-color.vals <- character(0)
-df <- data.frame(TR=numeric(0),
-                 grouping.var=character(0),
-                 color.var=character(0),
-                 value=numeric(0),
-                 stringsAsFactors = FALSE)
+# make filename
+prefix <- unlist(strsplit(basename(regressor.ls[1]), split="_"))
+prefix <- paste(prefix[1:(length(prefix)-1)], collapse="_")
+prefix <- paste0(prefix)
+if (file.exists(paste0(dir.save, "/", prefix, "_regressors.png"))) {
+  list.files(dir.save, pattern=paste0(prefix, "_regressors"))
+  suffix <- paste0("_", length(list.files)+1)
+} else {
+  suffix <- ""
+}
+
+
+plots <- list()
+plot.count <- numeric()
 for (i in 1:length(regressor.ls)) {
-  tf <- read.csv(regressor.ls[i], header=FALSE, sep="\t")
+  tf <- read.csv(regressor.ls[i], header=FALSE, sep="\t", stringsAsFactors = F)
   nTR <- nrow(tf)
   nVar <- ncol(tf)
+  type.1d <- FALSE
+  if (i == 1) { df <- data.frame(TR=1:nTR) }
   if (grepl("moco[+]6[.]1D", regressor.ls[i])) {
-    group.label <- "MoCo 6df"
-    uf <- data.frame(TR=rep(1:nTR, nVar),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(rep("X", nTR), rep("Y", nTR), rep("Z", nTR),
-                                 rep("Roll", nTR), rep("Pitch", nTR), rep("Yaw", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("X" %in% color.ls)) { 
-      color.ls <- c(color.ls, "X")
-      color.vals <- c(color.vals, "#a80000")
-    }
-    if (!("Y" %in% color.ls)) {
-      color.ls <- c(color.ls, "Y")
-      color.vals <- c(color.vals, "#00a800")
-    }
-    if (!("Z" %in% color.ls)) {
-      color.ls <- c(color.ls, "Z")
-      color.vals <- c(color.vals, "#0000a8")
-    }
-    if (!("Roll" %in% color.ls)) {
-      color.ls <- c(color.ls, "Roll")
-      color.vals <- c(color.vals, "#a86400")
-    }
-    if (!("Pitch" %in% color.ls)) {
-      color.ls <- c(color.ls, "Pitch")
-      color.vals <- c(color.vals, "#00a864")
-    }
-    if (!("Yaw" %in% color.ls)) {
-      color.ls <- c(color.ls, "Yaw")
-      color.vals <- c(color.vals, "#6400a8")
-    }
-  } else if (grepl("moco[+]6[+]deriv[.]1D", regressor.ls[i])) {
-    group.label <- "MoCo 6df dx"
-    uf <- data.frame(TR=rep(1:nTR, ncol(tf)),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(rep("X", nTR), rep("Y", nTR), rep("Z", nTR),
-                                 rep("Roll", nTR), rep("Pitch", nTR), rep("Yaw", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("X" %in% color.ls)) {
-      color.ls <- c(color.ls, "X")
-      color.vals <- c(color.vals, "#a80000")
-    }
-    if (!("Y" %in% color.ls)) {
-      color.ls <- c(color.ls, "Y")
-      color.vals <- c(color.vals, "#00a800")
-    }
-    if (!("Z" %in% color.ls)) {
-      color.ls <- c(color.ls, "Z")
-      color.vals <- c(color.vals, "#0000a8")
-    }
-    if (!("Roll" %in% color.ls)) {
-      color.ls <- c(color.ls, "Roll")
-      color.vals <- c(color.vals, "#a86400")
-    }
-    if (!("Pitch" %in% color.ls)) {
-      color.ls <- c(color.ls, "Pitch")
-      color.vals <- c(color.vals, "#00a864")
-    }
-    if (!("Yaw" %in% color.ls)) {
-      color.ls <- c(color.ls, "Yaw")
-      color.vals <- c(color.vals, "#6400a8")
-    }
-  } else if (grepl("moco[+]6[+]quad[.]1D", regressor.ls[i])) {
-    group.label <- "MoCo 6df sq."
-    uf <- data.frame(TR=rep(1:nTR, ncol(tf)),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(rep("X", nTR), rep("Y", nTR), rep("Z", nTR),
-                                 rep("Roll", nTR), rep("Pitch", nTR), rep("Yaw", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("X" %in% color.ls)) {
-      color.ls <- c(color.ls, "X")
-      color.vals <- c(color.vals, "#a80000")
-    }
-    if (!("Y" %in% color.ls)) {
-      color.ls <- c(color.ls, "Y")
-      color.vals <- c(color.vals, "#00a800")
-    }
-    if (!("Z" %in% color.ls)) {
-      color.ls <- c(color.ls, "Z")
-      color.vals <- c(color.vals, "#0000a8")
-    }
-    if (!("Roll" %in% color.ls)) {
-      color.ls <- c(color.ls, "Roll")
-      color.vals <- c(color.vals, "#a86400")
-    }
-    if (!("Pitch" %in% color.ls)) {
-      color.ls <- c(color.ls, "Pitch")
-      color.vals <- c(color.vals, "#00a864")
-    }
-    if (!("Yaw" %in% color.ls)) {
-      color.ls <- c(color.ls, "Yaw")
-      color.vals <- c(color.vals, "#6400a8")
-    }
-  } else if (grepl("moco[+]6[+]quad[+]deriv[.]1D", regressor.ls[i])) {
-    group.label <- "MoCo 6df sq. dx"
-    uf <- data.frame(TR=rep(1:nTR, ncol(tf)),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(rep("X", nTR), rep("Y", nTR), rep("Z", nTR),
-                                 rep("Roll", nTR), rep("Pitch", nTR), rep("Yaw", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("X" %in% color.ls)) {
-      color.ls <- c(color.ls, "X")
-      color.vals <- c(color.vals, "#a80000")
-    }
-    if (!("Y" %in% color.ls)) {
-      color.ls <- c(color.ls, "Y")
-      color.vals <- c(color.vals, "#00a800")
-    }
-    if (!("Z" %in% color.ls)) {
-      color.ls <- c(color.ls, "Z")
-      color.vals <- c(color.vals, "#0000a8")
-    }
-    if (!("Roll" %in% color.ls)) {
-      color.ls <- c(color.ls, "Roll")
-      color.vals <- c(color.vals, "#a86400")
-    }
-    if (!("Pitch" %in% color.ls)) {
-      color.ls <- c(color.ls, "Pitch")
-      color.vals <- c(color.vals, "#00a864")
-    }
-    if (!("Yaw" %in% color.ls)) {
-      color.ls <- c(color.ls, "Yaw")
-      color.vals <- c(color.vals, "#6400a8")
-    }
-  } else if (grepl("compcorr-anatomy[.]1D", regressor.ls[i])) {
-    group.label <- "Anatomical CompCorr"
-    uf <- data.frame(TR=rep(1:nTR, ncol(tf)),
-                     grouping.var=c(rep(group.label, 2*nTR)),
-                     color.var=c(rep("CSF", nTR),
-                                 rep("WM", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("CSF" %in% color.ls)) {
-      color.ls <- c(color.ls, "CSF")
-      color.vals <- c(color.vals, "#a800a8")
-    }
-    if (!("WM" %in% color.ls)) {
-      color.ls <- c(color.ls, "WM")
-      color.vals <- c(color.vals, "#00a8a8")
-    }
-  } else if (grepl("compcorr-temporal[.]1D", regressor.ls[i])) {
-    group.label <- "Temporal CompCorr"
-    uf <- data.frame(TR=rep(1:nTR, ncol(tf)),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(sort(rep(paste("Comp", 1:nVar), nTR))),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    color.ls <- c(color.ls, paste("Comp", 1:nVar))
-    color.vals <- c(color.vals, timbow(nVar))
-  } else if (grepl("global-anatomy[.]1D", regressor.ls[i])) {
-    group.label <- "Global Anatomical"
-    uf <- data.frame(TR=rep(1:nTR, 1),
-                     grouping.var=c(rep(group.label, nTR)),
-                     color.var=c(rep(NA, nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if ("NA" %in% color.ls) {
-      color.ls <- c(color.ls, "NA")
-      color.vals <- c(color.vals, "#000000")
-    }
-  } else if (grepl("global-temporal[.]1D", regressor.ls[i])) {
-    group.label <- "Global Temporal"
-    uf <- data.frame(TR=rep(1:nTR, 1),
-                     grouping.var=c(rep(group.label, nTR)),
-                     color.var=c(rep(NA, nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if ("NA" %in% color.ls) {
-      color.ls <- c(color.ls, "NA")
-      color.vals <- c(color.vals, "#000000")
-    }
-  } else if (grepl("AD[+]mm[.]1D", regressor.ls[i])) {
-    group.label <- "Absolute Displacement (mm)"
-    uf <- data.frame(TR=rep(1:nTR, nVar),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(rep("X", nTR), rep("Y", nTR), rep("Z", nTR),
-                                 rep("Roll", nTR), rep("Pitch", nTR), rep("Yaw", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("X" %in% color.ls)) { 
-      color.ls <- c(color.ls, "X")
-      color.vals <- c(color.vals, "#a80000")
-    }
-    if (!("Y" %in% color.ls)) {
-      color.ls <- c(color.ls, "Y")
-      color.vals <- c(color.vals, "#00a800")
-    }
-    if (!("Z" %in% color.ls)) {
-      color.ls <- c(color.ls, "Z")
-      color.vals <- c(color.vals, "#0000a8")
-    }
-    if (!("Roll" %in% color.ls)) {
-      color.ls <- c(color.ls, "Roll")
-      color.vals <- c(color.vals, "#a86400")
-    }
-    if (!("Pitch" %in% color.ls)) {
-      color.ls <- c(color.ls, "Pitch")
-      color.vals <- c(color.vals, "#00a864")
-    }
-    if (!("Yaw" %in% color.ls)) {
-      color.ls <- c(color.ls, "Yaw")
-      color.vals <- c(color.vals, "#6400a8")
-    }
-  } else if (grepl("RD[+]mm[.]1D", regressor.ls[i])) {
-    group.label <- "Relative Displacement (mm)"
-    uf <- data.frame(TR=rep(1:nTR, nVar),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=c(rep("X", nTR), rep("Y", nTR), rep("Z", nTR),
-                                 rep("Roll", nTR), rep("Pitch", nTR), rep("Yaw", nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if (!("X" %in% color.ls)) { 
-      color.ls <- c(color.ls, "X")
-      color.vals <- c(color.vals, "#a80000")
-    }
-    if (!("Y" %in% color.ls)) {
-      color.ls <- c(color.ls, "Y")
-      color.vals <- c(color.vals, "#00a800")
-    }
-    if (!("Z" %in% color.ls)) {
-      color.ls <- c(color.ls, "Z")
-      color.vals <- c(color.vals, "#0000a8")
-    }
-    if (!("Roll" %in% color.ls)) {
-      color.ls <- c(color.ls, "Roll")
-      color.vals <- c(color.vals, "#a86400")
-    }
-    if (!("Pitch" %in% color.ls)) {
-      color.ls <- c(color.ls, "Pitch")
-      color.vals <- c(color.vals, "#00a864")
-    }
-    if (!("Yaw" %in% color.ls)) {
-      color.ls <- c(color.ls, "Yaw")
-      color.vals <- c(color.vals, "#6400a8")
-    }
-  } else if (grepl("FD[.]1D", regressor.ls[i])) {
-    group.label <- "Framewise Displacement"
-    uf <- data.frame(TR=rep(1:nTR, 1),
-                     grouping.var=c(rep(group.label, nTR)),
-                     color.var=c(rep(NA, nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if ("NA" %in% color.ls) {
-      color.ls <- c(color.ls, "NA")
-      color.vals <- c(color.vals, "#000000")
-    }
-  } else if (grepl("RMS[.]1D", regressor.ls[i])) {
-    group.label <- "RMS"
-    uf <- data.frame(TR=rep(1:nTR, 1),
-                     grouping.var=c(rep(group.label, nTR)),
-                     color.var=c(rep(NA, nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if ("NA" %in% color.ls) {
-      color.ls <- c(color.ls, "NA")
-      color.vals <- c(color.vals, "#000000")
-    }
-  } else if (grepl("spike[.]1D", regressor.ls[i])) {
-    group.label <- "Spike"
-    uf <- data.frame(TR=rep(1:nTR, 1),
-                     grouping.var=c(rep(group.label, nTR)),
-                     color.var=c(rep(NA, nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    if ("NA" %in% color.ls) {
-      color.ls <- c(color.ls, "NA")
-      color.vals <- c(color.vals, "#000000")
-    }
-  } else if (grepl("moco[+]12[.]1D", regressor.ls[i])) {
-    group.label <- "MoCo 12df"
-    uf <- data.frame(TR=rep(1:nTR, nVar),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=sort(rep(paste("affine", 1:nVar), nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    color.ls <- c(color.ls, paste("affine", 1:nVar))
-    color.vals <- c(color.vals, timbow(nVar))
-  } else {
-    group.label <- "Regressor"
-    uf <- data.frame(TR=rep(1:nTR, nVar),
-                     grouping.var=c(rep(group.label, nVar*nTR)),
-                     color.var=sort(rep(paste("var", 1:nVar), nTR)),
-                     value=as.numeric(unlist(tf)), stringsAsFactors = FALSE)
-    group.ls <- c(group.ls, group.label)
-    color.ls <- c(color.ls, paste("var", 1:nVar))
-    color.vals <- c(color.vals, timbow(nVar))
+    plot.count <- c(plot.count, 2)
+    type.1d <- TRUE
+    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
+                      "Rotation:X", "Rotation:Y", "Rotation:Z")
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
+                     levels=c("Translation", "Rotation"))
+    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
+                       levels=c("X", "Y", "Z"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_x_continuous(expand=c(0,0)) +
+      facet_grid(xfm ~ ., scales="free_y") +
+      geom_line(size=1) +
+      geom_hline(yintercept = 0, linetype="dotted") +
+      labs(title="Rigid Body Motion Correction", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
+    
   }
-  df <- rbind(df,uf)
+  if (grepl("moco[+]6[+]deriv[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 2)
+    type.1d <- TRUE
+    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
+                      "Rotation:X", "Rotation:Y", "Rotation:Z")
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
+                     levels=c("Translation", "Rotation"))
+    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
+                       levels=c("X", "Y", "Z"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_x_continuous(expand=c(0,0)) +
+      facet_grid(xfm ~ ., scales="free_y") +
+      geom_line(size=1) +
+      geom_hline(yintercept = 0, linetype="dotted") +
+      labs(title="Rigid Body Motion Correction - 1st derivative", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("moco[+]6[+]quad[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 2)
+    type.1d <- TRUE
+    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
+                      "Rotation:X", "Rotation:Y", "Rotation:Z")
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
+                     levels=c("Translation", "Rotation"))
+    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
+                       levels=c("X", "Y", "Z"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_x_continuous(expand=c(0,0)) +
+      facet_grid(xfm ~ ., scales="free_y") +
+      geom_line(size=1) +
+      geom_hline(yintercept = 0, linetype="dotted") +
+      labs(title="Rigid Body Motion Correction - squared", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("moco[+]6[+]quad[+]deriv[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 2)
+    type.1d <- TRUE
+    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
+                      "Rotation:X", "Rotation:Y", "Rotation:Z")
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
+                     levels=c("Translation", "Rotation"))
+    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
+                       levels=c("X", "Y", "Z"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_x_continuous(expand=c(0,0)) +
+      facet_grid(xfm ~ ., scales="free_y") +
+      geom_line(size=1) +
+      geom_hline(yintercept = 0, linetype="dotted") +
+      labs(title="Rigid Body Motion Correction - squared, 1st derivative", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("compcorr-anatomy[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    uf <- tf
+    for (j in 1:nVar) { uf[ ,j] <- (uf[ ,j] - mean(uf[ ,j], na.rm=T)) / sd(uf[ ,j], na.rm=T) }
+    colnames(uf) <- colnames(tf) <- c("CSF", "WM")
+    uf$TR <- 1:nTR
+    pf <- melt(uf, id.vars="TR")
+    q <- quantile(pf$value, c(0.025, 0.975))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=variable)) +
+      theme_minimal() +
+      scale_color_manual(values = c("#c82c2c", "#2c2cc8")) +
+      scale_x_continuous(expand=c(0,0)) +
+      coord_cartesian(ylim=q) +
+      geom_line(size=1) +
+      geom_hline(yintercept=q, linetype="dashed") +
+      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
+               x=Inf, y=q[1]+2, vjust=0, hjust=1, size=3) +
+      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
+               x=Inf, y=q[2]-2, vjust=1, hjust=1, size=3) +
+      labs(title="CompCorr - Anatomical - scaled", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    
+  }
+  if (grepl("compcorr-temporal[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    uf <- tf
+    for (j in 1:nVar) { uf[ ,j] <- (uf[ ,j] - mean(uf[ ,j], na.rm=T)) / sd(uf[ ,j], na.rm=T) }
+    colnames(uf) <- colnames(tf) <- paste("Comp", 1:nVar)
+    uf$TR <- 1:nTR
+    pf <- melt(uf, id.vars="TR")
+    pf$group <- factor(unlist(strsplit(as.character(pf$variable), split=":")))
+    q <- quantile(pf$value, c(0.025, 0.975))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=group)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(nVar)) +
+      scale_x_continuous(expand=c(0,0)) +
+      coord_cartesian(ylim=q) +
+      geom_line(size=1) +
+      geom_hline(yintercept=q, linetype="dashed") +
+      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
+               x=Inf, y=q[1]*0.95, vjust=0, hjust=1, size=3) +
+      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
+               x=Inf, y=q[2]*0.95, vjust=1, hjust=1, size=3) +
+      labs(title="CompCorr - Temporal - scaled", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("global-anatomy[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    pf <- data.frame(TR=1:nTR,
+                     value = scale(as.numeric(unlist(tf[,1]))))
+    q <- quantile(pf$value, c(0.025, 0.975))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
+      theme_minimal() +
+      scale_x_continuous(expand=c(0,0)) +
+      coord_cartesian(ylim=q) +
+      geom_line(size=1) +
+      geom_hline(yintercept=q, linetype="dashed") +
+      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
+               x=Inf, y=q[1]*0.95, vjust=0, hjust=1, size=3) +
+      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
+               x=Inf, y=q[2]*0.95, vjust=1, hjust=1, size=3) +
+      labs(title="Global Anatomical - scaled", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("global-temporal[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    pf <- data.frame(TR=1:nTR,
+                     value = scale(as.numeric(unlist(tf[,1]))))
+    q <- quantile(pf$value, c(0.025, 0.975))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
+      theme_minimal() +
+      scale_x_continuous(expand=c(0,0)) +
+      coord_cartesian(ylim=q) +
+      geom_line(size=1) +
+      geom_hline(yintercept=q, linetype="dashed") +
+      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
+               x=Inf, y=q[1]+2, vjust=0, hjust=1, size=3) +
+      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
+               x=Inf, y=q[2]-2, vjust=1, hjust=1, size=3) +
+      labs(title="Global Temporal - scaled", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("AD[+]mm[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 2)
+    type.1d <- TRUE
+    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
+                      "Rotation:X", "Rotation:Y", "Rotation:Z")
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
+                     levels=c("Translation", "Rotation"))
+    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
+                       levels=c("X", "Y", "Z"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_x_continuous(expand=c(0,0)) +
+      facet_grid(xfm ~ ., scales="free_y") +
+      geom_line(size=1) +
+      geom_hline(yintercept = 0, linetype="dotted") +
+      labs(title="Absolute Displacement (mm)", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("RD[+]mm[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 2)
+    type.1d <- TRUE
+    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
+                      "Rotation:X", "Rotation:Y", "Rotation:Z")
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
+                     levels=c("Translation", "Rotation"))
+    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
+                       levels=c("X", "Y", "Z"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_x_continuous(expand=c(0,0)) +
+      facet_grid(xfm ~ ., scales="free_y") +
+      geom_line(size=1) +
+      geom_hline(yintercept = 0, linetype="dotted") +
+      labs(title="Relative Displacement (mm)", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("FD[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    pf <- data.frame(TR=1:nTR, value = as.numeric(unlist(tf[,1])))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
+      theme_minimal() +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      labs(title="Framewise Displacement", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("RMS[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    pf <- data.frame(TR=1:nTR, value = as.numeric(unlist(tf[,1])))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
+      theme_minimal() +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      labs(title="RMS", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("spike[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    pf <- data.frame(TR=1:nTR, value = as.numeric(unlist(tf[,1])))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
+      theme_minimal() +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      labs(title="Spike", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (grepl("moco[+]12[.]1D", regressor.ls[i])) {
+    type.1d <- TRUE
+    plot.count <- c(plot.count, 1)
+    uf <- tf
+    for (j in 1:nVar) { uf[ ,j] <- scale(uf[ ,j]) }
+    pf <- data.frame(TR=rep(1:nTR,nVar),
+                     group = c(sort(rep(paste("Affine", 1:nVar), nTR))),
+                     value = as.numeric(unlist(uf)))
+    pf$group <- factor(pf$group, levels=paste("Affine", 1:nVar))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=group)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(nVar)) +
+      guides(color=guide_legend(ncol=3)) +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      geom_hline(yintercept=0, linetype="dashed") +
+      labs(title="Affine Motion Correction", subtitle="(scaled)", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right", legend.spacing = unit(0,"lines"))
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  if (type.1d == FALSE) {
+    plot.count <- c(plot.count, 1)
+    pf <- data.frame(TR=rep(1:nTR,nVar),
+                     group = c(sort(rep(paste("Regressor", 1:nVar), nTR))),
+                     value = as.numeric(unlist(tf)))
+    pf$group <- factor(pf$group)
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=group)) +
+      theme_minimal() +
+      scale_color_manual(values = timbow(nVar)) +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      labs(title="Affine Motion Correction", y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="none")
+    tf <- tf[ ,-ncol(tf)]
+    
+  }
+  df <- cbind(df,tf)
 }
-df$grouping.var <- factor(df$grouping.var, levels = group.ls)
-df$color.var <- factor(df$color.var, levels=color.ls)
 
-ggplot(df, aes(x=TR, y=value, color=color.var)) +
-  theme_minimal() +
-  scale_color_manual(values = color.vals) +
-  scale_x_continuous(expand=c(0,0)) +
-  geom_hline(yintercept = 0, linetype="dotted") +
-  facet_wrap(~grouping.var, scales="free_y", ncol=1, strip.position="left") +
-  geom_line(size=1) +
-  labs(title="Nuisance Regressors", y=NULL, x=NULL) +
-  theme(axis.line.y = element_line(),
-        strip.text.y.left = element_text(angle=0, size=12, hjust=1),
-        strip.placement = "outside",
-        axis.text.y = element_text(size=8),
-        axis.text.x = element_blank(),
-        axis.title = element_text(size=12),
-        plot.title = element_text(size=12),
-        plot.title.position = "plot")
+plot_fcn <- "rgr_plot <- arrangeGrob("
+for (i in 1:length(regressor.ls)) {
+  plot_fcn <- paste0(plot_fcn, "plots[[", i, "]], ")
+}
+plot_fcn=paste0(plot_fcn, 'ncol=1, heights=c(', paste(plot.count, collapse=","), '), top="Nuisance Regressors")')
+eval(parse(text=plot_fcn))
 
-                 ggsave(filename = "temp.png",
-       path = "D:/tim/dev",
-       plot = the.plot,
+ggsave(filename = paste0(prefix, "_regressors", suffix, ".png"),
+       path = dir.save,
+       plot = rgr_plot,
        device = "png",
-       width = 7.5, height=0.5*nRGR, dpi=320)
+       width = 7.5, height=sum(plot.count), dpi=320)
+
+if (do.cor) {
+  df <- df[ ,-1]
+  corMX = melt(cor(df))
+  corMX$Var2 <- factor(corMX$Var2, levels=rev(levels(corMX$Var2)))
+  plot.corr <- ggplot(data=corMX, aes(x=Var1, y=Var2, fill=value)) +
+    theme_void() +
+    scale_fill_gradient2(midpoint = 0, limit=c(-1,1)) +
+    coord_equal() +
+    geom_raster() + 
+    labs(title="Nuisance Regressor - Correlations") +
+    theme(legend.title = element_blank(),
+          legend.text = element_text(size=8),
+          plot.title = element_text(size=10))
+  ggsave(filename = paste0(prefix, "_regressorsCorr", suffix, ".png"),
+         path = save.dir,
+         plot = plot.corr,
+         device = "png",
+         width = 3.5, height = 3.5, dpi=320)
+}
 
