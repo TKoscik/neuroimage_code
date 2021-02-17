@@ -101,9 +101,10 @@ ROI_ORDER="random"
 ROI_CBAR="false"
 ROI_VOL=1
 
+PLANE=z
+SLICE=
 LAYOUT=5x5
-LIMITS=
-# LIMITS=("BG", "BG_MASK", "FG", "FG;#", "FG_MASK", "FG_MASK;#", "ROI", "ROI;#", "10,100;13,130;45,150", "NA,NA;NA,NA;10:100")
+
 LABEL_NO_SLICE="false"
 LABEL_USE_VOX="false"
 LABEL_NO_LR="false"
@@ -148,7 +149,6 @@ while true; do
     --plane) PLANE="$2" ; shift 2 ;;
     --slice) SLICE="2" ; shift 2 ;;
     --layout) LAYOUT="$2" ; shift 2 ;;
-    --offset) OFFSET="$2" ; shift 2 ;;
     --limits) LIMITS="$2" ; shift 2 ;;
     --no-slice-label) LABEL_NO_SLICE="true" ; shift ;;
     --use-vox-label) LABEL_USE_VOX="true" ; shift ;;
