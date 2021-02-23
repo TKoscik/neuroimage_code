@@ -493,14 +493,8 @@ else
 fi
 
 slice_fcn="slicer ${BG} -u -l ${DIR_SCRATCH}/CBAR_BG.lut -i ${LO} ${HI}"
-for (( i=0; i<${NX}; i++ )); do
-  slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_BG.png"
-done
-for (( i=0; i<${NY}; i++ )); do
-  slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_BG.png"
-done
-for (( i=0; i<${NZ}; i++ )); do
-  slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_BG.png"
+for (( i=0; i<${NV}; i++ )); do
+  slice_fcn="${slice_fcn} -${PLANE,,} ${SLICE_PCT} ${DIR_SCRATCH}/V${i}_BG.png"
 done
 eval ${slice_fcn}
 
@@ -512,14 +506,8 @@ done
 
 if [[ -n ${BG_MASK} ]]; then
   slice_fcn="slicer ${BG_MASK} -u -l ${DIR_SCRATCH}/CBAR_MASK.lut -i 0 1"
-  for (( i=0; i<${NX}; i++ )); do
-    slice_fcn="${slice_fcn} -x ${XPCT[${i}]} ${DIR_SCRATCH}/X${i}_BGMASK.png"
-  done
-  for (( i=0; i<${NY}; i++ )); do
-    slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${i}_BGMASK.png"
-  done
-  for (( i=0; i<${NZ}; i++ )); do
-    slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${i}_BGMASK.png"
+  for (( i=0; i<${NV}; i++ )); do
+    slice_fcn="${slice_fcn} -${PLANE,,} ${SLICE_PCT} ${DIR_SCRATCH}/V${i}_BGMASK.png"
   done
   eval ${slice_fcn}
 
@@ -531,53 +519,37 @@ if [[ -n ${BG_MASK} ]]; then
 fi
 
 # composite BG BG_MASK on background
-for (( i=0; i<${NX}; i++ )); do
+for (( i=0; i<${NV}; i++ )); do
   unset comp_fcn
-  comp_fcn="composite ${DIR_SCRATCH}/X${i}_BG.png ${DIR_SCRATCH}/X${i}.png"
+  comp_fcn="composite ${DIR_SCRATCH}/V${i}_BG.png ${DIR_SCRATCH}/V${i}.png"
   if [[ -n ${BG_MASK} ]]; then
-    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}_BGMASK.png"
+    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/V${i}_BGMASK.png"
   fi
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${i}.png"
+  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/V${i}.png"
   eval ${comp_fcn}
 done
-for (( i=0; i<${NY}; i++ )); do
-  unset comp_fcn
-  comp_fcn="composite ${DIR_SCRATCH}/Y${i}_BG.png ${DIR_SCRATCH}/Y${i}.png"
-  if [[ -n ${BG_MASK} ]]; then
-    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}_BGMASK.png"
-  fi
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${i}.png"
-  eval ${comp_fcn}
-done
-for (( i=0; i<${NZ}; i++ )); do
-  unset comp_fcn
-  comp_fcn="composite ${DIR_SCRATCH}/Z${i}_BG.png ${DIR_SCRATCH}/Z${i}.png"
-  if [[ -n ${BG_MASK} ]]; then
-    comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}_BGMASK.png"
-  fi
-  comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${i}.png"
-  eval ${comp_fcn}
-done
-
 
 # Add Foreground Overlays ======================================================
-if [[ -n ${FG} ]]; then
-  for (( i=0; i<${#FG[@]}; i++ )); do
-    unset HILO LO HI
-    HILO=(${FG_THRESH[${i}]//,/ })
-    if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
-      LO=$(fslstats ${BG} -p ${HILO[0]})
-      HI=$(fslstats ${BG} -p ${HILO[1]})
-    else
-      LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
-      HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
-    fi
+for (( i=0; i<${#FG[@]}; i++ )); do
+  fslsplit ${FG[${i}]} ${DIR_SCRATCH}/FG_${i}_ -t
+  fslmaths ${FG[${i}]} -Tmax ${DIR_SCRATCH}/FG_${i}_tmax.nii.gz
+  fslmaths ${FG[${i}]} -Tmin ${DIR_SCRATCH}/FG_${i}_tmin.nii.gz
 
-    ## generate color bar
-    Rscript makeColors.R \
-      "palette" ${FG_COLOR[${i}]} "n" 200 \
-      "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
-      "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
+  unset HILO LO HI
+  HILO=(${FG_THRESH[${i}]//,/ })
+  if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
+    LO=$(fslstats ${DIR_SCRATCH}/FG_${i}_tmin.nii.gz -p ${HILO[0]})
+    HI=$(fslstats ${DIR_SCRATCH}/FG_${i}_tmax.nii.gz -p ${HILO[1]})
+  else
+    LO=$(fslstats -K ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}_tmin.nii.gz -p ${HILO[0]})
+    HI=$(fslstats -K ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}_tmax.nii.gz -p ${HILO[1]})
+  fi
+
+  ## generate color bar
+  Rscript makeColors.R \
+    "palette" ${FG_COLOR[${i}]} "n" 200 \
+    "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
+    "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
   
     ### add labels to color bar
     if [[ "${FG_CBAR[${i}]}" == "true" ]]; then
