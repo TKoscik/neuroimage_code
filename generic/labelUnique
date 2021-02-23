@@ -159,7 +159,7 @@ for (( i=0; i<${N_LABEL}; i++ )); do
     fi
     for (( k=${VOL_START}; k<${VOL_STOP}; k++ )); do
       fslroi ${LABEL[${i}]} ${TLABEL} ${k} 1
-      TVAL=(${VALUE[${i}]}//,/ )
+      TVAL=(${VALUE[${i}]//,/ })
       TNVAL=${#TVAL[@]}
       for (( l=0; l<${TNVAL}; l++ )); do
         MAX=$(fslstats ${MERGED} -p 100)
@@ -172,10 +172,10 @@ for (( i=0; i<${N_LABEL}; i++ )); do
           fslmaths ${LABEL[${i}]} -thr ${TVAL_RANGE[0]} -uthr ${TVAL_RANGE[0]} ${TLABEL}
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
           fslmaths ${TLABEL} -bin ${TMASK}
-          fslmaths ${TLABEL} -add ${MAX_LABEL} -mas ${TMASK} -add ${MERGED} ${MERGED}
+          fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
         else
           fslmaths ${LABEL[${i}]} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
-          fslmaths ${TLABEL} -add ${MAX_LABEL} -mas ${TLABEL} -add ${MAX_LABEL} -add ${MERGED} ${MERGED}
+          fslmaths ${TLABEL} -add ${MAX} -mas ${TLABEL} -add ${MAX} -add ${MERGED} ${MERGED}
         fi
         LabelClustersUniquely 3 ${MERGED} ${MERGED} 0
     done
