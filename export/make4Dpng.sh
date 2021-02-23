@@ -282,25 +282,23 @@ if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
 fi
 if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
 
-# Figure out number slices for each orientation --------------------------------
-### *** is PLANE useful and necessary?
-NX=0; NY=0; NZ=0
-ROW_LAYOUT=(${LAYOUT//\;/ })
-for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
-  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
-  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
-    TEMP=(${COL_LAYOUT[${j}]//\:/ })
-    if [[ "${TEMP[1]}" =~ "x" ]]; then
-      NX=$((${NX}+${TEMP[0]}))
-    fi
-    if [[ "${TEMP[1]}" =~ "y" ]]; then
-      NY=$((${NY}+${TEMP[0]}))
-    fi
-    if [[ "${TEMP[1]}" =~ "z" ]]; then
-      NZ=$((${NZ}+${TEMP[0]}))
-    fi
+# Figure out number slices based on number of volumes in FG --------------------
+## Assuming all images are in sync in 4D, e.g., timepoints, tensors, or statmaps
+## are the same for each FG image
+NV=0
+if [[ "${LAYOUT,,}" == *"x"* ]]; then
+  LAYOUT=${LAYOUT//x/ }
+  NV=$((${LAYOUT[0]}+${LAYOUT[1]}))
+else
+  ROW_LAYOUT=(${LAYOUT//\;/ })
+  for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
+    COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
+    for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
+      TEMP=(${COL_LAYOUT[${j}]//\:/ })
+      NV=$((${NV}+${TEMP[0]}))
+    done
   done
-done
+fi
 
 # select desired volume from multivolume images --------------------------------
 TV=$(niiInfo -i ${BG} -f vols)
