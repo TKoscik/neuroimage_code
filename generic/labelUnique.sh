@@ -167,7 +167,6 @@ for (( i=0; i<${N_LABEL}; i++ )); do
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
           fslmaths ${TLABEL} -bin ${TMASK}
           fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
-          LabelClustersUniquely 3 ${MERGED} ${MERGED} 0
         elif [[ "${TVAL[${l}]}" == *":"* ]]; then
           TVAL_RANGE=(${TVAL[${l}]//\:/ })
           fslmaths ${LABEL[${i}]} -thr ${TVAL_RANGE[0]} -uthr ${TVAL_RANGE[0]} ${TLABEL}
@@ -178,11 +177,12 @@ for (( i=0; i<${N_LABEL}; i++ )); do
           fslmaths ${LABEL[${i}]} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
           fslmaths ${TLABEL} -add ${MAX_LABEL} -mas ${TLABEL} -add ${MAX_LABEL} -add ${MERGED} ${MERGED}
         fi
+        LabelClustersUniquely 3 ${MERGED} ${MERGED} 0
     done
   done
 done
 
-mv ${MERGED} ${DIR_SAVE}/${FILE_NAME}.nii.gz
+mv ${MERGED} ${DIR_SAVE}/${PREFIX}.nii.gz
 
 #===============================================================================
 # End of Function

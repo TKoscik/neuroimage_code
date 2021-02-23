@@ -63,7 +63,7 @@ trap egress EXIT
 OPTS=$(getopt -o hvl --long \
 bg:,bg-vol:,bg-mask:,bg-mask-vol:,bg-thresh:,bg-color:,bg-direction:,bg-cbar,\
 fg:,fg-mask:,fg-mask-vol:,fg-thresh:,fg-color:,fg-direction:,fg-cbar,\
-roi:,roi-vol:,roi-level:,roi-color:,roi-direction:,roi-cbar,\
+roi:,roi-volume:,roi-value:,roi-color:,roi-direction:,roi-cbar,\
 plane:,slice:,
 image-layout:,bg-lim,no-slice-label,use-vox-label,no-lr-label,label-decimal:,\
 color-panel:,color-text:,color-decimal:,font-name:,font-size:,max-pixels:,\
@@ -95,7 +95,8 @@ FG_MASK_VOL=1
 FG_ALPHA=50
 
 ROI=
-ROI_LEVEL=
+ROI_VOLUME=
+ROI_VALUE=
 ROI_COLOR="#FF69B4"
 ROI_ORDER="random"
 ROI_CBAR="false"
@@ -141,10 +142,10 @@ while true; do
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
     --fg-cbar) FG_CBAR="true" ; shift ;;
     --roi) ROI="$2" ; shift 2 ;;
-    --roi-level) ROI_LEVEL="$2" ; shift 2 ;;
+    --roi-volume) ROI_VOLUME="$2" ; shift 2 ;;
+    --roi-value) ROI_VALUE="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
-    --roi-vol) ROI_VOL="$2" ; shift 2 ;;
     --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
     --plane) PLANE="$2" ; shift 2 ;;
     --slice) SLICE="2" ; shift 2 ;;
@@ -244,22 +245,12 @@ if [[ -z ${BG} ]]; then
   fi
 fi
 
-ROI_FILE=(${ROI_FILE//,/ })
+ROI=(${ROI//,/ })
 ROI_VOLUME=(${ROI_VOLUME//;/ })
 ROI_VALUE=(${ROI_VALUE//;/ })
-#ROI=(${ROI//;/ })
-#ROI_LEVEL=(${ROI_LEVEL//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
-ROI_N=${#ROI[@]}
-if [[ ${ROI_N} -gt 1 ]]; then
-  if [[ ${#ROI_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${ROI_N}; i++ )); do
-      ROI_VOL[${i}]=(${ROI_VOL[0]})
-    done
-  fi
-fi
 
 if [[ "${PLANE,,}" == "x" ]]; then
   PLANE_NUM=0
@@ -270,21 +261,41 @@ elif [[ "${PLANE,,}" == "z" ]]; then
 fi
 
 # Get image information -------------------------------------------------------
-unset DIMS PIXDIM ORIGIN ORIENT
-DIMS=($(niiInfo -i ${BG} -f voxels))
-PIXDIM=($(niiInfo -i ${BG} -f spacing))
-ORIGIN=($(niiInfo -i ${BG} -f origin))
-ORIENT=($(niiInfo -i ${BG} -f orient))
-VOLS=($(niiInfo -i ${FG[0]} -f volumes))
+unset BG_DIMS BG_PIXDIM BG_ORIGIN BG_ORIENT
+BG_DIMS=($(niiInfo -i ${BG} -f voxels))
+BG_PIXDIM=($(niiInfo -i ${BG} -f spacing))
+BG_ORIGIN=($(niiInfo -i ${BG} -f origin))
+BG_ORIENT=($(niiInfo -i ${BG} -f orient))
+unset FG_DIMS FG_PIXDIM FG_ORIGIN FG_ORIENT FG_VOLS
+FG_DIMS=($(niiInfo -i ${FG[0]} -f voxels))
+FG_PIXDIM=($(niiInfo -i ${FG[0]} -f spacing))
+FG_ORIGIN=($(niiInfo -i ${FG[0]} -f origin))
+FG_ORIENT=($(niiInfo -i ${FG[0]} -f orient))
+FG_VOLS=($(niiInfo -i ${FG[0]} -f volumes))
 
 # get slice percentage --------------------------------------------------------
 if [[ "${SLICE,,}" == "null" ]]; then
-  SLICE_PCT=0.5
-  if [[ "${PLANE,,}" == "x" ]]; then SLICE_PCT=0.49; fi
+  unset BB_CHK BB_STR BB
+  BB_CHK=${FG[0]}
+  if [[ -n ${FG_MASK} ]]; then BB_CHK=${FG_MASK[0]}; fi
+  BB_STR=$(3dAutobox -extent -input ${BB_CHK} 2>&1)
+  if [[ "${PLANE,,}" == "x" ]]; then
+    BB=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')
+    #"#'######################################### prevents bad code highlighting
+  elif [[ "${PLANE,,}" == "y" ]]; then
+    BB=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')
+    #"#'######################################### prevents bad code highlighting
+  elif [[ "${PLANE,,}" == "z" ]]; then
+    BB=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
+    #"#'######################################### prevents bad code highlighting
+  fi
+  BB=(${BB//../ });
+  SLICE_PCT=$(echo "scale=4; ((${BB[0]}+${BB[1]})/2)/${FG_DIMS[${PLANE_NUM}]}" | bc -l)
+  #"#'######################################### prevents bad code highlighting
 else
   if [[ ${SLICE} -lt 0 ]]; then
     SLICE_PCT=$(echo "scale=4; sqrt(((${SLICE}/${PIXDIM[${PLANE_NUM}]})/${DIMS[${PLANE_NUM}]})^2)" | bc -l)
-    #"#### gitlab web ide loses formatting in piped statements
+    #"#'######################################### prevents bad code highlighting
   elif [[ ${SLICE} -lt 1 ]]; then
     SLICE_PCT=${SLICE}
   elif [[ ${SLICE} -ge 1 ]]; then
@@ -313,18 +324,15 @@ if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
 ## are the same for each FG image
 NV=0
 if [[ "${LAYOUT,,}" == *"x"* ]]; then
-  LAYOUT=${LAYOUT//x/ }
-  NV=$((${LAYOUT[0]}+${LAYOUT[1]}))
+  LAYOUT=(${LAYOUT//x/ })
+  NV=$((${LAYOUT[0]} * ${LAYOUT[1]}))
 else
-  ROW_LAYOUT=(${LAYOUT//\;/ })
-  for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
-    COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
-    for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
-      TEMP=(${COL_LAYOUT[${j}]//\:/ })
-      NV=$((${NV}+${TEMP[0]}))
-    done
+  LAYOUT=(${LAYOUT//\;/ })
+  for (( i=0; i<${#LAYOUT[@]}; i++ )); do
+    NV=$((${NV} + ${LAYOUT[${i}]}))
   done
 fi
+NROW=${#LAYOUT[@]}
 
 # select desired volume from multivolume images --------------------------------
 TV=$(niiInfo -i ${BG} -f vols)
@@ -353,22 +361,6 @@ if [[ -n ${BG_MASK} ]]; then
   fi
 fi
 
-if [[ -n ${FG} ]]; then
-  for (( i=0; i<${FG_N}; i++ )); do
-    TV=$(niiInfo -i ${FG[${i}]} -f vols)
-    if [[ ${TV} -gt 1 ]]; then
-      if [[ ${FG_VOL[${i}]} > ${TV} ]]; then
-        echo "ERROR [INC:${FCN_NAME}] FG_VOL[${i}] out of range, <${TV}"
-        exit 1
-      else
-        WHICH_VOL=$((${FG_VOL[${i}]}-1))
-        fslroi ${FG[${i}]} ${DIR_SCRATCH}/FG_${i}.nii.gz ${WHICH_VOL} 1
-        FG[${i}]=${DIR_SCRATCH}/FG_${i}.nii.gz
-      fi
-    fi
-  done
-fi
-
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${FG_N}; i++ )); do
     TV=$(niiInfo -i ${FG_MASK[${i}]} -f vols)
@@ -386,159 +378,26 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
-  for (( i=0; i<${ROI_N}; i++ )); do
-    TV=$(niiInfo -i ${ROI[${i}]} -f vols)
-    if [[ ${TV} -gt 1 ]]; then
-      if [[ ${ROI_VOL[${i}]} > ${TV} ]]; then
-        echo "ERROR [INC:${FCN_NAME}] ROI_VOL[${i}] out of range, <${TV}"
-        exit 1
-      else
-        WHICH_VOL=$((${ROI_VOL[${i}]}-1))
-        fslroi ${ROI[${i}]} ${DIR_SCRATCH}/ROI_${i}.nii.gz ${WHICH_VOL} 1
-        ROI[${i}]=${DIR_SCRATCH}/ROI_${i}.nii.gz
-      fi
-    fi
-  done
+  labelUnique --label ${ROI} --volume ${ROI_VOLUME} --value ${ROI_VALUE} \
+  --dir-save ${DIR_SCRATCH} --prefix ROI
+  ROI=${DIR_SCRATCH}/ROI.nii.gz
+  ROI_VOLUME=1
+  ROI_VALUE="all"
 fi
 
 # Calculate slices to plot =====================================================
-# parse variable to determine image limits ------------------------------------
-if [[ -z "${LIMITS}" ]]; then
-  if [[ -n ${ROI} ]]; then 
-    LIM_CHK=(${LIM_CHK[@]} ${ROI[@]})
-  elif [[ -n ${FG_MASK} ]]; then
-    LIM_CHK=(${LIM_CHK[@]} ${FG_MASK[@]})    
-  elif [[ -n ${FG} ]]; then
-    LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
-  elif [[ -n ${BG_MASK} ]]; then
-    LIM_CHK=(${LIM_CHK[@]} ${BG_MASK})
-  else
-    LIM_CHK=(${LIM_CHK[@]} ${BG})
-  fi
-elif [[ "${LIMITS^^}" == "BG" ]]; then
-  LIM_CHK=(${LIM_CHK[@]} ${BG})
-elif [[ "${LIMITS^^}" == "BG_MASK" ]]; then
-  LIM_CHK=(${LIM_CHK[@]} ${BG_MASK})
-elif [[ "${LIMITS^^}" == *"FG"* ]]; then
-  TEMP=(${LIMITS//;/ })
-  if [[ "${TEMP[0]}" == "FG" ]]; then
-    LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
-  elif  [[ "${TEMP[0]}" == "FG_MASK" ]]; then
-    LIM_CHK=(${LIM_CHK[@]} ${FG_MASK[@]})
-  fi
-  if [[ ${#TEMP[@]} -gt 1 ]]; then
-    LIM_CHK=${LIM_CHK[${#TEMP[@]}]}
-  fi
-elif [[ "${LIMITS^^}" == *"ROI"* ]]; then
-  TEMP=(${LIMITS//;/ })
-  LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
-  if [[ ${#TEMP[@]} -gt 1 ]]; then
-    LIM_CHK=${LIM_CHK[${#TEMP[@]}]}
-  fi
-else
-  LIMITS_TEMP=(${LIMITS//;/ })
-fi
-
-## calculate slices in each plane ----------------------------------------------
-## (1) find bounding box within image
-## (2) add in desired offset
-## (3) constrain limits to image boundaries
-## (4) calculate slices to use
-### (4a) get edge slices if possible, and toss to avoid edges of image/roi
-### (4b) constrain to desired slice number, or fewer if slices unavailable
-## (5) convert to percentage of image width for FSL slicer
-
-## (1) find bounding box within image - - - - - - - - - - - - - - - - - - - - -
-unset XLIM YLIM ZLIM
-XLIM=(9999 0)
-YLIM=(9999 0)
-ZLIM=(9999 0)
-if [[ -n "${LIM_CHK}" ]]; then
-  for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
-    unset BB_STR BB
-    BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
-    BBX=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')
-    BBY=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')
-    BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
-    #'#************************************ prevents bad code highlighting
-    BBX=(${BBX//../ });
-    BBY=(${BBY//../ });
-    BBZ=(${BBZ//../ });
-    if [[ ${BBX[0]} -lt ${XLIM[0]} ]]; then XLIM[0]=${BBX[0]}; fi
-    if [[ ${BBX[1]} -gt ${XLIM[1]} ]]; then XLIM[1]=${BBX[1]}; fi
-    if [[ ${BBY[0]} -lt ${YLIM[0]} ]]; then YLIM[0]=${BBY[0]}; fi
-    if [[ ${BBY[1]} -gt ${YLIM[1]} ]]; then YLIM[1]=${BBY[1]}; fi
-    if [[ ${BBZ[0]} -lt ${ZLIM[0]} ]]; then ZLIM[0]=${BBZ[0]}; fi
-    if [[ ${BBZ[1]} -gt ${ZLIM[1]} ]]; then ZLIM[1]=${BBZ[1]}; fi
+if [[ ${NV} -gt ${FG_VOLS} ]]; then
+  LAYOUT[${NROW}]=$(echo "scale=0; ${LAYOUT[${NROW}]} - (${FG_VOLS} - ${NV})" | bc -l)
+  "#'######################################### prevents bad code highlighting
+  while [[ ${LAYOUT[${NROW}]} -lt 0 ]]; do
+    TROW=$((${NROW} - 1))
+    LAYOUT[${TROW}]=$(echo "scale=0; ${LAYOUT[${TROW}]} + ${LAYOUT[${NROW}]}" |bc -l)
   done
-else
-  XLIM=(${LIMITS_TEMP[0]//,/ })
-  YLIM=(${LIMITS_TEMP[1]//,/ })
-  ZLIM=(${LIMITS_TEMP[2]//,/ })
+  NV=${FG_VOLS}
 fi
-
-## calculate X slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [[ ${NX} > 0 ]]; then
-  unset XVOX XPCT RANGE TN STEP
-  XLIM[0]=$((${XLIM[0]}+${OFFSET[0]}))
-  XLIM[1]=$((${XLIM[1]}+${OFFSET[0]}))
-  if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
-  if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi  
-  RANGE=$((${XLIM[1]}-${XLIM[0]}))
-  TN=$((${NX}+1))
-  STEP=1
-  if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
-  XVOX=($(seq ${XLIM[0]} ${STEP} ${XLIM[1]}))
-  if [[ ${#XVOX[@]} -gt ${NX} ]]; then
-    XVOX=(${XVOX[@]:1:${NX}})
-  fi
-  NX=${#XVOX[@]}  
-  for (( i=0; i<${NX}; i++ )); do
-    XPCT+=($(echo "scale=4; ${XVOX[${i}]}/${DIMS[0]}" | bc -l))
-  done
-fi
-
-## calculate Y slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [[ ${NY} > 0 ]]; then
-  unset YVOX YPCT RANGE STEP TN
-  YLIM[0]=$((${YLIM[0]}+${OFFSET[1]}))
-  YLIM[1]=$((${YLIM[1]}+${OFFSET[1]}))
-  if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[1]}=1; fi
-  if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi  
-  RANGE=$((${YLIM[1]}-${YLIM[0]}))
-  TN=$((${NY}+1))
-  STEP=1
-  if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
-  YVOX=($(seq ${YLIM[0]} ${STEP} ${YLIM[1]}))
-  if [[ ${#YVOX[@]} -gt ${NY} ]]; then
-    YVOX=(${YVOX[@]:1:${NY}})
-  fi
-  NX=${#YVOX[@]}  
-  for (( i=0; i<${NY}; i++ )); do
-    YPCT+=($(echo "scale=4; ${YVOX[${i}]}/${DIMS[1]}" | bc -l))
-  done
-fi
-
-## calculate Z slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [[ ${NZ} > 0 ]]; then
-  unset ZVOX ZPCT RANGE STEP TN
-  ZLIM[0]=$((${ZLIM[0]}+${OFFSET[2]}))
-  ZLIM[1]=$((${ZLIM[1]}+${OFFSET[2]}))
-  if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[2]}=1; fi
-  if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
-  RANGE=$((${ZLIM[1]}-${ZLIM[0]}))
-  TN=$((${NZ}+1))
-  STEP=1
-  if [[ ${RANGE} -gt ${TN} ]]; then STEP=$((${RANGE}/${TN})); fi
-  ZVOX=($(seq ${ZLIM[0]} ${STEP} ${ZLIM[1]}))
-  if [[ ${#ZVOX[@]} -gt ${NZ} ]]; then
-    ZVOX=(${ZVOX[@]:1:${NZ}})
-  fi
-  NZ=${#ZVOX[@]}
-  for (( i=0; i<${NZ}; i++ )); do
-    ZPCT+=($(echo "scale=4; ${ZVOX[${i}]}/${DIMS[2]}" | bc -l))
-  done
-fi
+STEP=$(echo "scale=4; ${FG_VOLS} / ${NV}" | bc -l)
+V=($(seq 1 ${STEP} ${FG_VOLS}))
+V=($(printf "%0.0f " ${V[@]}))
 
 #===============================================================================
 # check if all images in same space --------------------------------------------
@@ -557,7 +416,7 @@ if [[ -n ${FG} ]]; then
     unset SPACE_CHK
     SPACE_CHK=$(niiCompare -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
-      antsApplyTransforms -d 3 -n Linear \
+      antsApplyTransforms -d 3 -e 3 -n Linear \
         -i ${FG[${i}]} -o ${DIR_SCRATCH}/FG_${i}.nii.gz -r ${BG}
       FG[${i}]="${DIR_SCRATCH}/FG_${i}.nii.gz"
     fi
@@ -575,15 +434,11 @@ if [[ -n ${FG_MASK} ]]; then
   done
 fi
 if [[ -n ${ROI} ]]; then
-  for (( i=0; i<${#ROI[@]}; i++ )); do
-    unset SPACE_CHK
-    SPACE_CHK=$(niiCompare -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
-    if [[ "${SPACE_CHK}" == "false" ]]; then
-      antsApplyTransforms -d 3 -n MultiLabel \
-        -i ${ROI[${i}]} -o ${DIR_SCRATCH}/ROI_${i}.nii.gz -r ${BG}
-      ROI[${i}]="${DIR_SCRATCH}/ROI_${i}.nii.gz"
-    fi
-  done
+  unset SPACE_CHK
+  SPACE_CHK=$(niiCompare -i ${BG} -j ${ROI} -f ${FIELD_CHK})
+  if [[ "${SPACE_CHK}" == "false" ]]; then
+    antsApplyTransforms -d 3 -n MultiLabel -i ${ROI} -o ${ROI} -r ${BG}
+  fi
 fi
 
 # make panel background ========================================================
