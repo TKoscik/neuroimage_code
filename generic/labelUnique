@@ -144,13 +144,13 @@ TMASK=${DIR_SCRATCH}/mask_temp.nii.gz
 
 # loop over label Files
 for (( i=0; i<${N_LABEL}; i++ )); do
-  TVOL=(${VOLUME[${i}]}//,/ )
+  TVOL=(${VOLUME[${i}]//,/ })
   for (( j=0; j<${#TVOL[@]}; j++ )); do
     if [[ "${TVOL[${j}]}" == "all" ]]; then
       VOL_START=0
       VOL_STOP=$(niiInfo -i ${LABEL[${i}]} -f volumes)
     elif [[ "${TVOL[${j}]}" == *":"* ]]; then
-      TVOL_RANGE=(${TVOL//\:/ })
+      TVOL_RANGE=(${TVOL[${j}]//\:/ })
       VOL_START=$((${TVOL_RANGE[0]}-1))
       VOL_STOP=${TVOL_RANGE[1]}
     else
