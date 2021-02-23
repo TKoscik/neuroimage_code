@@ -220,7 +220,6 @@ mkdir -p ${DIR_SAVE}
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
-FG_VOL=(${FG_VOL//;/ })
 FG_MASK=(${FG_MASK//;/ })
 FG_MASK_VOL=(${FG_MASK_VOL//;/ })
 FG_THRESH=(${FG_THRESH//;/ })
@@ -229,20 +228,25 @@ FG_ORDER=(${FG_COLOR_ORDER//;/ })
 FG_CBAR=(${FG_CBAR//;/ })
 FG_N=${#FG[@]}
 if [[ ${FG_N} -gt 1 ]]; then
-  if [[ ${#FG_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${FG_N} )); do
-      FG_VOL[${i}]=(${FG_VOL[0]})
-    done
-  fi
   if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${FG_N} )); do
+    for (( i=0; i<${FG_N}; i++ )); do
       FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
     done
   fi
 fi
 
-ROI_CSV=${ROI//;/,}
-ROI_VOL=(${ROI_VOL//;/ })
+if [[ -z ${BG} ]]; then
+  BG=${FG[0]}
+  BG_VOL=1
+  if [[ -n ${FG_MASK} ]]; then
+    BG_MASK=${FG_MASK[0]}
+    BG_MASK_VOL=1
+  fi
+fi
+
+ROI_FILE=(${ROI_FILE//,/ })
+ROI_VOLUME=(${ROI_VOLUME//;/ })
+ROI_VALUE=(${ROI_VALUE//;/ })
 #ROI=(${ROI//;/ })
 #ROI_LEVEL=(${ROI_LEVEL//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
@@ -251,20 +255,42 @@ ROI_CBAR=(${ROI_CBAR//;/ })
 ROI_N=${#ROI[@]}
 if [[ ${ROI_N} -gt 1 ]]; then
   if [[ ${#ROI_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${ROI_N} )); do
+    for (( i=0; i<${ROI_N}; i++ )); do
       ROI_VOL[${i}]=(${ROI_VOL[0]})
     done
   fi
 fi
 
-OFFSET=(${OFFSET//,/ })
+if [[ "${PLANE,,}" == "x" ]]; then
+  PLANE_NUM=0
+elif [[ "${PLANE,,}" == "y" ]]; then
+  PLANE_NUM=1
+elif [[ "${PLANE,,}" == "z" ]]; then
+  PLANE_NUM=2
+fi
 
-# Get image informtation -------------------------------------------------------
+# Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
 DIMS=($(niiInfo -i ${BG} -f voxels))
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
 ORIGIN=($(niiInfo -i ${BG} -f origin))
 ORIENT=($(niiInfo -i ${BG} -f orient))
+VOLS=($(niiInfo -i ${FG[0]} -f volumes))
+
+# get slice percentage --------------------------------------------------------
+if [[ "${SLICE,,}" == "null" ]]; then
+  SLICE_PCT=0.5
+  if [[ "${PLANE,,}" == "x" ]]; then SLICE_PCT=0.49; fi
+else
+  if [[ ${SLICE} -lt 0 ]]; then
+    SLICE_PCT=$(echo "scale=4; sqrt(((${SLICE}/${PIXDIM[${PLANE_NUM}]})/${DIMS[${PLANE_NUM}]})^2)" | bc -l)
+    #"#### gitlab web ide loses formatting in piped statements
+  elif [[ ${SLICE} -lt 1 ]]; then
+    SLICE_PCT=${SLICE}
+  elif [[ ${SLICE} -ge 1 ]]; then
+    SLICE_PCT=$(echo "scale=4; ${SLICE}/${DIMS[${PLANE_NUM}]}" | bc -l)
+  fi
+fi
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
