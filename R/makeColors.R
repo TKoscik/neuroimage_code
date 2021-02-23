@@ -124,7 +124,7 @@ if (no.png == FALSE) {
     geom_raster(fill=plotf$val) +
     theme(legend.position="none",
           plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
-          plot.background = element_rect(fill=color.bg, coilor=color.bg))
+          plot.background = element_rect(fill=color.bg, color=color.bg))
  ggsave(filename = paste0(prefix, ".png"),
         path = dir.save, plot = color.bar,
         device = "png", width=0.5, height=5, units = "cm", dpi = 320)

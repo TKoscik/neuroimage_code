@@ -392,6 +392,7 @@ if [[ ${NV} -gt ${FG_VOLS} ]]; then
   while [[ ${LAYOUT[${NROW}]} -lt 0 ]]; do
     TROW=$((${NROW} - 1))
     LAYOUT[${TROW}]=$(echo "scale=0; ${LAYOUT[${TROW}]} + ${LAYOUT[${NROW}]}" |bc -l)
+    NROW=${TROW}
   done
   NV=${FG_VOLS}
 fi
@@ -443,24 +444,18 @@ fi
 
 # make panel background ========================================================
 RESIZE_STR="${MAX_PIXELS}x${MAX_PIXELS}"
-for (( i=0; i<${NX}; i++ )); do
-  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/X${i}.png
-done
-for (( i=0; i<${NY}; i++ )); do
-  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/Y${i}.png
-done
-for (( i=0; i<${NZ}; i++ )); do
-  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/Z${i}.png
+for (( i=0; i<${NV}; i++ )); do
+  convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/V${i}.png
 done
 
 # Make Background ==============================================================
 ## generate color bar
-Rscript makeColors.R \
+Rscript ${INC_R}/makeColors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
 if [[ -n ${BG_MASK} ]] || [[ -n ${FG_MASK} ]] || [[ -n ${ROI} ]]; then
-  Rscript makeColors.R \
+  Rscript ${INC_R}/makeColors.R \
     "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
 fi
