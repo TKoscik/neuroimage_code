@@ -378,7 +378,7 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
-  labelUnique --label ${ROI} --volume ${ROI_VOLUME} --value ${ROI_VALUE} \
+  labelUnique.sh --label ${ROI} --volume ${ROI_VOLUME} --value ${ROI_VALUE} \
   --dir-save ${DIR_SCRATCH} --prefix ROI
   ROI=${DIR_SCRATCH}/ROI.nii.gz
   ROI_VOLUME=1
