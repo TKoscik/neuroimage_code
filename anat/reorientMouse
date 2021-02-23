@@ -141,12 +141,12 @@ elif [[ "${ORIENT_CODE:1:1}" == "I" ]]; then
 fi
 NEW_CODE="${X}${Y}${Z}"
 
-OUTNAME=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+OUTNAME=${DIR_SCRATCH}/${PREFIX}_reorient_${NEW_CODE}.nii.gz
 
 3dresample -orient ${NEW_CODE,,} -prefix ${OUTNAME} -input ${IMAGE}
 CopyImageHeaderInformation ${IMAGE} ${OUTNAME} ${OUTNAME} 1 1 0
 
-mv ${OUTNAME} ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
+mv ${OUTNAME} ${DIR_SAVE}/${PREFIX}_reorient_${NEW_CODE}.nii.gz
 
 #===============================================================================
 # End of Function
