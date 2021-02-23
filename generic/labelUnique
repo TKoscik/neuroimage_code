@@ -175,6 +175,7 @@ for (( i=0; i<${N_LABEL}; i++ )); do
         fslmaths ${TLABEL} -bin ${TMASK}
         fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
         LabelClustersUniquely 3 ${MERGED} ${MERGED} 0
+      done
     done
   done
 done
