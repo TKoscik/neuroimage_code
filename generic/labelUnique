@@ -58,7 +58,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long label:,level:,\
+OPTS=$(getopt -o hl --long label:,volume:,value:,\
 prefix:,dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
