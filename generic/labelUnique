@@ -165,18 +165,15 @@ for (( i=0; i<${N_LABEL}; i++ )); do
         MAX=$(fslstats ${MERGED} -p 100)
         if [[ "${TVAL[${l}]}" == "all" ]]; then
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
-          fslmaths ${TLABEL} -bin ${TMASK}
-          fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
         elif [[ "${TVAL[${l}]}" == *":"* ]]; then
-          TVAL_RANGE=(${TVAL[${l}]//\:/ })
-          fslmaths ${LABEL[${i}]} -thr ${TVAL_RANGE[0]} -uthr ${TVAL_RANGE[0]} ${TLABEL}
+          TRANGE=(${TVAL[${l}]//\:/ })
+          fslmaths ${LABEL[${i}]} -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
-          fslmaths ${TLABEL} -bin ${TMASK}
-          fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
         else
           fslmaths ${LABEL[${i}]} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
-          fslmaths ${TLABEL} -add ${MAX} -mas ${TLABEL} -add ${MAX} -add ${MERGED} ${MERGED}
         fi
+        fslmaths ${TLABEL} -bin ${TMASK}
+        fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
         LabelClustersUniquely 3 ${MERGED} ${MERGED} 0
     done
   done
