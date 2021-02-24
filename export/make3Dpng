@@ -336,10 +336,12 @@ if [[ -z "${FILENAME}" ]]; then
 fi
 
 # set default save directory
+echo ${DIR_SAVE}
 if [[ -n "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
 fi
 mkdir -p ${DIR_SAVE}
+echo ${DIR_SAVE}
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
@@ -373,8 +375,6 @@ ROI_CBAR=(${ROI_CBAR//;/ })
 
 OFFSET=(${OFFSET//,/ })
 
-echo ${DIR_SAVE}
-echo ${FILENAME}
 # Get image informtation -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
 DIMS=($(niiInfo -i ${BG} -f voxels))
