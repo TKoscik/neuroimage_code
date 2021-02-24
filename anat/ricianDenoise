@@ -187,11 +187,11 @@ if [[ "${KEEP}" == "true" ]]; then
 fi
 
 if [[ "${DO_PLOT}" == "true" ]]; then
-  make3dpng \
+  make3Dpng \
     --bg ${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
     --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
     --dir-save ${DIR_PLOT}
-  make3dpng \
+  make3Dpng \
     --bg ${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz \
     --bg-color "viridis" \
     --filename ${PREFIX}_desc-anat+ricianNoise_img-${MOD} \
