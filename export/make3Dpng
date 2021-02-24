@@ -60,13 +60,15 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long \
-bg:,bg-vol:,bg-mask:,bg-mask-vol:,bg-thresh:,bg-color:,bg-direction:,bg-cbar,\
-fg:,fg-vol:,fg-mask:,fg-mask-vol:,fg-thresh:,fg-color:,fg-direction:,fg-cbar,\
-roi:,roi-vol:,roi-level:,roi-color:,roi-direction:,roi-cbar,\
-image-layout:,ctr-offset:,bg-lim,no-slice-label,use-vox-label,no-lr-label,label-decimal:,\
-color-panel:,color-text:,color-decimal:,font-name:,font-size:,max-pixels:,\
-dir-save:,file-name:,keep-slice,keep-cbar,\
-dir-scratch:,help,verbose,no-log -n 'parse-options' -- "$@")
+bg:,bg-volume:,bg-mask:,bg-mask-volume:,bg-threshold:,bg-color:,bg-order:,bg-cbar,\
+fg:,fg-volume:,fg-mask:,fg-mask-volume:,fg-threshold:,fg-alpha:,fg-color:,fg-order:,fg-cbar,\
+roi:,roi-volume:,roi-value:,roi-color:,roi-order:,roi-cbar,\
+layout:,offset:,limits,\
+no-slice-label,use-vox-label,no-lr-label,label-decimal:,\
+color-panel:,color-text:,color-decimal:,font:,font-size:,max-pixels:,\
+keep-slice,keep-cbar,\
+filename:,dir-save:,dir-scratch:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -75,30 +77,30 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 BG=
+BG_VOL=1
 BG_MASK=
+BG_MASK_VOL=1
 BG_THRESH=0,100
-BG_COLOR="#010101,#FFFFFF"
+BG_COLOR="#000000,#FFFFFF"
 BG_ORDER="normal"
 BG_CBAR="false"
-BG_VOL=1
-BG_MASK_VOL=1
 
 FG=
+FG_VOL=1
 FG_MASK=
+FG_MASK_VOL=1
 FG_THRESH=0,100
+FG_ALPHA=50
 FG_COLOR="timbow"
 FG_ORDER="normal"
 FG_CBAR="true"
-FG_VOL=1
-FG_MASK_VOL=1
-FG_ALPHA=50
 
 ROI=
-ROI_LEVEL=
+ROI_VOL=1
+ROI_VALUE=
 ROI_COLOR="#FF69B4"
 ROI_ORDER="random"
 ROI_CBAR="false"
-ROI_VOL=1
 
 LAYOUT=1:x,1:y,1:z
 OFFSET=1,0,0
@@ -111,11 +113,11 @@ LABEL_DECIMAL=1
 COLOR_PANEL="#000000"
 COLOR_TEXT="#FFFFFF"
 COLOR_DECIMAL=2
-FONT_NAME=NimbusSans-Regular
-FONT_SIZE=18
+FONT=NimbusSans-Regular
+FONT_SIZE=24
 MAX_PIXELS=500
 
-FILE_NAME=
+FILENAME=
 DIR_SAVE=
 KEEP_SLICE="false"
 KEEP_CBAR="false"
@@ -127,24 +129,27 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG="true" ; shift ;;
     --bg) BG="$2" ; shift 2 ;;
+    --bg-volume) BG_VOL="$2" ; shift 2 ;;
     --bg-mask) BG_MASK="$2" ; shift 2 ;;
-    --bg-thresh) BG_THRESH="$2" ; shift 2 ;;
+    --bg-mask-volume) BG_VOL="$2" ; shift 2 ;;
+    --bg-threshold) BG_THRESH="$2" ; shift 2 ;;
     --bg-color) BG_COLOR="$2" ; shift 2 ;;
     --bg-order) BG_ORDER="$2" ; shift 2 ;;
-    --bg-vol) BG_VOL="$2" ; shift 2 ;;
     --bg-cbar) BG_CBAR="true" ; shift ;;
     --fg) FG="$2" ; shift 2 ;;
+    --fg-volume) FG_VOL="$2" ; shift 2 ;;
     --fg-mask) FG_MASK="$2" ; shift 2 ;;
-    --fg-thresh) FG_THRESH="$2" ; shift 2 ;;
+    --fg-mask-volume) FG_VOL="$2" ; shift 2 ;;
+    --fg-alpha) FG_ALPHA="$2" ; shift 2 ;;
+    --fg-threshold) FG_THRESH="$2" ; shift 2 ;;
     --fg-color) FG_COLOR="$2" ; shift 2 ;;
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
-    --fg-vol) FG_VOL="$2" ; shift 2 ;;
     --fg-cbar) FG_CBAR="true" ; shift ;;
     --roi) ROI="$2" ; shift 2 ;;
-    --roi-level) ROI_LEVEL="$2" ; shift 2 ;;
+    --roi-volume) ROI_VOL="$2" ; shift 2 ;;
+    --roi-value) ROI_VALUE="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
-    --roi-vol) ROI_VOL="$2" ; shift 2 ;;
     --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
     --layout) LAYOUT="$2" ; shift 2 ;;
     --offset) OFFSET="$2" ; shift 2 ;;
@@ -156,10 +161,10 @@ while true; do
     --color-panel) COLOR_PANEL="$2" ; shift 2 ;;
     --color-text) COLOR_TEXT="$2" ; shift 2 ;;
     --color-decimal) COLOR_DECIMAL="$2" ; shift 2 ;;
-    --font-name) FONT_NAME="$2" ; shift 2 ;;
+    --font) FONT="$2" ; shift 2 ;;
     --font-size) FONT_SIZE="$2" ; shift 2 ;;
     --max-pixels) MAX_PIXELS="$2" ; shift 2 ;;
-    --file-name) FILE_NAME="$2" ; shift 2 ;;
+    --filename) FILENAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --keep-slice) KEEP_SLICE="true" ; shift ;;
@@ -176,17 +181,124 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
-  echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --layout                 a string identifying the number of'
-  echo '                           slices, slice plane, rows and columns'
-  echo '    Layouts are specifed by using delimiters:'
-  echo '    (;) row delimiter'
-  echo '    (,) column delimiter'
-  echo '    (:) number and plane delimiter'
-  echo '        Applied in row -> column -> plane order'
-  echo '    See examples below'
+  echo '  -h | --help       display command help'
+  echo '  -v | --verbose    add verbose output to log file'
+  echo '  -l | --no-log     disable writing to output log'
+  echo '--bg                path to NIfTI file for background, single volume'
+  echo '                      e.g., anatomical'
+  echo '--bg-volume         volume to use for multivolume image, default=1'
+  echo '--bg-mask           region to plot, will be binarized'
+  echo '--bg-mask-volume    volume for multivolume mask, default=1'
+  echo '--bg-threshold      background intensity range, default=0,100'
+  echo '--bg-color          color scale for background, details below'
+  echo '--bg-order          order of the color bar, details below'
+  echo '--bg-cbar           toggle to turn ON color bar for background'
+  echo '--fg                path to NIfTI file for foreground, single-volume'
+  echo '                    multiple FG images semicolon-delimited,'
+  echo '                    plotted in order specified, 1st on bottom'
+  echo '--fg-mask           region to plot, will be binarized'
+  echo '--fg-mask-volume    volume for multivolume mask, default=1'
+  echo '--fg-threshold      foreground intensity range, default=0,100'
+  echo '--fg-alpha          strength of foreground overlay on preceeding layers'
+  echo '                      (0-100), default=75'
+  echo '--fg-color          color scale for foreground, details below'
+  echo '                      semicolon-delimited color schemes corresponding'
+  echo '                      to multiple foreground images'
+  echo '--fg-order          order of the color bar, details below'
+  echo '--fg-cbar           toggle to turn ON color bar for foreground'
+  echo '--roi               path to NIfTI file to plot ROI outlines,'
+  echo '                    should be integer values corresponding to'
+  echo '                    regional labels, semicolon delimited for'
+  echo '                    multiple files. All are combined into a single'
+  echo '                    sequentially numbered label set'
+  echo '--roi-volume        volume(s) for multi volume label files,'
+  echo '                      -all for all volumes in a file'
+  echo '                      -semicolon-delimiters for multiple files'
+  echo '                      -comma-delimiters for lists of single volumes'
+  echo '                      -colon-delimiters for ranges of volumes'
+  echo '                      e.g., 1,3:5;all;1'
+  echo '                        would yield: volumes 1,3,4,5 from ROI 1'
+  echo '                                     all volumes from ROI 2'
+  echo '                                     volume 1 from ROI 3'
+  echo '--roi-value         which label values from a file to include,'
+  echo '                    will be applied to all volumes from that ROI file'
+  echo '                    specification is the same as for ROI volumes'
+  echo '--roi-color         color scheme to use for ROIs, default="#FF69B4" (hot pink)'
+  echo '--roi-order         order of the color bar, details below'
+  echo '--roi-cbar          toggle to turn ON color bar for ROI'
+  echo '--layout            a string identifying the number of'
+  echo '                    slices, slice plane, rows and columns'
+  echo '                    Layouts are specifed by using delimiters:'
+  echo '                      (;) row delimiter'
+  echo '                      (,) column delimiter'
+  echo '                      (:) number and plane delimiter'
+  echo '                        Applied in row -> column -> plane order'
+  echo '                      See examples below, default=1:x,1:y,1:z'
+  echo '--offset            number of slices to shift slices from calculated values'
+  echo '                    perhaps to shift away from central slice slightly to'
+  echo '                    not view falx. Comma-delimted for offsets in each'
+  echo '                    plane (x,y,z), default=1,0,0'
+  echo '--limits            by default image limits are calculated based on inputs'
+  echo '                    in the order preferring: ROI > FG_MASK > FG > BG_MASK > BG'
+  echo '                    image used for calculation can be specified:'
+  echo '                      (semicolon-delimited nuymber for multi-file inputs)'
+  echo '                      BG, BG_MASK, FG, FG;#, FG_MASK, FG_MASK;#, ROI, ROI;#'
+  echo '                    or voxel values can be provided directly:'
+  echo '                      (semicolon-delimited planes, comma-delimited min,max)'
+  echo '                      10,100;13,130;45,150'
+  echo '                      NA,NA;NA,NA;10,100'
+  echo '--no-slice-label    toggle, turn off location labels'
+  echo '--use-voxel-label   toggle, use voxels not mm for location label'
+  echo '--no-lr-label       toggle, turn off L and R indicator'
+  echo '--label-decimal     number of decimal places for labels, default=1'
+  echo '--color-panel       color of background in image, default="#000000"'
+  echo '--color-text        color of text elements, default="#FFFFFF"'
+  echo '--color-decimal     number of decimal places of color bar labels, default=2'
+  echo '--font              name of font to be used, default=NimbusSans-Regular'
+  echo '--font-size         font size to use in final image, default=24'
+  echo '                    might need to be adjusted depending on image size'
+  echo '--max-pixels        maximum number of pixels for each slice, default=500'
+  echo '                    This will up- or down-sample slices accordingly,'
+  echo '                    but will retain aspect ratios'
+  echo '--filename          desired filename of output image,'
+  echo '                    default=sub-${PID}_ses-${SID}_YYMMDDThhmmssnnn'
+  echo '                            overlay4D_YYMMDDThhmmssnnn'
+  echo '--dir-save          location to save final image'
+  echo '--dir_scratch       directory to use to construct image'
+  echo '--keep-slice        toggle, keep individual slices, same save directory'
+  echo '--keep-cbar         toggle to keep color bar images, same save directory'
+  echo ''
+  echo ' Details: --------------------------------------------------------------'
+  echo 'thresholds:   comma-delimited minimum and maximum range of image values to'
+  echo '              plot as a % of total range (0-100). default=0,100'
+  echo 'colors:   colors can be specified via any comma-delimited combination of'
+  echo '          HEX colors in order from low to high. Color gradients will be'
+  echo '          constructed evenly distributing colors across the image range.'
+  echo '          example: Red - White - Blue color gradients'
+  echo '                   "#FF0000,#FFFFFF,#0000FF"'
+  echo '          Several named color schemes are available:'
+  echo '          -(timbow)  a rainbow color scheme based on colors from viridis'
+  echo '          -viridis   including: viridis, magma, inferno, plasma, and'
+  echo '                               cividis variants'
+  echo '          -cubehelix  a common astronomical color gradient, where colors'
+  echo '                      are selected such that intensity varies continuously'
+  echo '                      from low to high along with color.'
+  echo '                      Optional parameters can be specified as'
+  echo '                      comma-delimited, named values after cubehelix,'
+  echo '                        default="cubehelix,start,0.5,r,-1.5,hue,2,gamma,1"'
+  echo '          -hot        "hot" colors, Dark red to bright yellow'
+  echo '                        "#7F0000,#FF0000,#FF7F00,#FFFF00,#FFFF7F"'
+  echo '          -cold       "cold" colors, dark blue to bright cyan'
+  echo '                        "#00007F,#0000FF,#007FFF,#00FFFF,#7FFFFF"'
+  echo '          -grayscale  [grayscale, gray, grey] "#000000,#FFFFFF"'
+  echo '          -rainbow    rainbow colors, commonly referred to as "jet"'
+  echo '                        "#FF0000,#FFFF00,#00FF00,#00FFFF,#0000FF,#FF00FF"'
+  echo 'color order:   A modifier to add to change to the order that colors are used'
+  echo '               in the color scheme. Options include:'
+  echo '                 r, rand, random: randomize the order of colors'
+  echo '                 rev, reverse, i, inv, inverse: invert the order of colors'
+
+  
   echo '  --dir-save <value>       directory to save output'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
@@ -215,16 +327,16 @@ fi
 DIR_PROJECT=$(getDir -i ${BG})
 PID=$(getField -i ${BG} -f sub)
 SID=$(getField -i ${BG} -f ses)
-if [[ -z "${FILE_NAME}" ]]; then
+if [[ -z "${FILENAME}" ]]; then
   if [[ -n "${PID}" ]]; then
-    FILE_NAME="sub-${PID}"
+    FILENAME="sub-${PID}"
     if [[ -n "${SID}" ]]; then
-      FILE_NAME="${FILE_NAME}_ses-${SID}"
+      FILENAME="${FILENAME}_ses-${SID}"
     fi
   else
-    FILE_NAME="overlay"
+    FILENAME="overlay"
   fi
-  FILE_NAME="${FILE_NAME}_${DATE_SUFFIX}"
+  FILENAME="${FILENAME}_${DATE_SUFFIX}"
 fi
 
 # set default save directory
@@ -256,21 +368,12 @@ if [[ ${FG_N} -gt 1 ]]; then
   fi
 fi
 
-ROI_CSV=${ROI//;/,}
-ROI_VOL=(${ROI_VOL//;/ })
-#ROI=(${ROI//;/ })
-#ROI_LEVEL=(${ROI_LEVEL//;/ })
+ROI=(${ROI//;/ })
+ROI_VOLUME=(${ROI_VOLUME//;/ })
+ROI_VALUE=(${ROI_VALUE//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
-ROI_N=${#ROI[@]}
-if [[ ${ROI_N} -gt 1 ]]; then
-  if [[ ${#ROI_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${ROI_N} )); do
-      ROI_VOL[${i}]=(${ROI_VOL[0]})
-    done
-  fi
-fi
 
 OFFSET=(${OFFSET//,/ })
 
@@ -298,22 +401,18 @@ fi
 if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
 
 # Figure out number slices for each orientation --------------------------------
-### *** is PLANE useful and necessary?
+unset PLANE
 NX=0; NY=0; NZ=0
 ROW_LAYOUT=(${LAYOUT//\;/ })
 for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
   COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
   for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
     TEMP=(${COL_LAYOUT[${j}]//\:/ })
-    if [[ "${TEMP[1]}" =~ "x" ]]; then
-      NX=$((${NX}+${TEMP[0]}))
-    fi
-    if [[ "${TEMP[1]}" =~ "y" ]]; then
-      NY=$((${NY}+${TEMP[0]}))
-    fi
-    if [[ "${TEMP[1]}" =~ "z" ]]; then
-      NZ=$((${NZ}+${TEMP[0]}))
-    fi
+    case ${TEMP[1]} in 
+      x) NX=$((${NX}+${TEMP[0]})); PLANE+=("x"); ;;
+      y) NY=$((${NY}+${TEMP[0]})); PLANE+=("y"); ;;
+      z) NZ=$((${NZ}+${TEMP[0]})); PLANE+=("z"); ;;
+    esac
   done
 done
 
@@ -377,19 +476,11 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
-  for (( i=0; i<${ROI_N}; i++ )); do
-    TV=$(niiInfo -i ${ROI[${i}]} -f vols)
-    if [[ ${TV} -gt 1 ]]; then
-      if [[ ${ROI_VOL[${i}]} > ${TV} ]]; then
-        echo "ERROR [INC:${FCN_NAME}] ROI_VOL[${i}] out of range, <${TV}"
-        exit 1
-      else
-        WHICH_VOL=$((${ROI_VOL[${i}]}-1))
-        fslroi ${ROI[${i}]} ${DIR_SCRATCH}/ROI_${i}.nii.gz ${WHICH_VOL} 1
-        ROI[${i}]=${DIR_SCRATCH}/ROI_${i}.nii.gz
-      fi
-    fi
-  done
+  labelUnique --label ${ROI} --volume ${ROI_VOLUME} --value ${ROI_VALUE} \
+    --dir-save ${DIR_SCRATCH} --prefix ROI
+  ROI=${DIR_SCRATCH}/ROI.nii.gz
+  ROI_VOLUME=1
+  ROI_VALUE="all"
 fi
 
 # Calculate slices to plot =====================================================
@@ -398,7 +489,7 @@ if [[ -z "${LIMITS}" ]]; then
   if [[ -n ${ROI} ]]; then 
     LIM_CHK=(${LIM_CHK[@]} ${ROI[@]})
   elif [[ -n ${FG_MASK} ]]; then
-    LIM_CHK=(${LIM_CHK[@]} ${FG_MASK[@]})    
+    LIM_CHK=(${LIM_CHK[@]} ${FG_MASK[@]})
   elif [[ -n ${FG} ]]; then
     LIM_CHK=(${LIM_CHK[@]} ${FG[@]})
   elif [[ -n ${BG_MASK} ]]; then
@@ -448,10 +539,9 @@ if [[ -n "${LIM_CHK}" ]]; then
   for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
     unset BB_STR BB
     BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
-    BBX=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/')
-    BBY=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/')
-    BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/')
-    #'#************************************ prevents bad code highlighting
+    BBX=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/') #"#'# prevents bad syntax highlighting
+    BBY=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/') #"#'#
+    BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/') #"#'#
     BBX=(${BBX//../ });
     BBY=(${BBY//../ });
     BBZ=(${BBZ//../ });
@@ -467,6 +557,28 @@ else
   YLIM=(${LIMITS_TEMP[1]//,/ })
   ZLIM=(${LIMITS_TEMP[2]//,/ })
 fi
+
+# Figure out number slices for each orientation --------------------------------
+unset PLANE
+NX=0; NY=0; NZ=0
+ROW_LAYOUT=(${LAYOUT//\;/ })
+for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
+  COL_LAYOUT=(${ROW_LAYOUT[${i}]//\,/ })
+  for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
+    TEMP=(${COL_LAYOUT[${j}]//\:/ })
+    case ${TEMP[1]} in 
+      x) NX=$((${NX}+${TEMP[0]}))
+         PLANE+=("x")
+         ;;
+      y) NY=$((${NY}+${TEMP[0]}))
+         PLANE+=("y")
+         ;;
+      z) NZ=$((${NZ}+${TEMP[0]}))
+         PLANE+=("z")
+         ;;
+    esac
+  done
+done
 
 ## calculate X slices - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [[ ${NX} > 0 ]]; then
@@ -595,23 +707,21 @@ Rscript makeColors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
-if [[ -n ${BG_MASK} ]] || [[ -n ${FG_MASK} ]] || [[ -n ${ROI} ]]; then
-  Rscript makeColors.R \
-    "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
-    "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
-fi
+Rscript makeColors.R \
+  "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
+  "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
 
 ### add labels to color bar
 if [[ "${BG_CBAR}" == "true" ]]; then
   text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
   eval ${text_fcn}
   convert -background "transparent" -fill ${COLOR_TEXT} \
-    -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    -font ${FONT} -pointsize ${FONT_SIZE} \
     caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
   text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
   eval ${text_fcn}
   convert -background "transparent" -fill ${COLOR_TEXT} \
-    -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    -font ${FONT} -pointsize ${FONT_SIZE} \
     caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
   composite -gravity SouthEast \
     ${DIR_SCRATCH}/LABEL_LO.png \
@@ -700,7 +810,6 @@ for (( i=0; i<${NZ}; i++ )); do
   eval ${comp_fcn}
 done
 
-
 # Add Foreground Overlays ======================================================
 if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
@@ -725,12 +834,12 @@ if [[ -n ${FG} ]]; then
       text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
       eval ${text_fcn}
       convert -background "transparent" -fill ${COLOR_TEXT} \
-        -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+        -font ${FONT} -pointsize ${FONT_SIZE} \
         caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
       text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
       eval ${text_fcn}
       convert -background "transparent" -fill ${COLOR_TEXT} \
-        -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+        -font ${FONT} -pointsize ${FONT_SIZE} \
         caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
       composite -gravity SouthEast \
         ${DIR_SCRATCH}/LABEL_LO.png \
@@ -830,25 +939,12 @@ fi
 
 # Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
-  ## edit labels as specified
-  labelEdit \
-  --label ${ROI_CSV} 
-  --level ${ROI_LEVEL} \
-  --prefix ROI_EDIT \
-  --dir-save ${DIR_SCRATCH}
-
   ## total number of ROIs
-  ROI_N=$(fslstats ${DIR_SCRATCH}/ROI_EDIT.nii.gz -p 100)
-
+  ROI_N=$(fslstats ${ROI} -p 100)
   ## convert ROIs to outlines
-  labelOutline \
-  --label ${DIR_SCRATCH}/ROI_EDIT.nii.gz \
-  --prefix ROI_OUTLINE \
-  --dir-save ${DIR_SCRATCH}
-  
-  ## make ROI mask
+  labelOutline --label ${ROI} --prefix ROI_OUTLINE --dir-save ${DIR_SCRATCH}
+  # make ROI mask
   fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
-
   ## generate color bar
   Rscript makeColors.R \
     "palette" ${ROI_COLOR} "n" ${ROI_N} \
@@ -928,7 +1024,7 @@ for (( i=0; i<${NX}; i++ )); do
       LABEL_X=${XVOX[${i}]}
     fi
     LABEL_X="x=${LABEL_X}"
-    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
       -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
       -gravity NorthWest -annotate +10+10 "${LABEL_X}" \
       ${DIR_SCRATCH}/X${i}.png
@@ -945,7 +1041,7 @@ for (( i=0; i<${NY}; i++ )); do
       LABEL_Y=${YVOX[${i}]}
     fi
     LABEL_Y="y=${LABEL_Y}"
-    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
       -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
       -gravity NorthWest -annotate +10+10 "${LABEL_Y}" \
       ${DIR_SCRATCH}/Y${i}.png
@@ -962,7 +1058,7 @@ for (( i=0; i<${NX}; i++ )); do
       LABEL_Z=${ZVOX[${i}]}
     fi
     LABEL_Z="z=${LABEL_Z}"
-    mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+    mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
       -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
       -gravity NorthWest -annotate +10+10 "${LABEL_Z}" \
       ${DIR_SCRATCH}/Z${i}.png
@@ -999,8 +1095,12 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
        done
      fi
   done
-  png_fcn=${montage_fcn}' -tile x1 -geometry +0+0 -gravity center -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/image_row${i}.png'
-  eval ${png_fcn}
+  montage_fcn="${montage_fcn} -tile x1"
+  montage_fcn="${montage_fcn} -geometry +0+0"
+  montage_fcn="${montage_fcn} -gravity center"
+  montage_fcn=${montage_fcn}' -background "'${COLOR_PANEL}'"'
+  montage_fcn="${montage_fcn} ${DIR_SCRATCH}/image_row${i}.png"
+  eval ${montage_fcn}
 done
 
 FLS=($(ls ${DIR_SCRATCH}/image_row*.png))
@@ -1009,7 +1109,11 @@ if [[ ${#FLS[@]} -gt 1 ]]; then
   for (( i=1; i<${#FLS[@]}; i++ )); do
     montage_fcn="${montage_fcn} ${FLS[${i}]}"
   done
-  montage_fcn=${montage_fcn}' -tile 1x -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/image_col.png'
+  montage_fcn="${montage_fcn} -tile 1x"
+  montage_fcn="${montage_fcn} -geometry +0+0"
+  montage_fcn="${montage_fcn} -gravity center"
+  montage_fcn=${montage_fcn}' -background "'${COLOR_PANEL}'"'
+  montage_fcn="${montage_fcn} ${DIR_SCRATCH}/image_col.png"
   eval ${montage_fcn}
 else
   mv ${DIR_SCRATCH}/image_row0.png ${DIR_SCRATCH}/image_col.png
@@ -1044,10 +1148,14 @@ if [[ ${#CBAR_LS[@]} -gt 0 ]]; then
   for (( i=0; i<${#CBAR_LS[@]}; i++ )); do
     montage_fcn="${montage_fcn} ${CBAR_LS[${i}]}"
   done
-  montage_fcn=${montage_fcn}' -tile x1 -geometry +0+0 -gravity center  -background "'${COLOR_PANEL}'" ${DIR_SCRATCH}/${FILE_NAME}.png'
+  montage_fcn="${montage_fcn} -tile x1"
+  montage_fcn="${montage_fcn} -geometry +0+0"
+  montage_fcn="${montage_fcn} -gravity center"
+  montage_fcn=${montage_fcn}' -background "'${COLOR_PANEL}'"'
+  montage_fcn="${montage_fcn} ${DIR_SCRATCH}/${FILENAME}.png"
   eval ${montage_fcn}
 else
-  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${FILE_NAME}.png
+  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${FILENAME}.png
 fi
 
 if [[ "${LABEL_NO_LR}" == "false" ]]; then
@@ -1056,14 +1164,34 @@ if [[ "${LABEL_NO_LR}" == "false" ]]; then
   else
     TTXT="L"
   fi
-  mogrify -font ${FONT_NAME} -pointsize ${FONT_SIZE} \
+  mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
     -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
     -gravity SouthWest -annotate +10+10 "${TTXT}" \
-    ${DIR_SCRATCH}/${FILE_NAME}.png
+    ${DIR_SCRATCH}/${FILENAME}.png
 fi
 
 # move final png file
 mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
 
+# move optional outputs, slices and color bars
+if [[ "${KEEP_SLICE}" == "true" ]]; then
+  for (( i=0; i<${NX}; i++ )); do
+    mv ${DIR_SCRATCH}/X${i}.png ${DIR_SAVE}/${FILENAME}_X${i}.png
+  done
+  for (( i=0; i<${NY}; i++ )); do
+    mv ${DIR_SCRATCH}/Y${i}.png ${DIR_SAVE}/${FILENAME}_Y${i}.png
+  done
+  for (( i=0; i<${NZ}; i++ )); do
+    mv ${DIR_SCRATCH}/Z${i}.png ${DIR_SAVE}/${FILENAME}_Z${i}.png
+  done
+fi
+if [[ "${KEEP_CBAR}" == "true" ]]; then
+  rename CBAR ${FILENAME}_CBAR ${DIR_SCRATCH}/*.png
+  mv {DIR_SCRATCH}/${FILENAME}_CBAR*.png ${DIR_SAVE}/
+fi
+
+#-------------------------------------------------------------------------------
+# End of Function
+#-------------------------------------------------------------------------------
 exit 0
 

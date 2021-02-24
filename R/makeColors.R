@@ -113,7 +113,7 @@ color.ls <- cpal(color.n)
 if (color.order %in% c("r", "rand", "random")) {
   color.ls <- sample(color.ls, color.n, replace = F)
 }
-if (color.order %in% c("rev", "reverse", "inverse")) {
+if (color.order %in% c("rev", "reverse", "inverse", "inv", "i")) {
   color.ls <- rev(color.ls)
 }
 
