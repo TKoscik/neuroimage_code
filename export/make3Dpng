@@ -172,6 +172,7 @@ while true; do
     * ) break ;;
   esac
 done
+echo "175"
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -339,6 +340,7 @@ if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
 fi
 mkdir -p ${DIR_SAVE}
+echo "343"
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
@@ -371,6 +373,7 @@ ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
 
 OFFSET=(${OFFSET//,/ })
+echo "376"
 
 # Get image informtation -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
