@@ -371,6 +371,7 @@ ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
 
 OFFSET=(${OFFSET//,/ })
+echo "OFFSET: ${OFFSET[@]}"
 
 # Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
@@ -579,8 +580,8 @@ if [[ ${NX} > 0 ]]; then
   unset XVOX XPCT RANGE TN STEP
   XLIM[0]=$((${XLIM[0]}+${OFFSET[0]}))
   XLIM[1]=$((${XLIM[1]}+${OFFSET[0]}))
-  if [[ ${XLIM[0]} -lt 1 ]]; then ${XLIM[0]}=1; fi
-  if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then ${XLIM[1]}=${DIMS[0]}; fi  
+  if [[ ${XLIM[0]} -lt 1 ]]; then XLIM[0]=1; fi
+  if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then XLIM[1]=${DIMS[0]}; fi  
   RANGE=$((${XLIM[1]}-${XLIM[0]}))
   TN=$((${NX}+1))
   STEP=1
@@ -600,8 +601,8 @@ if [[ ${NY} > 0 ]]; then
   unset YVOX YPCT RANGE STEP TN
   YLIM[0]=$((${YLIM[0]}+${OFFSET[1]}))
   YLIM[1]=$((${YLIM[1]}+${OFFSET[1]}))
-  if [[ ${YLIM[0]} -lt 1 ]]; then ${YLIM[0]}=1; fi
-  if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then ${YLIM[1]}=${DIMS[1]}; fi  
+  if [[ ${YLIM[0]} -lt 1 ]]; then YLIM[0]=1; fi
+  if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then YLIM[1]=${DIMS[1]}; fi  
   RANGE=$((${YLIM[1]}-${YLIM[0]}))
   TN=$((${NY}+1))
   STEP=1
@@ -621,8 +622,8 @@ if [[ ${NZ} > 0 ]]; then
   unset ZVOX ZPCT RANGE STEP TN
   ZLIM[0]=$((${ZLIM[0]}+${OFFSET[2]}))
   ZLIM[1]=$((${ZLIM[1]}+${OFFSET[2]}))
-  if [[ ${ZLIM[0]} -lt 1 ]]; then ${ZLIM[0]}=1; fi
-  if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ${ZLIM[1]}=${DIMS[2]}; fi
+  if [[ ${ZLIM[0]} -lt 1 ]]; then ZLIM[0]=1; fi
+  if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ZLIM[1]=${DIMS[2]}; fi
   RANGE=$((${ZLIM[1]}-${ZLIM[0]}))
   TN=$((${NZ}+1))
   STEP=1
