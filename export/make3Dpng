@@ -336,12 +336,10 @@ if [[ -z "${FILENAME}" ]]; then
 fi
 
 # set default save directory
-echo ${DIR_SAVE}
-if [[ -n "${DIR_SAVE}" ]]; then
+if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
 fi
 mkdir -p ${DIR_SAVE}
-echo ${DIR_SAVE}
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
@@ -481,6 +479,7 @@ if [[ -n ${ROI} ]]; then
   ROI_VALUE="all"
 fi
 
+echo "482"
 # Calculate slices to plot =====================================================
 # parse variable to determine image limits ------------------------------------
 if [[ -z "${LIMITS}" ]]; then
