@@ -117,7 +117,7 @@ FONT=NimbusSans-Regular
 FONT_SIZE=24
 MAX_PIXELS=500
 
-FILE_NAME=
+FILENAME=
 DIR_SAVE=
 KEEP_SLICE="false"
 KEEP_CBAR="false"
@@ -164,7 +164,7 @@ while true; do
     --font) FONT="$2" ; shift 2 ;;
     --font-size) FONT_SIZE="$2" ; shift 2 ;;
     --max-pixels) MAX_PIXELS="$2" ; shift 2 ;;
-    --filename) FILE_NAME="$2" ; shift 2 ;;
+    --filename) FILENAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     --keep-slice) KEEP_SLICE="true" ; shift ;;
@@ -327,16 +327,16 @@ fi
 DIR_PROJECT=$(getDir -i ${BG})
 PID=$(getField -i ${BG} -f sub)
 SID=$(getField -i ${BG} -f ses)
-if [[ -z "${FILE_NAME}" ]]; then
+if [[ -z "${FILENAME}" ]]; then
   if [[ -n "${PID}" ]]; then
-    FILE_NAME="sub-${PID}"
+    FILENAME="sub-${PID}"
     if [[ -n "${SID}" ]]; then
-      FILE_NAME="${FILE_NAME}_ses-${SID}"
+      FILENAME="${FILENAME}_ses-${SID}"
     fi
   else
-    FILE_NAME="overlay"
+    FILENAME="overlay"
   fi
-  FILE_NAME="${FILE_NAME}_${DATE_SUFFIX}"
+  FILENAME="${FILENAME}_${DATE_SUFFIX}"
 fi
 
 # set default save directory
@@ -1152,10 +1152,10 @@ if [[ ${#CBAR_LS[@]} -gt 0 ]]; then
   montage_fcn="${montage_fcn} -geometry +0+0"
   montage_fcn="${montage_fcn} -gravity center"
   montage_fcn=${montage_fcn}' -background "'${COLOR_PANEL}'"'
-  montage_fcn="${montage_fcn} ${DIR_SCRATCH}/${FILE_NAME}.png"
+  montage_fcn="${montage_fcn} ${DIR_SCRATCH}/${FILENAME}.png"
   eval ${montage_fcn}
 else
-  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${FILE_NAME}.png
+  mv ${DIR_SCRATCH}/image_col.png ${DIR_SCRATCH}/${FILENAME}.png
 fi
 
 if [[ "${LABEL_NO_LR}" == "false" ]]; then
@@ -1167,7 +1167,7 @@ if [[ "${LABEL_NO_LR}" == "false" ]]; then
   mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
     -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
     -gravity SouthWest -annotate +10+10 "${TTXT}" \
-    ${DIR_SCRATCH}/${FILE_NAME}.png
+    ${DIR_SCRATCH}/${FILENAME}.png
 fi
 
 # move final png file
