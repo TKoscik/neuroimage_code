@@ -105,7 +105,6 @@ ROI_CBAR="false"
 LAYOUT=1:x,1:y,1:z
 OFFSET=1,0,0
 LIMITS=
-# LIMITS=("BG", "BG_MASK", "FG", "FG;#", "FG_MASK", "FG_MASK;#", "ROI", "ROI;#", "10,100;13,130;45,150", "NA,NA;NA,NA;10:100")
 LABEL_NO_SLICE="false"
 LABEL_USE_VOX="false"
 LABEL_NO_LR="false"
@@ -379,6 +378,7 @@ DIMS=($(niiInfo -i ${BG} -f voxels))
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
 ORIGIN=($(niiInfo -i ${BG} -f origin))
 ORIENT=($(niiInfo -i ${BG} -f orient))
+echo "381"
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
@@ -395,9 +395,9 @@ if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
   done
 fi
 if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
+echo "398"
 
 # Figure out number slices for each orientation --------------------------------
-unset PLANE
 NX=0; NY=0; NZ=0
 ROW_LAYOUT=(${LAYOUT//\;/ })
 for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
@@ -405,12 +405,13 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
   for (( j=0; j<${#COL_LAYOUT[@]}; j++ )); do
     TEMP=(${COL_LAYOUT[${j}]//\:/ })
     case ${TEMP[1]} in 
-      x) NX=$((${NX}+${TEMP[0]})); PLANE+=("x"); ;;
-      y) NY=$((${NY}+${TEMP[0]})); PLANE+=("y"); ;;
-      z) NZ=$((${NZ}+${TEMP[0]})); PLANE+=("z"); ;;
+      x) NX=$((${NX}+${TEMP[0]})) ;;
+      y) NY=$((${NY}+${TEMP[0]})) ;;
+      z) NZ=$((${NZ}+${TEMP[0]})) ;;
     esac
   done
 done
+echo "414"
 
 # select desired volume from multivolume images --------------------------------
 TV=$(niiInfo -i ${BG} -f vols)
