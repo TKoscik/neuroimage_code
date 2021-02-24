@@ -44,8 +44,6 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-echo $IMAGE
-echo $FIELD
 unset OUTPUT
 if [[ "${FIELD,,}" == "origin" ]]; then
   OUTPUT+=($(nifti_tool -disp_hdr -field qoffset_x -quiet -infiles ${IMAGE}))
@@ -55,7 +53,7 @@ elif [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
   OUTPUT=($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:1:3})
 elif [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
-  echo "inloop"
+  nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:1:3})
 elif [[ "${FIELD,,}" == "vols" ]] || [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
