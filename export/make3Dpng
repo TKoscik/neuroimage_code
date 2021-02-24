@@ -698,11 +698,11 @@ done
 
 # Make Background ==============================================================
 ## generate color bar
-Rscript makeColors.R \
+Rscript ${INC_R}/makeColors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
-Rscript makeColors.R \
+Rscript ${INC_R}/makeColors.R \
   "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
 
@@ -819,7 +819,7 @@ if [[ -n ${FG} ]]; then
     fi
 
     ## generate color bar
-    Rscript makeColors.R \
+    Rscript ${INC_R}/makeColors.R \
       "palette" ${FG_COLOR[${i}]} "n" 200 \
       "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
       "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
@@ -941,7 +941,7 @@ if [[ -n ${ROI} ]]; then
   # make ROI mask
   fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
   ## generate color bar
-  Rscript makeColors.R \
+  Rscript ${INC_R}/makeColors.R \
     "palette" ${ROI_COLOR} "n" ${ROI_N} \
     "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_ROI"
