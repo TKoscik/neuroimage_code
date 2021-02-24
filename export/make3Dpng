@@ -375,7 +375,6 @@ OFFSET=(${OFFSET//,/ })
 # Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
 DIMS=($(niiInfo -i ${BG} -f "voxels"))
-echo ${DIMS[@]}
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
 ORIGIN=($(niiInfo -i ${BG} -f origin))
 ORIENT=($(niiInfo -i ${BG} -f orient))
@@ -395,7 +394,6 @@ if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
   done
 fi
 if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
-echo "398"
 
 # Figure out number slices for each orientation --------------------------------
 NX=0; NY=0; NZ=0
@@ -411,7 +409,6 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
     esac
   done
 done
-echo "414"
 
 # select desired volume from multivolume images --------------------------------
 TV=$(niiInfo -i ${BG} -f vols)
@@ -480,7 +477,6 @@ if [[ -n ${ROI} ]]; then
   ROI_VALUE="all"
 fi
 
-echo "482"
 # Calculate slices to plot =====================================================
 # parse variable to determine image limits ------------------------------------
 if [[ -z "${LIMITS}" ]]; then
