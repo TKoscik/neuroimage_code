@@ -339,6 +339,7 @@ if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
 fi
 mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
@@ -371,7 +372,6 @@ ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
 
 OFFSET=(${OFFSET//,/ })
-echo "OFFSET: ${OFFSET[@]}"
 
 # Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
