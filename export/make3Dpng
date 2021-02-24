@@ -376,6 +376,7 @@ OFFSET=(${OFFSET//,/ })
 echo "1"
 unset DIMS PIXDIM ORIGIN ORIENT
 echo "2"
+niiInfo -h
 DIMS=($(niiInfo -i ${BG} -f voxels))
 echo "3"
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
