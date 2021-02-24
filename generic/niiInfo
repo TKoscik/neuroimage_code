@@ -15,6 +15,7 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 IMAGE=
 FIELD=
+HELP=false
 
 while true; do
   case "$1" in
@@ -32,7 +33,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -i | --image <value>     nii or nii.gz file'
   echo '  -f | --field <value>     string indicating information to extract'
