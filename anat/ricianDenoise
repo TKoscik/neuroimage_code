@@ -185,11 +185,13 @@ if [[ "${DO_PLOT}" == "true" ]]; then
     --bg ${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
     --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
     --dir-save ${DIR_PLOT}
+  echo "plot denoised"
   make3Dpng \
     --bg ${DIR_SAVE}/${PREFIX}_prep-noise_${MOD}.nii.gz \
     --bg-color "viridis" \
     --filename ${PREFIX}_desc-anat+ricianNoise_img-${MOD} \
     --dir-save ${DIR_PLOT}
+  echo "plot noise"
 fi
 if [[ "${DO_ECHO}" == "true" ]]; then
   echo "${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz ${DIR_SAVE}/${PREFIX}_prep-noise_${MOD}.nii.gz"
