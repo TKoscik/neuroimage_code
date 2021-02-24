@@ -374,6 +374,7 @@ OFFSET=(${OFFSET//,/ })
 
 # Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
+niiInfo -i ${BG} -f "voxels"
 DIMS=($(niiInfo -i ${BG} -f "voxels"))
 echo ${DIMS[@]}
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
