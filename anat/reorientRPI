@@ -66,6 +66,7 @@ PREFIX=
 IMAGE=
 DO_ECHO=false
 DIR_SAVE=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 
 while true; do
@@ -120,13 +121,15 @@ if [[ -z "${DIR_SAVE}" ]]; then
   fi
 fi
 mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
 
 # Reorient image
 MOD=$(getField -i ${IMAGE} -f modality)
-OUTNAME=${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
-3dresample -orient rpi -prefix ${OUTNAME} -input ${IMAGE}
+OUTNAME=${PREFIX}_${MOD}.nii.gz
+3dresample -orient rpi -prefix ${DIR_SCRATCH}/${OUTNAME} -input ${IMAGE}
+mv ${DIR_SCRATCH}/${OUTNAME} ${DIR_SAVE}
 
-if [[ "${DO_ECHO}" == "true" ]]; then echo ${OUTNAME}; fi
+if [[ "${DO_ECHO}" == "true" ]]; then echo ${DIR_SAVE}/${OUTNAME}; fi
 
 #===============================================================================
 # End of Function
