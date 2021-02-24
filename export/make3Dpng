@@ -341,7 +341,7 @@ fi
 
 # set default save directory
 if [[ -n "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/overlay_png
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
 fi
 mkdir -p ${DIR_SAVE}
 
