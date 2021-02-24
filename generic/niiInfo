@@ -54,7 +54,7 @@ elif [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
   OUTPUT=(${OUTPUT[@]:1:3})
 elif [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
   echo "wtf"
-  nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}
+  ${AFNIDIR}/nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:1:3})
 elif [[ "${FIELD,,}" == "vols" ]] || [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
