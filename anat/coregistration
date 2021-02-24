@@ -226,7 +226,7 @@ else
         ${INC_TEMPLATE}/${TEMPLATE}/${MIN_UNIT}/${TEMPLATE}_${MIN_UNIT}_${TMOD}.nii.gz \
         ${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${TMOD}.nii.gz \
         ${SIZE}x${SIZE}x${SIZE} 0 0 6
-      FIXED_NEW+=(${DIR_SCRATCH}/${TEMPLATE}_${SPACE_${TMOD}.nii.gz)
+      FIXED_NEW+=(${DIR_SCRATCH}/${TEMPLATE}_${SPACE}_${TMOD}.nii.gz)
     done
     unset FIXED
     FIXED=${FIXED_NEW}
