@@ -180,9 +180,9 @@ if [[ "${KEEP}" == "true" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_prep-noise* ${DIR_SAVE}/
 fi
 
-echo ${DIR_PLOT}
-echo ${DO_PLOT}
+
 if [[ "${DO_PLOT}" == "true" ]]; then
+  echo "make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz --filename ${PREFIX}_desc-anat+denoise_img-${MOD} --dir-save ${DIR_PLOT}"
   make3Dpng \
     --bg ${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
     --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
