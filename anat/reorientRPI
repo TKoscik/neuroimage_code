@@ -126,9 +126,7 @@ MOD=$(getField -i ${IMAGE} -f modality)
 OUTNAME=${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 3dresample -orient rpi -prefix ${OUTNAME} -input ${IMAGE}
 
-if [[ "${DO_ECHO}" == "true" ]];
-  echo ${OUTNAME}
-fi
+if [[ "${DO_ECHO}" == "true" ]]; then echo ${OUTNAME}; fi
 
 #===============================================================================
 # End of Function
