@@ -172,7 +172,6 @@ while true; do
     * ) break ;;
   esac
 done
-echo "175"
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
@@ -340,7 +339,6 @@ if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
 fi
 mkdir -p ${DIR_SAVE}
-echo "343"
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
@@ -373,15 +371,19 @@ ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
 
 OFFSET=(${OFFSET//,/ })
-echo "376"
 
-# Get image informtation -------------------------------------------------------
+# Get image information -------------------------------------------------------
+echo "1"
 unset DIMS PIXDIM ORIGIN ORIENT
+echo "2"
 DIMS=($(niiInfo -i ${BG} -f voxels))
+echo "3"
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
+echo "4"
 ORIGIN=($(niiInfo -i ${BG} -f origin))
+echo "5"
 ORIENT=($(niiInfo -i ${BG} -f orient))
-echo "381"
+echo "6"
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
