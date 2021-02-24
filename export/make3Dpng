@@ -341,7 +341,6 @@ if [[ -n "${DIR_SAVE}" ]]; then
 fi
 mkdir -p ${DIR_SAVE}
 
-echo "running"
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
 FG_VOL=(${FG_VOL//;/ })
@@ -374,6 +373,8 @@ ROI_CBAR=(${ROI_CBAR//;/ })
 
 OFFSET=(${OFFSET//,/ })
 
+echo ${DIR_SAVE}
+echo ${FILENAME}
 # Get image informtation -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
 DIMS=($(niiInfo -i ${BG} -f voxels))
