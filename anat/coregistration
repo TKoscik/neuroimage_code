@@ -59,6 +59,7 @@ mask-dil:,interpolation:,\
 template:,space:,\
 apply-to:,\
 dir-save:,dir-scratch:,\
+do-plot,do-echo,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -84,6 +85,8 @@ SPACE=1mm
 APPLY_TO=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+DO_PLOT=false
+DO_ECHO=false
 HELP=false
 VERBOSE=0
 KEEP=false
@@ -111,6 +114,8 @@ while true; do
     --apply-to) APPLY_TO="$2" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --do-plot) DO_PLOT=true ; shift ;;
+    --do-echo) DO_ECHO=true ; shift ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -163,6 +168,23 @@ fi
 #===============================================================================
 MOVING=(${MOVING//,/ })
 N=${#MOVING[@]}
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${MOVING[0]})
+PID=$(getField -i ${MOVING[0]} -f sub)
+SID=$(getField -i ${MOVING[0]} -f ses)
+DIRPID=sub-${PID}
+if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
+if [[ -z "${PREFIX}" ]]; then
+  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
+fi
+if [[ "${DO_PLOT}" == "true" ]]; then
+  if [[ -z ${DIR_PLOT} ]]; then
+    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
+  fi
+  mkdir -p ${DIR_PLOT}
+fi
+
 FROM=$(getSpace -i ${MOVING[0]})
 
 if [[ "${MOVING_MASK,,}" == "null" ]]; then
@@ -250,23 +272,12 @@ for (( i=0; i<${N_MOVING}; i++ )); do
   fi
 do
 
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${MOVING[0]})
-PID=$(getField -i ${MOVING[0]} -f sub)
-SID=$(getField -i ${MOVING[0]} -f ses)
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
-fi
-
 # setup directories
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/reg_${TO}
 fi
 
-DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/sub-${PID}
-if [[ -n "${SID}" ]]; then
-  DIR_XFM=${DIR_XFM}/ses-${SID}
-fi
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
@@ -286,7 +297,6 @@ if [[ "${MOVING_MASK}" != "NULL" ]]; then
       ImageMath 3 ${MOVING_NONBRAIN} MD ${MOVING_NONBRAIN} ${MASK_DIL}
       ImageMath 3 ${FIXED_NONBRAIN} MD ${FIXED_NONBRAIN} ${MASK_DIL}
     fi
-
     MOVING_MASK=${DIR_SCRATCH}/MOVING_mask-dil${MASK_DIL}.nii.gz
     FIXED_MASK=${DIR_SCRATCH}/FIXED_mask-dil${MASK_DIL}.nii.gz
   fi
@@ -436,6 +446,7 @@ for (( i=0; i<${N}; i++ )); do
   unset MOD xfm_fcn OUT_NAME
   MOD=($(getField -i ${MOVING[${i}]} -f "modality"))
   OUT_NAME=${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
+  ECHO_OUT+=(${OUT_NAME})
   xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
   xfm_fcn="${xfm_fcn} -i ${MOVING[${i}]}"
   xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
@@ -463,6 +474,7 @@ if [[ -n ${APPLY_TO} ]]; then
       N_TEMP=${#N_TEMP[@]}
       OUT_NAME="${DIR_SAVE}/${OUT_BASE}_reg-${TO}_${MOD}+${N_TEMP}.nii.gz"
     fi
+    ECHO_OUT+=(${OUT_NAME})
     xfm_fcn="antsApplyTransforms -d 3 -n BSpline[3]"
     xfm_fcn="${xfm_fcn} -i ${IMAGE_APPLY[${i}]}"
     xfm_fcn="${xfm_fcn} -o ${OUT_NAME}"
@@ -501,19 +513,42 @@ if [[ "${RIGID_ONLY,,}" == "false" ]]; then
     if [[ "${HARDCORE,,}" == "false" ]]; then
       mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
         ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
+      ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz)
       mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
         ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz
+      ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz)
+      PLOT_STR=syn
     else
       mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
         ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz
+      ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz)
       mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
         ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
+      ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz)
+      PLOT_STR=bspline
     fi
     mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
       ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
+    ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat)
+    PLOT_STR=affine
 else
   mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
     ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
+  ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat)
+  PLOT_STR=rigid
+fi
+
+if [[ "${DO_PLOT}" == "true" ]]; then
+  MOD=$(getField -i ${MOVING[0]} -f modality)
+  make3Dpng \
+    --bg ${FIXED[0]} --bg-color "#000000,#00FF00" \
+    --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" \
+    --filename ${PREFIX}_desc-coreg+${PLOT_STR}_img-${MOD} \
+    --dir-save ${DIR_PLOT}
+fi
+
+if [[ "${DO_ECHO}" == "true" ]]; then
+  echo ${ECHO_OUT[@]}
 fi
 
 #===============================================================================

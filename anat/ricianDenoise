@@ -181,7 +181,6 @@ if [[ "${KEEP}" == "true" ]]; then
 fi
 
 if [[ "${DO_PLOT}" == "true" ]]; then
-  echo "make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz --filename ${PREFIX}_desc-anat+denoise_img-${MOD} --dir-save ${DIR_PLOT}"
   make3Dpng \
     --bg ${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
     --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
