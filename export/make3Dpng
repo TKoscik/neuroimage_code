@@ -1166,7 +1166,7 @@ if [[ "${LABEL_NO_LR}" == "false" ]]; then
 fi
 
 # move final png file
-mv ${DIR_SCRATCH}/${IMAGE_NAME}.png ${DIR_SAVE}/
+mv ${DIR_SCRATCH}/${FILENAME}.png ${DIR_SAVE}/
 
 # move optional outputs, slices and color bars
 if [[ "${KEEP_SLICE}" == "true" ]]; then
