@@ -373,12 +373,9 @@ ROI_CBAR=(${ROI_CBAR//;/ })
 OFFSET=(${OFFSET//,/ })
 
 # Get image information -------------------------------------------------------
-echo "1"
 unset DIMS PIXDIM ORIGIN ORIENT
-echo "2"
-niiInfo -h
-DIMS=($(niiInfo -i ${BG} -f voxels))
-echo "3"
+DIMS=($(niiInfo -i ${BG} -f "voxels"))
+echo ${DIMS[@]}
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
 echo "4"
 ORIGIN=($(niiInfo -i ${BG} -f origin))
