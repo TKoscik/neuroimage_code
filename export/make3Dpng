@@ -374,15 +374,11 @@ OFFSET=(${OFFSET//,/ })
 
 # Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
-niiInfo -i ${BG} -f "voxels"
 DIMS=($(niiInfo -i ${BG} -f "voxels"))
 echo ${DIMS[@]}
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
-echo "4"
 ORIGIN=($(niiInfo -i ${BG} -f origin))
-echo "5"
 ORIENT=($(niiInfo -i ${BG} -f orient))
-echo "6"
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&

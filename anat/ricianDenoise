@@ -180,22 +180,22 @@ if [[ "${KEEP}" == "true" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_prep-noise* ${DIR_SAVE}/
 fi
 
-
 if [[ "${DO_PLOT}" == "true" ]]; then
-  echo "make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz --filename ${PREFIX}_desc-anat+denoise_img-${MOD} --dir-save ${DIR_PLOT}"
+  echo "make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz --filename ${PREFIX}_desc-anat+denoise_img-${MOD} --dir-save ${DIR_PLOT}"
   make3Dpng \
-    --bg ${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
+    --bg ${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
     --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
     --dir-save ${DIR_PLOT}
   make3Dpng \
-    --bg ${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz \
+    --bg ${DIR_SAVE}/${PREFIX}_prep-noise_${MOD}.nii.gz \
     --bg-color "viridis" \
     --filename ${PREFIX}_desc-anat+ricianNoise_img-${MOD} \
     --dir-save ${DIR_PLOT}
 fi
 if [[ "${DO_ECHO}" == "true" ]]; then
-  echo "${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz ${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz"
+  echo "${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz ${DIR_SAVE}/${PREFIX}_prep-noise_${MOD}.nii.gz"
 fi
+
 #===============================================================================
 # End of Function
 #===============================================================================
