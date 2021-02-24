@@ -141,24 +141,18 @@ fi
 DIR_PROJECT=$(getDir -i ${IMAGE})
 PID=$(getField -i ${IMAGE} -f sub)
 SID=$(getField -i ${IMAGE} -f ses)
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(getBidsBase -s -i ${IMAGE})
-fi
+DIRPID=sub-${PID}
+if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
+if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${IMAGE}); fi
 
-if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
-  if [ -n "${SID}" ]; then
-    DIR_SAVE=${DIR_SAVE}/ses-${SID}
-  fi
+if [[ -z "${DIR_SAVE}" ]]; then 
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 if [[ "${DO_PLOT}" == "true" ]]; then
-  if [[ -z "${DIR_PLOT}" ]]; then
-    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/sub-${PID}
-    if [ -n "${SID}" ]; then
-      DIR_PLOT=${DIR_PLOT}/ses-${SID}
-    fi
+  if [[ -z ${DIR_PLOT} ]]; then
+    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
   fi
   mkdir -p ${DIR_PLOT}
 fi
@@ -187,6 +181,7 @@ if [[ "${KEEP}" == "true" ]]; then
 fi
 
 if [[ "${DO_PLOT}" == "true" ]]; then
+  echo ${DIR_PLOT}
   make3Dpng \
     --bg ${DIR_SCRATCH}/${PREFIX}_prep-denoise_${MOD}.nii.gz \
     --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
