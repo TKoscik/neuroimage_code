@@ -357,12 +357,12 @@ FG_CBAR=(${FG_CBAR//;/ })
 FG_N=${#FG[@]}
 if [[ ${FG_N} -gt 1 ]]; then
   if [[ ${#FG_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${FG_N} )); do
+    for (( i=0; i<${FG_N}; i++ )); do
       FG_VOL[${i}]=(${FG_VOL[0]})
     done
   fi
   if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${FG_N} )); do
+    for (( i=0; i<${FG_N}; i++ )); do
       FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
     done
   fi
