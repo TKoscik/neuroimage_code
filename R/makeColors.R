@@ -142,7 +142,7 @@ color.bg <- format(t(col2rgb(color.bg))/255, digits=4)
 
 # Write look up table for overlay image
 if (file.exists(paste0(dir.save, "/", prefix, ".lut"))) {
-  file.remove(paste0(dir.save, "/", prefix, ".lut"))
+  file.remove(paste0(dir.save, "/", prefix, ".lut"), showWarnings=FALSE)
 }
 fid <- file(paste0(dir.save, "/", prefix, ".lut"), open="a", encoding = "UTF-8")
 writeLines(c(
