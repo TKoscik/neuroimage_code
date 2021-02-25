@@ -162,7 +162,6 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
-echo ${DIR_XFM}
 
 # set fixed image --------------------------------------------------------------
 ## modality of input image
@@ -201,15 +200,17 @@ antsRegistration -d 3 --float 1 --verbose ${VERBOSE} -u ${HIST_MATCH} -z 1 \
   -s 4x3x2x1x0vox
 
 # rename and move transform ----------------------------------------------------
+FROM=$(getSpace -i ${MOVING})
+TO=$(getSpace -i ${FIXED})
 mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
   ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
-
+echo 207
 # apply transform to moving image ----------------------------------------------
 antsApplyTransforms -d 3 -n ${INTERPOLATION} \
   -i ${MOVING} \
   -o ${DIR_SAVE}/${PREFIX}_prep-${PREP}align_${MOD}.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
-
+echo 213
 # plot output for review -------------------------------------------------------
 if [[ "${DO_PLOT}" == "true" ]]; then
   if [[ -z ${DIR_PLOT} ]]; then 
@@ -222,14 +223,16 @@ if [[ "${DO_PLOT}" == "true" ]]; then
     --layout "5:x;7:y;7:z" --offset "0,0,0" \
     --filename ${PREFIX}_desc-align_to-${TO}_img-${MOD} \
     --dir-save ${DIR_PLOT}
+    echo 226
 fi
 
 if [[ "${DO_ECHO}" == "true" ]]; then
   ECHO_OUT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}align_${MOD}.nii.gz)
   ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat)
   echo "${ECHO_OUT[@]}"
+  echo 233
 fi
-
+echo 235
 #===============================================================================
 # End of Function
 #===============================================================================
