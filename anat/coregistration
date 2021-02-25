@@ -197,7 +197,8 @@ else
         HIST_MATCH+=(0)
       fi
     done
-  else
+  #else (Tim, this is Lauren and coreg errors with this `else` here. If you actually have an else, just uncomment)
+  fi
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
