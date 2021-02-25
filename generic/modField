@@ -64,9 +64,9 @@ fi
 #==============================================================================
 # extract directory, filename, and extension ----------------------------------
 DIR_NAME=$(dirname ${INPUT})
-if [[ "${DIR_NAME}" == "." ]]; then DIR_NAME=; fi
+if [[ "${DIR_NAME}" == "." ]]; then DIR_NAME=null; fi
 BNAME=$(basename ${INPUT})
-FNAME="${BNAME%.*}"
+FNAME="${BNAME%%.*}"
 EXT="${BNAME#*.}"
 
 # extract flags and values ----------------------------------------------------
@@ -79,7 +79,7 @@ for (( i=0; i<${#TEMP[@]}; i++ )); do
     VALUE+=(${SPLIT_DASH[1]})
   else
     FLAG+=(modality)
-    VALUE+=(${SPLIT_DASH[1]})
+    VALUE+=(${SPLIT_DASH[0]})
   fi
 done
 NFLAG=${#FLAG[@]}
@@ -132,7 +132,7 @@ fi
 
 # write output string ---------------------------------------------------------
 OUT_STR=
-if [[ -n "${DIR_NAME}" ]]; then OUT_STR="${DIR_NAME}/"; fi
+if [[ "${DIR_NAME}" !="null" ]]; then OUT_STR="${DIR_NAME}/"; fi
 for (( i=0; i<${#FLAG[@]}; i++ )); do
   if [[ "${FLAG[${i}]}" != "delete" ]]; then
     if [[ "${FLAG[${i}]}" != "modality" ]]; then
