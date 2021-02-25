@@ -223,7 +223,7 @@ if [[ "${MOVING_MASK,,}" == "null" ]]; then
 fi
 
 if [[ "${FIXED,,}" != "null" ]]; then
-
+  echo "I'm gonna kill you Tim."
 else
   unset FIXED
   for (( i=0; i<${MOVING_N}; i++ )); do
@@ -298,7 +298,8 @@ for (( i=0; i<${MOVING_N}; i++ )); do
   if [[ "${MOD_FIXED}" != "${MOD_MOVING}" ]]; then
     HIST_MATCH=0
   fi
-do
+#do (Do you mean `done`?)
+done
 
 # setup directories
 if [[ -z "${DIR_SAVE}" ]]; then
