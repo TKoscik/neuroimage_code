@@ -68,10 +68,11 @@ if [[ "${DIR_NAME}" == "." ]]; then DIR_NAME="null"; fi
 BNAME=$(basename ${INPUT})
 FNAME="${BNAME%%.*}"
 EXT="${BNAME#*.}"
+if [[ "${BNAME}" == "${EXT}" ]]; then EXT="null"; fi
 
 # extract flags and values ----------------------------------------------------
 SPLIT_UNDERSCORE=(${FNAME//_/ })
-for (( i=0; i<${#TEMP[@]}; i++ )); do
+for (( i=0; i<${#SPLIT_UNDERSCORE[@]}; i++ )); do
   unset SPLIT_DASH
   SPLIT_DASH=(${SPLIT_UNDERSCORE[${i}]//-/ })
   if [[ ${#SPLIT_DASH[@]} -eq 2 ]]; then
@@ -142,7 +143,7 @@ for (( i=0; i<${#FLAG[@]}; i++ )); do
     fi
   fi
 done
-if [[ -n ${EXT} ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
+if [[ "${EXT}" != "null" ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
 
 # send output to terminal -----------------------------------------------------
 echo ${OUT_STR}
