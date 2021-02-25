@@ -62,6 +62,7 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
+echo $INPUT
 # extract directory, filename, and extension ----------------------------------
 DIR_NAME=$(dirname ${INPUT})
 if [[ "${DIR_NAME}" == "." ]]; then DIR_NAME=null; fi
