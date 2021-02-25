@@ -543,7 +543,7 @@ if [[ "${DO_PLOT}" == "true" ]]; then
   make3Dpng \
     --bg ${FIXED[0]} --bg-color "#000000,#00FF00" \
     --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" \
-    --filename ${PREFIX}_desc-coreg+${PLOT_STR}_img-${MOD} \
+    --filename ${PREFIX}_desc-coreg+${PLOT_STR}_from-${FROM}_to-${TO}_img-${MOD} \
     --dir-save ${DIR_PLOT}
 fi
 

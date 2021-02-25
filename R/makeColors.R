@@ -60,9 +60,10 @@ if (color.palette == "timbow") {
     "#B4DE2CFF", "#FDE725FF", "#F8E125FF", "#FDC926FF", "#FDB32FFF",
     "#FA9E3BFF", "#F58B47FF", "#ED7953FF", "#E3685FFF", "#D8576BFF",
     "#CC4678FF"))
+  color.ls <- cpal(color.n)
 }
 if (color.palette %in% c("viridis", "magma", "inferno", "plasma", "cividis")) {
-  cpal <- colorRampPalette(viridis(color.n, option=color.palette))
+  color.ls <- viridis(color.n, option=color.palette)
 }
 if (grepl("cubehelix", color.palette)) {
   temp <- unlist(strsplit(color.palette, split=","))
@@ -92,23 +93,28 @@ if (grepl("cubehelix", color.palette)) {
   cpal = l + hue * l * (1 - l)/2 * (M %*% t)
   cpal = pmin(pmax(cpal, 0), 1)
   cpal = apply(cpal, 2, function(x) rgb(x[1], x[2], x[3]))
+  color.ls <- cpal(color.n)
 }
 if (color.palette == "hot") {
   cpal <- colorRampPalette(c("#7F0000", "#FF0000", "#FF7F00", "#FFFF00", "#FFFF7F"))
+  color.ls <- cpal(color.n)
 }
 if (color.palette == "cold") {
   cpal <- colorRampPalette(rev(c("#00007F", "#0000FF", "#007FFF", "#00FFFF", "#7FFFFF")))
+  color.ls <- cpal(color.n)
 }
 if (color.palette %in% c("grayscale", "grayscale", "gray", "grey")) {
   cpal <- colorRampPalette(c("#000000", "#FFFFFF"))
+  color.ls <- cpal(color.n)
 }
 if (color.palette == "rainbow") {
   cpal <- colorRampPalette(c("#FF0000", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF", "#FF00FF"))
+  color.ls <- cpal(color.n)
 }
 if (length(cpal) == 0) {
   cpal <- colorRampPalette(unlist(strsplit(color.palette, split=",")))
+  color.ls <- cpal(color.n)
 }
-color.ls <- cpal(color.n)
   
 if (color.order %in% c("r", "rand", "random")) {
   color.ls <- sample(color.ls, color.n, replace = F)
