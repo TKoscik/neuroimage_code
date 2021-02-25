@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hmadi:f:v: --long input:,modify,add,delete,field:,value:,help -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hmari:f:v: --long input:,modify,add,remove,field:,value:,help -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -27,7 +27,7 @@ while true; do
     -i | --input) INPUT="$2" ; shift 2 ;;
     -m | --modify) ACTION=modify ; shift ;;
     -a | --add) ACTION=add ; shift ;;
-    -d | --delete) ACTION=delete ; shift ;;
+    -r | --remove) ACTION=remove ; shift ;;
     -f | --field) FIELD="$2" ; shift 2 ;;
     -v | --value) VALUE_NEW="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -45,7 +45,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -i | --input <value>     BIDs compliant filepath'
   echo '  -m | --modify            modify an existing flag'
   echo '  -a | --add               add an additional flag'
-  echo '  -d | --delete            delete an existing flag'
+  echo '  -r | --remove            remove an existing flag'
   echo '  -f | --field <value>     field to act on'
   echo '  -v | --value <value>     value to use'
   echo '  field options (in order):'
@@ -85,7 +85,7 @@ for (( i=0; i<${#TEMP[@]}; i++ )); do
 done
 NFLAG=${#FLAG[@]}
 
-# loop over possible flags, modify, add, or delete-----------------------------
+# loop over possible flags, modify, add, or remove-----------------------------
 ## modify flag ----------------------------------------------------------------
 if [[ "${ACTION,,}" == "modify" ]]; then
   for (( i=0; i<${NFLAG}; i++ )); do
@@ -95,12 +95,12 @@ if [[ "${ACTION,,}" == "modify" ]]; then
   done
 fi
 
-## delete flag ----------------------------------------------------------------
-if [[ "${ACTION,,}" == "delete" ]]; then
+## remove flag ----------------------------------------------------------------
+if [[ "${ACTION,,}" == "remove" ]]; then
   for (( i=0; i<${NFLAG}; i++ )); do
     if [[ "${FLAG[${i}]}" == "${FIELD,,}" ]]; then
-      FLAG[${i}]="delete"
-      VALUE[${i}]="delete"
+      FLAG[${i}]="remove"
+      VALUE[${i}]="remove"
     fi
   done
 fi
@@ -135,7 +135,7 @@ fi
 OUT_STR=
 if [[ "${DIR_NAME}" != "null" ]]; then OUT_STR="${DIR_NAME}/"; fi
 for (( i=0; i<${#FLAG[@]}; i++ )); do
-  if [[ "${FLAG[${i}]}" != "delete" ]]; then
+  if [[ "${FLAG[${i}]}" != "remove" ]]; then
     if [[ "${FLAG[${i}]}" != "modality" ]]; then
       OUT_STR="${OUT_STR}${FLAG[${i}]}-${VALUE[${i}]}_"
     else
