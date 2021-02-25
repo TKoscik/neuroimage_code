@@ -143,7 +143,7 @@ while true; do
     --fg-threshold) FG_THRESH="$2" ; shift 2 ;;
     --fg-color) FG_COLOR="$2" ; shift 2 ;;
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
-    --fg-cbar) FG_CBAR="true" ; shift ;;
+    --fg-cbar) FG_CBAR="false" ; shift ;;
     --roi) ROI="$2" ; shift 2 ;;
     --roi-volume) ROI_VOL="$2" ; shift 2 ;;
     --roi-value) ROI_VALUE="$2" ; shift 2 ;;

@@ -541,8 +541,8 @@ fi
 if [[ "${DO_PLOT}" == "true" ]]; then
   MOD=$(getField -i ${MOVING[0]} -f modality)
   make3Dpng \
-    --bg ${FIXED[0]} --bg-color "#000000,#00FF00" \
-    --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" \
+    --bg ${FIXED[0]} --bg-color "#000000,#00FF00" --bg-thresh 2,98 \
+    --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" --fg-thresh 2,98 --fg-cbar \
     --filename ${PREFIX}_desc-coreg+${PLOT_STR}_from-${FROM}_to-${TO}_img-${MOD} \
     --dir-save ${DIR_PLOT}
 fi
