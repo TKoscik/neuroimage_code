@@ -62,6 +62,7 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
+echo $ACTION
 # Gather input information ----------------------------------------------------
 DNAME=$(dirname ${INPUT})
 TEMP_NAME=$(basename ${INPUT})
@@ -138,7 +139,7 @@ fi
 
 # write output string ---------------------------------------------------------
 OUTPUT_STR=
-if [[ "${DNAME}" ~= "." ]]; then
+if [[ "${DNAME}" != "." ]]; then
   OUTPUT_STR="${DNAME}/"
 fi
 N_OUT=${#OUTPUT_FLAG[@]}
