@@ -62,7 +62,7 @@ if (color.palette == "timbow") {
     "#CC4678FF"))
 }
 if (color.palette %in% c("viridis", "magma", "inferno", "plasma", "cividis")) {
-  color.ls <- viridis(color.n, option=color.palette)
+  cpal <- colorRampPalette(viridis(color.n, option=color.palette))
 }
 if (grepl("cubehelix", color.palette)) {
   temp <- unlist(strsplit(color.palette, split=","))
