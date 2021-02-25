@@ -32,7 +32,7 @@ for (i in seq(1,length(args))) {
   if (args[i] == "palette") {
     color.palette <- args[i+1]
   } else if (args[i] %in% c("n", "number", "num.colors")) {
-    color.n <- args[i+1]
+    color.n <- as.numeric(args[i+1])
   } else if (args[i] %in% c("order", "color.order")) {
     color.order <- args[i+1]
   } else if (args[i] %in% c("bg", "background")) {
