@@ -140,7 +140,10 @@ N_OUT=${#OUTPUT_FLAG[@]}
 for (( i=0; i<${N_OUT}; i++ )); do
   OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
 done
-OUTPUT_STR="${OUTPUT_STR}${OUTPUT_MODALITY}.${EXT}"
+OUTPUT_STR="${OUTPUT_STR}${OUTPUT_MODALITY}"
+if [[ -n ${EXT} ]]; then
+  OUTPUT_STR="${OUTPUT_STR}.${EXT}"
+fi
 
 # send output to terminal -----------------------------------------------------
 echo ${OUTPUT_STR}

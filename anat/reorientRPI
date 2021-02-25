@@ -111,7 +111,11 @@ PID=$(getField -i ${IMAGE} -f sub)
 SID=$(getField -i ${IMAGE} -f ses)
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${IMAGE})
-  PREFIX="${PREFIX}_prep-reorient"
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREP="${PREP}+"
+    PREFIX=$(modField -i ${PREFIX} -d -f prep)
+  fi
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
@@ -123,12 +127,13 @@ fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
-# Reorient image
+# Reorient image ---------------------------------------------------------------
 MOD=$(getField -i ${IMAGE} -f modality)
-OUTNAME=${PREFIX}_${MOD}.nii.gz
+OUTNAME=${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz
 3dresample -orient rpi -prefix ${DIR_SCRATCH}/${OUTNAME} -input ${IMAGE}
 mv ${DIR_SCRATCH}/${OUTNAME} ${DIR_SAVE}
 
+# output filenames -------------------------------------------------------------
 if [[ "${DO_ECHO}" == "true" ]]; then echo ${DIR_SAVE}/${OUTNAME}; fi
 
 #===============================================================================
