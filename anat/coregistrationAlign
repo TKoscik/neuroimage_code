@@ -209,7 +209,8 @@ echo 207
 antsApplyTransforms -d 3 -n ${INTERPOLATION} \
   -i ${MOVING} \
   -o ${DIR_SAVE}/${PREFIX}_prep-${PREP}align_${MOD}.nii.gz \
-  -t ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
+  -t ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat \
+  -r ${FIXED}
 echo 213
 # plot output for review -------------------------------------------------------
 if [[ "${DO_PLOT}" == "true" ]]; then
