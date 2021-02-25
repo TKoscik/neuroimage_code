@@ -148,7 +148,7 @@ if [[ -z "${PREFIX}" ]]; then
   PREP=$(getField -i ${PREFIX} -f prep)
   if [[ -n ${PREP} ]]; then
     PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -d -f prep)
+    PREFIX=$(modField -i ${PREFIX} -r -f prep)
     echo ${PREFIX}
   fi
 fi
