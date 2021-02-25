@@ -149,7 +149,7 @@ if [[ -z "${PREFIX}" ]]; then
   if [[ -n ${PREP} ]]; then
     PREP="${PREP}+"
     PREFIX=$(modField -i ${PREFIX} -d -f prep)
-    echo "yes"
+    echo ${PREFIX}
   fi
 fi
 

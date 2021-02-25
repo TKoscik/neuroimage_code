@@ -17,7 +17,7 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 INPUT=
 FIELD=
-VALUE=
+VALUE_NEW=
 ACTION=
 HELP=false
 
@@ -29,7 +29,7 @@ while true; do
     -a | --add) ACTION=add ; shift ;;
     -d | --delete) ACTION=delete ; shift ;;
     -f | --field) FIELD="$2" ; shift 2 ;;
-    -v | --value) VALUE="$2" ; shift 2 ;;
+    -v | --value) VALUE_NEW="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -62,92 +62,90 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-echo $ACTION
-# Gather input information ----------------------------------------------------
-DNAME=$(dirname ${INPUT})
-TEMP_NAME=$(basename ${INPUT})
-TEMP_NAME=(${TEMP_NAME//./ })
-FNAME=${TEMP_NAME[0]}
-unset 'TEMP_NAME[0]'
-EXT=$(IFS=. ; echo "${TEMP_NAME[*]}")
+# extract directory, filename, and extension ----------------------------------
+DIR_NAME=$(dirname ${INPUT})
+if [[ "${DIR_NAME}" == "." ]]; then DIR_NAME=; fi
+BNAME=$(basename ${INPUT})
+FNAME="${BNAME%.*}"
+EXT="${BNAME#*.}"
 
-TEMP=(${FNAME//_/ })
-OUTPUT_MODALITY=${TEMP[-1]}
+# extract flags and values ----------------------------------------------------
+SPLIT_UNDERSCORE=(${FNAME//_/ })
 for (( i=0; i<${#TEMP[@]}; i++ )); do
-  unset TEMP2
-  TEMP2=(${TEMP[${i}]//-/ })
-  if [[ "${#TEMP2[@]}" == 2 ]]; then
-    INPUT_FLAG+=(${TEMP2[0]})
-    INPUT_VALUE+=(${TEMP2[1]})
+  unset SPLIT_DASH
+  SPLIT_DASH=(${SPLIT_UNDERSCORE[${i}]//-/ })
+  if [[ ${#SPLIT_DASH[@]} -eq 2 ]]; then
+    FLAG+=(${SPLIT_DASH[0]})
+    VALUE+=(${SPLIT_DASH[1]})
+  else
+    FLAG+=(modality)
+    VALUE+=(${SPLIT_DASH[1]})
   fi
 done
-N_FLAG=${#INPUT_FLAG[@]}
+NFLAG=${#FLAG[@]}
 
 # loop over possible flags, modify, add, or delete-----------------------------
 ## modify flag ----------------------------------------------------------------
 if [[ "${ACTION,,}" == "modify" ]]; then
-  if [[ "${FIELD,,}" == "modality" ]]; then
-    OUTPUT_MODALITY=${VALUE}
-  else
-    for (( i=0; i<${N_FLAG}; i++ )); do
-      if [[ "${INPUT_FLAG,,}" == "${FIELD,,}" ]]; then
-        INPUT_VALUE[${i}]="${VALUE}"
-        break
-      fi
-    done
-  fi
-  OUTPUT_FLAG=(${INPUT_FLAG[@]})
-  OUTPUT_VALUE=(${INPUT_VALUE[@]})
+  for (( i=0; i<${NFLAG}; i++ )); do
+    if [[ "${FLAG[${i}],,}" == "${FIELD,,}" ]]; then
+      VALUE[${i}]="${VALUE_NEW}"
+    fi
+  done
 fi
 
 ## delete flag ----------------------------------------------------------------
 if [[ "${ACTION,,}" == "delete" ]]; then
-  for (( i=0; i<${N_FLAG}; i++ )); do
-    if [[ "${INPUT_FLAG[${i}]}" == "${FIELD,,}" ]]; then
-      INPUT_FLAG[${i}]="delete"
-      INPUT_VALUE[${i}]="delete"
+  for (( i=0; i<${NFLAG}; i++ )); do
+    if [[ "${FLAG[${i}]}" == "${FIELD,,}" ]]; then
+      FLAG[${i}]="delete"
+      VALUE[${i}]="delete"
     fi
   done
-  OUTPUT_FLAG=(${INPUT_FLAG[@]})
-  OUTPUT_VALUE=(${INPUT_VALUE[@]})
 fi
 
 ## Add flag -------------------------------------------------------------------
 BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
 N_BIDS=${#BIDS_LS[@]}
 if [[ "${ACTION,,}" == "add" ]]; then
+  TFLAG=
+  TVALUE=
   for (( i=0; i<${N_BIDS}; i++ )); do
     if [[ "${FIELD,,}" == "${BIDS_LS[${i}]}" ]]; then
-      OUTPUT_FLAG+=(${FIELD,,})
-      OUTPUT_VALUE+=(${VALUE})
+      TFLAG+=(${FIELD,,})
+      TVALUE+=(${VALUE_NEW})
     fi
-    for (( j=0; j<${N_FLAG}; j++ )); do
-      if [[ "${INPUT_FLAG[${j}]}" == "${BIDS_LS[${i}]}" ]]; then
-        OUTPUT_FLAG+=(${INPUT_FLAG[${j}]})
-        OUTPUT_VALUE+=(${INPUT_VALUE[${j}]})
+    for (( j=0; j<${NFLAG}; j++ )); do
+      if [[ "${FLAG[${j}]}" == "${BIDS_LS[${i}]}" ]]; then
+        TFLAG+=(${FLAG[${j}]})
+        TVALUE+=(${VALUE[${j}]})
       fi
     done
   done
   if [[ ! "${BIDS_LS[@]}" =~ "${FIELD,,}" ]]; then
-    OUTPUT_FLAG+=(${FIELD,,})
-    OUTPUT_VALUE+=(${VALUE})
+    TFLAG+=(${FIELD,,})
+    TVALUE+=(${VALUE_NEW})
   fi
+  FLAG=(${TFLAG[@]})
+  VALUE=(${TVALUE[@]})
 fi
 
 # write output string ---------------------------------------------------------
-OUTPUT_STR=
-if [[ "${DNAME}" != "." ]]; then OUTPUT_STR="${DNAME}/"; fi
-N_OUT=${#OUTPUT_FLAG[@]}
-for (( i=0; i<${N_OUT}; i++ )); do
-  if [[ "${OUTPUT_FLAG[${i}]}" != "delete" ]]; then
-    OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
+OUT_STR=
+if [[ -n "${DIR_NAME}" ]]; then OUT_STR="${DIR_NAME}/"; fi
+for (( i=0; i<${#FLAG[@]}; i++ )); do
+  if [[ "${FLAG[${i}]}" != "delete" ]]; then
+    if [[ "${FLAG[${i}]}" != "modality" ]]; then
+      OUT_STR="${OUT_STR}${FLAG[${i}]}-${VALUE[${i}]}_"
+    else
+      OUT_STR="${OUT_STR}${VALUE[${i}]}"
+    fi
   fi
 done
-OUTPUT_STR="${OUTPUT_STR}${OUTPUT_MODALITY}"
-if [[ -n ${EXT} ]]; then OUTPUT_STR="${OUTPUT_STR}.${EXT}"; fi
+if [[ -n ${EXT} ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
 
 # send output to terminal -----------------------------------------------------
-echo ${OUTPUT_STR}
+echo ${OUT_STR}
 
 #==============================================================================
 # End of function
