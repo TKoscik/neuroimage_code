@@ -146,8 +146,8 @@ DIR_PROJECT=$(getDir -i ${MOVING})
 PID=$(getField -i ${MOVING} -f sub)
 SID=$(getField -i ${MOVING} -f ses)
 DIRPID=sub-${PID}
-if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
-if [[ -z "${PREFIX}" ]]; then
+if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+if [[ -z ${PREFIX} ]]; then
   PREFIX=$(getBidsBase -s -i ${MOVING})
   PREP=$(getField -i ${PREFIX} -f prep)
   if [[ -n ${PREP} ]]; then
@@ -162,6 +162,7 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
+echo ${DIR_XFM}
 
 # set fixed image --------------------------------------------------------------
 ## modality of input image
