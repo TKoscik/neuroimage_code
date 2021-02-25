@@ -132,7 +132,7 @@ fi
 
 # write output string ---------------------------------------------------------
 OUT_STR=
-if [[ "${DIR_NAME}" !="null" ]]; then OUT_STR="${DIR_NAME}/"; fi
+if [[ "${DIR_NAME}" != "null" ]]; then OUT_STR="${DIR_NAME}/"; fi
 for (( i=0; i<${#FLAG[@]}; i++ )); do
   if [[ "${FLAG[${i}]}" != "delete" ]]; then
     if [[ "${FLAG[${i}]}" != "modality" ]]; then
