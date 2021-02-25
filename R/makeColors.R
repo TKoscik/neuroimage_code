@@ -63,7 +63,8 @@ if (color.palette == "timbow") {
   color.ls <- cpal(color.n)
 }
 if (color.palette %in% c("viridis", "magma", "inferno", "plasma", "cividis")) {
-  color.ls <- viridis(color.n, option=color.palette)
+  cpal <- colorRampPalette(viridis(19, option=color.palette))
+  color.ls <- cpal(color.n)
 }
 if (grepl("cubehelix", color.palette)) {
   temp <- unlist(strsplit(color.palette, split=","))
