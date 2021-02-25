@@ -144,6 +144,7 @@ for (( i=0; i<${#FLAG[@]}; i++ )); do
   fi
 done
 if [[ "${EXT}" != "null" ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
+OUT_STR=${OUT_STR%_}
 
 # send output to terminal -----------------------------------------------------
 echo ${OUT_STR}

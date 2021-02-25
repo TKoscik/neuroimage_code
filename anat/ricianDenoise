@@ -149,7 +149,6 @@ if [[ -z "${PREFIX}" ]]; then
   if [[ -n ${PREP} ]]; then
     PREP="${PREP}+"
     PREFIX=$(modField -i ${PREFIX} -r -f prep)
-    echo ${PREFIX}
   fi
 fi
 
@@ -179,8 +178,8 @@ dn_fcn="${dn_fcn} -i ${IMAGE}"
 if [ -n "${MASK}" ]; then
   dn_fcn="${dn_fcn} -x ${MASK}"
 fi
-dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}+denoise_${MOD}.nii.gz,"
-dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}+noise_${MOD}.nii.gz]"
+dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz,"
+dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz]"
 eval ${dn_fcn}
 
 #  copy output to final file
