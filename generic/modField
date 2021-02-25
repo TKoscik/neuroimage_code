@@ -107,6 +107,8 @@ if [[ "${ACTION,,}" == "delete" ]]; then
       unset 'INPUT_VALUE[${i}]'
       break
     fi
+    echo ${INPUT_FLAG[@]}
+    echo ${INPUT_VALUE[@]}
   done
   OUTPUT_FLAG=(${INPUT_FLAG[@]})
   OUTPUT_VALUE=(${INPUT_VALUE[@]})
@@ -135,7 +137,10 @@ if [[ "${ACTION,,}" == "add" ]]; then
 fi
 
 # write output string ---------------------------------------------------------
-OUTPUT_STR="${DNAME}/"
+OUTPUT_STR=
+if [[ "${DNAME}" ~= "." ]]; then
+  OUTPUT_STR="${DNAME}/"
+fi
 N_OUT=${#OUTPUT_FLAG[@]}
 for (( i=0; i<${N_OUT}; i++ )); do
   OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
