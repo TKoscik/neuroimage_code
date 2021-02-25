@@ -52,9 +52,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkln --long prefix:,\
+OPTS=$(getopt -o hvlp --long prefix:,\
 moving:,interpolation:,template:,space-template:,space:,\
-dir-save:,dir-scratch:,do-plot,do-echo,\
+dir-save:,dir-scratch:,do-plot,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -72,7 +72,6 @@ SPACE=1mm
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 DO_PLOT=false
-DO_ECHO=false
 HELP=false
 VERBOSE=0
 
@@ -81,6 +80,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -p | --do-plot) DO_PLOT=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --moving) MOVING="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
@@ -89,8 +89,6 @@ while true; do
     --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
-    --do-plot) DO_PLOT=true ; shift ;;
-    --do-echo) DO_ECHO=true ; shift ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -102,10 +100,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
@@ -204,14 +200,15 @@ FROM=$(getSpace -i ${MOVING})
 TO=$(getSpace -i ${FIXED})
 mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
   ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
-echo 207
+
 # apply transform to moving image ----------------------------------------------
-antsApplyTransforms -d 3 -n ${INTERPOLATION} \
+antsApplyTransforms -d 3 \
+  -n ${INTERPOLATION} \
   -i ${MOVING} \
   -o ${DIR_SAVE}/${PREFIX}_prep-${PREP}align_${MOD}.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat \
   -r ${FIXED}
-echo 213
+
 # plot output for review -------------------------------------------------------
 if [[ "${DO_PLOT}" == "true" ]]; then
   if [[ -z ${DIR_PLOT} ]]; then 
@@ -224,16 +221,8 @@ if [[ "${DO_PLOT}" == "true" ]]; then
     --layout "5:x;7:y;7:z" --offset "0,0,0" \
     --filename ${PREFIX}_desc-align_to-${TO}_img-${MOD} \
     --dir-save ${DIR_PLOT}
-    echo 226
 fi
 
-if [[ "${DO_ECHO}" == "true" ]]; then
-  ECHO_OUT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}align_${MOD}.nii.gz)
-  ECHO_OUT+=(${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat)
-  echo "${ECHO_OUT[@]}"
-  echo 233
-fi
-echo 235
 #===============================================================================
 # End of Function
 #===============================================================================
