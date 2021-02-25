@@ -104,12 +104,9 @@ fi
 if [[ "${ACTION,,}" == "delete" ]]; then
   for (( i=0; i<${N_FLAG}; i++ )); do
     if [[ "${INPUT_FLAG[${i}]}" == "${FIELD,,}" ]]; then
-      unset 'INPUT_FLAG[${i}]'
-      unset 'INPUT_VALUE[${i}]'
-      break
+      INPUT_FLAG[${i}]="delete"
+      INPUT_VALUE[${i}]="delete"
     fi
-    echo ${INPUT_FLAG[@]}
-    echo ${INPUT_VALUE[@]}
   done
   OUTPUT_FLAG=(${INPUT_FLAG[@]})
   OUTPUT_VALUE=(${INPUT_VALUE[@]})
@@ -139,17 +136,15 @@ fi
 
 # write output string ---------------------------------------------------------
 OUTPUT_STR=
-if [[ "${DNAME}" != "." ]]; then
-  OUTPUT_STR="${DNAME}/"
-fi
+if [[ "${DNAME}" != "." ]]; then OUTPUT_STR="${DNAME}/"; fi
 N_OUT=${#OUTPUT_FLAG[@]}
 for (( i=0; i<${N_OUT}; i++ )); do
-  OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
+  if [[ "${OUTPUT_FLAG[${i}]}" != "delete" ]]; then
+    OUTPUT_STR="${OUTPUT_STR}${OUTPUT_FLAG[${i}]}-${OUTPUT_VALUE[${i}]}_"
+  fi
 done
 OUTPUT_STR="${OUTPUT_STR}${OUTPUT_MODALITY}"
-if [[ -n ${EXT} ]]; then
-  OUTPUT_STR="${OUTPUT_STR}.${EXT}"
-fi
+if [[ -n ${EXT} ]]; then OUTPUT_STR="${OUTPUT_STR}.${EXT}"; fi
 
 # send output to terminal -----------------------------------------------------
 echo ${OUTPUT_STR}
