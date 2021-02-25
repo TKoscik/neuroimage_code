@@ -183,16 +183,16 @@ dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz]"
 eval ${dn_fcn}
 
 #  copy output to final file
-mv ${DIR_SCRATCH}/${PREFIX}_prep-denoise* ${DIR_SAVE}/
-TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz)
-TO_ECHO+=(${DIR_SAVE}/${PREFIX}_prep-denoise_${MOD}.nii.gz)
+mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise* ${DIR_SAVE}/
+TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz)
+TO_ECHO+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz)
 
 if [[ "${KEEP}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-noise* ${DIR_SAVE}/
-  TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-noise_${MOD}.nii.gz)
-  TO_ECHO+=(${DIR_SAVE}/${PREFIX}_prep-noise_${MOD}.nii.gz)
+  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise* ${DIR_SAVE}/
+  TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
+  TO_ECHO+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
 else
-  TO_PLOT+=(${DIR_SCRATCH}/${PREFIX}_prep-noise_${MOD}.nii.gz)
+  TO_PLOT+=(${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
 fi
 
 if [[ "${DO_PLOT}" == "true" ]]; then
