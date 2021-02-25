@@ -155,7 +155,7 @@ if [[ -z "${PREFIX}" ]]; then
     PREFIX=$(modField -i ${PREFIX} -r -f prep)
   fi
 fi
-DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIR_PID}
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
 if [[ -z "${DIR_SAVE}" ]]; then 
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
@@ -199,15 +199,15 @@ antsRegistration -d 3 --float 1 --verbose ${VERBOSE} -u ${HIST_MATCH} -z 1 \
   -f 8x8x4x2x1 \
   -s 4x3x2x1x0vox
 
+# rename and move transform ----------------------------------------------------
+mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+  ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
+
 # apply transform to moving image ----------------------------------------------
 antsApplyTransforms -d 3 -n ${INTERPOLATION} \
   -i ${MOVING} \
   -o ${DIR_SAVE}/${PREFIX}_prep-${PREP}align_${MOD}.nii.gz \
   -t ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
-
-# rename and move transform ----------------------------------------------------
-mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-  ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
 
 # plot output for review -------------------------------------------------------
 if [[ "${DO_PLOT}" == "true" ]]; then
