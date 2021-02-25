@@ -42,7 +42,6 @@ if [[ ! -x "$(command -v jq)" ]]; then
   elif [[ "${HOSTNAME}" == *"psychiatry.uiowa.edu"* ]]; then
     echo -e "\tloading jq for JSON files"
     PATH=${PATH}:/Shared/pinc/sharedopt/apps/jq/Linux/x86_64/1.6
-    export jq=/Shared/pinc/sharedopt/apps/jq/Linux/x86_64/1.6/jq-linux64
   fi
   if [[ ! -x "$(command -v jq)" ]]; then
     echo "ERROR [INC setup]: Cannot read from init.json, jq could not be found or is not executable"
