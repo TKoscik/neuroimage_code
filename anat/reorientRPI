@@ -53,7 +53,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hl --long prefix:,\
-image:,do-echo,dir-save:,\
+image:,dir-save:,\
 help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -64,7 +64,6 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 IMAGE=
-DO_ECHO=false
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -75,7 +74,6 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
-    --do-echo) DO_ECHO=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -88,7 +86,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
@@ -132,9 +129,6 @@ MOD=$(getField -i ${IMAGE} -f modality)
 OUTNAME=${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz
 3dresample -orient rpi -prefix ${DIR_SCRATCH}/${OUTNAME} -input ${IMAGE}
 mv ${DIR_SCRATCH}/${OUTNAME} ${DIR_SAVE}
-
-# output filenames -------------------------------------------------------------
-if [[ "${DO_ECHO}" == "true" ]]; then echo ${DIR_SAVE}/${OUTNAME}; fi
 
 #===============================================================================
 # End of Function
