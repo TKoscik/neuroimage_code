@@ -1,6 +1,7 @@
 #!/bin/bash -e
 #===============================================================================
-# Rigid coregistration of neuroimages
+# Image coregistration, using coregistration_recipes.json for specification of
+#    registration parameters
 # Authors: Timothy R. Koscik
 # Date: 2021-02-25
 #===============================================================================
@@ -52,11 +53,15 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvlp --long prefix:,\
-moving:,moving-roi:,fixed:,fixed-roi:,\
-interpolation:,\
-dir-save:,dir-plot:,dir-scratch:,do-plot,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hvl --long recipe-json:,recipe-name:,\
+fixed:,moving:,fixed-mask:,moving-mask:,init-xfm:,\
+dimensonality:,random-seed:,float:,collapse-output-transforms:,\
+initial-moving-transform:,transform:,metric:,convergence:,soothing-sigmas:,shrink-factors:,\
+prefix:,mask-dilation:,roi-label:,xfm-label:,template:,space-source:,space-target:,\
+interpolation:,apply-to:,\
+dir-save:,dir-xfm:,dir-plot:,dir-scratch:,\
+print-xfm,no-png,no-fwd-xfm,no-inv-xfm,\
+verbose,help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -64,38 +69,85 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-PREFIX=
-MOVING=
-MOVING_ROI=
+RECIPE_JSON=
+RECIPE_NAME=
+
 FIXED=
-FIXED_ROI=
-XFM="rigid,affine,affine,syn,syn,bspline,custom"
-XFM_INIT=
-XFM_CUSTOM=
+MOVING=
+FIXED_MASK=
+MOVING_MASK=
+INIT_XFM=
+
+DIMENSIONALITY=
+RANDOM_SEED=
+FLOAT=
+COLLAPSE_OUTPUT_XFMS=
+INITIAL_MOVING_XFM=
+TRANSFORM=
 METRIC=
-METRIC_CUSTOM=
-INTERPOLATION=BSpline[3]
+CONVERGENCE=
+SMOOTHING_SIGMAS=
+SHRINK_FACTORS=
+
+PREFIX=
+MASK_DILATION=
+ROI_LABEL=
+XFM_LABEL=
+TEMPLATE=
+SPACE_SOURCE=
+SPACE_TARGET=
+INTERPOLATION=
+APPLY_TO=
+
 DIR_SAVE=
-DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-DO_PLOT=false
-DIR_PLOT=
-HELP=false
-VERBOSE=0
+DIR_XFM=
+DIR_PNG=
+DIR_SCRATCH=
+
+PRINT_ANTS=false
+NO_PNG=false
+NO_FWD_XFM=false
+NO_INV_XFM=false
+VERBOSE=
+HELP=
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -p | --do-plot) DO_PLOT=true ; shift ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
-    --moving) MOVING="$2" ; shift 2 ;;
-    --moving-roi) MOVING_ROI="$2" ; shift 2 ;;
+    --print-ants) PRINT_ANTS=true ; shift ;;
+    --no-png) NO_PNG=true ; shift ;;
+    --no-fwd-xfm) NO_FWD_XFM=true ; shift ;;
+    --no-inv-xfm) NO_INV_XFM=true ; shift ;;
+    --recipe-json) RECIPE_JSON="$2" ; shift 2 ;;
+    --recipe-name) RECIPE_NAME="$2" ; shift 2 ;;
     --fixed) FIXED="$2" ; shift 2 ;;
-    --fixed-roi) FIXED_ROI="$2" ; shift 2 ;;
+    --moving) MOVING="$2" ; shift 2 ;;
+    --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
+    --moving-mask) MOVING_MASK="$2" ; shift 2 ;;
+    --dimensonality) DIMENSIONALITY="$2" ; shift 2 ;;
+    --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
+    --float) FLOAT="$2" ; shift 2 ;;
+    --collapse-output-transforms) COLLAPSE_OUTPUT_XFMS="$2" ; shift 2 ;;
+    --initial-moving-transform) INITIAL_MOVING_XFM="$2" ; shift 2 ;;
+    --transform) TRANSFORM="$2" ; shift 2 ;;
+    --metric) METRIC="$2" ; shift 2 ;;
+    --convergence) CONVERGENCE="$2" ; shift 2 ;;
+    --soothing-sigmas) SMOOTHING_SIGMAS="$2" ; shift 2 ;;
+    --shrink-factors) SHRINK_FACTORS="$2" ; shift 2 ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --mask-dilation) MASK_DILATION="$2" ; shift 2 ;;
+    --roi-label) ROI_LABEL="$2" ; shift 2 ;;
+    --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
+    --template) TEMPLATE="$2" ; shift 2 ;;
+    --space-source) SPACE_SOURCE="$2" ; shift 2 ;;
+    --space-target) SPACE_TARGET="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
+    --apply-to) APPLY_TO="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-plot) DIR_PLOT="$2" ; shift 2 ;;
+    --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
+    --dir-png) DIR_PNG="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -111,33 +163,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  -p | --do-plot           generate png of output'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --fixed <value>          Optional target image to warp to, will'
-  echo '                           use a template (HCPICBM) by default. This'
-  echo '                           argument is only necessary if not using a'
-  echo '                           premade template as the target of'
-  echo '                           registration'
-  echo '  --fixed-mask <value>     mask corresponding to specified fixed image'
-  echo '  --moving <value>         Image to be warped to fixed image or template'
-  echo '  --moving-mask <value>    mask for image to be warped, e.g., brain mask'
-  echo '  --mask-dil <value>       Amount to dilate mask (to allow'
-  echo '                           transformations to extend to edges of desired'
-  echo '                           region); default=2 voxels'
-  echo '  --interpolation <value>  Interpolation method to use, default=BSpline[3]'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --rigid-only             perform only rigid registration'
-  echo '  --affine-only            perform rigid and affine registration only'
-  echo '  --hardcore               perform rigid, affine, and BSplineSyN'
-  echo '                           registration default is rigid, affine, SyN'
-  echo '  --stack-xfm              stack affine and syn registrations after'
-  echo '                           registration'
-  echo '  --dir-save <value>       directory to save output, default varies by'
-  echo '                           function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -146,60 +171,121 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${MOVING})
-PID=$(getField -i ${MOVING} -f sub)
-SID=$(getField -i ${MOVING} -f ses)
-DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
-if [[ -z ${PREFIX} ]]; then
-  PREFIX=$(getBidsBase -s -i ${MOVING})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -r -f prep)
+# locate recipe ----------------------------------------------------------------
+if [[ -n ${RECIPE_NAME} ]]; then
+  if [[ -z ${RECIPE_JSON} ]]; then
+    RECIPE_JSON=${INC_LUT}/coregistration_recipes.json
+  else
+    echo "WARNING [INC ${FCN_NAME}] Operating without a coregistration recipe, default values may be insufficient, all variables should be specified"
   fi
 fi
-DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
-if [[ -z "${DIR_SAVE}" ]]; then 
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+if [[ ! -f ${RECIPE_JSON} ]]; fi
+  echo "ERROR [INC ${FCN_NAME}] Recipe JSON not found. Aborting."
+  exit 1
 fi
+
+# read parameter names from recipe ---------------------------------------------
+if [[ -n ${RECIPE_JSON} ]]; then
+  RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+  if [[ " ${RECIPES[@]} " =~ " ${RECIPE_NAME} " ]]; then
+    RECIPE_PARAMETERS=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.parameters | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+    RECIPE_REQUIRED=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.required | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+    RECIPE_OPTIONAL=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+  else
+    echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
+    exit 2
+  fi
+fi
+
+# Set up BIDs compliant variables and workspace --------------------------------
+MOVING=${MOVING//,/ }
+MOVING_N=${#MOVING[@]}
+DIR_PROJECT=$(getDir -i ${MOVING[0]})
+PID=$(getField -i ${MOVING[0]} -f sub)
+SID=$(getField -i ${MOVING[0]} -f ses)
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+
+# set file prefix for output ---------------------------------------------------
+if [[ -z ${PREFIX} ]]; then
+  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " prefix " ]]; then
+    echo "ERROR [INC ${FCN_NAME}] prefix required for this recipe"
+    exit 1
+  else
+    PREFIX=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional.prefix' < ${RECIPE_JSON} | tr -d ' [],"'))
+    if [[ "${PREFIX,,}" == "default" ]]; then
+      PREFIX=$(getBidsBase -s -i ${MOVING[0]})
+      PREP=$(getField -i ${PREFIX} -f prep)
+      if [[ -n ${PREP} ]]; then
+        PREP="${PREP}+"
+        PREFIX=$(modField -i ${PREFIX} -r -f prep)
+      fi
+    fi
+  fi
+fi
+
+# set locations for output -----------------------------------------------------
+## make directories just before they are needed in case of crashing earlier
+if [[ -z "${DIR_SAVE}" ]]; then
+  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-save " ]]; then
+    echo "ERROR [INC ${FCN_NAME}] dir-save required for this recipe"
+    exit 1
+  else
+    DIR_SAVE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-save"' < ${RECIPE_JSON} | tr -d ' [],"'))
+    if [[ "${DIR_SAVE,,}" == "default" ]]; then
+      DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+    fi
+  fi
+fi
+
+if [[ -z "${DIR_XFM}" ]]; then
+  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-xfm " ]]; then
+    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for this recipe"
+    exit 1
+  else
+    DIR_XFM=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-xfm"' < ${RECIPE_JSON} | tr -d ' [],"'))
+    if [[ "${DIR_XFM,,}" == "default" ]]; then
+      DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+    fi
+  fi
+fi
+
+if [[ -z "${DIR_SCRATCH}" ]]; then
+  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-xfm " ]]; then
+    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for this recipe"
+    exit 1
+  else
+    DIR_SCRATCH=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-scratch"' < ${RECIPE_JSON} | tr -d ' [],"'))
+    if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
+      DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+    fi
+  fi
+fi
+
+# parse additional MOVING files
+
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 
-# parse registration steps -----------------------------------------------------
+# Coregistration from recipe ===================================================
+## 1) identify if a file was provided or use standard LUT
+###   -inputs: RECIPE_NAME
+###            RECIPE_LUT, default=${DIR_INC}/lut/coregistration_recipes.json
+## 2) find coregistration recipe
+###   a) find coregistration_recipe field in JSON
+###   b) find recipe name (in cases of multiple recipes in a file)
+###   c) load recipe "ingredients"
+## 3) translate recipe into antsRegistration call
+## 4) apply transforms
+## 5) rename and move outputs
+
 XFM=(${XFM//,/ })
 XFM_N=${#XFM[@]}
 
-RIGID_XFM="-t Rigid[0.1] -c [2000x2000x2000x2000x2000,1e-6,10] -f 8x8x4x2x1 -s 4x3x2x1x0vox"
-AFFINE_XFM="-t Affine[0.1] -c [2000x2000x2000x2000x2000,1e-6,10] -f 8x8x4x2x1 -s 4x3x2x1x0vox"
-SYN_XFM="-t SyN[0.1,3,0] -c [100x70x50x20,1e-6,10] -f 8x4x2x1 -s 3x2x1x0vox"
-BSPLINE_XFM+=("-t BsplineSyN[0.5,48,0] -c [100x70x50x20,1e-6,10] -f 8x4x2x1 -s 3x2x1x0vox")
-BSPLINE_XFM+=("-t BsplineSyN[0.1,48,0] -c [20,1e-6,10] -f 1 -s 0vox")
-if [[ -n ${XFM_CUSTOM} ]]; then CUSTOM_XFM=(${XFM_CUSTOM//;/ }); fi
 
-MI_METRIC=("-m Mattes[" ",1,32,Regular,0.25]")
-MI_HQ_METRIC=("-m Mattes[" ",1,64,Regular,0.30]")
-CC_METRIC=("-m CC[${FIXED[${i}]},${MOVING[${i}]},1,4]")
-CC_HQ_METRIC=("-m CC[" ",1,6]")
-if [[ -n ${METRIC_CUSTOM} ]]; then CUSTOM_METRIC=(${METRIC_CUSTOM//;/ })
-
-if [[ -n ${METRIC} ]]; then
-  for (( i=0; i<${XFM_N}; i++ )); do
-    if [[ "${XFM[${i}],,}" == "rigid" ]] ||
-       [[ "${XFM[${i}],,}" == "affine" ]] ||
-       [[ "${XFM[${i}],,}" == "custom" ]]; then
-      METRIC+="mattes"
-    elif [[ "${XFM[${i}],,}" == "syn" ]]; then
-      METRIC+="cc"
-    elif [[ "${XFM[${i}],,}" == "bspline" ]]; then
-      METRIC+="cc"
-      METRIC+="cchq"
-    fi
-  done
-fi
-
+***** echo ${X} | sed 's/fixedImage/${FIXED[${i}]}/g'
+done
 ## parse MOVING images ---------------------------------------------------------
 MOVING=(${MOVING//;/ })
 ## repeat MOVING images in array if same images are to be used for each
@@ -251,6 +337,7 @@ coreg_fcn="${coreg_fcn} --verbose ${VERBOSE}"
 coreg_fcn="${coreg_fcn} -u ${HIST_MATCH}"
 coreg_fcn="${coreg_fcn} -z 1"
 coreg_fcn="${coreg_fcn} -o ${DIR_SCRATCH}/xfm_"
+## add in initial XFMs
 if [[ -n ${XFM_INIT} ]]; then
   for (( i=0; i<${#XFM_INIT[@]}; i++ )); do
     coreg_fcn="${coreg_fcn} -r ${XFM_INIT[${i}]}"
@@ -258,19 +345,17 @@ if [[ -n ${XFM_INIT} ]]; then
 else
   coreg_fcn="${coreg_fcn} -r [${FIXED[0]},${MOVING[0]},1]"
 fi
+## add registration iterations 
 for (( i=0; i<${XFM_N}; i++ )); do
-  if [[ "${XFM[${i}],,}" == "rigid" ]]; then
-    coreg_fcn="${coreg_fcn} ${RIGID_STR}"
-  elif [[ "${XFM[${i}],,}" == "affine" ]]; then
-    coreg_fcn="${coreg_fcn} ${AFFINE_STR}"
-  elif [[ "${XFM[${i}],,}" == "syn" ]]; then
-    coreg_fcn="${coreg_fcn} ${SYN_STR}"
-  elif [[ "${XFM[${i}],,}" == "bspline" ]]; then
-    coreg_fcn="${coreg_fcn} ${BSPLINE_STR[0]}"
-    coreg_fcn="${coreg_fcn} ${BSPLINE_STR[1]}"
-  elif [[ "${XFM[${i}],,}" == "custom" ]]; then
-    coreg_fcn="${coreg_fcn} ${CUSTOM_STR}"
-  fi
+  case "${XFM[${i}],,}" in 
+    rigid) coreg_fcn="${coreg_fcn} ${RIGID_STR}" ;;
+    affine) coreg_fcn="${coreg_fcn} ${AFFINE_STR}" ;;
+    syn) coreg_fcn="${coreg_fcn} ${SYN_STR}" ;;
+    bspline) coreg_fcn="${coreg_fcn} ${BSPLINE_STR}" ;;
+    bspline-hq) coreg_fcn="${coreg_fcn} ${BSPLINE_HQ_STR[1]}" ;;
+    custom) coreg_fcn="${coreg_fcn} ${CUSTOM_STR}";;
+  esac
+  
 
   TFIXED=(${FIXED//,/ })
   TMOVING=(${MOVING//,/ })
