@@ -290,6 +290,9 @@ else
 fi
 
 ## get moving modalities
+for (( i=0; i<${#MOVING[@]}; i++ )); do
+  MOD+=($(getField -i ${MOVING[@]} -f modality))
+done
 
 
 # parse fixed images -----------------------------------------------------------
@@ -328,7 +331,17 @@ if [[ -z ${TEMPLATE} ]]; then
         echo "ERROR [INC ${FCN_NAME}] ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} not found"
         exit 12
       fi
-
+      # select FIXED images from template based on availability template folder and MOVING modality
+      HIST_MATCH=1
+      for (( i=0; i<${#MOVING[@]}; i++ )); do
+        CHK_MOD=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
+        if [[ -f ${CHK_MOD} ]]; then
+          FIXED+=(${CHK_MOD})
+        else
+          FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz)
+          HIST_MATCH=0
+        fi
+      done
     elif [[ " ${RECIPE_REQUIRED[@],,} " =~ " fixed " ]]; then
       echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires fixed image"
     else
