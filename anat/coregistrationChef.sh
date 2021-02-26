@@ -305,53 +305,60 @@ if [[ -z ${TEMPLATE} ]]; then
         echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires a template, default not specified"
         exit 10
       fi
-      # load template directory - - - -
-      if [[ -z ${DIR_TEMPLATE} ]]; then
-        DIR_TEMPLATE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-template"' < ${RECIPE_JSON} | tr -d ' [],"'))
-        if [[ "${DIR_TEMPLATE}" == "default" ]] || [[ "${DIR_TEMPLATE}" == "null" ]]; then
-          DIR_TEMPLATE=${INC_TEMPLATE}
-        fi
-      fi
-      if [[ ! -d ${DIR_TEMPLATE}/${TEMPLATE} ]]; then
-        echo "ERROR [INC ${FCN_NAME}] template directory not found"
-        exit 11
-      fi
-      # load and check template spacing - - - -
-      if [[ -z ${SPACE_SOURCE} ]]; then
-        SPACE_SOURCE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."space-source"' < ${RECIPE_JSON} | tr -d ' [],"'))
-        if [[ "${SPACE_SOURCE}" == "null" ]]; then
-          if [[ -d ${INC_TEMPLATE}/${TEMPLATE}/700um ]]; then
-            SPACE_SOURCE="700um"
-          elif [[ -d ${INC_TEMPLATE}/${TEMPLATE}/1mm ]]; then
-            SPACE_SOURCE="1mm"
-          fi
-        fi
-      fi
-      if [[ ! -d ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} ]]; then
-        echo "ERROR [INC ${FCN_NAME}] ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} not found"
-        exit 12
-      fi
-      # select FIXED images from template based on availability template folder and MOVING modality
-      HIST_MATCH=1
-      for (( i=0; i<${#MOVING[@]}; i++ )); do
-        CHK_MOD=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
-        if [[ -f ${CHK_MOD} ]]; then
-          FIXED+=(${CHK_MOD})
-        else
-          FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz)
-          HIST_MATCH=0
-        fi
-      done
     elif [[ " ${RECIPE_REQUIRED[@],,} " =~ " fixed " ]]; then
       echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires fixed image"
+      exit 13
     else
       echo "ERROR [INC ${FCN_NAME}] coregistrations require either a template or a fixed image"
+      exit 14
     fi
   else # use fixed
+    FIXED=(${FIXED//,/ })
   fi
-else # use template
 fi
 
+if [[ -n ${TEMPLATE} ]]; then
+  # load template directory - - - -
+  if [[ -z ${DIR_TEMPLATE} ]]; then
+    DIR_TEMPLATE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-template"' < ${RECIPE_JSON} | tr -d ' [],"'))
+    if [[ "${DIR_TEMPLATE}" == "default" ]] || [[ "${DIR_TEMPLATE}" == "null" ]]; then
+      DIR_TEMPLATE=${INC_TEMPLATE}
+    fi
+  fi
+  if [[ ! -d ${DIR_TEMPLATE}/${TEMPLATE} ]]; then
+    echo "ERROR [INC ${FCN_NAME}] template directory not found"
+    exit 11
+  fi
+  # load and check template spacing - - - -
+  if [[ -z ${SPACE_SOURCE} ]]; then
+    SPACE_SOURCE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."space-source"' < ${RECIPE_JSON} | tr -d ' [],"'))
+    if [[ "${SPACE_SOURCE}" == "null" ]]; then
+      if [[ -d ${INC_TEMPLATE}/${TEMPLATE}/700um ]]; then
+        SPACE_SOURCE="700um"
+      elif [[ -d ${INC_TEMPLATE}/${TEMPLATE}/1mm ]]; then
+        SPACE_SOURCE="1mm"
+      fi
+    fi
+  fi
+  if [[ ! -d ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} ]]; then
+    echo "ERROR [INC ${FCN_NAME}] ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} not found"
+    exit 12
+  fi
+  # select FIXED images from template based on availability template folder and MOVING modality
+  HIST_MATCH=1
+  for (( i=0; i<${#MOVING[@]}; i++ )); do
+    CHK_MOD=${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
+    if [[ -f ${CHK_MOD} ]]; then
+      FIXED+=(${CHK_MOD})
+    else
+      FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz)
+      HIST_MATCH=0
+    fi
+  done
+fi
+
+
+# Resample fixed images as necessary
 
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
