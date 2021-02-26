@@ -197,9 +197,11 @@ if [[ -n ${RECIPE_JSON} ]]; then
   fi
 fi
 
-# Set up BIDs compliant variables and workspace --------------------------------
+# parse basic required information about MOVING images -------------------------
 MOVING=${MOVING//,/ }
 MOVING_N=${#MOVING[@]}
+
+# Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${MOVING[0]})
 PID=$(getField -i ${MOVING[0]} -f sub)
 SID=$(getField -i ${MOVING[0]} -f ses)
@@ -209,8 +211,8 @@ if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
 # set file prefix for output ---------------------------------------------------
 if [[ -z ${PREFIX} ]]; then
   if [[ " ${RECIPE_REQUIRED[@],,} " =~ " prefix " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] prefix required for this recipe"
-    exit 1
+    echo "ERROR [INC ${FCN_NAME}] prefix required for ${RECIPE_NAME}"
+    exit 3
   else
     PREFIX=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional.prefix' < ${RECIPE_JSON} | tr -d ' [],"'))
     if [[ "${PREFIX,,}" == "default" ]]; then
@@ -228,11 +230,11 @@ fi
 ## make directories just before they are needed in case of crashing earlier
 if [[ -z "${DIR_SAVE}" ]]; then
   if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-save " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] dir-save required for this recipe"
-    exit 1
+    echo "ERROR [INC ${FCN_NAME}] dir-save required ${RECIPE_NAME}"
+    exit 4
   else
     DIR_SAVE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-save"' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${DIR_SAVE,,}" == "default" ]]; then
+    if [[ "${DIR_SAVE,,}" == "default" ]] || [[ "${DIR_SAVE,,}" == "null" ]]; then
       DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
     fi
   fi
@@ -240,11 +242,11 @@ fi
 
 if [[ -z "${DIR_XFM}" ]]; then
   if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-xfm " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for this recipe"
-    exit 1
+    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for ${RECIPE_NAME}"
+    exit 5
   else
     DIR_XFM=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-xfm"' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${DIR_XFM,,}" == "default" ]]; then
+    if [[ "${DIR_XFM,,}" == "default" ]] || [[ "${DIR_XFM,,}" == "null" ]]; then
       DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
     fi
   fi
@@ -252,17 +254,91 @@ fi
 
 if [[ -z "${DIR_SCRATCH}" ]]; then
   if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-xfm " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for this recipe"
-    exit 1
+    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for ${RECIPE_NAME}"
+    exit 6
   else
     DIR_SCRATCH=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-scratch"' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
+    if [[ "${DIR_SCRATCH,,}" == "default" ]] || [[ "${DIR_SCRATCH,,}" == "null" ]]; then
       DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
     fi
   fi
 fi
 
-# parse additional MOVING files
+# parse transforms basics ------------------------------------------------------
+if [[ -z ${TRANSFORM} ]]; then
+  TRANSFORM=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.parameters.transform[]' < ${RECIPE_JSON} | tr -d ' "'))
+  if [[ "${TRANSFORM}" == "null" ]]; then
+    echo "ERROR [INC ${FCN_NAME}] transform required for all coregistrations"
+    exit 7
+  fi
+else
+  TRANSFORM=(${TRANSFORM//;/ })
+fi
+
+# parse additional MOVING files ------------------------------------------------
+if [[ -z ${MOVING_MASK} ]]; then
+  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " moving-mask " ]]; then
+    echo "ERROR [INC ${FCN_NAME}] moving-mask required for ${RECIPE_NAME}"
+    exit 8
+  fi
+else
+  MOVING_MASK=(${MOVING_MASK//,/ })
+  if [[ ${#MOVING_MASK[@]} -ne 1 ]] || [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]]; then
+    echo "ERROR [INC ${FCN_NAME}] moving-mask must be of length 1 or equal to the number of transforms"
+    exit 9
+  fi
+fi
+
+## get moving modalities
+
+
+# parse fixed images -----------------------------------------------------------
+if [[ -z ${TEMPLATE} ]]; then
+  if [[ -z ${FIXED} ]]; then
+    if [[ " ${RECIPE_OPTIONAL[@],,} " =~ " template " ]]; then
+      # using a template for registration recipe - - - -
+      TEMPLATE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional.template' < ${RECIPE_JSON} | tr -d ' [],"'))
+      if [[ "${TEMPLATE}" == "null" ]]; then
+        echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires a template, default not specified"
+        exit 10
+      fi
+      # load template directory - - - -
+      if [[ -z ${DIR_TEMPLATE} ]]; then
+        DIR_TEMPLATE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-template"' < ${RECIPE_JSON} | tr -d ' [],"'))
+        if [[ "${DIR_TEMPLATE}" == "default" ]] || [[ "${DIR_TEMPLATE}" == "null" ]]; then
+          DIR_TEMPLATE=${INC_TEMPLATE}
+        fi
+      fi
+      if [[ ! -d ${DIR_TEMPLATE}/${TEMPLATE} ]]; then
+        echo "ERROR [INC ${FCN_NAME}] template directory not found"
+        exit 11
+      fi
+      # load and check template spacing - - - -
+      if [[ -z ${SPACE_SOURCE} ]]; then
+        SPACE_SOURCE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."space-source"' < ${RECIPE_JSON} | tr -d ' [],"'))
+        if [[ "${SPACE_SOURCE}" == "null" ]]; then
+          if [[ -d ${INC_TEMPLATE}/${TEMPLATE}/700um ]]; then
+            SPACE_SOURCE="700um"
+          elif [[ -d ${INC_TEMPLATE}/${TEMPLATE}/1mm ]]; then
+            SPACE_SOURCE="1mm"
+          fi
+        fi
+      fi
+      if [[ ! -d ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} ]]; then
+        echo "ERROR [INC ${FCN_NAME}] ${DIR_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE} not found"
+        exit 12
+      fi
+
+    elif [[ " ${RECIPE_REQUIRED[@],,} " =~ " fixed " ]]; then
+      echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires fixed image"
+    else
+      echo "ERROR [INC ${FCN_NAME}] coregistrations require either a template or a fixed image"
+    fi
+  else # use fixed
+  fi
+else # use template
+fi
+
 
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
