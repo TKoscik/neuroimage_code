@@ -197,6 +197,49 @@ if [[ -n ${RECIPE_JSON} ]]; then
   fi
 fi
 
+## Check all possible inputs ---------------------------------------------------
+## check ANTs parameters, error if required and not provided, 
+PARAMS_LS=("dimensonality" "random-seed" "float" "collapse-output-transforms"\
+ "initial-moving-transform" "transform" "metric" "convergence" "soothing-sigmas"\
+ "shrink-factors")
+CAPS_LS=(${PARAMS_LS[@]^^})
+for (( i=0; i<${PARAMS_LS[@]}, i++ )); do
+  CHK_INPUT="true"
+  CHK_INPUT=$(eval 'if [[ -n ${'${CAPS_LS[${i}]//-/_}'} ]]; then echo "false"; fi')
+  if [[ "${CHK_INPUT}" == "false" ]]; then
+    if [[ " ${RECIPE_REQUIRED[@],,} " =~ " ${PARAMS_LS[${i}]} " ]]; then
+      echo "ERROR [INC ${FCN_NAME}] ${PARAMS_LS[${i}]} required for ${RECIPE_NAME}"
+      exit 3
+    else
+      JQ_STR='.coregistration_recipe.'${RECIPE_NAME}'.parameters.'${PARAMS_LS[${i}]}
+      ${CAPS_LS[${i}]//-/_}=($(jq -r ${JQ_STR} < ${RECIPE_JSON} | tr -d ' [],"' ))
+    fi
+  fi
+  CHK_INPUT=$(eval 'if [[ -n ${'${CAPS_LS[${i}]//-/_}'} ]]; then else echo "false"; fi')
+  if [[ "${CHK_INPUT}" == "false" ]]; then
+    echo "ERROR [INC ${FCN_NAME}] ${PARAMS_LS[${i}]} required in recipe or as input"
+    exit 4
+  fi
+done
+
+OPT_LS=("fixed" "moving" "fixed-mask" "moving-mask" "prefix" "mask-dilation"\
+ "roi-label" "xfm-label" "dir-template" "template" "space-source" "space-target" "interpolation"\
+ "apply-to" "dir-save" "dir-xfm" "dir-png" "dir-scratch")
+CAPS_LS=(${OPTS_LS[@]^^})
+for (( i=0; i<${OPTS_LS[@]}, i++ )); do
+  CHK_INPUT="true"
+  CHK_INPUT=$(eval 'if [[ -n ${'${CAPS_LS[${i}]//-/_}'} ]]; then echo "false"; fi')
+  if [[ "${CHK_INPUT}" == "false" ]]; then
+    if [[ " ${RECIPE_REQUIRED[@],,} " =~ " ${OPTS_LS[${i}]} " ]]; then
+      echo "ERROR [INC ${FCN_NAME}] ${OPTS_LS[${i}]} required for ${RECIPE_NAME}"
+      exit 3
+    else
+      JQ_STR='.coregistration_recipe.'${RECIPE_NAME}'.optional.'${OPTS_LS[${i}]}
+      ${CAPS_LS[${i}]//-/_}=($(jq -r ${JQ_STR} < ${RECIPE_JSON} | tr -d ' [],"' ))
+    fi
+  fi
+done
+
 # parse basic required information about MOVING images -------------------------
 MOVING=${MOVING//,/ }
 MOVING_N=${#MOVING[@]}
@@ -208,114 +251,59 @@ SID=$(getField -i ${MOVING[0]} -f ses)
 DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
 
-# set file prefix for output ---------------------------------------------------
-if [[ -z ${PREFIX} ]]; then
-  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " prefix " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] prefix required for ${RECIPE_NAME}"
-    exit 3
-  else
-    PREFIX=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional.prefix' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${PREFIX,,}" == "default" ]]; then
-      PREFIX=$(getBidsBase -s -i ${MOVING[0]})
-      PREP=$(getField -i ${PREFIX} -f prep)
-      if [[ -n ${PREP} ]]; then
-        PREP="${PREP}+"
-        PREFIX=$(modField -i ${PREFIX} -r -f prep)
-      fi
-    fi
+# parse inputs, set defaults as necessary ======================================
+if [[ "${PREFIX,,}" == "default" ]] || [[ "${PREFIX,,}" == "null" ]]; then
+  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREP="${PREP}+"
+    PREFIX=$(modField -i ${PREFIX} -r -f prep)
   fi
 fi
 
-# set locations for output -----------------------------------------------------
-## make directories just before they are needed in case of crashing earlier
-if [[ -z "${DIR_SAVE}" ]]; then
-  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-save " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] dir-save required ${RECIPE_NAME}"
-    exit 4
-  else
-    DIR_SAVE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-save"' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${DIR_SAVE,,}" == "default" ]] || [[ "${DIR_SAVE,,}" == "null" ]]; then
-      DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
-    fi
-  fi
+## set directories -------------------------------------------------------------
+if [[ "${DIR_SAVE,,}" == "default" ]] || [[ "${DIR_SAVE,,}" == "null" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+fi
+if [[ "${DIR_XFM,,}" == "default" ]] || [[ "${DIR_XFM,,}" == "null" ]]; then
+  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+fi
+if [[ "${DIR_SCRATCH,,}" == "default" ]] || [[ "${DIR_SCRATCH,,}" == "null" ]]; then
+  DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
 
-if [[ -z "${DIR_XFM}" ]]; then
-  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-xfm " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for ${RECIPE_NAME}"
-    exit 5
-  else
-    DIR_XFM=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-xfm"' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${DIR_XFM,,}" == "default" ]] || [[ "${DIR_XFM,,}" == "null" ]]; then
-      DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
-    fi
-  fi
-fi
+## parse transforms basics -----------------------------------------------------
+TRANSFORM=(${TRANSFORM//;/ })
 
-if [[ -z "${DIR_SCRATCH}" ]]; then
-  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " dir-xfm " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] dir-xfm required for ${RECIPE_NAME}"
-    exit 6
-  else
-    DIR_SCRATCH=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional."dir-scratch"' < ${RECIPE_JSON} | tr -d ' [],"'))
-    if [[ "${DIR_SCRATCH,,}" == "default" ]] || [[ "${DIR_SCRATCH,,}" == "null" ]]; then
-      DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-    fi
-  fi
+## parse additional MOVING files -----------------------------------------------
+MOVING_MASK=(${MOVING_MASK//,/ })
+if [[ ${#MOVING_MASK[@]} -ne 1 ]] || [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]]; then
+  echo "ERROR [INC ${FCN_NAME}] moving-mask must be of length 1 or equal to the number of transforms"
+  exit 9
 fi
-
-# parse transforms basics ------------------------------------------------------
-if [[ -z ${TRANSFORM} ]]; then
-  TRANSFORM=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.parameters.transform[]' < ${RECIPE_JSON} | tr -d ' "'))
-  if [[ "${TRANSFORM}" == "null" ]]; then
-    echo "ERROR [INC ${FCN_NAME}] transform required for all coregistrations"
-    exit 7
-  fi
-else
-  TRANSFORM=(${TRANSFORM//;/ })
-fi
-
-# parse additional MOVING files ------------------------------------------------
-if [[ -z ${MOVING_MASK} ]]; then
-  if [[ " ${RECIPE_REQUIRED[@],,} " =~ " moving-mask " ]]; then
-    echo "ERROR [INC ${FCN_NAME}] moving-mask required for ${RECIPE_NAME}"
-    exit 8
-  fi
-else
-  MOVING_MASK=(${MOVING_MASK//,/ })
-  if [[ ${#MOVING_MASK[@]} -ne 1 ]] || [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]]; then
-    echo "ERROR [INC ${FCN_NAME}] moving-mask must be of length 1 or equal to the number of transforms"
-    exit 9
-  fi
-fi
-
-## get moving modalities
+### get moving modalities - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 for (( i=0; i<${#MOVING[@]}; i++ )); do
   MOD+=($(getField -i ${MOVING[@]} -f modality))
 done
 
-
 # parse fixed images -----------------------------------------------------------
+**** makje sure this is checking things in order
 if [[ -z ${TEMPLATE} ]]; then
-  if [[ -z ${FIXED} ]]; then
-    if [[ " ${RECIPE_OPTIONAL[@],,} " =~ " template " ]]; then
-      # using a template for registration recipe - - - -
-      TEMPLATE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional.template' < ${RECIPE_JSON} | tr -d ' [],"'))
-      if [[ "${TEMPLATE}" == "null" ]]; then
-        echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires a template, default not specified"
-        exit 10
-      fi
-    elif [[ " ${RECIPE_REQUIRED[@],,} " =~ " fixed " ]]; then
-      echo "ERROR [INC ${FCN_NAME}] ${RECIPE_NAME} requires fixed image"
-      exit 13
-    else
-      echo "ERROR [INC ${FCN_NAME}] coregistrations require either a template or a fixed image"
-      exit 14
-    fi
-  else # use fixed
-    FIXED=(${FIXED//,/ })
-  fi
+  FIXED=(${FIXED//,/ })
+else
+  for (( i=0; i<${MOVING_N}; i++ )); do
+    FIXED=
 fi
+
+DEFAULT_LS=("prefix" "mask-dilation" "roi-label" "xfm-label" "template" \
+ "space-source" "space-target" "interpolation"\
+ "dir-save" "dir-xfm" "dir-png" "dir-scratch")
+
+
+
+
+
+
 
 if [[ -n ${TEMPLATE} ]]; then
   # load template directory - - - -
