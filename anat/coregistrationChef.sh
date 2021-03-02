@@ -151,7 +151,7 @@ fi
 # Start of Function
 #===============================================================================
 RECIPE_DEFAULT=${INC_LUT}/coregistration_recipes.json
-PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted' < ${DEFAULT_RECIPE} | tr -d ' [],"'))
+PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted[]' < ${RECIPE_DEFAULT}))
 
 # locate recipe ----------------------------------------------------------------
 if [[ -n ${RECIPE_NAME} ]]; then
@@ -161,16 +161,16 @@ if [[ -n ${RECIPE_NAME} ]]; then
     echo "WARNING [INC ${FCN_NAME}] Operating without a coregistration recipe, default values may be insufficient, all variables should be specified"
   fi
 fi
-if [[ ! -f ${RECIPE_JSON} ]]; fi
+if [[ ! -f ${RECIPE_JSON} ]]; then
   echo "ERROR [INC ${FCN_NAME}] Recipe JSON not found. Aborting."
   exit 1
 fi
 
 # read parameter names from recipe ---------------------------------------------
 if [[ -n ${RECIPE_JSON} ]]; then
-  RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+  RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted[]' < ${RECIPE_JSON}))
   if [[ " ${RECIPES[@]} " =~ " ${RECIPE_NAME} " ]]; then
-    PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+    PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted[]' < ${RECIPE_JSON}))
   else
     echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
     exit 2
@@ -185,7 +185,7 @@ fi
 
 for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   unset VAR_NAME PARAM_STATE JQ_STR
-  VAR_NAME=${VAR_NAME[${i}]^^}
+  VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
   VAR_NAME=${VAR_NAME//-/_}
   PARAM_STATE=$(eval 'if [[ -n ${'${VAR_NAME}'} ]]; then PARAM_STATE="directInput"; fi')
   if [[ "${PARAM_STATE}" != "directInput" ]] &&\
@@ -199,7 +199,7 @@ for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi')
   if [[ "${CHK_VAR}" == "${MISSING}" ]]; then
     echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
-    exit 3
+    #exit 3
   fi
 do
 

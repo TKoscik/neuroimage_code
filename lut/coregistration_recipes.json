@@ -1,6 +1,6 @@
 {
     "coregistration_parameters": {
-        "dimensonality": 3,
+        "dimensionality": 3,
         "save-state": "optional",
         "restore-state": "optional",
         "write-composite-transform": 0,
