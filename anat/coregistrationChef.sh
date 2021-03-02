@@ -54,13 +54,19 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long recipe-json:,recipe-name:,\
-fixed:,moving:,fixed-mask:,moving-mask:,init-xfm:,\
-dimensonality:,random-seed:,float:,collapse-output-transforms:,\
-initial-moving-transform:,transform:,metric:,convergence:,soothing-sigmas:,shrink-factors:,\
-prefix:,mask-dilation:,roi-label:,xfm-label:,template:,space-source:,space-target:,\
-interpolation:,apply-to:,\
-dir-save:,dir-xfm:,dir-plot:,dir-scratch:,\
-print-xfm,no-png,no-fwd-xfm,no-inv-xfm,\
+fixed,fixed-mask,fixed-mask-dilation,\
+moving,moving-mask,moving-mask-dilation,\
+dir-template,template,space-source,space-target,\
+\
+dimensonality,save-state,restore-state,write-composite-transform,\
+print-similarity-measure-interval,write-internal-volumes,\
+collapse-output-transforms,initialize-transforms-per-stage,interpolation,\
+restrict-deformation,initial-fixed-transform,initial-moving-transform,metric,\
+transform,convergence,smoothing-sigmas,shrink-factors,use-histogram-matching,\
+use-estimate-learning-rate-once,winsorize-image-intensities,float,random-seed,\
+\
+prefix,xfm-label,apply-to,make-png,keep-fwd-xfm,keep-inv-xfm,\
+dir-save,dir-xfm,dir-png,dir-scratch,\
 verbose,help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -69,82 +75,55 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-RECIPE_JSON=
-RECIPE_NAME=
-
-FIXED=
-MOVING=
-FIXED_MASK=
-MOVING_MASK=
-INIT_XFM=
-
-DIMENSIONALITY=
-RANDOM_SEED=
-FLOAT=
-COLLAPSE_OUTPUT_XFMS=
-INITIAL_MOVING_XFM=
-TRANSFORM=
-METRIC=
-CONVERGENCE=
-SMOOTHING_SIGMAS=
-SHRINK_FACTORS=
-
-PREFIX=
-MASK_DILATION=
-ROI_LABEL=
-XFM_LABEL=
-TEMPLATE=
-SPACE_SOURCE=
-SPACE_TARGET=
-INTERPOLATION=
-APPLY_TO=
-
-DIR_SAVE=
-DIR_XFM=
-DIR_PNG=
-DIR_SCRATCH=
-
-PRINT_ANTS=false
-NO_PNG=false
-NO_FWD_XFM=false
-NO_INV_XFM=false
-VERBOSE=
-HELP=
+VERBOSE=0
+HELP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --print-ants) PRINT_ANTS=true ; shift ;;
-    --no-png) NO_PNG=true ; shift ;;
-    --no-fwd-xfm) NO_FWD_XFM=true ; shift ;;
-    --no-inv-xfm) NO_INV_XFM=true ; shift ;;
     --recipe-json) RECIPE_JSON="$2" ; shift 2 ;;
     --recipe-name) RECIPE_NAME="$2" ; shift 2 ;;
     --fixed) FIXED="$2" ; shift 2 ;;
-    --moving) MOVING="$2" ; shift 2 ;;
     --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
-    --moving-mask) MOVING_MASK="$2" ; shift 2 ;;
-    --dimensonality) DIMENSIONALITY="$2" ; shift 2 ;;
-    --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
-    --float) FLOAT="$2" ; shift 2 ;;
-    --collapse-output-transforms) COLLAPSE_OUTPUT_XFMS="$2" ; shift 2 ;;
-    --initial-moving-transform) INITIAL_MOVING_XFM="$2" ; shift 2 ;;
-    --transform) TRANSFORM="$2" ; shift 2 ;;
-    --metric) METRIC="$2" ; shift 2 ;;
-    --convergence) CONVERGENCE="$2" ; shift 2 ;;
-    --soothing-sigmas) SMOOTHING_SIGMAS="$2" ; shift 2 ;;
-    --shrink-factors) SHRINK_FACTORS="$2" ; shift 2 ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
-    --mask-dilation) MASK_DILATION="$2" ; shift 2 ;;
-    --roi-label) ROI_LABEL="$2" ; shift 2 ;;
-    --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
+    --fixed-mask-dilation) FIXED_MASK="$2" ; shift 2 ;;
+    --moving) MOVING="$2" ; shift 2 ;;
+    --moving-mask) MOVING_MASK_DILATION="$2" ; shift 2 ;;
+    --moving-mask-dilation) MOVING_MASK_DILATION="$2" ; shift 2 ;;
+    --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space-source) SPACE_SOURCE="$2" ; shift 2 ;;
     --space-target) SPACE_TARGET="$2" ; shift 2 ;;
+    --dimensonality) DIMENSIONALITY="$2" ; shift 2 ;;="$2" ; shift 2 ;;
+    --save-state) SAVE_STATE="$2" ; shift 2 ;;
+    --restore-state) RESTORE_STATE="$2" ; shift 2 ;;
+    --write-composite-transform) WRITE_COMPOSITE_TRANSFORM="$2" ; shift 2 ;;
+    --print-similarity-measure-interval) PRINT_SIMILARITY_MEASURE_INTERVAL="$2" ; shift 2 ;;
+    --write-internal-volumes) WRITE_INTERNAL_VOLUMES="$2" ; shift 2 ;;
+    --collapse-output-transforms) COLLAPSE_OUTPUT_TRANSFORMS="$2" ; shift 2 ;;
+    --initialize-transforms-per-stage) INITIALIZE_TRANSFORMS_PER_STAGE="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
-    --apply-to) APPLY_TO="$2" ; shift 2 ;;
+    --restrict-deformation) RESTRICT_DEFORMATION="$2" ; shift 2 ;;
+    --initial-fixed-transform) INITIAL_FIXED_TRANSFORM="$2" ; shift 2 ;;
+    --initial-moving-transform) INITIAL_MOVING_TRANSFORM="$2" ; shift 2 ;;
+    --metric) METRIC="$2" ; shift 2 ;;
+    --transform) TRANSFORM="$2" ; shift 2 ;;
+    --convergence) CONVERGENCE="$2" ; shift 2 ;;
+    --smoothing-sigmas) SMOOTHING_SIGMAS="$2" ; shift 2 ;;
+    --shrink-factors) SHRINK_FACTORS="$2" ; shift 2 ;;
+    --use-histogram-matching) USE_HISTOGRAM_MATCHING="$2" ; shift 2 ;;
+    --use-estimate-learning-rate-once) USE_ESTIMATE_LERANING_RATE_ONCE="$2" ; shift 2 ;;
+    --winsorize-image-intensities) WINSORIZE_IMAGE_INTENSITIES="$2" ; shift 2 ;;
+    --float) FLOAT="$2" ; shift 2 ;;
+    --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
+    --prefix) PREFIX="$2" ; shift 2 ;
+    --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
+    --roi-label) ROI_LABEL="$2" ; shift 2 ;;
+    --apply-to) APPLY_TO="$2" ; shift 2 ;;="$2" ; shift 2 ;;
+    --make-png) MAKE_PNG="true" ; shift ;;
+    --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
+    --keep-inv-xfm) KEEP_INV_XFM="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
     --dir-png) DIR_PNG="$2" ; shift 2 ;;
@@ -171,10 +150,13 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+RECIPE_DEFAULT=${INC_LUT}/coregistration_recipes.json
+PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted' < ${DEFAULT_RECIPE} | tr -d ' [],"'))
+
 # locate recipe ----------------------------------------------------------------
 if [[ -n ${RECIPE_NAME} ]]; then
   if [[ -z ${RECIPE_JSON} ]]; then
-    RECIPE_JSON=${INC_LUT}/coregistration_recipes.json
+    RECIPE_JSON=${RECIPE_DEFAULT}
   else
     echo "WARNING [INC ${FCN_NAME}] Operating without a coregistration recipe, default values may be insufficient, all variables should be specified"
   fi
@@ -188,57 +170,38 @@ fi
 if [[ -n ${RECIPE_JSON} ]]; then
   RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
   if [[ " ${RECIPES[@]} " =~ " ${RECIPE_NAME} " ]]; then
-    RECIPE_PARAMETERS=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.parameters | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
-    RECIPE_REQUIRED=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.required | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
-    RECIPE_OPTIONAL=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}'.optional | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
+    PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted' < ${RECIPE_JSON} | tr -d ' [],"'))
   else
     echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
     exit 2
   fi
 fi
 
-## Check all possible inputs ---------------------------------------------------
-## check ANTs parameters, error if required and not provided, 
-PARAMS_LS=("dimensonality" "random-seed" "float" "collapse-output-transforms"\
- "initial-moving-transform" "transform" "metric" "convergence" "soothing-sigmas"\
- "shrink-factors")
-CAPS_LS=(${PARAMS_LS[@]^^})
-for (( i=0; i<${PARAMS_LS[@]}, i++ )); do
-  CHK_INPUT="true"
-  CHK_INPUT=$(eval 'if [[ -n ${'${CAPS_LS[${i}]//-/_}'} ]]; then echo "false"; fi')
-  if [[ "${CHK_INPUT}" == "false" ]]; then
-    if [[ " ${RECIPE_REQUIRED[@],,} " =~ " ${PARAMS_LS[${i}]} " ]]; then
-      echo "ERROR [INC ${FCN_NAME}] ${PARAMS_LS[${i}]} required for ${RECIPE_NAME}"
-      exit 3
-    else
-      JQ_STR='.coregistration_recipe.'${RECIPE_NAME}'.parameters.'${PARAMS_LS[${i}]}
-      ${CAPS_LS[${i}]//-/_}=($(jq -r ${JQ_STR} < ${RECIPE_JSON} | tr -d ' [],"' ))
-    fi
-  fi
-  CHK_INPUT=$(eval 'if [[ -n ${'${CAPS_LS[${i}]//-/_}'} ]]; then else echo "false"; fi')
-  if [[ "${CHK_INPUT}" == "false" ]]; then
-    echo "ERROR [INC ${FCN_NAME}] ${PARAMS_LS[${i}]} required in recipe or as input"
-    exit 4
-  fi
-done
+# parse inputs and recipe together ---------------------------------------------
+## variable specification order of priority
+## 1. direct input to function
+## 2. specified recipe
+## 3. default values
 
-OPT_LS=("fixed" "moving" "fixed-mask" "moving-mask" "prefix" "mask-dilation"\
- "roi-label" "xfm-label" "dir-template" "template" "space-source" "space-target" "interpolation"\
- "apply-to" "dir-save" "dir-xfm" "dir-png" "dir-scratch")
-CAPS_LS=(${OPTS_LS[@]^^})
-for (( i=0; i<${OPTS_LS[@]}, i++ )); do
-  CHK_INPUT="true"
-  CHK_INPUT=$(eval 'if [[ -n ${'${CAPS_LS[${i}]//-/_}'} ]]; then echo "false"; fi')
-  if [[ "${CHK_INPUT}" == "false" ]]; then
-    if [[ " ${RECIPE_REQUIRED[@],,} " =~ " ${OPTS_LS[${i}]} " ]]; then
-      echo "ERROR [INC ${FCN_NAME}] ${OPTS_LS[${i}]} required for ${RECIPE_NAME}"
-      exit 3
-    else
-      JQ_STR='.coregistration_recipe.'${RECIPE_NAME}'.optional.'${OPTS_LS[${i}]}
-      ${CAPS_LS[${i}]//-/_}=($(jq -r ${JQ_STR} < ${RECIPE_JSON} | tr -d ' [],"' ))
-    fi
+for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
+  unset VAR_NAME PARAM_STATE JQ_STR
+  VAR_NAME=${VAR_NAME[${i}]^^}
+  VAR_NAME=${VAR_NAME//-/_}
+  PARAM_STATE=$(eval 'if [[ -n ${'${VAR_NAME}'} ]]; then PARAM_STATE="directInput"; fi')
+  if [[ "${PARAM_STATE}" != "directInput" ]] &&\
+     [[ " ${PARAMS_RECIPE} " =~ " ${PARAMS_DEFAULT[${i}]} " ]]; then
+     JQ_STR='.coregistration_recipe.'${RECIPE_NAME}'.'${PARAMS_DEFAULT[${i}]}'[]'
+     ${VAR_NAME}=($(jq -r ${JQ_STR} < ${RECIPE_JSON}))
+  elif [[ "${PARAM_STATE}" != "directInput" ]]; then
+     JQ_STR='.coregistration_parameters.'${PARAMS_DEFAULT[${i}]}'[]'
+     ${VAR_NAME}=($(jq -r ${JQ_STR} < ${RECIPE_JSON}))
   fi
-done
+  eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi')
+  if [[ "${CHK_VAR}" == "${MISSING}" ]]; then
+    echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
+    exit 3
+  fi
+do
 
 # parse basic required information about MOVING images -------------------------
 MOVING=${MOVING//,/ }
@@ -251,8 +214,8 @@ SID=$(getField -i ${MOVING[0]} -f ses)
 DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
 
-# parse inputs, set defaults as necessary ======================================
-if [[ "${PREFIX,,}" == "default" ]] || [[ "${PREFIX,,}" == "null" ]]; then
+# set defaults as necessary ----------------------------------------------------
+if [[ "${PREFIX,,}" == "default" ]]; then
   PREFIX=$(getBidsBase -s -i ${MOVING[0]})
   PREP=$(getField -i ${PREFIX} -f prep)
   if [[ -n ${PREP} ]]; then
@@ -261,19 +224,18 @@ if [[ "${PREFIX,,}" == "default" ]] || [[ "${PREFIX,,}" == "null" ]]; then
   fi
 fi
 
-## set directories -------------------------------------------------------------
-if [[ "${DIR_SAVE,,}" == "default" ]] || [[ "${DIR_SAVE,,}" == "null" ]]; then
+if [[ "${DIR_SAVE,,}" == "default" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
-if [[ "${DIR_XFM,,}" == "default" ]] || [[ "${DIR_XFM,,}" == "null" ]]; then
+if [[ "${DIR_XFM,,}" == "default" ]]; then
   DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
 fi
-if [[ "${DIR_SCRATCH,,}" == "default" ]] || [[ "${DIR_SCRATCH,,}" == "null" ]]; then
+if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
   DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
 
 ## parse transforms basics -----------------------------------------------------
-TRANSFORM=(${TRANSFORM//;/ })
+TRANSFORM=(${TRANSFORM//,/ })
 
 ## parse additional MOVING files -----------------------------------------------
 MOVING_MASK=(${MOVING_MASK//,/ })
