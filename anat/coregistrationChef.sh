@@ -151,7 +151,7 @@ fi
 # Start of Function
 #===============================================================================
 RECIPE_DEFAULT=${INC_LUT}/coregistration_recipes.json
-PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted[]' < ${RECIPE_DEFAULT}))
+PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted[]?' < ${RECIPE_DEFAULT}))
 
 # locate recipe ----------------------------------------------------------------
 if [[ -n ${RECIPE_NAME} ]]; then
@@ -168,9 +168,9 @@ fi
 
 # read parameter names from recipe ---------------------------------------------
 if [[ -n ${RECIPE_JSON} ]]; then
-  RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted[]' < ${RECIPE_JSON}))
+  RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted[]?' < ${RECIPE_JSON}))
   if [[ " ${RECIPES[@]} " =~ " ${RECIPE_NAME} " ]]; then
-    PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted[]' < ${RECIPE_JSON}))
+    PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted[]?' < ${RECIPE_JSON}))
   else
     echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
     exit 2
@@ -187,14 +187,16 @@ for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   unset VAR_NAME PARAM_STATE JQ_STR
   VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
   VAR_NAME=${VAR_NAME//-/_}
-  PARAM_STATE=$(eval 'if [[ -n ${'${VAR_NAME}'} ]]; then PARAM_STATE="directInput"; fi')
-  if [[ "${PARAM_STATE}" != "directInput" ]] &&\
-     [[ " ${PARAMS_RECIPE} " =~ " ${PARAMS_DEFAULT[${i}]} " ]]; then
-     JQ_STR='.coregistration_recipe.'${RECIPE_NAME}'.'${PARAMS_DEFAULT[${i}]}'[]'
-     ${VAR_NAME}=($(jq -r ${JQ_STR} < ${RECIPE_JSON}))
-  elif [[ "${PARAM_STATE}" != "directInput" ]]; then
-     JQ_STR='.coregistration_parameters.'${PARAMS_DEFAULT[${i}]}'[]'
-     ${VAR_NAME}=($(jq -r ${JQ_STR} < ${RECIPE_JSON}))
+  eval 'if [[ -n ${'${VAR_NAME}'} ]]; then PARAM_STATE="directInput"; else PARAM_STATE="lookup"; fi'
+  if [[ "${PARAM_STATE}" == "lookup" ]] &&\
+     [[ " ${PARAMS_RECIPE[@]} " =~ " ${PARAMS_DEFAULT[${i}]} " ]]; then
+     echo 1
+     JQ_STR=".coregistration_recipe.${RECIPE_NAME}.${PARAMS_DEFAULT[${i}]}[]?"
+     eval ${VAR_NAME}'=($(jq -r '${JQ_STR}' < '${RECIPE_JSON}'))'
+  elif [[ "${PARAM_STATE}" == "lookup" ]]; then
+     echo 2
+     JQ_STR=".coregistration_parameters.${PARAMS_DEFAULT[${i}]}[]?"
+     eval ${VAR_NAME}'=($(jq -r '${JQ_STR}' < '${RECIPE_JSON}'))'
   fi
   eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi')
   if [[ "${CHK_VAR}" == "${MISSING}" ]]; then
