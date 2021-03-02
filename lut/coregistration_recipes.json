@@ -11,7 +11,7 @@
         "interpolation": ["default"],
         "restrict-deformation": ["optional"],
         "initial-fixed-transform": ["optional"],
-        "initial-moving-transform": ["[fixedImage,movingImage,1]"],
+        "initial-moving-transform": ["[${FIXED[0]},${MOVING[0]},1]"],
         "metric": ["required"],
         "transform": ["required"],
         "convergence": ["required"],
