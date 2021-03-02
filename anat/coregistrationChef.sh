@@ -208,6 +208,34 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   MOD+=($(getField -i ${MOVING[@]} -f modality))
 done
 
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${MOVING[0]})
+PID=$(getField -i ${MOVING[0]} -f sub)
+SID=$(getField -i ${MOVING[0]} -f ses)
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+
+# set defaults as necessary ----------------------------------------------------
+if [[ "${PREFIX,,}" == "default" ]]; then
+  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREP="${PREP}+"
+    PREFIX=$(modField -i ${PREFIX} -r -f prep)
+  fi
+fi
+
+# set directories --------------------------------------------------------------
+if [[ "${DIR_SAVE,,}" == "default" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+fi
+if [[ "${DIR_XFM,,}" == "default" ]]; then
+  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+fi
+if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
+  DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+fi
+mkdir -p ${DIR_SCRATCH}
 if [[ "${DIR_TEMPLATE}" == "default" ]]; then
   DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}
 fi
@@ -226,11 +254,26 @@ else
   FIXED=(${FIXED//,/ })
 fi
 
-# check spacing and registration -----------------------------------------------
+# check spacing ----------------------------------------------------------------
+FIX_SPACE="false"
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
   SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
   SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
-  
+  if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
+    NEW_SPACE=${SPACE_MOVING// /x}
+    FIX_SPACE="true"
+  fi
+elif [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}"]]; then
+  NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
+  FIX_SPACE="true"
+fi
+
+if [[ "${FIX_SPACE}" == "true" ]]; then
+  for (( i=0; i<${#FIXED[@]}; i++ )); do
+    BNAME=$(basename ${FIXED[${i}]})
+    ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/${BNAME} ${NEW_SPACE} 0
+    FIXED[${i}]=${DIR_SCRATCH}/${BNAME}
+  done
 fi
 
 # check for histogram matching -------------------------------------------------
@@ -266,34 +309,6 @@ fi
 if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   echo "ERROR [INC ${FCN_NAME}] number of fixed and moving masks must match"
   #exit 6
-fi
-
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${MOVING[0]})
-PID=$(getField -i ${MOVING[0]} -f sub)
-SID=$(getField -i ${MOVING[0]} -f ses)
-DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
-
-# set defaults as necessary ----------------------------------------------------
-if [[ "${PREFIX,,}" == "default" ]]; then
-  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -r -f prep)
-  fi
-fi
-
-# set directories --------------------------------------------------------------
-if [[ "${DIR_SAVE,,}" == "default" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
-fi
-if [[ "${DIR_XFM,,}" == "default" ]]; then
-  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
-fi
-if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
-  DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
 
 # show outputs for dry run -----------------------------------------------------
@@ -363,7 +378,6 @@ for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"
   antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
 done
-
 antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
 if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
@@ -380,7 +394,22 @@ if [[ "${DRY_RUN}" == "true" ]]; then
 fi
 eval ${antsCoreg}
 
+# apply transforms =============================================================
+if [[ "${INTERPOLATION}" == "default" ]]; then
+  FIXED_INTERP="BSpline[3]"
+fi
+FROM=$(getSpace -i ${MOVING[0]})
+TO=$(getSpace -i ${FIXED[0]})
+for (( i=0; i<${#MOVING[@]}; i++ )); do
+  
+  OUTNAME=
+  antsApplyTransforms -d 3 \
+    -n ${FIXED_INTERP} \
+    -i ${FIXED} \
+    -o 
+# apply to extra images --------------------------------------------------------
 
+# move results to desired destination ------------------------------------------
 
 
 
@@ -429,7 +458,7 @@ fi
 
 # Resample fixed images as necessary
 
-mkdir -p ${DIR_SCRATCH}
+
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 
