@@ -33,6 +33,7 @@ if [[ ! -f ${INIT} ]]; then
 fi
 echo "Setting up Iowa Neuroimage Processing Core Software - Version ${INC_VERSION^^}"
 export DIR_INC=$(dirname ${INIT})
+echo -e "\tDIR_INC=${DIR_INC}"
 
 # load JQ to read init info from JSON ------------------------------------------
 if [[ ! -x "$(command -v jq)" ]]; then
