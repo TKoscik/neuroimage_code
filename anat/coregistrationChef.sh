@@ -184,30 +184,138 @@ fi
 ## 3. default values
 
 for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
-  unset VAR_NAME PARAM_STATE JQ_STR
+  unset VAR_NAME PARAM_STATE JQ_STR CHK_VAR
   VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
   VAR_NAME=${VAR_NAME//-/_}
   eval 'if [[ -n ${'${VAR_NAME}'} ]]; then PARAM_STATE="directInput"; else PARAM_STATE="lookup"; fi'
   if [[ "${PARAM_STATE}" == "lookup" ]] &&\
      [[ " ${PARAMS_RECIPE[@]} " =~ " ${PARAMS_DEFAULT[${i}]} " ]]; then
-     echo 1
-     JQ_STR=".coregistration_recipe.${RECIPE_NAME}.${PARAMS_DEFAULT[${i}]}[]?"
+     JQ_STR="'.coregistration_recipe.${RECIPE_NAME}."'"'${PARAMS_DEFAULT[${i}]}'"'"[]?'"
      eval ${VAR_NAME}'=($(jq -r '${JQ_STR}' < '${RECIPE_JSON}'))'
   elif [[ "${PARAM_STATE}" == "lookup" ]]; then
-     echo 2
-     JQ_STR=".coregistration_parameters.${PARAMS_DEFAULT[${i}]}[]?"
+     JQ_STR="'.coregistration_parameters."'"'${PARAMS_DEFAULT[${i}]}'"'"[]?'"
      eval ${VAR_NAME}'=($(jq -r '${JQ_STR}' < '${RECIPE_JSON}'))'
   fi
-  eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi')
-  if [[ "${CHK_VAR}" == "${MISSING}" ]]; then
+  eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi'
+  if [[ "${CHK_VAR}" == "missing" ]]; then
     echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
-    #exit 3
+    exit 3
   fi
-do
+  eval "echo ${VAR_NAME}"
+done
 
 # parse basic required information about MOVING images -------------------------
 MOVING=${MOVING//,/ }
 MOVING_N=${#MOVING[@]}
+for (( i=0; i<${#MOVING[@]}; i++ )); do
+  MOD+=($(getField -i ${MOVING[@]} -f modality))
+done
+
+if [[ "${DIR_TEMPLATE}" == "default" ]]; then
+  DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}
+fi
+
+# parse fixed ------------------------------------------------------------------
+CHK_MOD=1
+if [[ "${FIXED}" == "optional" ]]; then
+  unset FIXED
+  for (( i=0; i<${MOVING_N} )); do
+    if [[ -f ${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz ]]; then
+      FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
+    else
+      FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz
+      CHK_MOD=0
+    fi
+  done
+else
+  FIXED=(${FIXED//,/ })
+fi
+if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]
+  USE_HISTOGRAM_MATCHING=${CHK_MOD}
+fi
+
+# check masks ------------------------------------------------------------------
+if [[ -n ${MOVING_MASK} ]]; then
+  MOVING_MASK=(${MOVING_MASK//,/ })
+  if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] ||
+     [[ ${#MOVING_MASK[@]} -eq 1 ]]; then
+    echo "ERROR [INC ${FCN_NAME}] number of moving masks must be either 1 or equal to the number of transform levels"
+    exit 4
+  fi
+fi
+if [[ -n ${FIXED_MASK} ]]; then
+  FIXED_MASK=(${FIXED_MASK//,/ })
+  if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] ||
+     [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
+    echo "ERROR [INC ${FCN_NAME}] number of fixed masks must be either 1 or equal to the number of transform levels"
+    exit 4
+  fi
+fi
+if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]];
+  echo "ERROR [INC ${FCN_NAME}] number of fixed and moving masks must match"
+  exit 5
+fi
+
+### write ANTS registration function ===========================================
+antsCoreg="antsRegistration"
+
+antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
+if [[ "${SAVE_STATE}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --save-state ${SAVE_STATE}"
+fi
+if [[ "${RESTORE_STATE}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --restore-state ${RESTORE_STATE}"
+fi
+antsCoreg="${antsCoreg} --write-composite-transform ${WRITE_COMPOSITE_TRANSFORM}"
+antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
+antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
+antsCoreg="${antsCoreg} --collapse-output-transforms ${COLLAPSE_OUTPUT_TRANSFORMS}"
+antsCoreg="${antsCoreg} --initialize-transforms-per-stage ${INITIALIZE_TRANSFORMS_PER_STAGE}"
+if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --resrict-deformation ${RESTRICT_DEFORMATION}"
+fi
+if [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
+  INITIAL_FIXED_TRANSFORM=(${INITIAL_FIXED_TRANSFORM//;/ })
+  for (( i=0; i<${#INITIAL_FIXED_TRANSFORM[@]}; i++ )); do
+    antsCoreg="${antsCoreg} --initial-fixed-transform ${INITIAL_FIXED_TRANSFORM[${i}]}"
+  done
+fi
+if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
+  INITIAL_MOVING_TRANSFORM=(${INITIAL_MOVING_TRANSFORM//;/ })
+  for (( i=0; i<${#INITIAL_MOVING_TRANSFORM[@]}; i++ )); do
+    antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
+  done
+fi
+
+if [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
+  antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
+fi
+
+for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
+  antsCoreg="${antsCoreg} --transform ${TRANSFORM[${i}]}"
+  for (( j=0; j<${#MOVING[@]}; j++ )); do
+    METRIC_STR=${METRIC[${j}]}
+    METRIC_STR=$(echo ${METRIC_STR} | sed 's/fixedImage/${FIXED[${j}]}/g')
+    METRIC_STR=$(echo ${METRIC_STR} | sed 's/movingImage/${MOVING[${j}]}/g')
+    antsCoreg="${antsCoreg} --metric ${METRIC_STR}"
+  done
+  if [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
+    antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${j}]},${MOVING_MASK[${j}]}]"
+  fi
+  antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
+  antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"
+  antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
+fi
+antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
+if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" == "optional" ]]; then
+  antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
+fi
+if [[ "${WINSORIZE_IMAGE_INTENSITIES}" == "optional" ]]; then
+  antsCoreg="${antsCoreg} --winsorize-image-intensities ${WINSORIZE_IMAGE_INTENSITIES}"
+fi
+antsCoreg="${antsCoreg} --float ${FLOAT}"
+antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
+
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${MOVING[0]})
@@ -236,8 +344,6 @@ if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
   DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
 
-## parse transforms basics -----------------------------------------------------
-TRANSFORM=(${TRANSFORM//,/ })
 
 ## parse additional MOVING files -----------------------------------------------
 MOVING_MASK=(${MOVING_MASK//,/ })
@@ -246,9 +352,7 @@ if [[ ${#MOVING_MASK[@]} -ne 1 ]] || [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} 
   exit 9
 fi
 ### get moving modalities - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-for (( i=0; i<${#MOVING[@]}; i++ )); do
-  MOD+=($(getField -i ${MOVING[@]} -f modality))
-done
+
 
 # parse fixed images -----------------------------------------------------------
 **** makje sure this is checking things in order
