@@ -163,7 +163,7 @@ if [[ -n ${RECIPE_NAME} ]]; then
 fi
 if [[ ! -f ${RECIPE_JSON} ]]; then
   echo "ERROR [INC ${FCN_NAME}] Recipe JSON not found. Aborting."
-  exit 1
+  #exit 1
 fi
 
 # read parameter names from recipe ---------------------------------------------
@@ -173,7 +173,7 @@ if [[ -n ${RECIPE_JSON} ]]; then
     PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted[]?' < ${RECIPE_JSON}))
   else
     echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
-    exit 2
+    #exit 2
   fi
 fi
 
@@ -182,7 +182,6 @@ fi
 ## 1. direct input to function
 ## 2. specified recipe
 ## 3. default values
-
 for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   unset VAR_NAME PARAM_STATE JQ_STR CHK_VAR
   VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
@@ -262,10 +261,19 @@ if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   #exit 6
 fi
 
+if [[ "${DRY_RUN}" == "true" ]]; then
+  for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
+    VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
+    VAR_NAME=${VAR_NAME//-/_}
+    eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
+  done
+fi
+
 ### write ANTS registration function ===========================================
 antsCoreg="antsRegistration"
 
 antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
+antsCoreg="${antsCoreg} --output ${DIR_SCRATCH}/xfm_"
 if [[ "${SAVE_STATE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --save-state ${SAVE_STATE}"
 fi
