@@ -208,6 +208,34 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   MOD+=($(getField -i ${MOVING[@]} -f modality))
 done
 
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${MOVING[0]})
+PID=$(getField -i ${MOVING[0]} -f sub)
+SID=$(getField -i ${MOVING[0]} -f ses)
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+
+# set defaults as necessary ----------------------------------------------------
+if [[ "${PREFIX,,}" == "default" ]]; then
+  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREP="${PREP}+"
+    PREFIX=$(modField -i ${PREFIX} -r -f prep)
+  fi
+fi
+
+# set directories --------------------------------------------------------------
+if [[ "${DIR_SAVE,,}" == "default" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+fi
+if [[ "${DIR_XFM,,}" == "default" ]]; then
+  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+fi
+if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
+  DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+fi
+mkdir -p ${DIR_SCRATCH}
 if [[ "${DIR_TEMPLATE}" == "default" ]]; then
   DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}
 fi
@@ -224,6 +252,28 @@ if [[ "${FIXED}" == "optional" ]]; then
   done
 else
   FIXED=(${FIXED//,/ })
+fi
+
+# check spacing ----------------------------------------------------------------
+FIX_SPACE="false"
+if [[ "${SPACE_TARGET}" == "moving" ]]; then
+  SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
+  SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+  if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
+    NEW_SPACE=${SPACE_MOVING// /x}
+    FIX_SPACE="true"
+  fi
+elif [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}"]]; then
+  NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
+  FIX_SPACE="true"
+fi
+
+if [[ "${FIX_SPACE}" == "true" ]]; then
+  for (( i=0; i<${#FIXED[@]}; i++ )); do
+    BNAME=$(basename ${FIXED[${i}]})
+    ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/${BNAME} ${NEW_SPACE} 0
+    FIXED[${i}]=${DIR_SCRATCH}/${BNAME}
+  done
 fi
 
 # check for histogram matching -------------------------------------------------
@@ -261,18 +311,20 @@ if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   #exit 6
 fi
 
+# show outputs for dry run -----------------------------------------------------
 if [[ "${DRY_RUN}" == "true" ]]; then
   for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
     VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
     VAR_NAME=${VAR_NAME//-/_}
     eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
   done
+  exit 0
 fi
 
 ### write ANTS registration function ===========================================
 antsCoreg="antsRegistration"
-
 antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
+
 antsCoreg="${antsCoreg} --output ${DIR_SCRATCH}/xfm_"
 if [[ "${SAVE_STATE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --save-state ${SAVE_STATE}"
@@ -280,11 +332,21 @@ fi
 if [[ "${RESTORE_STATE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --restore-state ${RESTORE_STATE}"
 fi
-antsCoreg="${antsCoreg} --write-composite-transform ${WRITE_COMPOSITE_TRANSFORM}"
-antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
-antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
-antsCoreg="${antsCoreg} --collapse-output-transforms ${COLLAPSE_OUTPUT_TRANSFORMS}"
-antsCoreg="${antsCoreg} --initialize-transforms-per-stage ${INITIALIZE_TRANSFORMS_PER_STAGE}"
+if [[ ${WRITE_COMPOSITE_TRANSFORM} -eq 1 ]]; then
+  antsCoreg="${antsCoreg} --write-composite-transform 1"
+fi
+if [[ ${PRINT_SIMILARITY_MEASURE_INTERVAL} -ne 0 ]]; then
+  antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
+fi
+if [[ ${WRITE_INTERNAL_VOLUMES} -ne 0 ]]; then
+  antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
+fi
+if [[ ${COLLAPSE_OUTPUT_TRANSFORMS} -eq 0 ]]; then
+  antsCoreg="${antsCoreg} --collapse-output-transforms 0"
+fi
+if [[ ${INITIALIZE_TRANSFORMS_PER_STAGE} -eq 0 ]]; then
+  antsCoreg="${antsCoreg} --initialize-transforms-per-stage 0"
+fi
 if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --resrict-deformation ${RESTRICT_DEFORMATION}"
 fi
@@ -300,87 +362,54 @@ if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
     antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
   done
 fi
-
 if [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
   antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
 fi
-
 for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   antsCoreg="${antsCoreg} --transform ${TRANSFORM[${i}]}"
+  METRIC_STR=(${METRIC[${i}]//fixedImage,movingImage/ })
   for (( j=0; j<${#MOVING[@]}; j++ )); do
-    METRIC_STR=(${METRIC[${j}]//fixedImage,movingImage/ })
     antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
   done
-  if [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
+  if [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
     antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
   fi
   antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
   antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"
   antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
 done
-
 antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
-if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" == "optional" ]]; then
+if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
 fi
-if [[ "${WINSORIZE_IMAGE_INTENSITIES}" == "optional" ]]; then
+if [[ "${WINSORIZE_IMAGE_INTENSITIES}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --winsorize-image-intensities ${WINSORIZE_IMAGE_INTENSITIES}"
 fi
 antsCoreg="${antsCoreg} --float ${FLOAT}"
 antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
 
-
-# Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${MOVING[0]})
-PID=$(getField -i ${MOVING[0]} -f sub)
-SID=$(getField -i ${MOVING[0]} -f ses)
-DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
-
-# set defaults as necessary ----------------------------------------------------
-if [[ "${PREFIX,,}" == "default" ]]; then
-  PREFIX=$(getBidsBase -s -i ${MOVING[0]})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -r -f prep)
-  fi
+if [[ "${DRY_RUN}" == "true" ]]; then
+  echo ${antsCoreg}
+  exit 0
 fi
+eval ${antsCoreg}
 
-if [[ "${DIR_SAVE,,}" == "default" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+# apply transforms =============================================================
+if [[ "${INTERPOLATION}" == "default" ]]; then
+  FIXED_INTERP="BSpline[3]"
 fi
-if [[ "${DIR_XFM,,}" == "default" ]]; then
-  DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
-fi
-if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
-  DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-fi
+FROM=$(getSpace -i ${MOVING[0]})
+TO=$(getSpace -i ${FIXED[0]})
+for (( i=0; i<${#MOVING[@]}; i++ )); do
+  
+  OUTNAME=
+  antsApplyTransforms -d 3 \
+    -n ${FIXED_INTERP} \
+    -i ${FIXED} \
+    -o 
+# apply to extra images --------------------------------------------------------
 
-
-## parse additional MOVING files -----------------------------------------------
-MOVING_MASK=(${MOVING_MASK//,/ })
-if [[ ${#MOVING_MASK[@]} -ne 1 ]] || [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]]; then
-  echo "ERROR [INC ${FCN_NAME}] moving-mask must be of length 1 or equal to the number of transforms"
-  exit 9
-fi
-### get moving modalities - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-
-
-# parse fixed images -----------------------------------------------------------
-**** makje sure this is checking things in order
-if [[ -z ${TEMPLATE} ]]; then
-  FIXED=(${FIXED//,/ })
-else
-  for (( i=0; i<${MOVING_N}; i++ )); do
-    FIXED=
-fi
-
-DEFAULT_LS=("prefix" "mask-dilation" "roi-label" "xfm-label" "template" \
- "space-source" "space-target" "interpolation"\
- "dir-save" "dir-xfm" "dir-png" "dir-scratch")
-
-
+# move results to desired destination ------------------------------------------
 
 
 
@@ -429,7 +458,7 @@ fi
 
 # Resample fixed images as necessary
 
-mkdir -p ${DIR_SCRATCH}
+
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_XFM}
 

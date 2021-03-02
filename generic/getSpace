@@ -56,6 +56,10 @@ if [[ -z ${SPACE} ]]; then
     SPACE=(${SPACE//// })
     SPACE=${SPACE[0]}
     SPACE=${SPACE//_/+}
+  elif [[ "${DIR_INPUT}" == *"${INC_TEMPLATE}"* ]]; then
+    SPACE_TEMP=$(basename ${INPUT})
+    SPACE_TEMP=(${SPACE_TEMP//_/ })
+    SPACE="${SPACE_TEMP[0]}+${SPACE_TEMP[1]}"
   elif [[ "${DIR_INPUT,,}" == *"derivatives"* ]]; then
     SPACE="native"
   elif [[ "${DIR_INPUT,,}" == *"nifti"* ]] || [[ "${DIR_INPUT,,}" == *"rawdata"* ]]; then
