@@ -226,6 +226,13 @@ else
   FIXED=(${FIXED//,/ })
 fi
 
+# check spacing and registration -----------------------------------------------
+if [[ "${SPACE_TARGET}" == "moving" ]]; then
+  SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
+  SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+  
+fi
+
 # check for histogram matching -------------------------------------------------
 if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
   USE_HISTOGRAM_MATCHING=1
@@ -261,75 +268,6 @@ if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   #exit 6
 fi
 
-if [[ "${DRY_RUN}" == "true" ]]; then
-  for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
-    VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
-    VAR_NAME=${VAR_NAME//-/_}
-    eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
-  done
-fi
-
-### write ANTS registration function ===========================================
-antsCoreg="antsRegistration"
-
-antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
-antsCoreg="${antsCoreg} --output ${DIR_SCRATCH}/xfm_"
-if [[ "${SAVE_STATE}" != "optional" ]]; then
-  antsCoreg="${antsCoreg} --save-state ${SAVE_STATE}"
-fi
-if [[ "${RESTORE_STATE}" != "optional" ]]; then
-  antsCoreg="${antsCoreg} --restore-state ${RESTORE_STATE}"
-fi
-antsCoreg="${antsCoreg} --write-composite-transform ${WRITE_COMPOSITE_TRANSFORM}"
-antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
-antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
-antsCoreg="${antsCoreg} --collapse-output-transforms ${COLLAPSE_OUTPUT_TRANSFORMS}"
-antsCoreg="${antsCoreg} --initialize-transforms-per-stage ${INITIALIZE_TRANSFORMS_PER_STAGE}"
-if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
-  antsCoreg="${antsCoreg} --resrict-deformation ${RESTRICT_DEFORMATION}"
-fi
-if [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
-  INITIAL_FIXED_TRANSFORM=(${INITIAL_FIXED_TRANSFORM//;/ })
-  for (( i=0; i<${#INITIAL_FIXED_TRANSFORM[@]}; i++ )); do
-    antsCoreg="${antsCoreg} --initial-fixed-transform ${INITIAL_FIXED_TRANSFORM[${i}]}"
-  done
-fi
-if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
-  INITIAL_MOVING_TRANSFORM=(${INITIAL_MOVING_TRANSFORM//;/ })
-  for (( i=0; i<${#INITIAL_MOVING_TRANSFORM[@]}; i++ )); do
-    antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
-  done
-fi
-
-if [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
-  antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
-fi
-
-for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
-  antsCoreg="${antsCoreg} --transform ${TRANSFORM[${i}]}"
-  for (( j=0; j<${#MOVING[@]}; j++ )); do
-    METRIC_STR=(${METRIC[${j}]//fixedImage,movingImage/ })
-    antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
-  done
-  if [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
-    antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
-  fi
-  antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
-  antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"
-  antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
-done
-
-antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
-if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" == "optional" ]]; then
-  antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
-fi
-if [[ "${WINSORIZE_IMAGE_INTENSITIES}" == "optional" ]]; then
-  antsCoreg="${antsCoreg} --winsorize-image-intensities ${WINSORIZE_IMAGE_INTENSITIES}"
-fi
-antsCoreg="${antsCoreg} --float ${FLOAT}"
-antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
-
-
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${MOVING[0]})
 PID=$(getField -i ${MOVING[0]} -f sub)
@@ -347,6 +285,7 @@ if [[ "${PREFIX,,}" == "default" ]]; then
   fi
 fi
 
+# set directories --------------------------------------------------------------
 if [[ "${DIR_SAVE,,}" == "default" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
@@ -357,28 +296,89 @@ if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
   DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
 
-
-## parse additional MOVING files -----------------------------------------------
-MOVING_MASK=(${MOVING_MASK//,/ })
-if [[ ${#MOVING_MASK[@]} -ne 1 ]] || [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]]; then
-  echo "ERROR [INC ${FCN_NAME}] moving-mask must be of length 1 or equal to the number of transforms"
-  exit 9
-fi
-### get moving modalities - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-
-
-# parse fixed images -----------------------------------------------------------
-**** makje sure this is checking things in order
-if [[ -z ${TEMPLATE} ]]; then
-  FIXED=(${FIXED//,/ })
-else
-  for (( i=0; i<${MOVING_N}; i++ )); do
-    FIXED=
+# show outputs for dry run -----------------------------------------------------
+if [[ "${DRY_RUN}" == "true" ]]; then
+  for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
+    VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
+    VAR_NAME=${VAR_NAME//-/_}
+    eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
+  done
+  exit 0
 fi
 
-DEFAULT_LS=("prefix" "mask-dilation" "roi-label" "xfm-label" "template" \
- "space-source" "space-target" "interpolation"\
- "dir-save" "dir-xfm" "dir-png" "dir-scratch")
+### write ANTS registration function ===========================================
+antsCoreg="antsRegistration"
+antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
+
+antsCoreg="${antsCoreg} --output ${DIR_SCRATCH}/xfm_"
+if [[ "${SAVE_STATE}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --save-state ${SAVE_STATE}"
+fi
+if [[ "${RESTORE_STATE}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --restore-state ${RESTORE_STATE}"
+fi
+if [[ ${WRITE_COMPOSITE_TRANSFORM} -eq 1 ]]; then
+  antsCoreg="${antsCoreg} --write-composite-transform 1"
+fi
+if [[ ${PRINT_SIMILARITY_MEASURE_INTERVAL} -ne 0 ]]; then
+  antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
+fi
+if [[ ${WRITE_INTERNAL_VOLUMES} -ne 0 ]]; then
+  antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
+fi
+if [[ ${COLLAPSE_OUTPUT_TRANSFORMS} -eq 0 ]]; then
+  antsCoreg="${antsCoreg} --collapse-output-transforms 0"
+fi
+if [[ ${INITIALIZE_TRANSFORMS_PER_STAGE} -eq 0 ]]; then
+  antsCoreg="${antsCoreg} --initialize-transforms-per-stage 0"
+fi
+if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --resrict-deformation ${RESTRICT_DEFORMATION}"
+fi
+if [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
+  INITIAL_FIXED_TRANSFORM=(${INITIAL_FIXED_TRANSFORM//;/ })
+  for (( i=0; i<${#INITIAL_FIXED_TRANSFORM[@]}; i++ )); do
+    antsCoreg="${antsCoreg} --initial-fixed-transform ${INITIAL_FIXED_TRANSFORM[${i}]}"
+  done
+fi
+if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
+  INITIAL_MOVING_TRANSFORM=(${INITIAL_MOVING_TRANSFORM//;/ })
+  for (( i=0; i<${#INITIAL_MOVING_TRANSFORM[@]}; i++ )); do
+    antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
+  done
+fi
+if [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
+  antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
+fi
+for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
+  antsCoreg="${antsCoreg} --transform ${TRANSFORM[${i}]}"
+  METRIC_STR=(${METRIC[${i}]//fixedImage,movingImage/ })
+  for (( j=0; j<${#MOVING[@]}; j++ )); do
+    antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
+  done
+  if [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
+    antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
+  fi
+  antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
+  antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"
+  antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
+done
+
+antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
+if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
+fi
+if [[ "${WINSORIZE_IMAGE_INTENSITIES}" != "optional" ]]; then
+  antsCoreg="${antsCoreg} --winsorize-image-intensities ${WINSORIZE_IMAGE_INTENSITIES}"
+fi
+antsCoreg="${antsCoreg} --float ${FLOAT}"
+antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
+
+if [[ "${DRY_RUN}" == "true" ]]; then
+  echo ${antsCoreg}
+  exit 0
+fi
+eval ${antsCoreg}
 
 
 
