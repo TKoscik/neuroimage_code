@@ -199,14 +199,12 @@ for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi'
   if [[ "${CHK_VAR}" == "missing" ]]; then
     echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
-    exit 3
+#    exit 3
   fi
-  eval "echo ${VAR_NAME}"
 done
 
 # parse basic required information about MOVING images -------------------------
-MOVING=${MOVING//,/ }
-MOVING_N=${#MOVING[@]}
+MOVING=(${MOVING//,/ })
 for (( i=0; i<${#MOVING[@]}; i++ )); do
   MOD+=($(getField -i ${MOVING[@]} -f modality))
 done
@@ -216,44 +214,52 @@ if [[ "${DIR_TEMPLATE}" == "default" ]]; then
 fi
 
 # parse fixed ------------------------------------------------------------------
-CHK_MOD=1
 if [[ "${FIXED}" == "optional" ]]; then
   unset FIXED
-  for (( i=0; i<${MOVING_N} )); do
+  for (( i=0; i<${MOVING_N}; i++ )); do
     if [[ -f ${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz ]]; then
       FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
     else
       FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz
-      CHK_MOD=0
     fi
   done
 else
   FIXED=(${FIXED//,/ })
 fi
-if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]
-  USE_HISTOGRAM_MATCHING=${CHK_MOD}
+
+# check for histogram matching -------------------------------------------------
+if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
+  USE_HISTOGRAM_MATCHING=1
+  for (( i=0; i<${#MOVING[@]}; i++ )); do
+    MOVING_MOD=$(getField -i ${MOVING[${i}]} -f modality)
+    FIXED_MOD=$(getField -i ${FIXED[${i}]} -f modality)
+    if [[ "${MOVING_MOD}" != "${FIXED_MOD}" ]]; then
+      USE_HISTOGRAM_MATCHING=0
+      break
+    fi
+  done
 fi
 
 # check masks ------------------------------------------------------------------
 if [[ -n ${MOVING_MASK} ]]; then
   MOVING_MASK=(${MOVING_MASK//,/ })
-  if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] ||
-     [[ ${#MOVING_MASK[@]} -eq 1 ]]; then
-    echo "ERROR [INC ${FCN_NAME}] number of moving masks must be either 1 or equal to the number of transform levels"
-    exit 4
+  if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
+     [[ ${#MOVING_MASK[@]} -ne 1 ]]; then
+    echo "ERROR [INC ${FCN_NAME}] number of moving masks must equal 1 or the number of transforms"
+    #exit 4
   fi
 fi
 if [[ -n ${FIXED_MASK} ]]; then
   FIXED_MASK=(${FIXED_MASK//,/ })
-  if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] ||
-     [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
-    echo "ERROR [INC ${FCN_NAME}] number of fixed masks must be either 1 or equal to the number of transform levels"
-    exit 4
+  if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
+     [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
+    echo "ERROR [INC ${FCN_NAME}] number of fixed masks must equal 1 or the number of transforms"
+    #exit 5
   fi
 fi
-if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]];
+if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   echo "ERROR [INC ${FCN_NAME}] number of fixed and moving masks must match"
-  exit 5
+  #exit 6
 fi
 
 ### write ANTS registration function ===========================================
@@ -294,18 +300,17 @@ fi
 for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   antsCoreg="${antsCoreg} --transform ${TRANSFORM[${i}]}"
   for (( j=0; j<${#MOVING[@]}; j++ )); do
-    METRIC_STR=${METRIC[${j}]}
-    METRIC_STR=$(echo ${METRIC_STR} | sed 's/fixedImage/${FIXED[${j}]}/g')
-    METRIC_STR=$(echo ${METRIC_STR} | sed 's/movingImage/${MOVING[${j}]}/g')
-    antsCoreg="${antsCoreg} --metric ${METRIC_STR}"
+    METRIC_STR=(${METRIC[${j}]//fixedImage,movingImage/ })
+    antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
   done
   if [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
-    antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${j}]},${MOVING_MASK[${j}]}]"
+    antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
   fi
   antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
   antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"
   antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
-fi
+done
+
 antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
 if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" == "optional" ]]; then
   antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
