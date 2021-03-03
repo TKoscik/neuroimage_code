@@ -64,6 +64,10 @@ if [[ -z ${SPACE} ]]; then
     SPACE="native"
   elif [[ "${DIR_INPUT,,}" == *"nifti"* ]] || [[ "${DIR_INPUT,,}" == *"rawdata"* ]]; then
     SPACE="raw"
+  else
+    TEMP=(${INPUT//_/ })
+    SPACE=${TEMP[0]}
+    SPACE=${SPACE//-/+}
   fi
 fi
 echo ${SPACE}
