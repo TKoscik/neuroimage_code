@@ -65,7 +65,8 @@ if [[ -z ${SPACE} ]]; then
   elif [[ "${DIR_INPUT,,}" == *"nifti"* ]] || [[ "${DIR_INPUT,,}" == *"rawdata"* ]]; then
     SPACE="raw"
   else
-    TEMP=(${INPUT//_/ })
+    BNAME=$(basename ${INPUT})
+    TEMP=(${BNAME//_/ })
     SPACE=${TEMP[0]}
     SPACE=${SPACE//-/+}
   fi
