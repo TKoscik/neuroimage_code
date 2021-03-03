@@ -97,7 +97,7 @@ while true; do
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space-source) SPACE_SOURCE="$2" ; shift 2 ;;
     --space-target) SPACE_TARGET="$2" ; shift 2 ;;
-    --dimensonality) DIMENSIONALITY="$2" ; shift 2 ;;="$2" ; shift 2 ;;
+    --dimensonality) DIMENSIONALITY="$2" ; shift 2 ;;
     --save-state) SAVE_STATE="$2" ; shift 2 ;;
     --restore-state) RESTORE_STATE="$2" ; shift 2 ;;
     --write-composite-transform) WRITE_COMPOSITE_TRANSFORM="$2" ; shift 2 ;;
