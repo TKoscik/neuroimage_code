@@ -54,19 +54,20 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvld --long recipe-json:,recipe-name:,\
-fixed,fixed-mask,fixed-mask-dilation,\
-moving,moving-mask,moving-mask-dilation,\
-dir-template,template,space-source,space-target,\
+fixed:,fixed-mask:,fixed-mask-dilation:,\
+moving:,moving-mask:,moving-mask-dilation:,\
+dir-template:,template:,space-source:,space-target:,\
 \
-dimensonality,save-state,restore-state,write-composite-transform,\
-print-similarity-measure-interval,write-internal-volumes,\
-collapse-output-transforms,initialize-transforms-per-stage,interpolation,\
-restrict-deformation,initial-fixed-transform,initial-moving-transform,metric,\
-transform,convergence,smoothing-sigmas,shrink-factors,use-histogram-matching,\
-use-estimate-learning-rate-once,winsorize-image-intensities,float,random-seed,\
+dimensonality:,save-state:,restore-state:,write-composite-transform,\
+print-similarity-measure-interval:,write-internal-volumes:,\
+collapse-output-transforms,initialize-transforms-per-stage,interpolation:,\
+restrict-deformation:,initial-fixed-transform:,initial-moving-transform,metric:,\
+transform:,convergence:,smoothing-sigmas:,shrink-factors:,use-histogram-matching:,\
+use-estimate-learning-rate-once,winsorize-image-intensities:,float,random-seed:,\
+ants-verbose,\
 \
-prefix,xfm-label,apply-to,make-png,keep-fwd-xfm,keep-inv-xfm,\
-dir-save,dir-xfm,dir-png,dir-scratch,\
+prefix:,xfm-label:,apply-to:,make-png:,keep-fwd-xfm:,keep-inv-xfm:,\
+dir-save:,dir-xfm:,dir-png:,dir-scratch:,\
 verbose,help,no-log,dry-run -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -100,10 +101,10 @@ while true; do
     --dimensonality) DIMENSIONALITY="$2" ; shift 2 ;;
     --save-state) SAVE_STATE="$2" ; shift 2 ;;
     --restore-state) RESTORE_STATE="$2" ; shift 2 ;;
-    --write-composite-transform) WRITE_COMPOSITE_TRANSFORM="$2" ; shift 2 ;;
+    --write-composite-transform) WRITE_COMPOSITE_TRANSFORM=true ; shift ;;
     --print-similarity-measure-interval) PRINT_SIMILARITY_MEASURE_INTERVAL="$2" ; shift 2 ;;
     --write-internal-volumes) WRITE_INTERNAL_VOLUMES="$2" ; shift 2 ;;
-    --collapse-output-transforms) COLLAPSE_OUTPUT_TRANSFORMS="$2" ; shift 2 ;;
+    --collapse-output-transforms) COLLAPSE_OUTPUT_TRANSFORMS=true ; shift ;;
     --initialize-transforms-per-stage) INITIALIZE_TRANSFORMS_PER_STAGE="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --restrict-deformation) RESTRICT_DEFORMATION="$2" ; shift 2 ;;
@@ -115,10 +116,11 @@ while true; do
     --smoothing-sigmas) SMOOTHING_SIGMAS="$2" ; shift 2 ;;
     --shrink-factors) SHRINK_FACTORS="$2" ; shift 2 ;;
     --use-histogram-matching) USE_HISTOGRAM_MATCHING="$2" ; shift 2 ;;
-    --use-estimate-learning-rate-once) USE_ESTIMATE_LERANING_RATE_ONCE="$2" ; shift 2 ;;
+    --use-estimate-learning-rate-once) USE_ESTIMATE_LERANING_RATE_ONCE=true ; shift ;;
     --winsorize-image-intensities) WINSORIZE_IMAGE_INTENSITIES="$2" ; shift 2 ;;
-    --float) FLOAT="$2" ; shift 2 ;;
+    --float) FLOAT=true ; shift ;;
     --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
+    --ants-verbose) ANTS_VERBOSE=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
     --roi-label) ROI_LABEL="$2" ; shift 2 ;;
@@ -337,8 +339,10 @@ fi
 if [[ "${RESTORE_STATE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --restore-state ${RESTORE_STATE}"
 fi
-if [[ ${WRITE_COMPOSITE_TRANSFORM} -eq 1 ]]; then
+if [[ "${WRITE_COMPOSITE_TRANSFORM}" == "true" ]]; then
   antsCoreg="${antsCoreg} --write-composite-transform 1"
+else  
+  antsCoreg="${antsCoreg} --write-composite-transform 0"
 fi
 if [[ ${PRINT_SIMILARITY_MEASURE_INTERVAL} -ne 0 ]]; then
   antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
@@ -346,7 +350,9 @@ fi
 if [[ ${WRITE_INTERNAL_VOLUMES} -ne 0 ]]; then
   antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
 fi
-if [[ ${COLLAPSE_OUTPUT_TRANSFORMS} -eq 0 ]]; then
+if [[ "${COLLAPSE_OUTPUT_TRANSFORMS}" == "true" ]]; then
+  antsCoreg="${antsCoreg} --collapse-output-transforms 1"
+else
   antsCoreg="${antsCoreg} --collapse-output-transforms 0"
 fi
 if [[ ${INITIALIZE_TRANSFORMS_PER_STAGE} -eq 0 ]]; then
@@ -384,13 +390,24 @@ for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   antsCoreg="${antsCoreg} --shrink-factors ${SHRINK_FACTORS[${i}]}"
 done
 antsCoreg="${antsCoreg} --use-histogram-matching ${USE_HISTOGRAM_MATCHING}"
-if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" != "optional" ]]; then
-  antsCoreg="${antsCoreg} --use-estimate-learning-rate-once ${USE_ESTIMATE_LEARNING_RATE_ONCE}"
+if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE}" == "true" ]]; then
+  antsCoreg="${antsCoreg} --use-estimate-learning-rate-once 1"
+else
+  antsCoreg="${antsCoreg} --use-estimate-learning-rate-once 0"
 fi
 if [[ "${WINSORIZE_IMAGE_INTENSITIES}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --winsorize-image-intensities ${WINSORIZE_IMAGE_INTENSITIES}"
 fi
-antsCoreg="${antsCoreg} --float ${FLOAT}"
+if [[ "${FLOAT}" == "true" ]]; then
+  antsCoreg="${antsCoreg} --float 1"
+else
+  antsCoreg="${antsCoreg} --float 0"
+fi
+if [[ "${ANTS_VERBOSE}" == "true" ]]; then
+  antsCoreg="${antsCoreg} --verbose 1"
+else
+  antsCoreg="${antsCoreg} --verbose 0"
+fi
 antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
 
 if [[ "${DRY_RUN}" == "true" ]]; then
