@@ -47,7 +47,7 @@
         "verbose": [0]},
     "coregistration_recipe": {
         "rigid": {
-            "random-seed": [2669819985],
+            "random-seed": [65536],
             "transform": ["Rigid[0.1]"],
             "metric": ["Mattes[fixedImage,movingImage,1,32,Regular,0.25]"],
             "convergence": ["[2000x2000x2000x2000x2000,1e-6,10]"],
