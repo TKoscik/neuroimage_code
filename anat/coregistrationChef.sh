@@ -240,15 +240,13 @@ fi
 if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
   DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
-mkdir -p ${DIR_SCRATCH}
 if [[ "${DIR_TEMPLATE}" == "default" ]]; then
   DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}
 fi
 if [[ "${MAKE_PNG}" == "true" ]]; then
-  if [[ "${DIR_PNG" == "default" ]]; then
+  if [[ "${DIR_PNG}" == "default" ]]; then
     DIR_PNG=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
   fi
-  mkdir -p ${DIR_PNG}
 fi
 
 # parse fixed ------------------------------------------------------------------
@@ -303,7 +301,7 @@ if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
 fi
 
 # check masks ------------------------------------------------------------------
-if [[ -n ${MOVING_MASK} ]]; then
+if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   MOVING_MASK=(${MOVING_MASK//,/ })
   if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
      [[ ${#MOVING_MASK[@]} -ne 1 ]]; then
@@ -311,7 +309,7 @@ if [[ -n ${MOVING_MASK} ]]; then
     exit 4
   fi
 fi
-if [[ -n ${FIXED_MASK} ]]; then
+if [[ "${FIXED_MASK}" != "optional" ]]; then
   FIXED_MASK=(${FIXED_MASK//,/ })
   if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
      [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
@@ -319,7 +317,9 @@ if [[ -n ${FIXED_MASK} ]]; then
     exit 5
   fi
 fi
-if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
+if [[ "${MOVING_MASK[0]}" != "optional" ]] && \
+   [[ "${FIXED_MASK}" != "optional" ]] && \
+   [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   echo "ERROR [INC ${FCN_NAME}] number of fixed and moving masks must match"
   exit 6
 fi
@@ -615,7 +615,8 @@ if [[ "${MAKE_PNG}" == "true" ]]; then
   make3Dpng \
     --bg ${FIXED[0]} --bg-color "#000000,#00FF00" --bg-thresh 2,98 \
     --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" --fg-thresh 2,98 --fg-cbar \
-    --layout "${NS}:x;${NC}:y;${NA}:z" --offset "0,0,0" \
+    --layout "${NS}:x;${NC}:y;${NA}:z" \
+    --offset "0,0,0" \
     --filename ${PREFIX}_from-${FROM}_to-${TO}_img-${PNG_MOD} \
     --dir-save ${DIR_PNG}
 fi
