@@ -29,7 +29,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
+<<<<<<< HEAD
 OPTS=$(getopt -o hvl --long \
+=======
+OPTS=$(getopt -o hvl --long prefix:,\
+>>>>>>> ec026be4ef4861ba8aecbe8606e55ca927efc4b6
 input:,dir-save:,dcm-version:,depth:,reorient:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
