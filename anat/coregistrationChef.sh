@@ -261,6 +261,7 @@ fi
 # check spacing ----------------------------------------------------------------
 FIX_SPACE="false"
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
+echo 264
   SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
   SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
 echo ${SPACE_MOVING} ${SPACE_FIXED}
@@ -269,10 +270,11 @@ echo ${SPACE_MOVING} ${SPACE_FIXED}
     FIX_SPACE="true"
   fi
 elif [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
+echo 273
   NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
   FIX_SPACE="true"
 fi
-
+echo 277
 if [[ "${FIX_SPACE}" == "true" ]]; then
   for (( i=0; i<${#FIXED[@]}; i++ )); do
     BNAME=$(basename ${FIXED[${i}]})
@@ -280,8 +282,7 @@ if [[ "${FIX_SPACE}" == "true" ]]; then
     FIXED[${i}]=${DIR_SCRATCH}/${BNAME}
   done
 fi
-
-echo 284
+echo 285
 
 # check for histogram matching -------------------------------------------------
 if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
