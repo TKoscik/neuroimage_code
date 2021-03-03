@@ -259,7 +259,6 @@ else
 fi
 
 # check spacing ----------------------------------------------------------------
-echo ${SPACE_TARGET}
 FIX_SPACE="false"
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
   SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
@@ -281,6 +280,8 @@ if [[ "${FIX_SPACE}" == "true" ]]; then
     FIXED[${i}]=${DIR_SCRATCH}/${BNAME}
   done
 fi
+
+echo 284
 
 # check for histogram matching -------------------------------------------------
 if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
