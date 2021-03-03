@@ -261,7 +261,8 @@ fi
 # check spacing ----------------------------------------------------------------
 FIX_SPACE="false"
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
-echo 264
+echo "MOVING=${MOVING[0]}"
+echo "FIXED=${FIXED[0]}"
   SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
   SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
 echo ${SPACE_MOVING} ${SPACE_FIXED}
