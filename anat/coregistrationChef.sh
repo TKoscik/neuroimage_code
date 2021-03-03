@@ -154,10 +154,11 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-RECIPE_DEFAULT=${INC_LUT}/coregistration_recipes.json
-PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted[]?' < ${RECIPE_DEFAULT}))
+if [[ "${DRY_RUN}" == "true" ]]; then NO_LOG=TRUE; fi
 
 # locate recipe ----------------------------------------------------------------
+RECIPE_DEFAULT=${INC_LUT}/coregistration_recipes.json
+PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted[]?' < ${RECIPE_DEFAULT}))
 if [[ -n ${RECIPE_NAME} ]]; then
   if [[ -z ${RECIPE_JSON} ]]; then
     RECIPE_JSON=${RECIPE_DEFAULT}
@@ -243,6 +244,12 @@ mkdir -p ${DIR_SCRATCH}
 if [[ "${DIR_TEMPLATE}" == "default" ]]; then
   DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}
 fi
+if [[ "${MAKE_PNG}" == "true" ]]; then
+  if [[ "${DIR_PNG" == "default" ]]; then
+    DIR_PNG=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
+  fi
+  mkdir -p ${DIR_PNG}
+fi
 
 # parse fixed ------------------------------------------------------------------
 if [[ "${FIXED}" == "optional" ]]; then
@@ -275,7 +282,9 @@ fi
 if [[ "${FIX_SPACE}" == "true" ]]; then
   for (( i=0; i<${#FIXED[@]}; i++ )); do
     BNAME=$(basename ${FIXED[${i}]})
-    ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/${BNAME} ${NEW_SPACE} 0
+    if [[ "${DRY_RUN}" == "false" ]]; then
+      ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/${BNAME} ${NEW_SPACE} 0
+    fi
     FIXED[${i}]=${DIR_SCRATCH}/${BNAME}
   done
 fi
@@ -315,21 +324,114 @@ if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   exit 6
 fi
 
+# generate output names --------------------------------------------------------
+FROM=$(getSpace -i ${MOVING[0]})
+TO=$(getSpace -i ${FIXED[0]})
+for (( i=0; i<${#MOVING[@]}; i++ )); do
+  MOVING_OUTPUT+=${PREFIX}
+  if [[ -n ${PREP} ]]; then
+    MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_prep-${PREP}"
+  fi
+  TMOD=$(getField -i ${MOVING[${i}]} -f modality)
+  MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_reg-${TO}_${TMOD}.nii.gz"
+done
+
+APPLY_TO=(${APPLY_TO//,/ })
+if [[ "${APPLY_TO[0]}" != "optional" ]]; then
+  for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
+    APPLY_OUTPUT+=$(getBidsBase -s -i ${APPLY_TO[${i}]})
+    TMOD=$(getField -i ${APPLY_TO[${i}]} -f modality)
+    APPLY_OUTPUT[${i}]="${APPLY_OUTPUT[${i}]}_reg-${TO}_${TMOD}.nii.gz"
+  done
+fi
+
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  XFM_LABEL=(${XFM_LABEL//,/ })
+  if [[ "${XFM_LABEL[0]}" == "default" ]]; then
+    if [[ "${TRANSFORM[@],,}" == *"bsplineexponential"* ]]; then
+      XFM_LABEL[0]="bsplineExp"
+    elif [[ "${TRANSFORM[@],,}" == *"exponential"* ]]; then
+      XFM_LABEL[0]="exp"
+    elif [[ "${TRANSFORM[@],,}" == *"bsplinesyn"* ]]; then
+      XFM_LABEL[0]="bsplineSyn"
+    elif [[ "${TRANSFORM[@],,}" == *"syn"* ]]; then
+      XFM_LABEL[0]="syn"
+    elif [[ "${TRANSFORM[@],,}" == *"timevaryingbsplinevelocityfield"* ]]; then
+      XFM_LABEL[0]="timeVaryingBspline"
+    elif [[ "${TRANSFORM[@],,}" == *"timevaryingvelocityfield"* ]]; then
+      XFM_LABEL[0]="timeVarying"
+    elif [[ "${TRANSFORM[@],,}" == *"bsplinedisplacementfield"* ]]; then
+      XFM_LABEL[0]="bsplineDisp"
+    elif [[ "${TRANSFORM[@],,}" == *"gaussiandisplacementfield"* ]]; then
+      XFM_LABEL[0]="displacement"
+    elif [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
+      XFM_LABEL[0]="bspline"
+    else
+      XFM_LABEL[0]="nonlinear"
+    fi
+    if [[ "${TRANSFORM[@],,}" == *"compositeaffine"* ]]; then
+      XFM_LABEL[1]="affineComposit"
+    elif [[ "${TRANSFORM[@],,}" == *"affine"* ]]; then
+      XFM_LABEL[1]="affine"
+    elif [[ "${TRANSFORM[@],,}" == *"similarity"* ]]; then
+      XFM_LABEL[1]="similarity"
+    elif [[ "${TRANSFORM[@],,}" == *"rigid"* ]]; then
+      XFM_LABEL[1]="rigid"
+    elif [[ "${TRANSFORM[@],,}" == *"translation"* ]]; then
+      XFM_LABEL[1]="translation"
+    else
+      XFM_LABEL[1]="unknown"
+    fi
+  fi
+fi
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  AFFINE_OUTPUT=${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[1]}.nii.gz
+fi
+if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
+  FWD_NAME=${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[0]}.nii.gz
+fi
+if [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  INV_NAME=${PREFIX}_from-${TO}_to-${FROM}_xfm-${XFM_LABEL[0]}.nii.gz
+fi
+if [[ "${MAKE_PNG}" == "true" ]]; then
+  PNG_MOD=$(getField -i ${MOVING[0]} -f modality)
+  PNG_OUTPUT=${PREFIX}_from-${FROM}_to-${TO}_img-${PNG_MOD}
+fi
+
 # show outputs for dry run -----------------------------------------------------
-if [[ "${DRY_RUN}" == "true" ]]; then
+if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
   for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
     VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
     VAR_NAME=${VAR_NAME//-/_}
     eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
   done
-  NO_LOG=TRUE
-  exit 0
+  echo "OUTPUT IMAGES:"
+  echo -e "\t${DIR_SAVE}"
+  for (( i=0; i<${#MOVING[@]}; i++ )); do echo -e "\t\t${MOVING_OUTPUT[${i}]}"; done
+  if [[ "${APPLY_TO[0]}" != "optional" ]]; then
+    for (( i=0; i<${#APPLY_TO[@]}; i++ )); do echo -e "\t\t${APPLY_OUTPUT[${i}]}"; done
+  fi
+  if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+    echo "TRANSFORMS:"
+    echo -e "\t${DIR_SAVE}"
+    echo -e "\t\t${AFFINE_OUTPUT}"
+  fi
+  if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
+    echo -e "\t\t${FWD_NAME}"
+  fi
+  if [[ "${KEEP_INV_XFM}" == "true" ]]; then
+    echo -e "\t\t${INV_NAME}"
+  fi
+  if [[ "${MAKE_PNG}" == "true" ]]; then
+    echo "OUTPUT PNG:"
+    echo -e "\t${DIR_PNG}"
+    echo -e "\t\t${PNG_OUTPUT}.png"
+  fi
 fi
 
 ### write ANTS registration function ===========================================
 antsCoreg="antsRegistration"
 antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
-
 antsCoreg="${antsCoreg} --output ${DIR_SCRATCH}/xfm_"
 if [[ "${SAVE_STATE}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --save-state ${SAVE_STATE}"
@@ -371,7 +473,7 @@ if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
     antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
   done
 fi
-if [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
+if [[ "${FIXED_MASK[0]}" != "optional"]] && [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
   antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
 fi
 for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
@@ -380,7 +482,7 @@ for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   for (( j=0; j<${#MOVING[@]}; j++ )); do
     antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
   done
-  if [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
+  if [[ "${FIXED_MASK[0]}" != "optional"]] && [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
     antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
   fi
   antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
@@ -408,21 +510,27 @@ else
 fi
 antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
 
-if [[ "${DRY_RUN}" == "true" ]]; then
+if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
   echo ${antsCoreg}
   exit 0
 fi
+
+# make directories ------------------------------------------------------------
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  mkdir -p ${DIR_XFM}
+fi
+if [[ "${MAKE_PNG}" == "true" ]]; then
+  mkdir -p ${DIR_PNG}
+fi
+
+# run coregistration -----------------------------------------------------------
 eval ${antsCoreg}
 
 # apply transforms =============================================================
 mkdir -p ${DIR_SAVE}
-FROM=$(getSpace -i ${MOVING[0]})
-TO=$(getSpace -i ${FIXED[0]})
 for (( i=0; i<${#MOVING[@]}; i++ )); do
-  TNAME=${DIR_SAVE}/${PREFIX}
-  if [[ -n ${PREP} ]]; then TNAME="${TNAME}_prep-${PREP}"; fi
-  TNAME="${TNAME}_reg-${TO}_${TMOD}.nii.gz"
-  TMOD=$(getField -i ${MOVING[${i}]} -f modality)
   apply_xfm="antsApplyTransforms -d 3"
   if [[ "${INTERPOLATION}" == "default" ]]; then
     apply_xfm="${apply_xfm} -n BSpline[3]"
@@ -430,7 +538,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
     apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
   fi
   apply_xfm="${apply_xfm} -i ${FIXED}"
-  apply_xfm="${apply_xfm} -o ${TNAME}"
+  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}"
   if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
   fi
@@ -442,92 +550,50 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
 done
 
 # apply to extra images --------------------------------------------------------
-APPLY_TO=(${APPLY_TO//,/ })
-for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
-  TNAME=$(getBidsBase -s -i ${APPLY_TO[${i}]})
-  TMOD=$(getField -i ${APPLY_TO[${i}]} -f modality)
-  apply_xfm="antsApplyTransforms -d 3"
-  if [[ "${INTERPOLATION}" == "default" ]]; then
-    if [[ "${TMOD}" == *"label"* ]]; then
-      apply_xfm="${apply_xfm} -n MultiLabel"
-    elif [[ "${TMOD}" == *"mask"* ]]; then
-      apply_xfm="${apply_xfm} -n GenericLabel"
+if [[ "${APPLY_TO[0]}" != "optional" ]]; then
+  for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
+   apply_xfm="antsApplyTransforms -d 3"
+    if [[ "${INTERPOLATION}" == "default" ]]; then
+      if [[ "${TMOD}" == *"label"* ]]; then
+        apply_xfm="${apply_xfm} -n MultiLabel"
+      elif [[ "${TMOD}" == *"mask"* ]]; then
+        apply_xfm="${apply_xfm} -n GenericLabel"
+      else
+        apply_xfm="${apply_xfm} -n BSpline[3]"
+      fi
     else
-      apply_xfm="${apply_xfm} -n BSpline[3]"
+      apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
     fi
-  else
-    apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
-  fi
-  apply_xfm="${apply_xfm} -i ${FIXED}"
-  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${TNAME}_reg-${TO}_${TMOD}.nii.gz"
-  if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
-    apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
-  fi
-  if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
-    apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
-  fi
-  apply_xfm="${apply_xfm} -r ${FIXED[0]}"
-  eval ${apply_xfm}
-done
-
-# move results to desired destination ------------------------------------------
-XFM_LABEL=(${XFM_LABEL//,/ })
-if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  mkdir -p ${DIR_XFM}
-  if [[ "${XFM_LABEL[0]}" == "default" ]]; then
-    if [[ "${TRANSFORM[@],,}" == *"bsplineexponential"* ]]; then
-      XFM_LABEL[0]="bsplineExp"
-    elif [[ "${TRANSFORM[@],,}" == *"exponential"* ]]; then
-      XFM_LABEL[0]="exp"
-    elif [[ "${TRANSFORM[@],,}" == *"bsplinesyn"* ]]; then
-      XFM_LABEL[0]="bsplineSyn"
-    elif [[ "${TRANSFORM[@],,}" == *"syn"* ]]; then
-      XFM_LABEL[0]="syn"
-    elif [[ "${TRANSFORM[@],,}" == *"timevaryingbsplinevelocityfield"* ]]; then
-      XFM_LABEL[0]="timeVaryingBspline"
-    elif [[ "${TRANSFORM[@],,}" == *"timevaryingvelocityfield"* ]]; then
-      XFM_LABEL[0]="timeVarying"
-    elif [[ "${TRANSFORM[@],,}" == *"bsplinedisplacementfield"* ]]; then
-      XFM_LABEL[0]="bsplineDisp"
-    elif [[ "${TRANSFORM[@],,}" == *"gaussiandisplacementfield"* ]]; then
-      XFM_LABEL[0]="displacement"
-    elif [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
-      XFM_LABEL[0]="bspline"
-    else
-      XFM_LABEL[0]="nonlinear"
+    apply_xfm="${apply_xfm} -i ${FIXED}"
+    apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}"
+    if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
+      apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
     fi
-    if [[ "${TRANSFORM[@],,}" == *"compositeaffine"* ]]; then
-      XFM_LABEL[1]="affineComposit"
-    elif [[ "${TRANSFORM[@],,}" == *"affine"* ]]; then
-      XFM_LABEL[1]="affine"
-    elif [[ "${TRANSFORM[@],,}" == *"similarity"* ]]; then
-      XFM_LABEL[1]="similarity"
-    elif [[ "${TRANSFORM[@],,}" == *"rigid"* ]]; then
-      XFM_LABEL[1]="rigid"
-    elif [[ "${TRANSFORM[@],,}" == *"translation"* ]]; then
-      XFM_LABEL[1]="translation"
-    else
-      XFM_LABEL[1]="unknown"
+    if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
+      apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
     fi
-  fi
+    apply_xfm="${apply_xfm} -r ${FIXED[0]}"
+    eval ${apply_xfm}
+  done
 fi
 
+# move results to desired destination ------------------------------------------
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
   if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
     mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[1]}.nii.gz
+      ${DIR_XFM}/${AFFINE_OUTPUT}
   fi
 fi
 if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
   if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
     mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[0]}.nii.gz
+      ${DIR_XFM}/${FWD_NAME}
   fi
 fi
 if [[ "${KEEP_INV_XFM}" == "true" ]]; then
   if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
     mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-${XFM_LABEL[0]}.nii.gz
+      ${DIR_XFM}/${INV_NAME}
   fi
 fi
 
@@ -551,7 +617,7 @@ if [[ "${MAKE_PNG}" == "true" ]]; then
     --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" --fg-thresh 2,98 --fg-cbar \
     --layout "${NS}:x;${NC}:y;${NA}:z" --offset "0,0,0" \
     --filename ${PREFIX}_from-${FROM}_to-${TO}_img-${PNG_MOD} \
-    --dir-save ${DIR_PLOT}
+    --dir-save ${DIR_PNG}
 fi
 
 #===============================================================================
