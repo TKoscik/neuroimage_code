@@ -257,10 +257,12 @@ else
 fi
 
 # check spacing ----------------------------------------------------------------
+echo ${SPACE_TARGET}
 FIX_SPACE="false"
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
   SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
   SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+echo ${SPACE_MOVING} ${SPACE_FIXED}
   if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
     NEW_SPACE=${SPACE_MOVING// /x}
     FIX_SPACE="true"
