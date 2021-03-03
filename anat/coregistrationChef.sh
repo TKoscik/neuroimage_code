@@ -247,7 +247,7 @@ fi
 # parse fixed ------------------------------------------------------------------
 if [[ "${FIXED}" == "optional" ]]; then
   unset FIXED
-  for (( i=0; i<${MOVING_N}; i++ )); do
+  for (( i=0; i<${#MOVING[@]}; i++ )); do
     if [[ -f ${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz ]]; then
       FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
     else
@@ -269,7 +269,7 @@ echo ${SPACE_MOVING} ${SPACE_FIXED}
     NEW_SPACE=${SPACE_MOVING// /x}
     FIX_SPACE="true"
   fi
-elif [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}"]]; then
+elif [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
   NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
   FIX_SPACE="true"
 fi
