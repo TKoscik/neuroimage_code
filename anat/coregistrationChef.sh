@@ -405,7 +405,8 @@ if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
     VAR_NAME=${VAR_NAME//-/_}
     eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
   done
-  echo "OUTPUT IMAGES:"
+  echo ""
+  echo "OUTPUT IMAGES:------------------------------------------------------------------"
   echo -e "\t${DIR_SAVE}"
   for (( i=0; i<${#MOVING[@]}; i++ )); do echo -e "\t\t${MOVING_OUTPUT[${i}]}"; done
   if [[ "${APPLY_TO[0]}" != "optional" ]]; then
@@ -515,7 +516,9 @@ fi
 antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
 
 if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
-  echo ${antsCoreg}
+  echo ""
+  echo "ANTs Coregistration Call -------------------------------------------------------"
+  echo -e ${antsCoreg//--/ \\ \\n  --}
   exit 0
 fi
 
