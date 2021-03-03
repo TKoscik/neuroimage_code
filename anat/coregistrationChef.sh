@@ -122,7 +122,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
     --roi-label) ROI_LABEL="$2" ; shift 2 ;;
-    --apply-to) APPLY_TO="$2" ; shift 2 ;;="$2" ; shift 2 ;;
+    --apply-to) APPLY_TO="$2" ; shift 2 ;;
     --make-png) MAKE_PNG="true" ; shift ;;
     --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
     --keep-inv-xfm) KEEP_INV_XFM="true" ; shift ;;
