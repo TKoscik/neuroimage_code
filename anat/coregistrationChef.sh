@@ -603,16 +603,12 @@ if [[ "${MAKE_PNG}" == "true" ]]; then
   DIMS=($(niiInfo -i ${FIXED[0]} -f voxels))
   if [[ ${DIMS[1]} -gt ${DIMS[0]} ]]; then
     NS=5
-    NC=$(echo "scale=0; (${NS}*${DIMS[1]})/${DIMS[2]}" | bc -l)
-    #"#
-    NA=$(echo "scale=0; (${NS}*${DIMS[1]})/${DIMS[0]}" | bc -l)
-    #"#
+    NC=$(echo "scale=0; ${NS}*${DIMS[1]}/${DIMS[2]}" | bc -l)
+    NA=$(echo "scale=0; ${NS}*${DIMS[1]}/${DIMS[0]}" | bc -l)
   else
     NA=5
-    NC=$(echo "scale=0; (${NA}*${DIMS[0]})/${DIMS[2]}" | bc -l)
-    #"#
-    NS=$(echo "scale=0; (${NA}*${DIMS[0]})/${DIMS[1]}" | bc -l)
-    #"#
+    NC=$(echo "scale=0; ${NA}*${DIMS[0]}/${DIMS[2]}" | bc -l)
+    NS=$(echo "scale=0; ${NA}*${DIMS[0]}/${DIMS[1]}" | bc -l)
   fi
   
   PNG_MOD=$(getField -i ${MOVING[0]} -f modality)
