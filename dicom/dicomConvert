@@ -30,7 +30,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,\
-dir-input:,dir-save:,dcm-version:,depth:,reorient:,\
+input:,dir-save:,dcm-version:,depth:,reorient:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -95,7 +95,7 @@ if [[ -d "${INPUT}" ]]; then
 else
   FNAME="${INPUT##*/}"
   FEXT="${FNAME##*.}"
-  if [[ "${FEXT,,}" != "zip" ]];
+  if [[ "${FEXT,,}" != "zip" ]]; then
     echo "ERROR [INC:${FCN_NAME}] Input must be either a directory or zip file"
     exit 1
   fi
@@ -107,7 +107,7 @@ N_SCAN=${#DIR_DCM[@]}
 
 # convert dicoms ---------------------------------------------------------------
 for (( i=0; i<${N_SCAN}; i++ )); do
-  if [[ -n ${DCM_VERSION} ]];
+  if [[ -n ${DCM_VERSION} ]]; then
     dcm_fcn="${DCM2NIIX}"
   else
     KERNEL="$(unname -s)"
