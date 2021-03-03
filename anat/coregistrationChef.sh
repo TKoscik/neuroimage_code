@@ -119,7 +119,7 @@ while true; do
     --winsorize-image-intensities) WINSORIZE_IMAGE_INTENSITIES="$2" ; shift 2 ;;
     --float) FLOAT="$2" ; shift 2 ;;
     --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
-    --prefix) PREFIX="$2" ; shift 2 ;
+    --prefix) PREFIX="$2" ; shift 2 ;;
     --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
     --roi-label) ROI_LABEL="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;="$2" ; shift 2 ;;
