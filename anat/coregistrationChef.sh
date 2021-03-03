@@ -53,7 +53,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvl --long recipe-json:,recipe-name:,\
+OPTS=$(getopt -o hvld --long recipe-json:,recipe-name:,\
 fixed,fixed-mask,fixed-mask-dilation,\
 moving,moving-mask,moving-mask-dilation,\
 dir-template,template,space-source,space-target,\
@@ -67,7 +67,7 @@ use-estimate-learning-rate-once,winsorize-image-intensities,float,random-seed,\
 \
 prefix,xfm-label,apply-to,make-png,keep-fwd-xfm,keep-inv-xfm,\
 dir-save,dir-xfm,dir-png,dir-scratch,\
-verbose,help,no-log -n 'parse-options' -- "$@")
+verbose,help,no-log,dry-run -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -77,12 +77,14 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 VERBOSE=0
 HELP=false
+DRY_RUN=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -d | --dry-run) DRY_RUN=true ; shift ;;
     --recipe-json) RECIPE_JSON="$2" ; shift 2 ;;
     --recipe-name) RECIPE_NAME="$2" ; shift 2 ;;
     --fixed) FIXED="$2" ; shift 2 ;;
@@ -163,7 +165,7 @@ if [[ -n ${RECIPE_NAME} ]]; then
 fi
 if [[ ! -f ${RECIPE_JSON} ]]; then
   echo "ERROR [INC ${FCN_NAME}] Recipe JSON not found. Aborting."
-  #exit 1
+  exit 1
 fi
 
 # read parameter names from recipe ---------------------------------------------
@@ -173,7 +175,7 @@ if [[ -n ${RECIPE_JSON} ]]; then
     PARAMS_RECIPE=($(jq -r '.coregistration_recipe.'${RECIPE_NAME}' | keys_unsorted[]?' < ${RECIPE_JSON}))
   else
     echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
-    #exit 2
+    exit 2
   fi
 fi
 
@@ -198,7 +200,7 @@ for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi'
   if [[ "${CHK_VAR}" == "missing" ]]; then
     echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
-#    exit 3
+    exit 3
   fi
 done
 
@@ -220,7 +222,7 @@ if [[ "${PREFIX,,}" == "default" ]]; then
   PREFIX=$(getBidsBase -s -i ${MOVING[0]})
   PREP=$(getField -i ${PREFIX} -f prep)
   if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
+    PREP="${PREP}+coreg"
     PREFIX=$(modField -i ${PREFIX} -r -f prep)
   fi
 fi
@@ -295,7 +297,7 @@ if [[ -n ${MOVING_MASK} ]]; then
   if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
      [[ ${#MOVING_MASK[@]} -ne 1 ]]; then
     echo "ERROR [INC ${FCN_NAME}] number of moving masks must equal 1 or the number of transforms"
-    #exit 4
+    exit 4
   fi
 fi
 if [[ -n ${FIXED_MASK} ]]; then
@@ -303,12 +305,12 @@ if [[ -n ${FIXED_MASK} ]]; then
   if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
      [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
     echo "ERROR [INC ${FCN_NAME}] number of fixed masks must equal 1 or the number of transforms"
-    #exit 5
+    exit 5
   fi
 fi
 if [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   echo "ERROR [INC ${FCN_NAME}] number of fixed and moving masks must match"
-  #exit 6
+  exit 6
 fi
 
 # show outputs for dry run -----------------------------------------------------
@@ -318,6 +320,7 @@ if [[ "${DRY_RUN}" == "true" ]]; then
     VAR_NAME=${VAR_NAME//-/_}
     eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
   done
+  NO_LOG=TRUE
   exit 0
 fi
 
@@ -395,10 +398,13 @@ fi
 eval ${antsCoreg}
 
 # apply transforms =============================================================
+mkdir -p ${DIR_SAVE}
 FROM=$(getSpace -i ${MOVING[0]})
 TO=$(getSpace -i ${FIXED[0]})
 for (( i=0; i<${#MOVING[@]}; i++ )); do
-  TNAME=$(getBidsBase -s -i ${MOVING[${i}]})
+  TNAME=${DIR_SAVE}/${PREFIX}
+  if [[ -n ${PREP} ]]; then TNAME="${TNAME}_prep-${PREP}"; fi
+  TNAME="${TNAME}_reg-${TO}_${TMOD}.nii.gz"
   TMOD=$(getField -i ${MOVING[${i}]} -f modality)
   apply_xfm="antsApplyTransforms -d 3"
   if [[ "${INTERPOLATION}" == "default" ]]; then
@@ -407,7 +413,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
     apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
   fi
   apply_xfm="${apply_xfm} -i ${FIXED}"
-  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${OUTNAME}_reg-${TO}_${TMOD}.nii.gz"
+  apply_xfm="${apply_xfm} -o ${TNAME}"
   if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
   fi
@@ -436,7 +442,7 @@ for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
     apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
   fi
   apply_xfm="${apply_xfm} -i ${FIXED}"
-  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${OUTNAME}_reg-${TO}_${TMOD}.nii.gz"
+  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${TNAME}_reg-${TO}_${TMOD}.nii.gz"
   if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
   fi
@@ -449,65 +455,85 @@ done
 
 # move results to desired destination ------------------------------------------
 XFM_LABEL=(${XFM_LABEL//,/ })
-if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
-  if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
-    if [[ "${XFM_LABEL}" == "default" ]]; then
-      if [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
-        mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-          ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-bspline.nii.gz
-      else
-        mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-          ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-syn.nii.gz
-      fi
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  mkdir -p ${DIR_XFM}
+  if [[ "${XFM_LABEL[0]}" == "default" ]]; then
+    if [[ "${TRANSFORM[@],,}" == *"bsplineexponential"* ]]; then
+      XFM_LABEL[0]="bsplineExp"
+    elif [[ "${TRANSFORM[@],,}" == *"exponential"* ]]; then
+      XFM_LABEL[0]="exp"
+    elif [[ "${TRANSFORM[@],,}" == *"bsplinesyn"* ]]; then
+      XFM_LABEL[0]="bsplineSyn"
+    elif [[ "${TRANSFORM[@],,}" == *"syn"* ]]; then
+      XFM_LABEL[0]="syn"
+    elif [[ "${TRANSFORM[@],,}" == *"timevaryingbsplinevelocityfield"* ]]; then
+      XFM_LABEL[0]="timeVaryingBspline"
+    elif [[ "${TRANSFORM[@],,}" == *"timevaryingvelocityfield"* ]]; then
+      XFM_LABEL[0]="timeVarying"
+    elif [[ "${TRANSFORM[@],,}" == *"bsplinedisplacementfield"* ]]; then
+      XFM_LABEL[0]="bsplineDisp"
+    elif [[ "${TRANSFORM[@],,}" == *"gaussiandisplacementfield"* ]]; then
+      XFM_LABEL[0]="displacement"
+    elif [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
+      XFM_LABEL[0]="bspline"
     else
-      mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-        ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[0]}.nii.gz
+      XFM_LABEL[0]="nonlinear"
     fi
-  fi
-  if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
-    if [[ "${XFM_LABEL}" == "default" ]]; then
-      if [[ "${TRANSFORM[@],,}" == *"affine"* ]]; then
-        mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-          ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-affine.mat
-      else
-        mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-          ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-rigid.mat
-      fi
+    if [[ "${TRANSFORM[@],,}" == *"compositeaffine"* ]]; then
+      XFM_LABEL[1]="affineComposit"
+    elif [[ "${TRANSFORM[@],,}" == *"affine"* ]]; then
+      XFM_LABEL[1]="affine"
+    elif [[ "${TRANSFORM[@],,}" == *"similarity"* ]]; then
+      XFM_LABEL[1]="similarity"
+    elif [[ "${TRANSFORM[@],,}" == *"rigid"* ]]; then
+      XFM_LABEL[1]="rigid"
+    elif [[ "${TRANSFORM[@],,}" == *"translation"* ]]; then
+      XFM_LABEL[1]="translation"
     else
-      mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-        ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[1]}.nii.gz
-    fi
-  fi
-fi
-if [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
-    if [[ "${XFM_LABEL}" == "default" ]]; then
-      if [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
-        mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-          ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-bspline.nii.gz
-      else
-        mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-          ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-syn.nii.gz
-      fi
-    else
-      mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-        ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-${XFM_LABEL[0]}.nii.gz
+      XFM_LABEL[1]="unknown"
     fi
   fi
 fi
 
-***** 
-# plot output for review -------------------------------------------------------
-if [[ "${DO_PLOT}" == "true" ]]; then
-  if [[ -z ${DIR_PLOT} ]]; then 
-    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
+    mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[1]}.nii.gz
   fi
-  mkdir -p ${DIR_PLOT}
+fi
+if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
+  if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
+    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[0]}.nii.gz
+  fi
+fi
+if [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
+    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
+      ${DIR_XFM}/${PREFIX}_from-${TO}_to-${FROM}_xfm-${XFM_LABEL[0]}.nii.gz
+  fi
+fi
+
+# plot output for review -------------------------------------------------------
+if [[ "${MAKE_PNG}" == "true" ]]; then
+  mkdir -p ${DIR_PNG}
+  DIMS=($(niiInfo -i ${FIXED[0]} -f voxels))
+  if [[ ${DIMS[1]} -gt ${DIMS[0]} ]]; then
+    NS=5
+    NC=$(echo "scale=0; (${NS}*${DIMS[1]})/${DIMS[2]}" | bc -l) #"#'#
+    NA=$(echo "scale=0; (${NS}*${DIMS[1]})/${DIMS[0]}" | bc -l) #"#'#
+  else
+    NA=5
+    NC=$(echo "scale=0; (${NA}*${DIMS[0]})/${DIMS[2]}" | bc -l) #"#'#
+    NS=$(echo "scale=0; (${NA}*${DIMS[0]})/${DIMS[1]}" | bc -l) #"#'#
+  fi
+  
+  PNG_MOD=$(getField -i ${MOVING[0]} -f modality)
   make3Dpng \
-    --bg ${FIXED} --bg-color "#000000,#00FF00" --bg-thresh 2,98 \
-    --fg ${MOVING} --fg-color "#000000,#FF00FF" --fg-thresh 2,98 --fg-cbar \
-    --layout "5:x;7:y;7:z" --offset "0,0,0" \
-    --filename ${PREFIX}_desc-rigid_to-${TO}_img-${MOD} \
+    --bg ${FIXED[0]} --bg-color "#000000,#00FF00" --bg-thresh 2,98 \
+    --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" --fg-thresh 2,98 --fg-cbar \
+    --layout "${NS}:x;${NC}:y;${NA}:z" --offset "0,0,0" \
+    --filename ${PREFIX}_from-${FROM}_to-${TO}_img-${PNG_MOD} \
     --dir-save ${DIR_PLOT}
 fi
 
