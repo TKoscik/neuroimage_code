@@ -105,7 +105,7 @@ while true; do
     --print-similarity-measure-interval) PRINT_SIMILARITY_MEASURE_INTERVAL="$2" ; shift 2 ;;
     --write-internal-volumes) WRITE_INTERNAL_VOLUMES="$2" ; shift 2 ;;
     --collapse-output-transforms) COLLAPSE_OUTPUT_TRANSFORMS=true ; shift ;;
-    --initialize-transforms-per-stage) INITIALIZE_TRANSFORMS_PER_STAGE="$2" ; shift 2 ;;
+    --initialize-transforms-per-stage) INITIALIZE_TRANSFORMS_PER_STAGE="true" ; shift ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --restrict-deformation) RESTRICT_DEFORMATION="$2" ; shift 2 ;;
     --initial-fixed-transform) INITIAL_FIXED_TRANSFORM="$2" ; shift 2 ;;
@@ -367,7 +367,7 @@ if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
     elif [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
       XFM_LABEL[0]="bspline"
     else
-      XFM_LABEL[0]="nonlinear"
+      XFM_LABEL[0]="noNonlinear"
     fi
     if [[ "${TRANSFORM[@],,}" == *"compositeaffine"* ]]; then
       XFM_LABEL[1]="affineComposit"
@@ -380,7 +380,7 @@ if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
     elif [[ "${TRANSFORM[@],,}" == *"translation"* ]]; then
       XFM_LABEL[1]="translation"
     else
-      XFM_LABEL[1]="unknown"
+      XFM_LABEL[1]="noLinear"
     fi
   fi
 fi
@@ -413,13 +413,15 @@ if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
   fi
   if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
     echo "TRANSFORMS:"
-    echo -e "\t${DIR_SAVE}"
-    echo -e "\t\t${AFFINE_OUTPUT}"
+    echo -e "\t${DIR_XFM}"
+    if [[ "${XFM_LABEL[1]}" != "noNonlinear" ]]; then
+      echo -e "\t\t${AFFINE_OUTPUT}"
+    fi
   fi
-  if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
+  if [[ "${KEEP_FWD_XFM}" == "true" ]] && [[ "${XFM_LABEL[1]}" != "noNonlinear" ]]; then
     echo -e "\t\t${FWD_NAME}"
   fi
-  if [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  if [[ "${KEEP_INV_XFM}" == "true" ]] && [[ "${XFM_LABEL[1]}" != "noNonlinear" ]]; then
     echo -e "\t\t${INV_NAME}"
   fi
   if [[ "${MAKE_PNG}" == "true" ]]; then
@@ -455,7 +457,9 @@ if [[ "${COLLAPSE_OUTPUT_TRANSFORMS}" == "true" ]]; then
 else
   antsCoreg="${antsCoreg} --collapse-output-transforms 0"
 fi
-if [[ ${INITIALIZE_TRANSFORMS_PER_STAGE} -eq 0 ]]; then
+if [[ "${INITIALIZE_TRANSFORMS_PER_STAGE}" == "true" ]]; then
+  antsCoreg="${antsCoreg} --initialize-transforms-per-stage 1"
+else
   antsCoreg="${antsCoreg} --initialize-transforms-per-stage 0"
 fi
 if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
@@ -473,7 +477,7 @@ if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
     antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
   done
 fi
-if [[ "${FIXED_MASK[0]}" != "optional"]] && [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
+if [[ "${FIXED_MASK[0]}" != "optional" ]] && [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
   antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
 fi
 for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
@@ -482,7 +486,7 @@ for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   for (( j=0; j<${#MOVING[@]}; j++ )); do
     antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
   done
-  if [[ "${FIXED_MASK[0]}" != "optional"]] && [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
+  if [[ "${FIXED_MASK[0]}" != "optional" ]] && [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
     antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
   fi
   antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"

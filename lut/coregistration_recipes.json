@@ -7,7 +7,7 @@
         "print-similarity-measure-interval": [0],
         "write-internal-volumes": [0],
         "collapse-output-transforms": ["true"],
-        "initialize-transforms-per-stage": [1],
+        "initialize-transforms-per-stage": ["true"],
         "interpolation": ["default"],
         "restrict-deformation": ["optional"],
         "initial-fixed-transform": ["optional"],
