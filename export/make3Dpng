@@ -60,7 +60,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long \
-bg:,bg-volume:,bg-mask:,bg-mask-volume:,bg-threshold:,bg-color:,bg-order:,bg-cbar,\
+bg:,bg-volume:,bg-mask:,bg-mask-volume:,bg-threshold:,bg-alpha:,bg-color:,bg-order:,bg-cbar,\
 fg:,fg-volume:,fg-mask:,fg-mask-volume:,fg-threshold:,fg-alpha:,fg-color:,fg-order:,fg-cbar,\
 roi:,roi-volume:,roi-value:,roi-color:,roi-order:,roi-cbar,\
 layout:,offset:,limits,\
@@ -84,20 +84,21 @@ BG_THRESH=0,100
 BG_COLOR="#000000,#FFFFFF"
 BG_ORDER="normal"
 BG_CBAR="false"
+BG_ALPHA=100
 
 FG=
 FG_VOL=1
 FG_MASK=
 FG_MASK_VOL=1
 FG_THRESH=0,100
-FG_ALPHA=50
+FG_ALPHA=100
 FG_COLOR="timbow"
 FG_ORDER="normal"
 FG_CBAR="true"
 
 ROI=
 ROI_VOL=1
-ROI_VALUE=
+ROI_VALUE=1
 ROI_COLOR="#FF69B4"
 ROI_ORDER="random"
 ROI_CBAR="false"
@@ -131,6 +132,7 @@ while true; do
     --bg-volume) BG_VOL="$2" ; shift 2 ;;
     --bg-mask) BG_MASK="$2" ; shift 2 ;;
     --bg-mask-volume) BG_VOL="$2" ; shift 2 ;;
+    --bg-alpha) BG_ALPHA="$2" ; shift 2 ;;
     --bg-threshold) BG_THRESH="$2" ; shift 2 ;;
     --bg-color) BG_COLOR="$2" ; shift 2 ;;
     --bg-order) BG_ORDER="$2" ; shift 2 ;;
@@ -365,7 +367,7 @@ if [[ ${FG_N} -gt 1 ]]; then
 fi
 
 ROI=(${ROI//;/ })
-ROI_VOLUME=(${ROI_VOLUME//;/ })
+ROI_VOL=(${ROI_VOL//;/ })
 ROI_VALUE=(${ROI_VALUE//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
@@ -471,10 +473,11 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
-  labelUnique --label ${ROI} --volume ${ROI_VOLUME} --value ${ROI_VALUE} \
+  labelUnique --label ${ROI} --volume ${ROI_VOL} --value ${ROI_VALUE} \
     --dir-save ${DIR_SCRATCH} --prefix ROI
   ROI=${DIR_SCRATCH}/ROI.nii.gz
-  ROI_VOLUME=1
+  cp ${DIR_SCRATCH}/ROI.nii.gz /Dedicated/inc_database/project/sca_iowa/derivatives/inc/func/prep/sub-105/ses-20190726/ 
+  ROI_VOL=1
   ROI_VALUE="all"
 fi
 
@@ -611,7 +614,7 @@ if [[ ${NY} > 0 ]]; then
   if [[ ${#YVOX[@]} -gt ${NY} ]]; then
     YVOX=(${YVOX[@]:1:${NY}})
   fi
-  NX=${#YVOX[@]}  
+  NY=${#YVOX[@]}  
   for (( i=0; i<${NY}; i++ )); do
     YPCT+=($(echo "scale=4; ${YVOX[${i}]}/${DIMS[1]}" | bc -l))
   done
@@ -811,11 +814,11 @@ if [[ -n ${FG} ]]; then
     unset HILO LO HI
     HILO=(${FG_THRESH[${i}]//,/ })
     if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
-      LO=$(fslstats ${BG} -p ${HILO[0]})
-      HI=$(fslstats ${BG} -p ${HILO[1]})
+      LO=$(fslstats ${FG[${i}]} -p ${HILO[0]})
+      HI=$(fslstats ${FG[${i}]} -p ${HILO[1]})
     else
-      LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
-      HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
+      LO=$(fslstats -K ${FG_MASK[${i}]} ${FG[${i}]} -p ${HILO[0]})
+      HI=$(fslstats -K ${FG_MASK[${i}]} ${FG[${i}]} -p ${HILO[1]})
     fi
 
     ## generate color bar
@@ -855,10 +858,10 @@ if [[ -n ${FG} ]]; then
       slice_fcn="${slice_fcn} -x ${XPCT[${j}]} ${DIR_SCRATCH}/X${j}_FG_${i}.png"
     done
     for (( j=0; j<${NY}; j++ )); do
-      slice_fcn="${slice_fcn} -y ${YPCT[${i}]} ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
+      slice_fcn="${slice_fcn} -y ${YPCT[${j}]} ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
     done
     for (( j=0; j<${NZ}; j++ )); do
-      slice_fcn="${slice_fcn} -z ${ZPCT[${i}]} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
+      slice_fcn="${slice_fcn} -z ${ZPCT[${j}]} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
     done
     eval ${slice_fcn}
     # resize images
@@ -898,7 +901,8 @@ if [[ -n ${FG} ]]; then
     ## set background transparency and overlay on background - - - - - - - - - -
     for (( j=0; j<${NX}; j++ )); do
       unset comp_fcn
-      comp_fcn="composite -blend ${FG_ALPHA}x100"
+      comp_fcn="composite"
+      comp_fcn="${comp_fcn} -blend ${FG_ALPHA}x${BG_ALPHA}%"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
@@ -909,7 +913,8 @@ if [[ -n ${FG} ]]; then
     done
     for (( j=0; j<${NY}; j++ )); do
       unset comp_fcn
-      comp_fcn="composite -blend ${FG_ALPHA}x100"
+      comp_fcn="composite"
+      comp_fcn="${comp_fcn} -blend ${FG_ALPHA}x${BG_ALPHA}%"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
@@ -920,7 +925,8 @@ if [[ -n ${FG} ]]; then
     done
     for (( j=0; j<${NZ}; j++ )); do
       unset comp_fcn
-      comp_fcn="composite -blend ${FG_ALPHA}x100"
+      comp_fcn="composite"
+      comp_fcn="${comp_fcn} -blend ${FG_ALPHA}x${BG_ALPHA}%"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then

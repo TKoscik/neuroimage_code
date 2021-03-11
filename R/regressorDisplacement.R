@@ -19,7 +19,7 @@ for (i in 1:length(args)) {
   }
 }
 if (is.null(input)) {
-  error("ERROR: [INC regressorDisplacement.R] input 1D file must be provided")
+  exit("ERROR: [INC regressorDisplacement.R] input 1D file must be provided")
 }
 if (is.null(dir.save)) {
   dir.save <- dirname(input)
@@ -33,9 +33,18 @@ base.name <- paste(base.name[1:(length(base.name)-1)], collapse="_")
 file.prefix <- paste0(dir.save, "/", basename(base.name))
 
 # load input 1D file -----------------------------------------------------------
-df <- read.csv(input, header=FALSE, sep="\t")
+delims <- c("\t",",",";"," ","")
+delim.chk <- TRUE
+iter <- 0
+while (delim.chk) {
+  iter <- iter + 1
+  df <- read.csv(input, header=F, sep=delims[iter], as.is=TRUE)
+  if (ncol(df) > 1) {
+    delim.chk <- FALSE
+  }
+}
 if (ncol(df) != 6) {
-  error("ERROR [INC regressorDisplacement.R] expecting 6 DOF motion parameters")
+  exit("ERROR [INC regressorDisplacement.R] expecting 6 DOF motion parameters")
 }
 
 # Calculate displacement for each vector----------------------------------------

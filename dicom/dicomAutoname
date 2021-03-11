@@ -101,7 +101,7 @@ BNAME="${FNAME[0]%%.*}"
 TEMP=(${BNAME//_x-x_/ })
 SID="${TEMP[2]:0:8}T${TEMP[2]:8}"
 
-for (( i=0; i<${N_FLS}; i++)) {
+for (( i=0; i<${N_FLS}; i++)); do
   unset FNAME BNAME SUBDIR SUFFIX TEMP
   unset TLS QC_TSV OUT_STR
   FNAME="${FLS[${i}]##*/}"

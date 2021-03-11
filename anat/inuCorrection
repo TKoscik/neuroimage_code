@@ -54,12 +54,12 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvklp --long prefix:,\
 dimension:,image:,method:,mask:,\
 smooth-kernel:,\
 weight:,shrink:,convergence,bspline:,hist-sharpen:,\
-no-gm,urad:,do-t2,\
-dir-save:,dir-scratch:,\
+no-gm,urad:,do-t2,make-png,\
+dir-save:,dir-png:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -82,7 +82,9 @@ HIST_SHARPEN=[0.15,0.01,200]
 NO_GM=false
 URAD=30
 DO_T2=false
+MAKE_PNG=true
 DIR_SAVE=
+DIR_PNG=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
@@ -94,6 +96,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -p | --make-png) MAKE_PNG=false ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -109,6 +112,7 @@ while true; do
     --urad) URAD="$2" ; shift 2 ;;
     --do-t2) DO_T2=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-png) DIR_PNG="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -158,24 +162,42 @@ fi
 # Start of Function
 #===============================================================================
 IMAGE=(${IMAGE//,/ })
-if [[ "${#IMAGE[@]}" == 1 ]] && [[ "${METHOD,,}" == "t1t2" ]]; then
-  echo "You must give a T1w AND T2w for the t1t2 method, switching to N4"
-  METHOD="n4"
+for (( i=0; i<${#IMAGE[@]}; i++ )); do
+  MOD+=($(getField -i ${IMAGE[${i}]} -f modality))
+done
+
+if [[ "${METHOD,,}" == "t1t2" ]] && [[ "${MOD[0],,}" != "t1w" ]] && [[ "${MOD[1],,}" != "t2w" ]]; then
+  echo "ERROR [INC ${FCN_NAME} for the T1T2 method, images must be T1w and T2w (in that order)"
+  exit 1
 fi
+if [[ "${METHOD,,}" == "t1wm" ]] || [[ "${METHOD,,}" == "3dunifize" ]]; then
+  if [[ "${MOD[0],,}" != "t1w" ]]; then
+    echo "ERROR [INC ${FCN_NAME} for the T1WM/3dUnifize method, images must be T1w and T2w (optional) (in that order)"
+    exit 2
+  fi
+  if [[ ${#IMAGE[@]} -eq 2 ]] && [[ "${MOD[0],,}" != "t2w" ]]; then
+    echo "ERROR [INC ${FCN_NAME} for the T1WM/3dUnifize method, images must be T1w and T2w (optional) (in that order)"
+    exit 3
+  fi
+fi   
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMAGE[0]})
 PID=$(getField -i ${IMAGE[0]} -f sub)
 SID=$(getField -i ${IMAGE[0]} -f ses)
+DIRPID=sub-${PID}
+if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${IMAGE[0]})
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREP="${PREP}+"
+    PREFIX=$(modField -i ${PREFIX} -r -f prep)
+  fi
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
-  if [[ -n "${SID}" ]]; then
-    DIR_SAVE=${DIR_SAVE}/ses-${SID}
-  fi
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -232,17 +254,21 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
     ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz
 
   # Move files to appropriate location
-  mv ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-bias+T1T2_T1w.nii.gz
-  mv ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-bias+T1T2_T2w.nii.gz
+  mv ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T1w.nii.gz
+  mv ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T2w.nii.gz
+  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T1w.nii.gz
+  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T2w.nii.gz
   if [[ "${KEEP}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${PREFIX}_prep-bias+T1T2+field.nii.gz
+    mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${PREFIX}_biasField+T1T2.nii.gz
+    TO_PLOT+=${DIR_SAVE}/${PREFIX}_biasField+T1T2.nii.gz
+  else
+    TO_PLOT+=${DIR_SCRATCH}/${PREFIX}_biasField+T1T2.nii.gz
   fi
 fi
 
 # gather modality for output
-MOD=$(getField -i ${IMAGE[0]} -f modality)
-
-if [[ "${METHOD,,}" == "n4" ]]; then
+if [[ "${METHOD,,}" == "n4" ]] \
+|| [[ "${METHOD,,}" == "ants" ]]; then
   n4_fcn="N4BiasFieldCorrection"
   n4_fcn="${n4_fcn} -d ${DIM}"
   n4_fcn="${n4_fcn} -i ${IMAGE[0]}"
@@ -257,19 +283,28 @@ if [[ "${METHOD,,}" == "n4" ]]; then
   n4_fcn="${n4_fcn} -c ${CONVERGENCE}"
   n4_fcn="${n4_fcn} -b ${BSPLINE}"
   n4_fcn="${n4_fcn} -t ${HIST_SHARPEN}"
-  n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-bias+N4_${MOD}.nii.gz,${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz]"
+  n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz,"
+  n4_fcn="${n4_fcn}${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz]"
   n4_fcn="${n4_fcn} -v ${VERBOSE}"
   eval ${n4_fcn}
   
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4_${MOD}.nii.gz ${DIR_SAVE}/
+  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz ${DIR_SAVE}/
+  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz
   if [[ "${KEEP,,}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/${PREFIX}_prep-bias+N4+field_${MOD}.nii.gz ${DIR_SAVE}/
+    mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz ${DIR_SAVE}/
+    TO_PLOT+=${DIR_SAVE}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz
+  else
+    TO_PLOT+=${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz
   fi
 fi
 
-if [[ "${METHOD,,}" == "t1wm" ]]; then
+# AFNI's 3dUnifize method ------------------------------------------------------
+## based on WM intensities locally vs. globally
+if [[ "${METHOD,,}" == "t1wm" ]] \
+|| [[ "${METHOD,,}" == "afni" ]] \
+|| [[ "${METHOD,,}" == "3dunifize" ]]; then
   t1wm_fcn="3dUnifize"
-  t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${PREFIX}_prep-bias+T1WM_${MOD}.nii.gz"
+  t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1WM_${MOD}.nii.gz"
   t1wm_fcn="${t1wm_fcn} -input ${IMAGE[0]}"
   if [[ "${NO_GM,,}" == "false" ]]; then
     t1wm_fcn="${t1wm_fcn} -GM"
@@ -279,10 +314,33 @@ if [[ "${METHOD,,}" == "t1wm" ]]; then
     t1wm_fcn="${t1wm_fcn} -T2"
   fi
   eval ${t1wm_fcn}
+  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1WM_${MOD}.nii.gz
+fi
+
+# make output plots ------------------------------------------------------------
+if [[ "${MAKE_PNG}" == "true" ]]; then
+  if [[ -z ${DIR_PLOT} ]]; then
+    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
+  fi
+  mkdir -p ${DIR_PLOT}
+  if [[ "${METHOD,,}" == "t1t2" ]]; then
+    make3Dpng --bg ${TO_PLOT[0]} --filename ${PREFIX}_prep-${PREP}biasT1T2_T1w --dir-save ${DIR_PLOT}
+    make3Dpng --bg ${TO_PLOT[1]} --filename ${PREFIX}_prep-${PREP}biasT1T2_T2w --dir-save ${DIR_PLOT}
+    make3Dpng --bg ${TO_PLOT[2]} --bg-color "plasma" --filename ${PREFIX}_biasField+T1T2 --dir-save ${DIR_PLOT}
+  elif [[ "${METHOD,,}" == "n4" ]] \
+  || [[ "${METHOD,,}" == "ants" ]]; then
+    make3Dpng --bg ${TO_PLOT[0]} --filename ${PREFIX}_prep-${PREP}biasN4_${MOD} --dir-save ${DIR_PLOT}
+    make3Dpng --bg ${TO_PLOT[1]} --bg-color "plasma" --filename ${PREFIX}_mod-${MOD}_biasField+N4 --dir-save ${DIR_PLOT}
+  elif [[ "${METHOD,,}" == "t1wm" ]] \
+  || [[ "${METHOD,,}" == "afni" ]] \
+  || [[ "${METHOD,,}" == "3dunifize" ]]; then
+    make3Dpng --bg ${TO_PLOT[0]} --filename ${PREFIX}_prep-${PREP}biasT1WM_${MOD} --dir-save ${DIR_PLOT}
+  fi
 fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

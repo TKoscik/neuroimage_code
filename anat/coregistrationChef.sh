@@ -56,6 +56,7 @@ trap egress EXIT
 OPTS=$(getopt -o hvld --long recipe-json:,recipe-name:,\
 fixed:,fixed-mask:,fixed-mask-dilation:,\
 moving:,moving-mask:,moving-mask-dilation:,\
+mask-procedure:,apply-to:,\
 dir-template:,template:,space-source:,space-target:,\
 \
 dimensonality:,save-state:,restore-state:,write-composite-transform,\
@@ -66,7 +67,8 @@ transform:,convergence:,smoothing-sigmas:,shrink-factors:,use-histogram-matching
 use-estimate-learning-rate-once,winsorize-image-intensities:,float,random-seed:,\
 ants-verbose,\
 \
-prefix:,xfm-label:,apply-to:,make-png:,keep-fwd-xfm:,keep-inv-xfm:,\
+prefix:,label-xfm:,label-from:,label-to:,label-reg:,\
+apply-to:,make-overlay-png,make-gradient-png,keep-fwd-xfm,keep-inv-xfm,\
 dir-save:,dir-xfm:,dir-png:,dir-scratch:,\
 verbose,help,no-log,dry-run -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -76,14 +78,14 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-VERBOSE=0
+VERBOSE=false
 HELP=false
 DRY_RUN=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -d | --dry-run) DRY_RUN=true ; shift ;;
     --recipe-json) RECIPE_JSON="$2" ; shift 2 ;;
@@ -92,8 +94,9 @@ while true; do
     --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
     --fixed-mask-dilation) FIXED_MASK="$2" ; shift 2 ;;
     --moving) MOVING="$2" ; shift 2 ;;
-    --moving-mask) MOVING_MASK_DILATION="$2" ; shift 2 ;;
+    --moving-mask) MOVING_MASK="$2" ; shift 2 ;;
     --moving-mask-dilation) MOVING_MASK_DILATION="$2" ; shift 2 ;;
+    --mask-procedure) MASK_PROCEDURE="$2" ; shift 2 ;;
     --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space-source) SPACE_SOURCE="$2" ; shift 2 ;;
@@ -122,10 +125,27 @@ while true; do
     --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
     --ants-verbose) ANTS_VERBOSE=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --xfm-label) XFM_LABEL="$2" ; shift 2 ;;
-    --roi-label) ROI_LABEL="$2" ; shift 2 ;;
+    --label-xfm) LABEL_XFM="$2" ; shift 2 ;;
+    --label-from) LABEL_FROM="$2" ; shift 2 ;;
+    --label-to) LABEL_TO="$2" ; shift 2 ;;
+    --label-reg) LABEL_REG="$2" ; shift 2 ;;
+    --label-roi) LABEL_ROI="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;
-    --make-png) MAKE_PNG="true" ; shift ;;
+    --make-overlay-png) MAKE_OVERLAY_PNG="true" ; shift ;;
+    --make-gradient-png) MAKE_GRADIENT_PNG="true" ; shift ;;
+    --png-overlay-bg-color) PNG_OVERLAY_BG_COLOR="$2" ; shift 2 ;;
+    --png-overlay-bg-alpha) PNG_OVERLAY_BG_ALPHA="$2" ; shift 2 ;;
+    --png-overlay-bg-thresh) PNG_OVERLAY_BG_THRESH="$2" ; shift 2 ;;
+    --png-overlay-fg-color) PNG_OVERLAY_FG_COLOR="$2" ; shift 2 ;;
+    --png-overlay-fg-alpha) PNG_OVERLAY_FG_ALPHA="$2" ; shift 2 ;;
+    --png-overlay-fg-thresh) PNG_OVERLAY_FG_THRESH="$2" ; shift 2 ;;
+    --png-overlay-layout) PNG_OVERLAY_LAYOUT="$2" ; shift 2 ;;
+    --png-overlay-offset) PNG_OVERLAY_OFFSET="$2" ; shift 2 ;;
+    --png-overlay-filename) PNG_OVERLAY_FILENAME="$2" ; shift 2 ;;
+    --png-grad-color) PNG_GRAD_COLOR="$2" ; shift 2 ;;
+    --png-grad-layout) PNG_GRAD_LAYOUT="$2" ; shift 2 ;;
+    --png-grad-offset) PNG_GRAD_OFFSET="$2" ; shift 2 ;;
+    --png-grad-filename) PNG_GRAD_FILENAME="$2" ; shift 2 ;;
     --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
     --keep-inv-xfm) KEEP_INV_XFM="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -154,9 +174,11 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [[ "${DRY_RUN}" == "true" ]]; then NO_LOG=TRUE; fi
+if [[ "${DRY_RUN}" == "true" ]]; then NO_LOG=true; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo "Running the INC coregistration chef"; fi
 
 # locate recipe ----------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>locating coregistration recipe"; fi
 RECIPE_DEFAULT=${INC_LUT}/coregistration_recipes.json
 PARAMS_DEFAULT=($(jq -r '.coregistration_parameters | keys_unsorted[]?' < ${RECIPE_DEFAULT}))
 if [[ -n ${RECIPE_NAME} ]]; then
@@ -170,8 +192,10 @@ if [[ ! -f ${RECIPE_JSON} ]]; then
   echo "ERROR [INC ${FCN_NAME}] Recipe JSON not found. Aborting."
   exit 1
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # read parameter names from recipe ---------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>reading coregistration parameters"; fi
 if [[ -n ${RECIPE_JSON} ]]; then
   RECIPES=($(jq -r '.coregistration_recipe | keys_unsorted[]?' < ${RECIPE_JSON}))
   if [[ " ${RECIPES[@]} " =~ " ${RECIPE_NAME} " ]]; then
@@ -181,12 +205,14 @@ if [[ -n ${RECIPE_JSON} ]]; then
     exit 2
   fi
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # parse inputs and recipe together ---------------------------------------------
 ## variable specification order of priority
 ## 1. direct input to function
 ## 2. specified recipe
 ## 3. default values
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>parsing coregistration recipe and loading defaults"; fi
 for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
   unset VAR_NAME PARAM_STATE JQ_STR CHK_VAR
   VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
@@ -206,31 +232,40 @@ for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
     exit 3
   fi
 done
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # parse basic required information about MOVING images -------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>parsing MOVING images"; fi
 MOVING=(${MOVING//,/ })
 for (( i=0; i<${#MOVING[@]}; i++ )); do
   MOD+=($(getField -i ${MOVING[@]} -f modality))
 done
+MOD_STR="${MOD[@]}"
+MOD_STR=${MOD_STR// /+}
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>gathering project and participant information"; fi
 DIR_PROJECT=$(getDir -i ${MOVING[0]})
 PID=$(getField -i ${MOVING[0]} -f sub)
 SID=$(getField -i ${MOVING[0]} -f ses)
 DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # set defaults as necessary ----------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>setting default file prefixes"; fi
 if [[ "${PREFIX,,}" == "default" ]]; then
   PREFIX=$(getBidsBase -s -i ${MOVING[0]})
-  PREP=$(getField -i ${PREFIX} -f prep)
   if [[ -n ${PREP} ]]; then
     PREP="${PREP}+coreg"
     PREFIX=$(modField -i ${PREFIX} -r -f prep)
   fi
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # set directories --------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>setting output directories"; fi
 if [[ "${DIR_SAVE,,}" == "default" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
@@ -240,54 +275,74 @@ fi
 if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
   DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
-if [[ "${DIR_TEMPLATE}" == "default" ]]; then
+if [[ "${DIR_TEMPLATE,,}" == "default" ]]; then
   DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}/${SPACE_SOURCE}
 fi
 if [[ "${MAKE_PNG}" == "true" ]]; then
-  if [[ "${DIR_PNG}" == "default" ]]; then
+  if [[ "${DIR_PNG,,}" == "default" ]]; then
     DIR_PNG=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
   fi
 fi
 
+## make directories 
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then mkdir -p ${DIR_XFM}; fi
+if [[ "${MAKE_PNG}" == "true" ]]; then mkdir -p ${DIR_PNG}; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
 # parse fixed ------------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>parsing fixed/template images"; fi
 if [[ "${FIXED}" == "optional" ]]; then
   unset FIXED
   for (( i=0; i<${#MOVING[@]}; i++ )); do
     if [[ -f ${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz ]]; then
-      FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz
+      FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_${MOD[${i}]}.nii.gz)
     else
-      FIXED+=${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz
+      FIXED+=(${DIR_TEMPLATE}/${TEMPLATE}_${SPACE_SOURCE}_T1w.nii.gz)
     fi
   done
 else
   FIXED=(${FIXED//,/ })
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # check spacing ----------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>checking image spacing for output"; fi
 FIX_SPACE="false"
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
+  echo ${MOVING[0]}
   SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
+  echo b
   SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+  echo c
   if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
     NEW_SPACE=${SPACE_MOVING// /x}
     FIX_SPACE="true"
   fi
-elif [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
+  echo ""
+  echo ${NEW_SPACE}
+elif [[ "${SPACE_TARGET}" != "fixed" ]] && [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
   NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
   FIX_SPACE="true"
 fi
-
+echo 1
 if [[ "${FIX_SPACE}" == "true" ]]; then
   for (( i=0; i<${#FIXED[@]}; i++ )); do
-    BNAME=$(basename ${FIXED[${i}]})
+    TMOD=$(getField -i ${FIXED[${i}]} -f modality)
+    echo 2
     if [[ "${DRY_RUN}" == "false" ]]; then
-      ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/${BNAME} ${NEW_SPACE} 0
+      mkdir -p ${DIR_SCRATCH}
+      ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz ${NEW_SPACE} 0
     fi
-    FIXED[${i}]=${DIR_SCRATCH}/${BNAME}
+    echo 3
+    FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
   done
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # check for histogram matching -------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>set histogram matching"; fi
 if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
   USE_HISTOGRAM_MATCHING=1
   for (( i=0; i<${#MOVING[@]}; i++ )); do
@@ -299,8 +354,10 @@ if [[ "${USE_HISTOGRAM_MATCHING}" == "default" ]]; then
     fi
   done
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # check masks ------------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>check masks"; fi
 if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   MOVING_MASK=(${MOVING_MASK//,/ })
   if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
@@ -308,105 +365,192 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
     echo "ERROR [INC ${FCN_NAME}] number of moving masks must equal 1 or the number of transforms"
     exit 4
   fi
+  if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
+    for (( i=0; i<${#MOVING_MASK[@]}; i++ )); do
+      TMOD=$(getField -i ${MOVING_MASK[${i}]} -f modality)
+      ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}_${TMOD}.nii.gz \
+        MD ${MOVING_MASK[${i}]} ${MOVING_MASK_DILATION}
+      MOVING_MASK[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}_${TMOD}.nii.gz
+    done
+  fi
+  if [[ ${#MOVING_MASK[@]} -eq 1 ]] && [[ ${#MOVING[@]} -gt 1 ]]; then
+    for (( i=1; i<${#MOVING[@]}; i++ )); do
+      MOVING_MASK+=(${MOVING_MASK[0]})
+    done
+  fi
+  if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
+    for (( i=0; i<${#MOVING[@]}; i++ )); do
+      TMOD=$(getField -i ${MOVING[${i}]} -f modality)
+      fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[${i}]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+      MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+    done
+  fi
 fi
-if [[ "${FIXED_MASK}" != "optional" ]]; then
+if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   FIXED_MASK=(${FIXED_MASK//,/ })
   if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
      [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
     echo "ERROR [INC ${FCN_NAME}] number of fixed masks must equal 1 or the number of transforms"
     exit 5
   fi
+  if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
+    for (( i=0; i<${#FIXED_MASK[@]}; i++ )); do
+      TMOD=$(getField -i ${FIXED_MASK[${i}]} -f modality)
+      ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz \
+        MD ${FIXED_MASK[${i}]} ${FIXED_MASK_DILATION}
+      FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz
+    done
+  fi
+  if [[ "${FIX_SPACE}" == "true" ]]; then
+    for (( i=0; i<${#FIXED_MASK[@]}; i++ )); do
+      TMOD=$(getField -i ${FIXED_MASK[${i}]} -f modality)
+      if [[ "${DRY_RUN}" == "false" ]]; then
+        mkdir -p ${DIR_SCRATCH}
+        antsApplyTransforms -d 3 -n GenericLabel \
+          -i ${FIXED_MASK[${i}]} \
+          -o ${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz \
+          -r ${FIXED[0]}
+      fi
+      FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz
+    done
+  fi
+  if [[ ${#FIXED_MASK[@]} -eq 1 ]] && [[ ${#FIXED[@]} -gt 1 ]]; then
+    for (( i=1; i<${#FIXED[@]}; i++ )); do
+      FIXED_MASK+=(${FIXED_MASK[0]})
+    done
+  fi
+  if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
+    for (( i=0; i<${#FIXED[@]}; i++ )); do
+      TMOD=$(getField -i ${FIXED[${i}]} -f modality)
+      fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+      FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+    done
+  fi
 fi
 if [[ "${MOVING_MASK[0]}" != "optional" ]] && \
-   [[ "${FIXED_MASK}" != "optional" ]] && \
+   [[ "${FIXED_MASK[0]}" != "optional" ]] && \
    [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
   echo "ERROR [INC ${FCN_NAME}] number of fixed and moving masks must match"
   exit 6
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # generate output names --------------------------------------------------------
-FROM=$(getSpace -i ${MOVING[0]})
-TO=$(getSpace -i ${FIXED[0]})
-for (( i=0; i<${#MOVING[@]}; i++ )); do
-  MOVING_OUTPUT+=${PREFIX}
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>generate output names"; fi
+PREP=$(getField -i ${PREFIX} -f prep)
+if [[ -n ${PREP} ]]; then PREFIX=$(modField -i ${PREFIX} -r -f prep); fi
+if [[ -z ${RECIPE_NAME} ]]; then RECIPE_NAME=coreg; fi
+if [[ "${LABEL_FROM,,}" == "default" ]]; then LABEL_FROM=$(getSpace -i ${MOVING[0]}); fi
+if [[ "${LABEL_TO,,}" == "default" ]]; then LABEL_TO=$(getSpace -i ${FIXED[0]}); fi
+if [[ "${LABEL_REG,,}" == "default" ]]; then
   if [[ -n ${PREP} ]]; then
-    MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_prep-${PREP}"
+    LABEL_REG=prep-${PREP}+${RECIPE_NAME}+${LABEL_TO}
+  else
+    LABEL_REG=reg-${RECIPE_NAME}+${LABEL_TO}
+  fi
+fi
+
+for (( i=0; i<${#MOVING[@]}; i++ )); do
+  MOVING_OUTPUT+=(${PREFIX})
+  if [[ -n ${PREP} ]]; then
+    MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_${LABEL_REG}"
+  else
+    MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_${LABEL_REG}"
   fi
   TMOD=$(getField -i ${MOVING[${i}]} -f modality)
-  MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_reg-${TO}_${TMOD}.nii.gz"
+  MOVING_OUTPUT[${i}]="${MOVING_OUTPUT[${i}]}_${TMOD}.nii.gz"
 done
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne " MOVING"; fi
 
 APPLY_TO=(${APPLY_TO//,/ })
 if [[ "${APPLY_TO[0]}" != "optional" ]]; then
   for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
     APPLY_OUTPUT+=$(getBidsBase -s -i ${APPLY_TO[${i}]})
     TMOD=$(getField -i ${APPLY_TO[${i}]} -f modality)
-    APPLY_OUTPUT[${i}]="${APPLY_OUTPUT[${i}]}_reg-${TO}_${TMOD}.nii.gz"
+    APPLY_OUTPUT[${i}]="${APPLY_OUTPUT[${i}]}_${LABEL_REG}_${TMOD}.nii.gz"
   done
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne " EXTRA"; fi
 fi
 
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  XFM_LABEL=(${XFM_LABEL//,/ })
-  if [[ "${XFM_LABEL[0]}" == "default" ]]; then
+  LABEL_XFM=(${LABEL_XFM//,/ })
+  if [[ "${LABEL_XFM[0]}" == "default" ]]; then
     if [[ "${TRANSFORM[@],,}" == *"bsplineexponential"* ]]; then
-      XFM_LABEL[0]="bsplineExp"
+      LABEL_XFM[0]="bsplineExp"
     elif [[ "${TRANSFORM[@],,}" == *"exponential"* ]]; then
-      XFM_LABEL[0]="exp"
+      LABEL_XFM[0]="exp"
     elif [[ "${TRANSFORM[@],,}" == *"bsplinesyn"* ]]; then
-      XFM_LABEL[0]="bsplineSyn"
+      LABEL_XFM[0]="bsplineSyn"
     elif [[ "${TRANSFORM[@],,}" == *"syn"* ]]; then
-      XFM_LABEL[0]="syn"
+      LABEL_XFM[0]="syn"
     elif [[ "${TRANSFORM[@],,}" == *"timevaryingbsplinevelocityfield"* ]]; then
-      XFM_LABEL[0]="timeVaryingBspline"
+      LABEL_XFM[0]="timeVaryingBspline"
     elif [[ "${TRANSFORM[@],,}" == *"timevaryingvelocityfield"* ]]; then
-      XFM_LABEL[0]="timeVarying"
+      LABEL_XFM[0]="timeVarying"
     elif [[ "${TRANSFORM[@],,}" == *"bsplinedisplacementfield"* ]]; then
-      XFM_LABEL[0]="bsplineDisp"
+      LABEL_XFM[0]="bsplineDisp"
     elif [[ "${TRANSFORM[@],,}" == *"gaussiandisplacementfield"* ]]; then
-      XFM_LABEL[0]="displacement"
+      LABEL_XFM[0]="displacement"
     elif [[ "${TRANSFORM[@],,}" == *"bspline"* ]]; then
-      XFM_LABEL[0]="bspline"
+      LABEL_XFM[0]="bspline"
     else
-      XFM_LABEL[0]="noNonlinear"
+      LABEL_XFM[0]="none"
     fi
     if [[ "${TRANSFORM[@],,}" == *"compositeaffine"* ]]; then
-      XFM_LABEL[1]="affineComposit"
+      LABEL_XFM[1]="affineComposite"
     elif [[ "${TRANSFORM[@],,}" == *"affine"* ]]; then
-      XFM_LABEL[1]="affine"
+      LABEL_XFM[1]="affine"
     elif [[ "${TRANSFORM[@],,}" == *"similarity"* ]]; then
-      XFM_LABEL[1]="similarity"
+      LABEL_XFM[1]="similarity"
     elif [[ "${TRANSFORM[@],,}" == *"rigid"* ]]; then
-      XFM_LABEL[1]="rigid"
+      LABEL_XFM[1]="rigid"
     elif [[ "${TRANSFORM[@],,}" == *"translation"* ]]; then
-      XFM_LABEL[1]="translation"
+      LABEL_XFM[1]="translation"
     else
-      XFM_LABEL[1]="noLinear"
+      LABEL_XFM[1]="none"
     fi
   fi
 fi
-if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  AFFINE_OUTPUT=${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[1]}.nii.gz
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]] ; then
+  if [[ "${LABEL_XFM[1]}" != "none" ]]; then
+    AFFINE_OUTPUT=${PREFIX}_mod-${MOD_STR}_from-${LABEL_FROM}_to-${LABEL_TO}_xfm-${LABEL_XFM[1]}.mat
+  fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne " XFM"; fi
 fi
 if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
-  FWD_NAME=${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_LABEL[0]}.nii.gz
+  if [[ "${LABEL_XFM[0]}" != "none" ]]; then
+    FWD_OUTPUT=${PREFIX}_mod-${MOD_STR}_from-${LABEL_FROM}_to-${LABEL_TO}_xfm-${LABEL_XFM[0]}.nii.gz
+  fi
 fi
 if [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  INV_NAME=${PREFIX}_from-${TO}_to-${FROM}_xfm-${XFM_LABEL[0]}.nii.gz
+  if [[ "${LABEL_XFM[0]}" != "none" ]]; then
+    INV_OUTPUT=${PREFIX}_mod-${MOD_STR}_from-${LABEL_FROM}_to-${LABEL_TO}_xfm-${LABEL_XFM[0]}+inverse.nii.gz
+  fi
 fi
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  PNG_MOD=$(getField -i ${MOVING[0]} -f modality)
-  PNG_OUTPUT=${PREFIX}_from-${FROM}_to-${TO}_img-${PNG_MOD}
+if [[ "${MAKE_OVERLAY_PNG}" == "true" ]]; then
+  TNAME=${MOVING_OUTPUT[0]%%.*}
+  PNG_OVERLAY_FILENAME=${TNAME}_overlay
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne " PNG-OVERLAY"; fi
 fi
+if [[ "${MAKE_GRADIENT_PNG}" == "true" ]]; then
+  TNAME=${MOVING_OUTPUT[0]%%.*}
+  PNG_GRAD_FILENAME=${TNAME}_gradientMagDiff
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne " PNG-GRADIENT"; fi
+fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # show outputs for dry run -----------------------------------------------------
 if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
+  echo ""
+  echo "PARAMETERS:---------------------------------------------------------------------"
   for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
     VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
     VAR_NAME=${VAR_NAME//-/_}
     eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
   done
   echo ""
-  echo "OUTPUT IMAGES:------------------------------------------------------------------"
+  echo "OUTPUT:------------------------------------------------------------------"
+  echo "TRANSFORMED IMAGES:"
   echo -e "\t${DIR_SAVE}"
   for (( i=0; i<${#MOVING[@]}; i++ )); do echo -e "\t\t${MOVING_OUTPUT[${i}]}"; done
   if [[ "${APPLY_TO[0]}" != "optional" ]]; then
@@ -415,24 +559,20 @@ if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
   if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
     echo "TRANSFORMS:"
     echo -e "\t${DIR_XFM}"
-    if [[ "${XFM_LABEL[1]}" != "noNonlinear" ]]; then
-      echo -e "\t\t${AFFINE_OUTPUT}"
-    fi
-  fi
-  if [[ "${KEEP_FWD_XFM}" == "true" ]] && [[ "${XFM_LABEL[1]}" != "noNonlinear" ]]; then
-    echo -e "\t\t${FWD_NAME}"
-  fi
-  if [[ "${KEEP_INV_XFM}" == "true" ]] && [[ "${XFM_LABEL[1]}" != "noNonlinear" ]]; then
-    echo -e "\t\t${INV_NAME}"
+    if [[ -n ${AFFINE_OUTPUT} ]]; then echo -e "\t\t${AFFINE_OUTPUT}"; fi
+    if [[ -n ${FWD_OUTPUT} ]]; then echo -e "\t\t${FWD_OUTPUT}"; fi
+    if [[ -n ${INV_OUTPUT} ]]; then echo -e "\t\t${INV_OUTPUT}"; fi
   fi
   if [[ "${MAKE_PNG}" == "true" ]]; then
-    echo "OUTPUT PNG:"
+    echo "PNG:"
     echo -e "\t${DIR_PNG}"
-    echo -e "\t\t${PNG_OUTPUT}.png"
-  fi
+    echo -e "\t\t${PNG_OVERLAY_FILENAME}"
+    echo -e "\t\t${PNG_GRAD_FILENAME}"
+ fi
 fi
 
 ### write ANTS registration function ===========================================
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>write coregistration function"; fi
 antsCoreg="antsRegistration"
 antsCoreg="${antsCoreg} --dimensionality ${DIMENSIONALITY}"
 antsCoreg="${antsCoreg} --output ${DIR_SCRATCH}/xfm_"
@@ -466,19 +606,25 @@ fi
 if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
   antsCoreg="${antsCoreg} --resrict-deformation ${RESTRICT_DEFORMATION}"
 fi
-if [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
+if [[ "${INITIAL_FIXED_TRANSFORM}" == "default" ]]; then
+  antsCoreg="${antsCoreg} --initial-fixed-transform [${MOVING[0]},${FIXED[0]},1]"
+elif [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
   INITIAL_FIXED_TRANSFORM=(${INITIAL_FIXED_TRANSFORM//;/ })
   for (( i=0; i<${#INITIAL_FIXED_TRANSFORM[@]}; i++ )); do
     antsCoreg="${antsCoreg} --initial-fixed-transform ${INITIAL_FIXED_TRANSFORM[${i}]}"
   done
 fi
-if [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
+if [[ "${INITIAL_MOVING_TRANSFORM}" == "default" ]]; then
+  antsCoreg="${antsCoreg} --initial-moving-transform [${FIXED[0]},${MOVING[0]},1]"
+elif [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
   INITIAL_MOVING_TRANSFORM=(${INITIAL_MOVING_TRANSFORM//;/ })
   for (( i=0; i<${#INITIAL_MOVING_TRANSFORM[@]}; i++ )); do
     antsCoreg="${antsCoreg} --initial-moving-transform ${INITIAL_MOVING_TRANSFORM[${i}]}"
   done
 fi
-if [[ "${FIXED_MASK[0]}" != "optional" ]] && [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
+if [[ "${MASK_PROCEDURE}" == "restrict" ]] \
+&& [[ "${FIXED_MASK[0]}" != "optional" ]] \
+&& [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
   antsCoreg="${antsCoreg} --masks [${FIXED_MASK[0]},${MOVING_MASK[0]}]"
 fi
 for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
@@ -487,7 +633,9 @@ for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   for (( j=0; j<${#MOVING[@]}; j++ )); do
     antsCoreg="${antsCoreg} --metric ${METRIC_STR[0]}${FIXED[${j}]},${MOVING[${j}]}${METRIC_STR[1]}"
   done
-  if [[ "${FIXED_MASK[0]}" != "optional" ]] && [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
+  if [[ "${MASK_PROCEDURE}" == "restrict" ]] \
+  && [[ "${FIXED_MASK[0]}" != "optional" ]] \
+  && [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
     antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
   fi
   antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
@@ -514,28 +662,34 @@ else
   antsCoreg="${antsCoreg} --verbose 0"
 fi
 antsCoreg="${antsCoreg} --random-seed ${RANDOM_SEED}"
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
   echo ""
   echo "ANTs Coregistration Call -------------------------------------------------------"
-  echo -e ${antsCoreg//--/ \\ \\n  --}
+  echo ""
+  echo "${antsCoreg}"
+  echo ""
+fi
+if [[ "${DRY_RUN}" == "true" ]]; then
   exit 0
 fi
 
 # make directories ------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>make output directories"; fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
-if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  mkdir -p ${DIR_XFM}
-fi
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  mkdir -p ${DIR_PNG}
-fi
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then mkdir -p ${DIR_XFM}; fi
+if [[ "${MAKE_PNG}" == "true" ]]; then mkdir -p ${DIR_PNG}; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # run coregistration -----------------------------------------------------------
-eval ${antsCoreg}
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>run coregistration"; fi
+eval "${antsCoreg}"
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # apply transforms =============================================================
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>apply transforms to MOVING"; fi
 mkdir -p ${DIR_SAVE}
 for (( i=0; i<${#MOVING[@]}; i++ )); do
   apply_xfm="antsApplyTransforms -d 3"
@@ -544,7 +698,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   else
     apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
   fi
-  apply_xfm="${apply_xfm} -i ${FIXED}"
+  apply_xfm="${apply_xfm} -i ${MOVING[${i}]}"
   apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}"
   if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
@@ -553,13 +707,16 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
   fi
   apply_xfm="${apply_xfm} -r ${FIXED[0]}"
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
   eval ${apply_xfm}
 done
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # apply to extra images --------------------------------------------------------
 if [[ "${APPLY_TO[0]}" != "optional" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>apply transforms to ADDITIONAL IMAGES"; fi
   for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
-   apply_xfm="antsApplyTransforms -d 3"
+    apply_xfm="antsApplyTransforms -d 3"
     if [[ "${INTERPOLATION}" == "default" ]]; then
       if [[ "${TMOD}" == *"label"* ]]; then
         apply_xfm="${apply_xfm} -n MultiLabel"
@@ -571,7 +728,7 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     else
       apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
     fi
-    apply_xfm="${apply_xfm} -i ${FIXED}"
+    apply_xfm="${apply_xfm} -i ${APPLY_TO[${i}]}"
     apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}"
     if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
       apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
@@ -580,52 +737,71 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
       apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
     fi
     apply_xfm="${apply_xfm} -r ${FIXED[0]}"
+    if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
     eval ${apply_xfm}
   done
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
 
 # move results to desired destination ------------------------------------------
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
-    mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat \
-      ${DIR_XFM}/${AFFINE_OUTPUT}
-  fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>move transforms"; fi
 fi
-if [[ "${KEEP_FWD_XFM}" == "true" ]]; then
-  if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
-    mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz \
-      ${DIR_XFM}/${FWD_NAME}
-  fi
+if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
+  mv ${DIR_SCRATCH}/xfm_0GenericAffine.mat ${DIR_XFM}/${AFFINE_OUTPUT}
 fi
-if [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
-    mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz \
-      ${DIR_XFM}/${INV_NAME}
-  fi
+if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
+  mv ${DIR_SCRATCH}/xfm_1Warp.nii.gz ${DIR_XFM}/${FWD_OUTPUT}
+fi
+if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
+  mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ${DIR_XFM}/${INV_OUTPUT}
+fi
+if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
 
 # plot output for review -------------------------------------------------------
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  mkdir -p ${DIR_PNG}
-  DIMS=($(niiInfo -i ${FIXED[0]} -f voxels))
-  if [[ ${DIMS[1]} -gt ${DIMS[0]} ]]; then
-    NS=5
-    NC=$(echo "scale=0; ${NS}*${DIMS[1]}/${DIMS[2]}" | bc -l)
-    NA=$(echo "scale=0; ${NS}*${DIMS[1]}/${DIMS[0]}" | bc -l)
-  else
-    NA=5
-    NC=$(echo "scale=0; ${NA}*${DIMS[0]}/${DIMS[2]}" | bc -l)
-    NS=$(echo "scale=0; ${NA}*${DIMS[0]}/${DIMS[1]}" | bc -l)
-  fi
-  
-  PNG_MOD=$(getField -i ${MOVING[0]} -f modality)
-  make3Dpng \
-    --bg ${FIXED[0]} --bg-color "#000000,#00FF00" --bg-thresh 2,98 \
-    --fg ${MOVING[0]} --fg-color "#000000,#FF00FF" --fg-thresh 2,98 --fg-cbar \
-    --layout "${NS}:x;${NC}:y;${NA}:z" \
-    --offset "0,0,0" \
-    --filename ${PREFIX}_from-${FROM}_to-${TO}_img-${PNG_MOD} \
-    --dir-save ${DIR_PNG}
+if [[ "${MAKE_OVERLAY_PNG}" == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>generate results PNG"; fi
+  overlay_png="make3Dpng"
+  overlay_png="${overlay_png} --bg ${FIXED[0]}"
+  overlay_png=${overlay_png}' --bg-color "'${PNG_OVERLAY_BG_COLOR}'"'
+  overlay_png="${overlay_png} --bg-alpha ${PNG_OVERLAY_BG_ALPHA}"
+  overlay_png=${overlay_png}' --bg-thresh "'${PNG_OVERLAY_BG_THRESH}'"'
+  overlay_png="${overlay_png} --fg ${DIR_SAVE}/${MOVING_OUTPUT[0]}"
+  overlay_png=${overlay_png}' --fg-color "'${PNG_OVERLAY_FG_COLOR}'"'
+  overlay_png="${overlay_png} --fg-alpha ${PNG_OVERLAY_FG_ALPHA}"
+  overlay_png=${overlay_png}' --fg-thresh "'${PNG_OVERLAY_FG_THRESH}'"'
+  overlay_png="${overlay_png} --fg-cbar"
+  overlay_png=${overlay_png}' --layout "'${PNG_OVERLAY_LAYOUT}'"'
+  overlay_png=${overlay_png}' --offset "'${PNG_OVERLAY_OFFSET}'"'
+  overlay_png=${overlay_png}' --filename "'${PNG_OVERLAY_FILENAME}'"'
+  overlay_png="${overlay_png} --dir-save ${DIR_PNG}"
+  eval ${overlay_png}
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+fi
+if [[ "${MAKE_GRADIENT_PNG}" == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>generate results PNG"; fi
+  FIXED_SZ=($(niiInfo -i ${FIXED[0]} -f spacing))
+  VXL_SZ=$(echo "scale=1; ${FIXED_SZ[0]}*${FIXED_SZ[1]}*${FIXED_SZ[2]}" | bc -l)
+  GRAD_SIGMA=$(echo "scale=1; ${VXL_SZ}/2" | bc -l)
+  ImageMath 3 ${DIR_SCRATCH}/grad_fixed.nii.gz \
+    Grad ${FIXED[0]} ${GRAD_SIGMA} 1
+  ImageMath 3 ${DIR_SCRATCH}/grad_moving.nii.gz \
+    Grad ${DIR_SAVE}/${MOVING_OUTPUT[0]} ${GRAD_SIGMA} 1  
+  ImageMath 3 ${DIR_SCRATCH}/grad_moving_histMatch.nii.gz \
+    HistogramMatch ${DIR_SCRATCH}/grad_moving.nii.gz ${DIR_SCRATCH}/grad_fixed.nii.gz
+  ImageMath 3 ${DIR_SCRATCH}/grad_diff.nii.gz \
+    - ${DIR_SCRATCH}/grad_moving.nii.gz ${DIR_SCRATCH}/grad_fixed.nii.gz
+  grad_png="make3Dpng"
+  grad_png="${grad_png} --bg ${DIR_SCRATCH}/grad_diff.nii.gz"
+  grad_png=${grad_png}' --bg-color "'${PNG_GRAD_COLOR}'"'
+  grad_png=${grad_png}' --layout "'${PNG_GRAD_LAYOUT}'"'
+  grad_png=${grad_png}' --offset "'${PNG_GRAD_OFFSET}'"'
+  grad_png=${grad_png}' --filename "'${PNG_GRAD_FILENAME}'"'
+  grad_png="${grad_png} --dir-save ${DIR_PNG}"
+  eval ${grad_png}
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
 
 #===============================================================================

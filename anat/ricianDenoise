@@ -55,7 +55,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvklp --long prefix:,\
 dimension:,image:,mask:,model:,shrink:,patch:,search:,\
-do-plot,dir-save:,dir-scratch:,\
+make-png,dir-save:,dir-png:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -74,7 +74,7 @@ PATCH=1
 SEARCH=2
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-DO_PLOT=false
+MAKE_PNG=true
 DIR_PLOT=
 HELP=false
 VERBOSE=0
@@ -85,7 +85,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -p | --do-plot) DO_PLOT=true ; shift ;;
+    -p | --make-png) MAKE_PNG=false ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -183,16 +183,16 @@ else
   TO_PLOT+=(${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
 fi
 
-if [[ "${DO_PLOT}" == "true" ]]; then
+if [[ "${MAKE_PNG}" == "true" ]]; then
   if [[ -z ${DIR_PLOT} ]]; then
     DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
   fi
   mkdir -p ${DIR_PLOT}
   make3Dpng --bg ${TO_PLOT[0]} \
-    --filename ${PREFIX}_desc-anat+denoise_img-${MOD} \
+    --filename ${PREFIX}_prep-${PREP}denoise_${MOD} \
     --dir-save ${DIR_PLOT}
   make3Dpng --bg ${TO_PLOT[1]} --bg-color "viridis" \
-    --filename ${PREFIX}_desc-anat+ricianNoise_img-${MOD} \
+    --filename ${PREFIX}_prep-${PREP}noise_${MOD} \
     --dir-save ${DIR_PLOT}
 fi
 
@@ -200,4 +200,5 @@ fi
 # End of Function
 #===============================================================================
 exit 0
+
 

@@ -52,8 +52,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long regressors:,do-corr:,dir-save:,\
-help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hl --long regressor:,do-corr,dir-save:,help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -61,7 +60,7 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-REGRESSORS=
+REGRESSOR=
 DO_CORR="false"
 DIR_SAVE=
 HELP=false
@@ -70,8 +69,8 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --regressors) REGRESSORS="$2" ; shift 2 ;;
-    --do-corr) DO_CORR="true" ; shift 2 ;;
+    --regressor) REGRESSOR="$2" ; shift 2 ;;
+    --do-corr) DO_CORR="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -86,7 +85,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --regressors <value>     csv list of file paths *.1D regressor files'
+  echo '  --regressor <value>     csv list of file paths *.1D regressor files'
   echo '  --do-corr                make a correlation plot as well'
   echo '  --dir-save <value>       directory to save output, optional'
   echo ''
@@ -106,9 +105,9 @@ fi
 mkdir -p ${DIR_SAVE}
 
 Rscript ${INC_R}/regressorPlot.R \
-  ${REGRESSORS} \
-  ${DIR_SAVE} \
-  "doCorr=${DO_CORR^^}"
+  "regressor" ${REGRESSOR} \
+  "dir-save" ${DIR_SAVE} \
+  "docorr" ${DO_CORR^^}
 
 #===============================================================================
 # End of Function

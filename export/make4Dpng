@@ -338,6 +338,7 @@ if [[ -n "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/overlay_png
 fi
 mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
 
 # parse parameters for FG and ROIs ---------------------------------------------
 FG=(${FG//;/ })
@@ -396,7 +397,7 @@ FG_TR=$(niiInfo -i ${FG[0]} -f tr)
 if [[ -n ${SLICE} ]]; then
   unset COORDS
   if [[ -n ${SLICE_METHOD} ]]; then
-    coord_fcn="COORDS=($(fslstats "
+    coord_fcn='COORDS=($(fslstats '
     if [[ -n ${FG_MASK} ]]; then
       coord_fcn="${coord_fcn} -K ${FG_MASK[0]}"
     fi

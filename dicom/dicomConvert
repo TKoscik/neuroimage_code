@@ -29,11 +29,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-<<<<<<< HEAD
 OPTS=$(getopt -o hvl --long \
-=======
-OPTS=$(getopt -o hvl --long prefix:,\
->>>>>>> ec026be4ef4861ba8aecbe8606e55ca927efc4b6
 input:,dir-save:,dcm-version:,depth:,reorient:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -111,19 +107,19 @@ N_SCAN=${#DIR_DCM[@]}
 
 # convert dicoms ---------------------------------------------------------------
 for (( i=0; i<${N_SCAN}; i++ )); do
-  if [[ -n ${DCM_VERSION} ]]; then
+  if [[ -z ${DCM_VERSION} ]]; then
     dcm_fcn="${DCM2NIIX}"
   else
-    KERNEL="$(unname -s)"
+    KERNEL="$(uname -s)"
     HARDWARE="$(uname -m)"
-    dcm_fcn="${PINCAPP}/dcm2niix/${KERNEL}/${HARDWARE}/${VERSION}/dcm2niix"
+    dcm_fcn="${PINCAPP}/dcm2niix/${KERNEL}/${HARDWARE}/${DCM_VERSION}/dcm2niix"
   fi
-  dcm_fcn="${dcm_fcn} -b y -d ${DEPTH} -v ${VERBOSE}"
-  dcm_fcn=${dcm_fcn}' -f "%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'
+  dcm_fcn="${dcm_fcn} -b y -z y -d ${DEPTH} -v ${VERBOSE}"
+  dcm_fcn="${dcm_fcn} -f '%x_x-x_%n_x-x_%t_x-x_%s_x-x_%d'"
   dcm_fcn="${dcm_fcn} -o ${DIR_SAVE}/"
   dcm_fcn="${dcm_fcn} ${DIR_DCM[${i}]}"
   eval ${dcm_fcn}
-fi
+done
 
 if [[ -n ${REORIENT} ]]; then
   if [[ "${REORIENT,,}" =~ "r" ]] | [[ "${REORIENT,,}" =~ "l" ]]; then

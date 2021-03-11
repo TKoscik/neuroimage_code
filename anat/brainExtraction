@@ -52,9 +52,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvklp --long prefix:,\
 image:,method:,suffix:,spatial-filter:,filter-radius:,\
-dir-save:,dir-scratch:,\
+make-png,dir-save:,dir-png:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -67,20 +67,24 @@ PREFIX=
 IMAGE=
 METHOD=
 SUFFIX=
-SPATIAL_FILTER="NULL"
+SPATIAL_FILTER=null
 FILTER_RADIUS=1
 TEMPLATE="OASIS"
+AUTOMASK_CLIP=0.5
+MAKE_PNG=true
+DIR_PNG=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
+VERBOSE=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -p | --make-png) MAKE_PNG=false ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --method) METHOD="$2" ; shift 2 ;;
@@ -89,6 +93,7 @@ while true; do
     --filter-radius) FILTER_RADIUS="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-png) DIR_PNG="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -101,7 +106,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -136,9 +140,6 @@ fi
 # Start of Function
 #===============================================================================
 IMAGE=(${IMAGE//,/ })
-NUM_IMAGE=${#IMAGE[@]}
-METHOD=(${METHOD//,/ })
-NUM_METHOD=${#METHOD[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMAGE[0]})
@@ -155,138 +156,158 @@ mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # Brain extraction ------------------------------------------------------------
-for (( i=0; i<${NUM_METHOD}; i++ )); do
-  # run AFNI 3dSkullStrip -----------------------------------------------------
-  if [[ "${METHOD[${i}],,}" == "afni" ]] || [[ "${METHOD[${i}],,}" == "3dskullstrip" ]]; then
-    echo ">>>Running AFNI 3dSkullstrip"
-    3dSkullStrip \
-      -input ${IMAGE[0]} \
-      -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
-    fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
-    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
-      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
-      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
-      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
-      eval ${sf_fcn}
-      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
-    fi
-  fi
-
-  # run ANTs brain extraction -------------------------------------------------
-  if [[ "${METHOD[${i}],,}" == "ants" ]]; then
-    echo ">>>Running ANTs Brain Extraction"
-    DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}
-    ants_fcn="antsBrainExtraction.sh"
-    ants_fcn="${ants_fcn} -d 3"
-    for (( j=0; j<${NUM_IMAGE}; j++ )); do
-      ants_fcn="${ants_fcn} -a ${IMAGE[${j}]}"
-    done
-    ants_fcn="${ants_fcn} -e ${INC_TEMPLATE}/T_template0.nii.gz"
-    ants_fcn="${ants_fcn} -m ${INC_TEMPLATE}/T_template0_BrainCerebellumProbabilityMask.nii.gz"
-    ants_fcn="${ants_fcn} -f ${INC_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
-    ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/ants-bex_"
-    eval ${ants_fcn}
-    
-    CopyImageHeaderInformation ${IMAGE[${j}]} \
-      ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
-      ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz 1 1 1
-    mv ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
-      ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
-    rm ${DIR_SCRATCH}/ants-bex_BrainExtraction*
-
-    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
-      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
-      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
-      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
-      eval ${sf_fcn}
-      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
-    fi
-  fi
-
-  # run FSL's BET -------------------------------------------------------------
-  if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
-    echo ">>>Running FSL's BET"
-    fsl_fcn="bet ${IMAGE[0]}"
-    fsl_fcn="${fsl_fcn} ${DIR_SCRATCH}/fsl_bet.nii.gz"
-    if [[ ${NUM_IMAGE} > 1 ]]; then
-      fsl_fcn="${fsl_fcn} -A2 ${IMAGE[0]}"
-    fi
-    fsl_fcn="${fsl_fcn} -m -R"
-    eval ${fsl_fcn}
-    mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz \
-      ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
-    rm ${DIR_SCRATCH}/fsl*
-    
-    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
-      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
-      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
-      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
-      eval ${sf_fcn}
-      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
-    fi
-  fi
-
-  if [[ "${METHOD[${i}],,}" == "fsurf" ]] || [[ "${METHOD[${i}],,}" == "freesurfer" ]] || [[ "${METHOD[${i}],,}" == "samseg" ]]; then
-    echo ">>>Running Freesurfer's SAMSEG"
-    mkdir -p ${DIR_SCRATCH}/samseg
-    samseg_fcn="run_samseg --input"
-    for (( j=0; j<${NUM_IMAGE}; j++ )); do
-      mri_convert ${IMAGE[${j}]} ${DIR_SCRATCH}/image${j}.mgz
-      samseg_fcn="${samseg_fcn} ${DIR_SCRATCH}/image${j}.mgz"
-    done
-    samseg_fcn="${samseg_fcn} --output ${DIR_SCRATCH}/samseg"
-    eval ${samseg_fcn}
-    mri_extract_label ${DIR_SCRATCH}/samseg/seg.mgz 0 4 24 43 165 258 259 ${DIR_SCRATCH}/samseg/nonbrain.mgz
-    mri_convert ${DIR_SCRATCH}/samseg/nonbrain.mgz ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
-    mri_convert ${DIR_SCRATCH}/samseg/seg.mgz ${DIR_SCRATCH}/samseg/brain.nii.gz
-    fslmaths ${DIR_SCRATCH}/samseg/nonbrain.nii.gz -binv ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
-    fslmaths ${DIR_SCRATCH}/samseg/brain.nii.gz -bin -mas ${DIR_SCRATCH}/samseg/nonbrain.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
-
-    if [[ "${SPATIAL_FILTER}" != "NULL" ]]; then
-      echo ">>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"
-      sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
-      sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz"
-      sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
-      eval ${sf_fcn}
-      fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
-    fi
-  fi
-done
-
-# do majority vote mask if multiple used
-if [[ ${NUM_METHOD} > 1 ]]; then
-  echo ">>>Running Majority Vote Function"
-  majVote_fcn="ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz"
-  majVote_fcn="${majVote_fcn} MajorityVoting"
-  for (( i=0; i<${NUM_METHOD}; i++ )); do
-    if [[ "${METHOD[${i}],,}" == "afni" ]] || [[ "${METHOD[${i}],,}" == "3dskullstrip" ]]; then
-      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz"
-    fi
-    if [[ "${METHOD[${i}],,}" == "ants" ]]; then
-      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz"
-    fi
-    if [[ "${METHOD[${i}],,}" == "fsl" ]] || [[ "${METHOD[${i}],,}" == "bet" ]] || [[ "${METHOD[${i}],,}" == "bet2" ]]; then
-      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz"
-    fi
-    if [[ "${METHOD[${i}],,}" == "fsurf" ]] || [[ "${METHOD[${i}],,}" == "freesurfer" ]] || [[ "${METHOD[${i}],,}" == "samseg" ]]; then
-      majVote_fcn="${majVote_fcn} ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz"
-    fi
-  done
-  eval ${majVote_fcn}
+# run AFNI 3dSkullStrip -----------------------------------------------------
+if [[ "${METHOD,,}" == *"skullstrip"* ]] \
+|| [[ "${METHOD,,}" == *"afni"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running AFNI 3dSkullstrip"; fi
+  3dSkullStrip \
+    -input ${IMAGE[0]} \
+    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz \
+    -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz)
 fi
 
-# move files to appropriate locations
+# run AFNI 3dAutomask -----------------------------------------------------
+if [[ "${METHOD,,}" == *"automask"* ]] \
+|| [[ "${METHOD,,}" == *"afni"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running AFNI 3dAutomask"; fi
+  3dAutomask \
+    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz \
+    -clfrac ${AUTOMASK_CLIP} -q \
+    ${IMAGE[0]}
+  CopyImageHeaderInformation ${IMAGE[0]} \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz 1 1 1
+  MASK_LS+=(${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz)
+fi
+
+# run ANTs brain extraction -------------------------------------------------
+if [[ "${METHOD,,}" == *"ants"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running ANTs Brain Extraction"; fi
+  DIR_TEMPLATE=${INC_TEMPLATE}/${TEMPLATE}
+  ants_fcn="antsBrainExtraction.sh"
+  ants_fcn="${ants_fcn} -d 3"
+  for (( j=0; j<${#IMAGE[@]}; j++ )); do
+    ants_fcn="${ants_fcn} -a ${IMAGE[${j}]}"
+  done
+  ants_fcn="${ants_fcn} -e ${INC_TEMPLATE}/T_template0.nii.gz"
+  ants_fcn="${ants_fcn} -m ${INC_TEMPLATE}/T_template0_BrainCerebellumProbabilityMask.nii.gz"
+  ants_fcn="${ants_fcn} -f ${INC_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
+  ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/ants-bex_"
+  eval ${ants_fcn}
+  CopyImageHeaderInformation ${IMAGE[${j}]} \
+    ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
+    ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz 1 1 1
+  mv ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
+  rm ${DIR_SCRATCH}/ants-bex_BrainExtraction*
+  MASK_LS+=(${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz)
+fi
+
+# run FSL's BET -------------------------------------------------------------
+if [[ "${METHOD,,}" == *"fsl"* ]] || [[ "${METHOD,,}" == *"bet"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running FSL's BET"; fi
+  fsl_fcn="bet ${IMAGE[0]}"
+  fsl_fcn="${fsl_fcn} ${DIR_SCRATCH}/fsl_bet.nii.gz"
+  if [[ ${#IMAGE[@]} -gt 1 ]]; then
+    fsl_fcn="${fsl_fcn} -A2 ${IMAGE[0]}"
+  fi
+  fsl_fcn="${fsl_fcn} -m -R"
+  eval ${fsl_fcn}
+  mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz)
+  rm ${DIR_SCRATCH}/fsl*
+fi
+
+# SAMSEG labelling for brain mask ----------------------------------------------
+if [[ "${METHOD,,}" == *"fsurf"* ]] \
+|| [[ "${METHOD,,}" == *"freesurfer"* ]] \
+|| [[ "${METHOD,,}" == *"samseg"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running Freesurfer's SAMSEG"; fi
+  mkdir -p ${DIR_SCRATCH}/samseg
+  samseg_fcn="run_samseg --input"
+  for (( j=0; j<${#IMAGE[@]}; j++ )); do
+    mri_convert ${IMAGE[${j}]} ${DIR_SCRATCH}/image${j}.mgz
+    samseg_fcn="${samseg_fcn} ${DIR_SCRATCH}/image${j}.mgz"
+  done
+  samseg_fcn="${samseg_fcn} --output ${DIR_SCRATCH}/samseg"
+  eval ${samseg_fcn}
+  mri_extract_label ${DIR_SCRATCH}/samseg/seg.mgz \
+    0 4 24 43 165 258 259 ${DIR_SCRATCH}/samseg/nonbrain.mgz
+  mri_convert ${DIR_SCRATCH}/samseg/nonbrain.mgz ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
+  mri_convert ${DIR_SCRATCH}/samseg/seg.mgz ${DIR_SCRATCH}/samseg/brain.nii.gz
+  fslmaths ${DIR_SCRATCH}/samseg/nonbrain.nii.gz \
+    -binv ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
+  fslmaths ${DIR_SCRATCH}/samseg/brain.nii.gz \
+    -bin -mas ${DIR_SCRATCH}/samseg/nonbrain.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz)
+fi
+
+if [[ "${SPATIAL_FILTER,,}" != "null" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>>applying Spatial Filter ${SPATIAL_FILTER} ${FILTER_RADIUS}"; fi
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    sf_fcn="ImageMath 3 ${DIR_SCRATCH}/${MASK_LS[@]}"
+    sf_fcn="${sf_fcn} ${SPATIAL_FILTER}"
+    sf_fcn="${sf_fcn} ${DIR_SCRATCH}/${MASK_LS[@]}"
+    sf_fcn="${sf_fcn} ${FILTER_RADIUS}"
+    eval ${sf_fcn}
+  done
+fi
+
+# do majority vote mask if multiple used ---------------------------------------
+METHOD=(${METHOD//,/ })
+if [[ ${#METHOD[@]} > 1 ]]; then
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    TLS="${TLS},${DIR_SCRATCH}/${MASK_LS[${i}]}"
+  done
+
+  ## make Venn mask labelling overlapping regions in labels
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running making Venn-like overlap of masks"; fi
+  maskVenn --mask-ls ${TLS} --label "brain+VENN${SUFFIX}" --prefix ${PREFIX} --dir-save ${DIR_SCRATCH}
+  MASK_LS+=(${PREFIX}_mask-brain+VENN${SUFFIX}.nii.gz)
+
+  ## make MAJORITY VOTE for brain mask
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running majority vote of masks"; fi
+  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz MajorityVoting ${TLS//,/ }
+  MASK_LS+=(${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz)
+fi
+
+# move files to appropriate locations-------------------------------------------
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain* ${DIR_SAVE}
+
+echo ${MASK_LS[@]}
+# generate png outlines of brain masks -----------------------------------------
+if [[ "${MAKE_PNG}" == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>generating PNGs of results"; fi
+  if [[ -z ${DIR_PNG} ]]; then
+    DIR_PNG=${DIR_PROJECT}/derivatives/inc/png/sub-${PID}
+    if [[ -n ${SID} ]]; then DIR_PNG=${DIR_PNG}/ses-${SID}; fi
+  fi
+  mkdir -p ${DIR_PNG}
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    TNAME=${MASK_LS[${i}]%%.*}
+    png_fcn="make3Dpng --bg ${IMAGE[0]}"
+    if [[ "${TNAME}" == *"VENN" ]]; then
+      png_fcn="${png_fcn} --fg ${DIR_SAVE}/${MASK_LS[${i}]}"
+      png_fcn=${png_fcn}' --fg-color "rainbow"'
+      png_fcn=${png_fcn}' --fg-order "random"'
+    else
+      png_fcn="${png_fcn} --roi ${DIR_SAVE}/${MASK_LS[${i}]}"
+      png_fcn=${png_fcn}' --roi-color "#FF0000"'
+    fi
+    png_fcn=${png_fcn}' --layout "7:z;7:z;7:z;7:z;7:z"'
+    png_fcn=${png_fcn}' --offset "0,0,0"'
+    png_fcn="${png_fcn} --filename ${TNAME}"
+    png_fcn="${png_fcn} --dir-save ${DIR_PNG}"
+    eval ${png_fcn}
+  done
+fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

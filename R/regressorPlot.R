@@ -1,13 +1,11 @@
 args <- commandArgs(trailingOnly = TRUE)
-
-regressor.ls <- unlist(strsplit(args[1], split=","))
-if (length(args) > 1) {
-  for (i = 2:length(args)) {
-    if (grepl("docorr", args[i])) {
-      do.corr <- as.logical(unlist(strsplit(args[i], split="=")))
-    } else {
-      dir.save <- args[i]
-    }
+for (i in 1:length(args)) {
+  if (args[i] == "regressor") {
+    regressor.ls <- unlist(strsplit(args[i+1], split=","))
+  } else if (args[i] == "dir-save") {
+    dir.save <- args[i+1]
+  } else if (args[i] == "docorr") {
+    do.corr <- as.logical(args[i+1])
   }
 }
 
@@ -15,6 +13,7 @@ library(tools)
 library(ggplot2)
 library(viridis)
 library(reshape2)
+library(gridExtra)
 
 timbow <- colorRampPalette(c("#440154FF", "#482878FF", "#3E4A89FF", "#31688EFF",
   "#26828EFF", "#1F9E89FF", "#35B779FF", "#6DCD59FF", "#B4DE2CFF", "#FDE725FF",
@@ -46,11 +45,17 @@ if (file.exists(paste0(dir.save, "/", prefix, "_regressors.png"))) {
   suffix <- ""
 }
 
-
 plots <- list()
 plot.count <- numeric()
 for (i in 1:length(regressor.ls)) {
-  tf <- read.csv(regressor.ls[i], header=FALSE, sep="\t", stringsAsFactors = F)
+  delims <- c("\t",",",";"," ","")
+  delim.chk <- TRUE
+  iter <- 0
+  while (delim.chk) {
+    iter <- iter + 1
+    tf <- read.csv(regressor.ls[1], header=F, sep=delims[iter], as.is=TRUE, stringsAsFactors = FALSE)
+    if (ncol(tf) > 1) { delim.chk <- FALSE  }
+  }
   nTR <- nrow(tf)
   nVar <- ncol(tf)
   type.1d <- FALSE
@@ -75,8 +80,7 @@ for (i in 1:length(regressor.ls)) {
       geom_hline(yintercept = 0, linetype="dotted") +
       labs(title="Rigid Body Motion Correction", y=NULL, x=NULL) +
       theme_obj
-    tf <- tf[ ,-ncol(tf)]
-    
+    tf <- tf[ ,-ncol(tf)] 
   }
   if (grepl("moco[+]6[+]deriv[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 2)
@@ -98,8 +102,7 @@ for (i in 1:length(regressor.ls)) {
       geom_hline(yintercept = 0, linetype="dotted") +
       labs(title="Rigid Body Motion Correction - 1st derivative", y=NULL, x=NULL) +
       theme_obj
-    tf <- tf[ ,-ncol(tf)]
-    
+    tf <- tf[ ,-ncol(tf)] 
   }
   if (grepl("moco[+]6[+]quad[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 2)
@@ -121,8 +124,7 @@ for (i in 1:length(regressor.ls)) {
       geom_hline(yintercept = 0, linetype="dotted") +
       labs(title="Rigid Body Motion Correction - squared", y=NULL, x=NULL) +
       theme_obj
-    tf <- tf[ ,-ncol(tf)]
-    
+    tf <- tf[ ,-ncol(tf)] 
   }
   if (grepl("moco[+]6[+]quad[+]deriv[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 2)
@@ -145,7 +147,6 @@ for (i in 1:length(regressor.ls)) {
       labs(title="Rigid Body Motion Correction - squared, 1st derivative", y=NULL, x=NULL) +
       theme_obj
     tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("compcorr-anatomy[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -169,7 +170,6 @@ for (i in 1:length(regressor.ls)) {
                x=Inf, y=q[2]-2, vjust=1, hjust=1, size=3) +
       labs(title="CompCorr - Anatomical - scaled", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    
   }
   if (grepl("compcorr-temporal[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -194,8 +194,6 @@ for (i in 1:length(regressor.ls)) {
                x=Inf, y=q[2]*0.95, vjust=1, hjust=1, size=3) +
       labs(title="CompCorr - Temporal - scaled", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("global-anatomy[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -215,8 +213,6 @@ for (i in 1:length(regressor.ls)) {
                x=Inf, y=q[2]*0.95, vjust=1, hjust=1, size=3) +
       labs(title="Global Anatomical - scaled", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("global-temporal[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -236,8 +232,6 @@ for (i in 1:length(regressor.ls)) {
                x=Inf, y=q[2]-2, vjust=1, hjust=1, size=3) +
       labs(title="Global Temporal - scaled", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("AD[+]mm[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 2)
@@ -260,7 +254,6 @@ for (i in 1:length(regressor.ls)) {
       labs(title="Absolute Displacement (mm)", y=NULL, x=NULL) +
       theme_obj
     tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("RD[+]mm[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 2)
@@ -283,7 +276,6 @@ for (i in 1:length(regressor.ls)) {
       labs(title="Relative Displacement (mm)", y=NULL, x=NULL) +
       theme_obj
     tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("FD[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -295,8 +287,6 @@ for (i in 1:length(regressor.ls)) {
       geom_line(size=1) +
       labs(title="Framewise Displacement", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("RMS[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -308,8 +298,6 @@ for (i in 1:length(regressor.ls)) {
       geom_line(size=1) +
       labs(title="RMS", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("spike[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
@@ -321,8 +309,6 @@ for (i in 1:length(regressor.ls)) {
       geom_line(size=1) +
       labs(title="Spike", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (grepl("moco[+]12[.]1D", regressor.ls[i])) {
     type.1d <- TRUE
@@ -342,8 +328,6 @@ for (i in 1:length(regressor.ls)) {
       geom_hline(yintercept=0, linetype="dashed") +
       labs(title="Affine Motion Correction", subtitle="(scaled)", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right", legend.spacing = unit(0,"lines"))
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   if (type.1d == FALSE) {
     plot.count <- c(plot.count, 1)
@@ -358,8 +342,6 @@ for (i in 1:length(regressor.ls)) {
       geom_line(size=1) +
       labs(title="Affine Motion Correction", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="none")
-    tf <- tf[ ,-ncol(tf)]
-    
   }
   df <- cbind(df,tf)
 }
@@ -375,9 +357,11 @@ ggsave(filename = paste0(prefix, "_regressors", suffix, ".png"),
        path = dir.save,
        plot = rgr_plot,
        device = "png",
-       width = 7.5, height=sum(plot.count), dpi=320)
+       width = 7.5,
+       height=sum(plot.count),
+       dpi=320)
 
-if (do.cor) {
+if (do.corr) {
   df <- df[ ,-1]
   corMX = melt(cor(df))
   corMX$Var2 <- factor(corMX$Var2, levels=rev(levels(corMX$Var2)))
@@ -391,9 +375,10 @@ if (do.cor) {
           legend.text = element_text(size=8),
           plot.title = element_text(size=10))
   ggsave(filename = paste0(prefix, "_regressorsCorr", suffix, ".png"),
-         path = save.dir,
+         path = dir.save,
          plot = plot.corr,
          device = "png",
          width = 3.5, height = 3.5, dpi=320)
 }
+
 

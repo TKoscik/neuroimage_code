@@ -126,11 +126,10 @@ if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${TS_BOLD})
 fi
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIR_SUBSES}
 fi
-DIR_REGRESSORS=${DIR_SAVE}/regressors/${DIR_SUBSES}
 mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_REGRESSORS}
+mkdir -p ${DIR_SAVE}
 
 # ANTs 3 Tissue Regressors (aCompCorr) ----------------------------------------
 ImageMath 4 ${DIR_SCRATCH}/${PREFIX}_acompcorr.nii.gz \
@@ -143,8 +142,8 @@ cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_com
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
 
-mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_REGRESSORS}/
-mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_REGRESSORS}/
+mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_SAVE}/
+mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_SAVE}/
 
 #===============================================================================
 # End of Function
