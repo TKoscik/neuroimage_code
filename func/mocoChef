@@ -1,0 +1,433 @@
+#!/bin/bash -e
+#===============================================================================
+# Time series motion correction
+#  using standardized "recipes" in json format
+# Authors: Timothy R. Koscik, PhD
+# Date: 2021-03-11
+# CHANGELOG:
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    logBenchmark --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvdl --long recipe-json:,recipe-name:,\
+ts:,target:,\
+\
+dimensionality:,n-images:,\
+transform:,metric:,iterations:,smoothing-sigmas:,shrink-factors:,\
+random-seed:,\
+\
+use-estimate-learning-rate-once,use-fixed-reference-image,use-scales-estimator,\
+average-image,write-displacement,use-histogram-matching,\
+ants-verbose,\
+\
+keep-regressor,keep-xfm,keep-mean,keep-ts,keep-prepost,make-png,\
+dir-regressor:,dir-xfm:,dir-mean:,dir-ts:,dir-prepost:,dir-png:,dir-scratch:,\
+prefix:,suffix:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+HELP=false
+VERBOSE=false
+DRY_RUN=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -d | --dry-run) DRY_RUN=true ; shift ;;
+    --recipe-json) RECIPE_JSON="$2" ; shift 2 ;;
+    --recipe-name) RECIPE_NAME="$2" ; shift 2 ;;
+    --ts) TS="$2" ; shift 2 ;;
+    --target) TARGET="$2" ; shift 2 ;;
+    --dimensionality) DIMENSIONALITY="$2" ; shift 2 ;;
+    --n-images) N_IMAGES="$2" ; shift 2 ;;
+    --transform) TRANSFORM="$2" ; shift 2 ;;
+    --metric) METRIC="$2" ; shift 2 ;;
+    --iterations) ITERATIONS="$2" ; shift 2 ;;
+    --smoothing-sigmas) SMOOTHING_SIGMAS="$2" ; shift 2 ;;
+    --shrink-factors) SHRINK_FACTORS="$2" ; shift 2 ;;
+    --random-seed) RANDOM_SEED="$2" ; shift 2 ;;
+    --use-estimate-learning-rate-once) USE_ESTIMATE_LEARNING_RATE_ONCE="$2" ; shift 2 ;;
+    --use-fixed-reference-image) USE_FIXED_REFERENCE_IMAGE="$2" ; shift 2 ;;
+    --use-scales-estimator) USE_SCALES_ESTIMATOR="$2" ; shift 2 ;;
+    --average-image) AVERAGE_IMAGE="$2" ; shift 2 ;;
+    --write-displacement) WRITE_DISPLACEMENT="$2" ; shift 2 ;;
+    --use-histogram-matching) USE_HISTOGRAM_MATCHING="$2" ; shift 2 ;;
+    --ants-verbose) ANTS_VERBOSE="true" ; shift ;;
+    --keep-regressor) KEEP_REGRESSOR="$2" ; shift 2 ;;
+    --keep-xfm) KEEP_XFM="$2" ; shift 2 ;;
+    --keep-mean) KEEP_MEAN="$2" ; shift 2 ;;
+    --keep-ts) KEEP_TS="$2" ; shift 2 ;;
+    --keep-prepost) KEEP_PREPOST="$2" ; shift 2 ;;
+    --make-png) MAKE_PNG="$2" ; shift 2 ;;
+    --dir-regressor) DIR_REGRESSOR="$2" ; shift 2 ;;
+    --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
+    --dir-mean) DIR_MEAN="$2" ; shift 2 ;;
+    --dir-ts) DIR_TS="$2" ; shift 2 ;;
+    --dir-prepost) DIR_PREPOST="$2" ; shift 2 ;;
+    --dir-png) DIR_PNG="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --suffix) SUFFIX="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -v | --verbose           verbose output'
+  echo '  -d | --dry-run           setup variables and print to test function'
+  echo '  -l | --no-log            disable writing to output log'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+if [[ "${DRY_RUN}" == "true" ]]; then NO_LOG=true; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo "Running the INC MoCo Chef"; fi
+
+# locate recipe ----------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>locating MoCo recipe"; fi
+RECIPE_DEFAULT=${INC_LUT}/moco_recipes.json
+PARAMS_DEFAULT=($(jq -r '.moco_parameters | keys_unsorted[]?' < ${RECIPE_DEFAULT}))
+if [[ -n ${RECIPE_NAME} ]]; then
+  if [[ -z ${RECIPE_JSON} ]]; then
+    RECIPE_JSON=${RECIPE_DEFAULT}
+  else
+    echo "WARNING [INC ${FCN_NAME}] Operating without a MoCo recipe, default values may be insufficient, all variables should be specified"
+  fi
+fi
+if [[ ! -f ${RECIPE_JSON} ]]; then
+  echo "ERROR [INC ${FCN_NAME}] Recipe JSON not found. Aborting."
+  exit 1
+fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# read parameter names from recipe ---------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>reading MoCo parameters"; fi
+if [[ -n ${RECIPE_JSON} ]]; then
+  RECIPES=($(jq -r '.moco_recipe | keys_unsorted[]?' < ${RECIPE_JSON}))
+  if [[ " ${RECIPES[@]} " =~ " ${RECIPE_NAME} " ]]; then
+    PARAMS_RECIPE=($(jq -r '.moco_recipe.'${RECIPE_NAME}' | keys_unsorted[]?' < ${RECIPE_JSON}))
+  else
+    echo "ERROR [INC ${FCN_NAME}] Recipe not in JSON. Aborting."
+    exit 2
+  fi
+fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# parse inputs and recipe together ---------------------------------------------
+## variable specification order of priority
+## 1. direct input to function
+## 2. specified recipe
+## 3. default values
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>parsing MoCo recipe and loading defaults"; fi
+for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
+  unset VAR_NAME PARAM_STATE JQ_STR CHK_VAR
+  VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
+  VAR_NAME=${VAR_NAME//-/_}
+  eval 'if [[ -n ${'${VAR_NAME}'} ]]; then PARAM_STATE="directInput"; else PARAM_STATE="lookup"; fi'
+  if [[ "${PARAM_STATE}" == "lookup" ]] &&\
+     [[ " ${PARAMS_RECIPE[@]} " =~ " ${PARAMS_DEFAULT[${i}]} " ]]; then
+     JQ_STR="'.moco_recipe.${RECIPE_NAME}."'"'${PARAMS_DEFAULT[${i}]}'"'"[]?'"
+     eval ${VAR_NAME}'=($(jq -r '${JQ_STR}' < '${RECIPE_JSON}'))'
+  elif [[ "${PARAM_STATE}" == "lookup" ]]; then
+     JQ_STR="'.moco_parameters."'"'${PARAMS_DEFAULT[${i}]}'"'"[]?'"
+     eval ${VAR_NAME}'=($(jq -r '${JQ_STR}' < '${RECIPE_JSON}'))'
+  fi
+  eval 'if [[ "${'${VAR_NAME}'}" == "required" ]]; then CHK_VAR="missing"; fi'
+  if [[ "${CHK_VAR}" == "missing" ]]; then
+    echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
+    exit 3
+  fi
+done
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# parse basic TS information ---------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>parsing TS"; fi
+NTR=$(niiInfo -i ${TS} -f numTR)
+TR=$(niiInfo -i ${TS} -f TR)
+if [[ ${NTR} -lt 2 ]]; then
+  echo "ERROR [INC ${FCN_NAME}] Input time-series does not have more than one timepoint, aborting"
+  exit 4
+fi
+
+# Set up BIDs compliant variables and workspace --------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>gathering project and participant information"; fi
+DIR_PROJECT=$(getDir -i ${TS})
+PID=$(getField -i ${TS} -f sub)
+SID=$(getField -i ${TS} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# set outputs necessary --------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>setting default file prefixes"; fi
+if [[ "${PREFIX,,}" == "default" ]]; then PREFIX=$(getBidsBase -s -i ${TS}); fi
+PREFIX_NOPREP=$(modField -i ${PREFIX} -d -f prep)
+if [[ "${SUFFIX}" == "default" ]]; then
+  SUFFIX="${RECIPE_NAME}"
+elif [[ "${SUFFIX}" == "omit" ]]; then
+  SUFFIX=""
+fi
+PREFIX_MODPREP=$(modField -i ${PREFIX} -m -f prep -v "moco${SUFFIX}")
+
+if [[ "${KEEP_REGRESSOR,,}" == "true" ]]; then
+  if [[ "${DIR_REGRESSOR,,}" == "default" ]]; then
+    DIR_REGRESSOR=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}
+  fi
+  NAME_REGRESSOR="${DIR_REGRESSOR}/${PREFIX_NOPREP}_moco-${SUFFIX}.1D"
+  if [[ "${DRY_RUN}" == "false" ]]; then mkdir -p ${DIR_REGRESSOR}; fi
+fi
+if [[ "${KEEP_XFM,,}" == "true" ]]; then
+  if [[ "${DIR_XFM,,}" == "default" ]]; then
+    DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+  fi
+  if [[ "${DRY_RUN}" == "false" ]]; then mkdir -p ${DIR_XFM}; fi
+fi
+if [[ "${KEEP_MEAN,,}" == "true" ]]; then
+  if [[ "${DIR_MEAN,,}" == "default" ]]; then
+    DIR_MEAN=${DIR_PROJECT}/derivatives/inc/func/tstats
+  fi
+  NAME_MEAN="${DIR_MEAN}/${PREFIX_MODPREP}_mean.nii.gz"
+  if [[ "${DRY_RUN}" == "false" ]]; then mkdir -p ${DIR_MEAN}; fi
+fi
+if [[ "${KEEP_TS,,}" == "true" ]]; then
+  if [[ "${DIR_TS,,}" == "default" ]]; then
+    DIR_TS=${DIR_PROJECT}/derivatives/inc/func/moco${RECIPE_NAME}
+  fi
+  NAME_TS="${DIR_TS}/${PREFIX_MODPREP}_bold.nii.gz"
+  if [[ "${DRY_RUN}" == "false" ]]; then mkdir -p ${DIR_TS}; fi
+fi
+if [[ "${KEEP_PREPOST,,}" == "true" ]]; then
+  if [[ "${DIR_PREPOST,,}" == "default" ]]; then
+    DIR_PREPOST=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}
+  fi
+  NAME_PREPOST="${DIR_PREPOST}/${PREFIX_NOPREP}_moco-PrePost+${SUFFIX}.1D"
+  if [[ "${DRY_RUN}" == "false" ]]; then mkdir -p ${DIR_PREPOST}; fi
+fi
+if [[ "${MAKE_PNG,,}" == "true" ]]; then
+  if [[ "${DIR_PNG,,}" == "default" ]]; then
+    DIR_PNG=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}
+  fi
+  NAME_PNG="${DIR_TS}/${PREFIX_NOPREP}_moco-${SUFFIX}.png"
+  if [[ "${DRY_RUN}" == "false" ]]; then mkdir -p ${DIR_PNG}; fi
+fi
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# check mean, create if not provided -------------------------------------------
+if [[ "${TARGET}" == "default" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>making time-series mean for target image"; fi
+  TARGET=${DIR_SCRATCH}/TARGET.nii.gz
+  if [[ "${DRY_RUN}" == "false" ]]; then
+    antsMotionCorr -d 3 -a ${TS} -o ${TARGET}
+  fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+fi
+
+# show outputs (for dry-run and verbose) ---------------------------------------
+if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
+  echo ""
+  echo "PARAMETERS:---------------------------------------------------------------------"
+  for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
+    VAR_NAME=${PARAMS_DEFAULT[${i}]^^}
+    VAR_NAME=${VAR_NAME//-/_}
+    eval "echo ${VAR_NAME}="'${'${VAR_NAME}'[@]}'
+  done
+  echo ""
+  echo "OUTPUT:------------------------------------------------------------------"
+  if [[ "${KEEP_TS,,}" == "true" ]]; then echo -e "TS:\t${NAME_TS}"; fi
+  if [[ "${KEEP_MEAN,,}" == "true" ]]; then echo -e "MEAN:\t${NAME_MEAN}"; fi
+  if [[ "${KEEP_REGRESSOR,,}" == "true" ]]; then echo -e "REGRESSOR:\t${NAME_REGRESSOR}"; fi
+  if [[ "${KEEP_PREPOST,,}" == "true" ]]; then echo -e "PREPOST:\t${NAME_PREPOST}"; fi
+  if [[ "${MAKE_PNG,,}" == "true" ]]; then echo -e "PNG:\t${NAME_PNG}"; fi
+fi
+
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# write ANTs Motion Correction function ========================================
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>writing ANTs Motion Correction function"; fi
+antsMOCO="antsMotionCorr"
+antsMOCO="${antsMOCO} --dimensionality ${DIMENSIONALITY}"
+if [[ "${ANTS_VERBOSE,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --verbose"
+fi
+if [[ "${USE_ESTIMATE_LEARNING_RATE_ONCE,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --use-estimate-learning-rate-once"
+fi
+if [[ "${USE_FIXED_REFERENCE_IMAGE,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --useFixedReferenceImage 1"
+else
+  antsMOCO="${antsMOCO} --useFixedReferenceImage 0"
+fi
+if [[ "${USE_SCALES_ESTIMATOR,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --useScalesEstimator"
+fi
+if [[ "${WRITE_DISPLACEMENT,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --write-displacement"
+fi
+if [[ "${USE_HISTOGRAM_MATCHING,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --use-histogram-matching 1"
+else
+  antsMOCO="${antsMOCO} --use-histogram-matching 0"
+fi
+if [[ "${AVERAGE_IMAGE,,}" == "true" ]]; then
+  antsMOCO="${antsMOCO} --average-image ${TS}"
+fi
+antsMOCO="${antsMOCO} --random-seed ${RANDOM_SEED}"
+antsMOCO="${antsMOCO} --n-images ${NTR}"
+for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
+  antsMOCO="${antsMOCO} --transform ${TRANSFORM[${i}]}"
+  unset METRIC_STR
+  METRIC_STR=(${METRIC[${i}]//meanTimeSeries,timeSeries/ })
+  antsMOCO="${antsMOCO} --metric ${METRIC_STR[0]}${TARGET},${TS}${METRIC_STR[1]}"
+  antsMOCO="${antsMOCO} --iterations ${ITERATIONS[${i}]}"
+  antsMOCO="${antsMOCO} --smoothingSigmas ${SMOOTHING_SIGMAS[${i}]}"
+  antsMOCO="${antsMOCO} --shrinkFactors ${SHRINK_FACTORS[${i}]}"
+done
+antsMOCO="${antsMOCO} --output [${DIR_SCRATCH}/xfm_,${DIR_SCRATCH}/mocoTS.nii.gz,${DIR_SCRATCH}/mocoMean.nii.gz]"
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# show ANTs MOCO function ------------------------------------------------------
+if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
+  echo ""
+  echo "ANTs Motion Correction Call ----------------------------------------------------"
+  echo ""
+  echo "${antsMOCO}"
+  echo ""
+fi
+if [[ "${DRY_RUN}" == "true" ]]; then
+  exit 0
+fi
+
+# run ANTs MOCO function -------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>run ANTs motion correction"; fi
+eval ${antsMOCO}
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# reformat vectors -------------------------------------------------------------
+cat ${DIR_SCRACTH}/xfm_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/xfm_temp.csv
+cut -d, -f1-2 --complement ${DIR_SCRATCH}/xfm_temp.csv > ${DIR_SCRATCH}/regressor_moco-${SUFFIX}.1D
+
+##Calculate Displacement (if 6df in suffix)
+if [[ "${SUFFIX,,}" == "6df" ]]; then
+  regressorDisplacement --regressor ${DIR_SCRATCH}/regressor_moco-${SUFFIX}.1D
+fi
+
+# generate Pre & Post Timeseries -----------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>generate Pre and Post Timeseries"; fi
+3dAutomask -prefix ${DIR_SCRATCH}/mask-pre.nii.gz -clfrac 0.5 -q ${TARGET}
+fslmeants -i ${TS} -o ${DIR_SCRATCH}/meanTS-pre.csv --label=${DIR_SCRATCH}/mask-pre.nii.gz
+sed -i s/"  "/","/g ${DIR_SCRATCH}/meanTS-pre.csv
+sed -i s/",$"//g ${DIR_SCRATCH}/meanTS-pre.csv
+
+3dAutomask -prefix ${DIR_SCRATCH}/mask-post.nii.gz -clfrac 0.5 -q ${DIR_SCRATCH}/mocoMean.nii.gz
+fslmeants -i ${TS} -o ${DIR_SCRATCH}/meanTS-post.csv --label=${DIR_SCRATCH}/mask-post.nii.gz
+sed -i s/"  "/","/g ${DIR_SCRATCH}/meanTS-post.csv
+sed -i s/",$"//g ${DIR_SCRATCH}/meanTS-post.csv
+
+paste ${DIR_SCRATCH}/meanTS-pre.csv ${DIR_SCRATCH}/meanTS-pre.csv -d "," > ${DIR_SCRATCH}/meanTS_moco-PrePost.1D
+
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# make plots -------------------------------------------------------------------
+if [[ "${MAKE_PNG,,}" == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>making results PNG"; fi
+  REG_LS="${DIR_SCRATCH}/regressor_moco-${SUFFIX}.1D"
+  if [[ "${SUFFIX,,}" == "6df" ]]; then REG_LS="${REG_LS},${DIR_SCRATCH}/regressor_FD.1D"; fi
+  REG_LS="${REG_LS},${DIR_SCRATCH}/meanTS_moco-PrePost.1D"
+  regressorPlot --regressors ${REG_LS} --dir-save ${DIR_SCRATCH}
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+fi
+# move results (is this necessary?) --------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>move results"; fi
+
+if [[ "${KEEP_REGRESSOR,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/regressor_moco-${SUFFIX}.1D ${NAME_REGRESSOR}
+fi
+if [[ "${KEEP_XFM,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/xfm_*.nii.gz ${NAME_XFM}
+fi
+if [[ "${KEEP_MEAN,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/mocoMean.nii.gz ${NAME_MEAN}
+fi
+if [[ "${KEEP_TS,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/mocoTS.nii.gz ${NAME_TS}
+fi
+if [[ "${KEEP_PREPOST,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/meanTS_moco-PrePost.1D ${NAME_PREPOST}
+fi
+if [[ "${MAKE_PNG,,}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/regressor_regressors.png ${NAME_PNG}
+fi
+
+if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
+

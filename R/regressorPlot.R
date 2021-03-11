@@ -60,7 +60,7 @@ for (i in 1:length(regressor.ls)) {
   nVar <- ncol(tf)
   type.1d <- FALSE
   if (i == 1) { df <- data.frame(TR=1:nTR) }
-  if (grepl("moco[+]6[.]1D", regressor.ls[i])) {
+  if (grepl("moco[+]6[.]1D", regressor.ls[i]) || grepl("6df[.]1D", regressor.ls[i])) {
     plot.count <- c(plot.count, 2)
     type.1d <- TRUE
     colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
@@ -328,6 +328,24 @@ for (i in 1:length(regressor.ls)) {
       geom_hline(yintercept=0, linetype="dashed") +
       labs(title="Affine Motion Correction", subtitle="(scaled)", y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right", legend.spacing = unit(0,"lines"))
+  }
+  if (grepl("PrePost[.]1D", regressor.ls[i])) {
+    plot.count <- c(plot.count, 1)
+    type.1d <- TRUE
+    colnames(tf) <- c("PreMOCO", "PostMOCO")
+    tf$PreMOCO <- scale(tf$PreMOCO)
+    tf$PostMOCO <- scale(tf$PostMOCO)
+    tf$TR <- 1:nTR
+    pf <- melt(tf, id.vars="TR")
+    pf$variable <- factor(pf$variable, levels=c("PreMOCO", "PostMOCO"))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=variable)) +
+      theme_minimal() +
+      scale_color_manual(values = c("#cf00cf", "#00cf00")) +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      labs(title="Pre- and Post-Motion Correction", subtitle="(scaled)", y=NULL, x=NULL) +
+      theme_obj
+    tf <- tf[ ,-ncol(tf)]
   }
   if (type.1d == FALSE) {
     plot.count <- c(plot.count, 1)

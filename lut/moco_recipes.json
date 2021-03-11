@@ -1,15 +1,17 @@
 {
   "moco_parameters": {
+    "ts": ["required"],
+    "target": ["optional"],
     "dimensionality": [3],
     "use-estimate-learning-rate-once": ["true"],
     "n-images": ["default"],
-    "useFixedReferenceImage": ["true"],
-    "useScalesEstimator": ["true"],
+    "use-fixed-reference-image": ["true"],
+    "use-scales-estimator": ["true"],
     "transform": ["required"],
     "metric": ["required"],
     "iterations": ["required"],
-    "smoothingSigmas": ["required"],
-    "shrinkFactors": ["required"],
+    "smoothing-sigmas": ["required"],
+    "shrink-factors": ["required"],
     "average-image": ["optional"],
     "write-displacement": ["optional"],
     "use-histogram-matching": ["true"],
@@ -19,10 +21,16 @@
     "keep-xfm": ["false"],
     "keep-mean": ["true"],
     "keep-ts": ["true"],
+    "keep-prepost": ["true"],
+    "make-png": ["true"],
     "dir-regressor": ["default"],
     "dir-xfm": ["default"],
     "dir-mean": ["default"],
-    "dir-ts": ["default"]
+    "dir-ts": ["default"],
+    "dir-prepost": ["default"],
+    "dir-png": ["default"],
+    "prefix": ["default"],
+    "suffix": ["default"]
   },
   "moco_recipe": {
     "meanTS": {
@@ -30,32 +38,40 @@
       "transform": ["omit"],
       "metric": ["omit"],
       "iterations": ["omit"],
-      "smoothingSigmas": ["omit"],
-      "shrinkFactors": ["omit"],
+      "smoothing-sigmas": ["omit"],
+      "shrink-factors": ["omit"],
       "use-estimate-learning-rate-once": ["false"],
       "n-images": ["omit"],
-      "useFixedReferenceImage": ["false"],
-      "useScalesEstimator": ["false"],
-      "keep-regressor": ["true"],
+      "use-fixed-reference-image": ["false"],
+      "use-scales-estimator": ["false"],
+      "random-seed": [2196450088],
+      "keep-regressor": ["false"],
       "keep-xfm": ["false"],
       "keep-mean": ["true"],
-      "keep-ts": ["true"]
+      "keep-ts": ["false"],
+      "keep-prepost": ["false"],
+      "make-png": ["false"],
+      "suffix": ["omit"]
     },
     "rigid": {
       "transform": ["Rigid[0.1]"],
       "metric": ["MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"],
       "iterations": ["20x15x5x1"],
-      "smoothingSigmas": ["3x2x1x0"],
-      "shrinkFactors": ["4x3x2x1"],
-      "use-estimate-learning-rate-once": ["false"]
+      "smoothing-sigmas": ["3x2x1x0"],
+      "shrink-factors": ["4x3x2x1"],
+      "use-estimate-learning-rate-once": ["false"],
+      "random-seed": [3966866545],
+      "suffix": ["6df"]
     },
     "affine": {
       "transform": ["Affine[0.1]"],
       "metric": ["MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"],
       "iterations": ["20x15x5x1"],
-      "smoothingSigmas": ["3x2x1x0"],
-      "shrinkFactors": ["4x3x2x1"],
-      "use-estimate-learning-rate-once": ["false"]
+      "smoothing-sigmas": ["3x2x1x0"],
+      "shrink-factors": ["4x3x2x1"],
+      "use-estimate-learning-rate-once": ["false"],
+      "random-seed": [1266398783],
+      "suffix": ["12df"]
     },
     "syn": {
       "transform": ["Rigid[0.25]",
@@ -73,7 +89,8 @@
       "shrinkFactors": ["4x3x2x1",
                         "4x3x2x1",
                         "4x3x2x1"],
-      "keep-1d": ["false"]
+      "random-seed": [841169454],
+      "keep-regressor": ["false"],
     },
     "synHQ": {
       "transform": ["Rigid[0.1]",
@@ -85,13 +102,14 @@
       "iterations": ["100x100x100x100",
                      "100x100x100x100",
                      "100x70x50x20"],
-      "smoothingSigmas": ["3x2x1x0",
+      "smoothing-sigmas": ["3x2x1x0",
                           "3x2x1x0",
                           "3x2x1x0"],
-      "shrinkFactors": ["4x3x2x1",
+      "shrink-factors": ["4x3x2x1",
                         "4x3x2x1",
                         "4x3x2x1"],
-      "keep-1d": ["false"]
+      "random-seed": [1275018474],
+      "keep-regressor": ["false"]
     }
   }
 }
