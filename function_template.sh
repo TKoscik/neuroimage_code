@@ -1,8 +1,9 @@
 #!/bin/bash -e
 #===============================================================================
-# Function Description
-# Authors: <<author names>>
-# Date: <<date>>
+# <<DESCRIPTION>>
+# Authors: <GIVENNAME> <FAMILYNAME>, 
+# Date: <date of initial commit>
+# CHANGELOG: <description of major changes to functionality>
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -32,37 +33,29 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} --hardware ${HARDWARE} --kernel ${KERNEL} \
-    --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} \
-    --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    logBenchmark --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
     if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
-      --pid ${PID} --sid ${SID} --hardware ${HARDWARE} --kernel ${KERNEL} \
-      --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} \
-      --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       if [[ -n "${SID}" ]]; then
-        logSession.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
-        --pid ${PID} --sid ${SID} --hardware ${HARDWARE} --kernel ${KERNEL} \
-        --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} --fcn-name ${FCN_NAME} \
-        --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
       fi
-    fi
-    if [[ "${FCN_NAME}" == *"QC"* ]]; then
-      logQC.sh --operator ${OPERATOR} --dir-project ${DIR_PROJECT} \
-      --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} --fcn-name ${FCN_NAME} \
-      --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
-      --notes ${NOTES}
     fi
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
-other-inputs:,template:,space:,\
-dir-save:,dir-scratch:,\
+OPTS=$(getopt -o hvkl --long prefix:,other:,dir.save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
-if [[ $? != 0 ]]; then
+if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
@@ -70,24 +63,20 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER_INPUTS=
-TEMPLATE=HCPICBM
-SPACE=1mm
+OTHER=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
+VERBOSE=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
-    -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other-inputs) OTHER_INPUTS="$2" ; shift 2 ;;
-    --template) TEMPLATE="$2" ; shift 2 ;;
-    --space) SPACE="$2" ; shift 2 ;;
+    --other) OTHER="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -101,19 +90,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --other-inputs <value>   other inputs necessary for function'
-  echo '  --template <value>       name of template to use (if necessary),'
-  echo '                           e.g., HCPICBM'
-  echo '  --space <value>          spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --prefix  <optional>     filename, without extension to use for file'
+  echo '  --other                  other inputs as needed'
+  echo '  --dir-save               location to save output'
+  echo '  --dir-scratch            location for temporary files'
   echo ''
   NO_LOG=true
   exit 0
@@ -126,29 +108,41 @@ fi
 DIR_PROJECT=$(getDir -i ${INPUT})
 PID=$(getField -i ${INPUT} -f sub)
 SID=$(getField -i ${INPUT} -f ses)
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX="sub-${PID}"
-  if [[ -n "${SID}" ]]; then
-    PREFIX="${PREFIX}_ses-${SID}"
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+
+if [[ -z ${PREFIX} ]]; then
+  PREFIX=$(getBidsBase -i ${TS})
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREFIX=$(modField -i ${PREFIX} -m -f prep -v "${PREP}+pad${PAD}")
+  else
+    PREFIX=$(modField -i ${PREFIX} -a -f prep -v "pad${PAD}")
   fi
 fi
 
-DIR_SUBSES="sub-${PID}"
-if [[ -n "${SID}" ]]; then
-  DIR_SUBSES="${DIR_SUBSES}_ses-${SID}"
-fi
-if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIR_SUBSES}
-fi
-mkdir -p ${DIR_SCRATCH}
-mkdir -p ${DIR_SAVE}
+## not sure if this works and will not always be applicable ----
+### may be easier to hard code the anat/func/dwi folders
+FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+FCN_TYPE=(${FCN_DIR//\// })
+## ----
 
-# <<body of function here>>
-# insert comments for important chunks
-# move files to appropriate locations
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}
+fi
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
+
+# body of function here --------------------------------------------------------
+## insert comments for important chunks
+## use dashes as above to separate chunks of code visually
+## move files to appropriate locations
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

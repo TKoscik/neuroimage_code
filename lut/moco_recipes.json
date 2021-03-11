@@ -1,0 +1,97 @@
+{
+  "moco_parameters": {
+    "dimensionality": [3],
+    "use-estimate-learning-rate-once": ["true"],
+    "n-images": ["default"],
+    "useFixedReferenceImage": ["true"],
+    "useScalesEstimator": ["true"],
+    "transform": ["required"],
+    "metric": ["required"],
+    "iterations": ["required"],
+    "smoothingSigmas": ["required"],
+    "shrinkFactors": ["required"],
+    "average-image": ["optional"],
+    "write-displacement": ["optional"],
+    "use-histogram-matching": ["true"],
+    "random-seed": [2736622191],
+    "ants-verbose": ["false"],
+    "keep-regressor": ["true"],
+    "keep-xfm": ["false"],
+    "keep-mean": ["true"],
+    "keep-ts": ["true"],
+    "dir-regressor": ["default"],
+    "dir-xfm": ["default"],
+    "dir-mean": ["default"],
+    "dir-ts": ["default"]
+  },
+  "moco_recipe": {
+    "meanTS": {
+      "average-image": ["required"],
+      "transform": ["omit"],
+      "metric": ["omit"],
+      "iterations": ["omit"],
+      "smoothingSigmas": ["omit"],
+      "shrinkFactors": ["omit"],
+      "use-estimate-learning-rate-once": ["false"],
+      "n-images": ["omit"],
+      "useFixedReferenceImage": ["false"],
+      "useScalesEstimator": ["false"],
+      "keep-regressor": ["true"],
+      "keep-xfm": ["false"],
+      "keep-mean": ["true"],
+      "keep-ts": ["true"]
+    },
+    "rigid": {
+      "transform": ["Rigid[0.1]"],
+      "metric": ["MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"],
+      "iterations": ["20x15x5x1"],
+      "smoothingSigmas": ["3x2x1x0"],
+      "shrinkFactors": ["4x3x2x1"],
+      "use-estimate-learning-rate-once": ["false"]
+    },
+    "affine": {
+      "transform": ["Affine[0.1]"],
+      "metric": ["MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"],
+      "iterations": ["20x15x5x1"],
+      "smoothingSigmas": ["3x2x1x0"],
+      "shrinkFactors": ["4x3x2x1"],
+      "use-estimate-learning-rate-once": ["false"]
+    },
+    "syn": {
+      "transform": ["Rigid[0.25]",
+                    "Affine[0.25]"
+                    "SyN[0.2,3,0]"],
+      "metric": ["MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"
+                 "MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"
+                 "MI[meanTimeSeries,timeSeries,1,32,Regular,0.2]"],
+      "iterations": ["20x15x5x1",
+                     "20x15x5x1",
+                     "20x15x5x1"],
+      "smoothingSigmas": ["3x2x1x0",
+                          "3x2x1x0",
+                          "3x2x1x0"],
+      "shrinkFactors": ["4x3x2x1",
+                        "4x3x2x1",
+                        "4x3x2x1"],
+      "keep-1d": ["false"]
+    },
+    "synHQ": {
+      "transform": ["Rigid[0.1]",
+                    "Affine[0.1]"
+                    "SyN[0.1,3,0]"],
+      "metric": ["MI[meanTimeSeries,timeSeries,1,32,Regular,0.3]"
+                 "MI[meanTimeSeries,timeSeries,1,32,Regular,0.3]"
+                 "MI[meanTimeSeries,timeSeries,1,32]"],
+      "iterations": ["100x100x100x100",
+                     "100x100x100x100",
+                     "100x70x50x20"],
+      "smoothingSigmas": ["3x2x1x0",
+                          "3x2x1x0",
+                          "3x2x1x0"],
+      "shrinkFactors": ["4x3x2x1",
+                        "4x3x2x1",
+                        "4x3x2x1"],
+      "keep-1d": ["false"]
+    }
+  }
+}
