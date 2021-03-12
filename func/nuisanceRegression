@@ -165,7 +165,7 @@ AFNI_CALL="${AFNI_CALL} -TR ${TR}"
 
 eval ${AFNI_CALL}
 
-mv ${DIR_SCRATCH}/resid.nii.gz ${DIR_SAVE}/${PREFIX}_bold.nii.gz
+mv ${DIR_SCRATCH}/resid.nii.gz ${DIR_SAVE}/${PREFIX}_resid.nii.gz
 
 #===============================================================================
 # End of Function

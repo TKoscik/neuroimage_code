@@ -83,7 +83,7 @@ BG_VOL=1
 BG_MASK=
 BG_MASK_VOL=1
 BG_THRESH=0,100
-BG_COLOR="#010101,#FFFFFF"
+BG_COLOR="#000000,#FFFFFF"
 BG_ORDER="normal"
 BG_CBAR="false"
 
@@ -120,7 +120,6 @@ COLOR_DECIMAL=2
 FONT=NimbusSans-Regular
 FONT_SIZE=24
 MAX_PIXELS=500
-
 
 KEEP_SLICE="false"
 KEEP_CBAR="false"
@@ -321,12 +320,13 @@ fi
 DIR_PROJECT=$(getDir -i ${BG})
 PID=$(getField -i ${BG} -f sub)
 SID=$(getField -i ${BG} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
 if [[ -z "${FILENAME}" ]]; then
   if [[ -n "${PID}" ]]; then
-    FILENAME="sub-${PID}"
-    if [[ -n "${SID}" ]]; then
-      FILENAME="${FILENAME}_ses-${SID}"
-    fi
+    FILENAME="${PIDSTR}"
   else
     FILENAME="overlay4D"
   fi
@@ -335,7 +335,7 @@ fi
 
 # set default save directory
 if [[ -n "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/overlay_png
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
@@ -394,7 +394,7 @@ FG_VOLS=($(niiInfo -i ${FG[0]} -f volumes))
 FG_TR=$(niiInfo -i ${FG[0]} -f tr)
 
 # get slice percentage --------------------------------------------------------
-if [[ -n ${SLICE} ]]; then
+if [[ -z ${SLICE} ]]; then
   unset COORDS
   if [[ -n ${SLICE_METHOD} ]]; then
     coord_fcn='COORDS=($(fslstats '
@@ -419,21 +419,21 @@ if [[ -n ${SLICE} ]]; then
     BBY=(${BBY//../ });
     BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/') #"#'#
     BBZ=(${BBZ//../ });
-    COORDS+=$(echo "scale=4; ((${BBX[0]}+${BBX[1]})/2)" | bc -l) #"#'#
-    COORDS+=$(echo "scale=4; ((${BBY[0]}+${BBY[1]})/2)" | bc -l) #"#'#
-    COORDS+=$(echo "scale=4; ((${BBZ[0]}+${BBZ[1]})/2)" | bc -l) #"#'#
+    COORDS+=$(ezMath -x "((${BBX[0]}+${BBX[1]})/2)" -d 4)
+    COORDS+=$(ezMath -x "((${BBY[0]}+${BBY[1]})/2)" -d 4)
+    COORDS+=$(ezMath -x "((${BBZ[0]}+${BBZ[1]})/2)" -d 4)
   fi
-  SLICE_PCT=$(echo "scale=4; ${COORDS[${PLANE_NUM}]}/${FG_DIMS[${PLANE_NUM}]}" | bc -l)
+  SLICE_PCT=$(ezMath -x "${COORDS[${PLANE_NUM}]}/${FG_DIMS[${PLANE_NUM}]}" -d 4)
 else
   if [[ ${SLICE} -lt 0 ]]; then
-    SLICE_PCT=$(echo "scale=4; sqrt(((${SLICE}/${PIXDIM[${PLANE_NUM}]})/${DIMS[${PLANE_NUM}]})^2)" | bc -l) #"#'#
+    SLICE_PCT=$(ezMath -x "sqrt(((${SLICE}/${PIXDIM[${PLANE_NUM}]})/${FG_DIMS[${PLANE_NUM}]})^2)" -d 4)
   elif [[ ${SLICE} -lt 1 ]]; then
     SLICE_PCT=${SLICE}
   elif [[ ${SLICE} -ge 1 ]]; then
-    SLICE_PCT=$(echo "scale=4; ${SLICE}/${DIMS[${PLANE_NUM}]}" | bc -l)
+    SLICE_PCT=$(ezMath -x "${SLICE}/${FG_DIMS[${PLANE_NUM}]}" -d 4)
   fi
 fi
-SLICE_NUM=$(echo "scale=0; ${SLICE_PCT}*${DIMS[${PLANE_NUM}]}" | bc -l)
+SLICE_NUM=$(ezMath -x "${SLICE_PCT}*${FG_DIMS[${PLANE_NUM}]}" -d 0)
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
@@ -524,15 +524,15 @@ fi
 # Calculate slices to plot =====================================================
 if [[ ${NV} -gt ${FG_VOLS} ]]; then
   TROW=$((${NROW} - 1))
-  LAYOUT[${TROW}]=$(echo "scale=0; ${LAYOUT[${TROW}]} - (${FG_VOLS} - ${NV})" | bc -l) #"#'#
+  LAYOUT[${TROW}]=$(ezMath -x "${LAYOUT[${TROW}]} - (${FG_VOLS} - ${NV})" -d 0)
   while [[ ${LAYOUT[${TROW}]} -lt 0 ]]; do
     UROW=$((${TROW} - 1))
-    LAYOUT[${UROW}]=$(echo "scale=0; ${LAYOUT[${UROW}]} + ${LAYOUT[${TROW}]}" | bc -l)
+    LAYOUT[${UROW}]=$(ezMath "${LAYOUT[${UROW}]} + ${LAYOUT[${TROW}]}" -d 0)
     NROW=${UROW}
   done
   NV=${FG_VOLS}
 fi
-STEP=$(echo "scale=4; ${FG_VOLS} / ${NV}" | bc -l)
+STEP=$(ezMath -x "${FG_VOLS} / ${NV}" -d 4)
 V=($(seq 1 ${STEP} ${FG_VOLS}))
 V=($(printf "%0.0f " ${V[@]}))
 
@@ -733,7 +733,7 @@ for (( i=0; i<${#FG[@]}; i++ )); do
       ${DIR_SCRATCH}/V${j}_FGMASK_${i}.png \
       ${DIR_SCRATCH}/V${j}.png
   done
-fi
+done
 
 # Add ROI ======================================================================
 if [[ -n ${ROI} ]]; then
@@ -776,9 +776,9 @@ fi
 # Add labels after FG and ROIs are composited
 if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
   if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-    LABEL_SLICE=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[${PLANE_NUM}]}/${PIXDIM[${PLANE_NUM}]}" | bc -l)
-    LABEL_SLICE=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_SLICE}-${SLICE_NUM}" | bc -l)
-    LABEL_SLICE=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_SLICE}*${PIXDIM[${PLANE_NUM}]}" | bc -l)
+    LABEL_SLICE=$(ezMath -x "${ORIGIN[${PLANE_NUM}]}/${PIXDIM[${PLANE_NUM}]}" -d ${LABEL_DECIMAL})
+    LABEL_SLICE=$(ezMath -x "${LABEL_SLICE}-${SLICE_NUM}" -d ${LABEL_DECIMAL})
+    LABEL_SLICE=$(ezMath -x "${LABEL_SLICE}*${PIXDIM[${PLANE_NUM}]}" -d ${LABEL_DECIMAL})
     LABEL_SLICE="${LABEL_SLICE}mm"
   else
     LABEL_SLICE=${SLICE_NUM}
@@ -793,7 +793,7 @@ for (( i=0; i<${NV}; i++ )); do
   if [[ "${LABEL_NO_TIME}" == "false" ]]; then
     LABEL_TIME=${V[${i}]}
     if [[ "${LABEL_USE_VOL}" == "false" ]]; then
-      LABEL_TIME=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_TIME}*${FG_TR}" | bc -l)
+      LABEL_TIME=$(ezMath -x "${LABEL_TIME}*${FG_TR}" -d ${LABEL_DECIMAL})
       LABEL_TIME="${LABEL_TIME} s"
     fi
     mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
