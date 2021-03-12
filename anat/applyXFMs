@@ -1,0 +1,163 @@
+#!/bin/bash -e
+#===============================================================================
+# Apply transforms
+# Authors: Timothy R. Koscik
+# Date: 2021-03-12
+# CHANGELOG: <description of major changes to functionality>
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${NO_LOG}" == "false" ]]; then
+    logBenchmark --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvl --long image:,xfm:,interpolation:,ref-image:,label-to:,\
+prefix:,dir.save:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+IMAGE=
+XFM=
+INTERPOLATION=
+REF_IMAGE=
+LABEL_TO=
+DIR_SAVE=
+HELP=false
+VERBOSE=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --xfm) XFM="$2" ; shift 2 ;;
+    --interpolation) INTERPOLATION="$2" ; shift 2 ;;
+    --ref-image) REF_IMAGE="$2" ; shift 2 ;;
+    --label-to) LABEL_TO="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix  <optional>     filename, without extension to use for file'
+  echo '  --dir-save               location to save output'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+IMAGE=(${IMAGE//;/ })
+XFM=(${XFM//;/ })
+INTERPOLATION=(${INTERPOLATION//;/ })
+if [[ -z ${TO} ]]; then TO=$(getSpace -i ${REF_IMAGE}); fi
+DIR_SAVE=(${DIR_SAVE//;/ })
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${IMAGE[0]})
+PID=$(getField -i ${IMAGE[0]} -f sub)
+SID=$(getField -i ${IMAGE[0]} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+
+## not sure if this works and will not always be applicable ----
+### may be easier to hard code the anat/func/dwi folders
+FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+FCN_TYPE=(${FCN_DIR//\// })
+## ----
+
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}
+fi
+mkdir -p ${DIR_SAVE}
+
+# apply transforms to all input images -----------------------------------------
+for (( i=0; i<${#IMAGE[@]}; i++ )); do
+  unset apply_xfm NVOL MOD
+  NVOL=$(niiInfo -i ${IMAGE[${i}]} -f volumes)
+  if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -s -i ${IMAGE[${i}]}); fi
+  MOD=$(getField -i ${IMAGE[${i}]} -f modality)  
+    
+  apply_xfm="antsApplyTransforms -d 3"
+  if [[ ${NVOL} -gt 1 ]]; then apply_xfm="${apply_xfm} -e 3"; fi
+  if [[ -n ${INTERPOLATION} ]]; then
+    if [[ "${IMAGE[${i}]}" == *"mask"* ]]; then
+      apply_xfm="${apply_xfm} -n GenericLabel"
+    elif [[ "${IMAGE[${i}]}" == *"label"* ]]; then
+      apply_xfm="${apply_xfm} -n MultiLabel"
+    else
+      apply_xfm="${apply_xfm} -n BSpline[3]"
+    fi
+  fi
+  apply_xfm="${apply_xfm} -i ${IMAGE[${i}]}"
+  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz"
+  for (( j=0; j<${#XFM[@]}; j++ )); do
+    apply_xfm="${apply_xfm} -t ${XFM[${j}]}"
+  done
+  apply_xfm="${apply_xfm} -r ${REF_IMAGE}
+  
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "IMAGE ${i}):"
+    echo ${apply_xfm}
+  fi
+  eval ${apply_xfm}
+done
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
+
