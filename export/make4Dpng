@@ -62,7 +62,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long \
 bg:,bg-volume:,bg-mask:,bg-mask-volume:,\
-bg-threshold:,bg-color:,bg-order:,bg-cbar,\
+bg-threshold:,bg-alpha:,bg-color:,bg-order:,bg-cbar,\
 fg:,fg-mask:,fg-mask-volume:,\
 fg-threshold:,fg-alpha:,fg-color:,fg-direction:,fg-cbar,\
 roi:,roi-volume:,roi-value:,roi-color:,roi-order:,roi-cbar,\
@@ -83,6 +83,7 @@ BG_VOL=1
 BG_MASK=
 BG_MASK_VOL=1
 BG_THRESH=0,100
+BG_ALPHA=0
 BG_COLOR="#000000,#FFFFFF"
 BG_ORDER="normal"
 BG_CBAR="false"
@@ -91,7 +92,7 @@ FG=
 FG_MASK=
 FG_MASK_VOL=1
 FG_THRESH=0,100
-FG_ALPHA=50
+FG_ALPHA=75
 FG_COLOR="timbow"
 FG_ORDER="normal"
 FG_CBAR="true"
@@ -126,17 +127,19 @@ KEEP_CBAR="false"
 FILENAME=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+VERBOSE="false"
 
 while true; do
   case "$1" in
     -h | --help) HELP="true" ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE="true" ; shift ;;
     -l | --no-log) NO_LOG="true" ; shift ;;
     --bg) BG="$2" ; shift 2 ;;
     --bg-volume) BG_VOL="$2" ; shift 2 ;;
     --bg-mask) BG_MASK="$2" ; shift 2 ;;
     --bg-mask-volume) BG_MASK_VOL="$2" ; shift 2 ;;
     --bg-threshold) BG_THRESH="$2" ; shift 2 ;;
+    --bg-alpha) BG_ALPHA="$2" ; shift 2 ;;
     --bg-color) BG_COLOR="$2" ; shift 2 ;;
     --bg-order) BG_ORDER="$2" ; shift 2 ;;
     --bg-cbar) BG_CBAR="true" ; shift ;;
@@ -334,13 +337,14 @@ if [[ -z "${FILENAME}" ]]; then
 fi
 
 # set default save directory
-if [[ -n "${DIR_SAVE}" ]]; then
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
 # parse parameters for FG and ROIs ---------------------------------------------
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> parse FG parameters"; fi
 FG=(${FG//;/ })
 FG_MASK=(${FG_MASK//;/ })
 FG_MASK_VOL=(${FG_MASK_VOL//;/ })
@@ -358,6 +362,7 @@ if [[ ${FG_N} -gt 1 ]]; then
 fi
 
 if [[ -z ${BG} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> use volume 1 of FG as background"; fi
   BG=${FG[0]}
   BG_VOL=1
   if [[ -n ${FG_MASK} ]]; then
@@ -366,12 +371,15 @@ if [[ -z ${BG} ]]; then
   fi
 fi
 
-ROI=(${ROI//;/ })
-ROI_VOLUME=(${ROI_VOLUME//;/ })
-ROI_VALUE=(${ROI_VALUE//;/ })
-ROI_COLOR=(${ROI_COLOR//;/ })
-ROI_ORDER=(${ROI_ORDER//;/ })
-ROI_CBAR=(${ROI_CBAR//;/ })
+if [[ -n ${ROI} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> parse ROI"; fi
+  ROI=(${ROI//;/ })
+  ROI_VOLUME=(${ROI_VOLUME//;/ })
+  ROI_VALUE=(${ROI_VALUE//;/ })
+  ROI_COLOR=(${ROI_COLOR//;/ })
+  ROI_ORDER=(${ROI_ORDER//;/ })
+  ROI_CBAR=(${ROI_CBAR//;/ })
+fi
 
 case ${PLANE,,} in
   x) PLANE_NUM=0 ;;
@@ -380,6 +388,7 @@ case ${PLANE,,} in
 esac
 
 # Get image information -------------------------------------------------------
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> read image properties from NIfTI headers"; fi
 unset BG_DIMS BG_PIXDIM BG_ORIGIN BG_ORIENT
 BG_DIMS=($(niiInfo -i ${BG} -f voxels))
 BG_PIXDIM=($(niiInfo -i ${BG} -f spacing))
@@ -394,6 +403,7 @@ FG_VOLS=($(niiInfo -i ${FG[0]} -f volumes))
 FG_TR=$(niiInfo -i ${FG[0]} -f tr)
 
 # get slice percentage --------------------------------------------------------
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> calculate slice location"; fi
 if [[ -z ${SLICE} ]]; then
   unset COORDS
   if [[ -n ${SLICE_METHOD} ]]; then
@@ -434,6 +444,7 @@ else
   fi
 fi
 SLICE_NUM=$(ezMath -x "${SLICE_PCT}*${FG_DIMS[${PLANE_NUM}]}" -d 0)
+BG_SLICE_NUM=$(ezMath -x "${SLICE_PCT}*${BG_DIMS[${PLANE_NUM}]}" -d 0)
 
 ## use mm only if image is in known standard space -----------------------------
 if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
@@ -449,18 +460,19 @@ if [[ "${LABEL_NO_SLICE}" == "false" ]] &&
     fi
   done
 fi
-if [[ "${VERBOSE}" == "1" ]]; then echo ${MSG}; fi
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ${MSG}; fi
 
 # Figure out number slices based on number of volumes in FG --------------------
 ## Assuming all images are in sync in 4D, e.g., timepoints, tensors, or statmaps
 ## are the same for each FG image
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> calculate image layout"; fi
 NV=0
 if [[ "${LAYOUT,,}" == *"x"* ]]; then
   TEMP_LAYOUT=(${LAYOUT//x/ })
   NV=$((${TEMP_LAYOUT[0]} * ${TEMP_LAYOUT[1]}))
   unset LAYOUT
-  for (( i=0; i<${TEMP_LAYOUT[1]}; i++ )); do
-    LAYOUT+=(${TEMP_LAYOUT[0]})
+  for (( i=0; i<${TEMP_LAYOUT[0]}; i++ )); do
+    LAYOUT+=(${TEMP_LAYOUT[1]})
   done
 else
   LAYOUT=(${LAYOUT//\;/ })
@@ -471,6 +483,7 @@ fi
 NROW=${#LAYOUT[@]}
 
 # select desired volume from multivolume images --------------------------------
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> select BG volume"; fi
 TV=$(niiInfo -i ${BG} -f vols)
 if [[ ${TV} -gt 1 ]]; then
   if [[ ${BG_VOL} > ${TV} ]]; then
@@ -484,6 +497,7 @@ if [[ ${TV} -gt 1 ]]; then
 fi
 
 if [[ -n ${BG_MASK} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> select BG_MASK volume"; fi
   TV=$(niiInfo -i ${BG_MASK} -f vols)
   if [[ ${TV} -gt 1 ]]; then
     if [[ ${BG_MASK_VOL} > ${TV} ]]; then
@@ -498,6 +512,7 @@ if [[ -n ${BG_MASK} ]]; then
 fi
 
 if [[ -n ${FG_MASK} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> select FG_MASK volume(s)"; fi
   for (( i=0; i<${FG_N}; i++ )); do
     TV=$(niiInfo -i ${FG_MASK[${i}]} -f vols)
     if [[ ${TV} -gt 1 ]]; then
@@ -514,6 +529,7 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> converting ROI labels to sequential values, single volume"; fi
   labelUnique --label ${ROI} --volume ${ROI_VOLUME} --value ${ROI_VALUE} \
   --dir-save ${DIR_SCRATCH} --prefix ROI
   ROI=${DIR_SCRATCH}/ROI.nii.gz
@@ -540,6 +556,7 @@ V=($(printf "%0.0f " ${V[@]}))
 # check if all images in same space --------------------------------------------
 FIELD_CHK="dim,pixdim,quatern_b,quatern_c,quatern_d,qoffset_x,qoffset_y,qoffset_z,srow_x,srow_y,srow_z"
 if [[ -n ${BG_MASK} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> check if BG_MASK in BG space, push if not"; fi
   unset SPACE_CHK
   SPACE_CHK=$(niiCompare -i ${BG} -j ${BG_MASK} -f ${FIELD_CHK})
   if [[ "${SPACE_CHK}" == "false" ]]; then
@@ -548,37 +565,21 @@ if [[ -n ${BG_MASK} ]]; then
     BG_MASK="${DIR_SCRATCH}/BG_mask.nii.gz"
   fi
 fi
-if [[ -n ${FG} ]]; then
-  for (( i=0; i<${#FG[@]}; i++ )); do
-    unset SPACE_CHK
-    SPACE_CHK=$(niiCompare -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
-    if [[ "${SPACE_CHK}" == "false" ]]; then
-      antsApplyTransforms -d 3 -e 3 -n Linear \
-        -i ${FG[${i}]} -o ${DIR_SCRATCH}/FG_${i}.nii.gz -r ${BG}
-      FG[${i}]="${DIR_SCRATCH}/FG_${i}.nii.gz"
-    fi
-  done
-fi
 if [[ -n ${FG_MASK} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> check if FG_MASK in FG space, push if not"; fi
   for (( i=0; i<${#FG_MASK[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(niiCompare -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(niiCompare -i ${FG[${I}]} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n GenericLabel \
-        -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${BG}
+        -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${FG[${i}]}
       FG_MASK[${i}]="${DIR_SCRATCH}/FG_mask-${i}.nii.gz"
     fi
   done
 fi
-if [[ -n ${ROI} ]]; then
-  unset SPACE_CHK
-  SPACE_CHK=$(niiCompare -i ${BG} -j ${ROI} -f ${FIELD_CHK})
-  if [[ "${SPACE_CHK}" == "false" ]]; then
-    antsApplyTransforms -d 3 -n MultiLabel -i ${ROI} -o ${ROI} -r ${BG}
-  fi
-fi
 
 # make panel background ========================================================
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate panel background"; fi
 RESIZE_STR="${MAX_PIXELS}x${MAX_PIXELS}"
 for (( i=0; i<${NV}; i++ )); do
   convert -size ${RESIZE_STR} canvas:${COLOR_PANEL} ${DIR_SCRATCH}/V${i}.png
@@ -586,16 +587,14 @@ done
 
 # Make Background ==============================================================
 ## generate color bar
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate BG color bar"; fi
 Rscript ${INC_R}/makeColors.R \
   "palette" ${BG_COLOR} "n" 200 \
   "order" ${BG_ORDER} "bg" ${COLOR_PANEL} \
   "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_BG"
-# make transparency color bar for binary masks
-Rscript ${INC_R}/makeColors.R \
-  "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
-  "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
 ### add labels to color bar
 if [[ "${BG_CBAR}" == "true" ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> add intensity labels to BG color bar"; fi
   text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
   eval ${text_fcn}
   convert -background "transparent" -fill ${COLOR_TEXT} \
@@ -614,9 +613,17 @@ if [[ "${BG_CBAR}" == "true" ]]; then
     ${DIR_SCRATCH}/LABEL_HI.png \
     ${DIR_SCRATCH}/CBAR_BG.png \
     ${DIR_SCRATCH}/CBAR_BG.png
+  convert ${DIR_SCRATCH}/CBAR_BG.png -resize ${RESIZE_STR} ${DIR_SCRATCH}/CBAR_BG.png
 fi
 
+# make transparency color bar for binary masks
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate pseudo color bar of mask transparencies"; fi
+Rscript ${INC_R}/makeColors.R \
+  "palette" "#000000,#FFFFFF" "n" 2 "no.png" \
+  "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_MASK"
+
 ## generate slice PNGs
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> calculate intensity BG limits"; fi
 HILO=(${BG_THRESH//,/ })
 if [[ -n ${BG_MASK} ]]; then
   LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
@@ -628,9 +635,12 @@ fi
 
 # if not specified make background mask based on image thresholds
 if [[ -z ${BG_MASK} ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> threshold BG to make BG MASK"; fi
   fslmaths ${BG} -thr ${LO} -bin ${DIR_SCRATCH}/BGMASK.nii.gz
   BG_MASK=${DIR_SCRATCH}/BGMASK.nii.gz
 fi
+
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate BG layers"; fi
 # make background slice
 slicer ${BG} \
   -u -l ${DIR_SCRATCH}/CBAR_BG.lut -i ${LO} ${HI} \
@@ -649,57 +659,63 @@ convert ${DIR_SCRATCH}/BGMASK.png \
   ${DIR_SCRATCH}/BGMASK.png
 
 # composite background on image for each slice
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> composite BG layers"; fi
 for (( i=0; i<${NV}; i++ )); do
-  composite ${DIR_SCRATCH}/BG.png \
-    ${DIR_SCRATCH}/V${i}.png \
-    ${DIR_SCRATCH}/BGMASK.png \
-    ${DIR_SCRATCH}/V${i}.png
+  composite ${DIR_SCRATCH}/BG.png ${DIR_SCRATCH}/V${i}.png ${DIR_SCRATCH}/BGMASK.png ${DIR_SCRATCH}/V${i}.png
 done
 
 # Add Foreground Overlays ======================================================
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate FG layers"; fi
 for (( i=0; i<${#FG[@]}; i++ )); do
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> split FG volumes into separate files"; fi
   fslsplit ${FG[${i}]} ${DIR_SCRATCH}/FG_${i}_ -t
   fslmaths ${FG[${i}]} -Tmax ${DIR_SCRATCH}/FG_${i}_tmax.nii.gz
   fslmaths ${FG[${i}]} -Tmin ${DIR_SCRATCH}/FG_${i}_tmin.nii.gz
 
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> calculate intensity limits"; fi
   unset HILO LO HI
   HILO=(${FG_THRESH[${i}]//,/ })
   if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
     LO=$(fslstats ${DIR_SCRATCH}/FG_${i}_tmin.nii.gz -p ${HILO[0]})
     HI=$(fslstats ${DIR_SCRATCH}/FG_${i}_tmax.nii.gz -p ${HILO[1]})
   else
+    fslmaths ${FG_MASK[${i}]} -bin ${DIR_SCRATCH}/FG_MASK_${i}.nii.gz
+    FG_MASK[${i}]=${DIR_SCRATCH}/FG_MASK_${i}.nii.gz
     LO=$(fslstats -K ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}_tmin.nii.gz -p ${HILO[0]})
     HI=$(fslstats -K ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}_tmax.nii.gz -p ${HILO[1]})
   fi
 
   ## generate color bar
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate FG color bar"; fi
   Rscript ${INC_R}/makeColors.R \
     "palette" ${FG_COLOR[${i}]} "n" 200 \
     "order" ${FG_ORDER[${i}]} "bg" ${COLOR_PANEL} \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_FG_${i}"
+
   ### add labels to color bar
-  if [[ "${FG_CBAR[${i}]}" == "true" ]]; then
-    text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
-    eval ${text_fcn}
-    convert -background "transparent" -fill ${COLOR_TEXT} \
-      -font ${FONT} -pointsize ${FONT_SIZE} \
-      caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
-    text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
-    eval ${text_fcn}
-    convert -background "transparent" -fill ${COLOR_TEXT} \
-      -font ${FONT} -pointsize ${FONT_SIZE} \
-      caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
-    composite -gravity SouthEast \
-      ${DIR_SCRATCH}/LABEL_LO.png \
-      ${DIR_SCRATCH}/CBAR_FG_${i}.png \
-      ${DIR_SCRATCH}/CBAR_FG_${i}.png
-    composite -gravity NorthEast \
-      ${DIR_SCRATCH}/LABEL_HI.png \
-      ${DIR_SCRATCH}/CBAR_FG_${i}.png \
-      ${DIR_SCRATCH}/CBAR_FG_${i}.png
-  fi
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> add FG color bar labels"; fi
+  text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${LO})'
+  eval ${text_fcn}
+  convert -background "transparent" -fill ${COLOR_TEXT} \
+    -font ${FONT} -pointsize ${FONT_SIZE} \
+    caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
+  text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
+  eval ${text_fcn}
+  convert -background "transparent" -fill ${COLOR_TEXT} \
+    -font ${FONT} -pointsize ${FONT_SIZE} \
+    caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
+  composite -gravity SouthEast \
+    ${DIR_SCRATCH}/LABEL_LO.png \
+    ${DIR_SCRATCH}/CBAR_FG_${i}.png \
+    ${DIR_SCRATCH}/CBAR_FG_${i}.png
+  composite -gravity NorthEast \
+    ${DIR_SCRATCH}/LABEL_HI.png \
+    ${DIR_SCRATCH}/CBAR_FG_${i}.png \
+    ${DIR_SCRATCH}/CBAR_FG_${i}.png
+  convert ${DIR_SCRATCH}/CBAR_FG_${i}.png -resize ${RESIZE_STR} ${DIR_SCRATCH}/CBAR_FG_${i}.png
 
   ## generate slice PNGs - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate FG layer and composite on BG"; fi
   for (( j=0; j<${NV}; j++ )); do
     SNUM=$(printf "%04.0f" ${V[${j}]})
     fslmaths ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz -thr ${LO} \
@@ -727,7 +743,7 @@ for (( i=0; i<${#FG[@]}; i++ )); do
       -resize ${RESIZE_STR} -gravity center \
       ${DIR_SCRATCH}/V${j}_FGMASK_${i}.png
     # set background transparency and overlay on background
-    composite -blend ${FG_ALPHA}x100% \
+    composite -dissolve ${FG_ALPHA}% \
       ${DIR_SCRATCH}/V${j}_FG_${i}.png \
       ${DIR_SCRATCH}/V${j}.png \
       ${DIR_SCRATCH}/V${j}_FGMASK_${i}.png \
@@ -740,14 +756,19 @@ if [[ -n ${ROI} ]]; then
   ## total number of ROIs
   ROI_N=$(fslstats ${ROI} -p 100)
   ## convert ROIs to outlines
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> convert ROI to outline"; fi
   labelOutline --label ${ROI} --prefix ROI_OUTLINE --dir-save ${DIR_SCRATCH}
   ## make ROI mask
   fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
   ## generate color bar
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> generate ROI color bar"; fi
   Rscript ${INC_R}/makeColors.R \
     "palette" ${ROI_COLOR} "n" ${ROI_N} \
     "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
     "dir.save" ${DIR_SCRATCH} "prefix" "CBAR_ROI"
+  convert ${DIR_SCRATCH}/CBAR_ROI.png -resize ${RESIZE_STR} ${DIR_SCRATCH}/CBAR_ROI.png
+
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> composite ROI outlines on BG"; fi
   for (( i=0; i<${NV}; i++ )); do
     ## get slices
     slicer ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz \
@@ -775,36 +796,40 @@ fi
 
 # Add labels after FG and ROIs are composited
 if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> add slice labels"; fi
   if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-    LABEL_SLICE=$(ezMath -x "${ORIGIN[${PLANE_NUM}]}/${PIXDIM[${PLANE_NUM}]}" -d ${LABEL_DECIMAL})
-    LABEL_SLICE=$(ezMath -x "${LABEL_SLICE}-${SLICE_NUM}" -d ${LABEL_DECIMAL})
-    LABEL_SLICE=$(ezMath -x "${LABEL_SLICE}*${PIXDIM[${PLANE_NUM}]}" -d ${LABEL_DECIMAL})
-    LABEL_SLICE="${LABEL_SLICE}mm"
+    LABEL_SLICE=$(ezMath -x "${BG_ORIGIN[${PLANE_NUM}]}/${BG_PIXDIM[${PLANE_NUM}]}" -d ${LABEL_DECIMAL})
+    LABEL_SLICE=$(ezMath -x "${LABEL_SLICE}-${BG_SLICE_NUM}" -d ${LABEL_DECIMAL})
+    LABEL_SLICE=$(ezMath -x "${LABEL_SLICE}*${BG_PIXDIM[${PLANE_NUM}]}" -d ${LABEL_DECIMAL})
+    LABEL_SLICE="${LABEL_SLICE} mm"
   else
     LABEL_SLICE=${SLICE_NUM}
   fi
   LABEL_SLICE="${PLANE,,}=${LABEL_SLICE}"
   mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+    -fill "${COLOR_TEXT}" -undercolor "transparent" \
     -gravity NorthWest -annotate +10+10 "${LABEL_SLICE}" \
     ${DIR_SCRATCH}/V0.png
 fi
-for (( i=0; i<${NV}; i++ )); do
-  if [[ "${LABEL_NO_TIME}" == "false" ]]; then
+
+if [[ "${LABEL_NO_TIME}" == "false" ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> add time labels"; fi
+  for (( i=0; i<${NV}; i++ )); do
     LABEL_TIME=${V[${i}]}
     if [[ "${LABEL_USE_VOL}" == "false" ]]; then
       LABEL_TIME=$(ezMath -x "${LABEL_TIME}*${FG_TR}" -d ${LABEL_DECIMAL})
       LABEL_TIME="${LABEL_TIME} s"
     fi
     mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
-      -gravity South -annotate +10+10 "${LABEL_TIME}" \
+      -fill "${COLOR_TEXT}" -undercolor "transparent" \
+      -gravity South -annotate +0+0 "${LABEL_TIME}" \
       ${DIR_SCRATCH}/V${i}.png
-  fi
-done
-
+  done
+fi
+ 
 # merge PNGs according to prescribed layout ====================================
 # add laterality label if desired ----------------------------------------------
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> combine slice images into montage"; fi
 COUNT=0
 for (( i=0; i<${NROW}; i++ )); do
   montage_fcn="montage"
@@ -860,7 +885,8 @@ if [[ -n ${ROI} ]]; then
   done
 fi
 
-if [[ ${#CBAR_LS[@]} -gt 0 ]]; then  
+if [[ ${#CBAR_LS[@]} -gt 0 ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> add color bars"; fi  
   montage_fcn="montage ${DIR_SCRATCH}/image_col.png"
   for (( i=0; i<${#CBAR_LS[@]}; i++ )); do
     montage_fcn="${montage_fcn} ${CBAR_LS[${i}]}"
@@ -876,15 +902,17 @@ else
 fi
 
 if [[ "${LABEL_NO_LR}" == "false" ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> add L/R labels"; fi
   TTXT="L"
   if [[ "${ORIENT,,}" == *"r"* ]]; then TTXT="R"; fi
   mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+    -fill "${COLOR_TEXT}" -undercolor "transparent" \
     -gravity SouthWest -annotate +10+10 "${TTXT}" \
     ${DIR_SCRATCH}/${FILENAME}.png
 fi
 
 # move final png file
+if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> save output image"; fi
 mv ${DIR_SCRATCH}/${FILENAME}.png ${DIR_SAVE}/
 
 # move optional outputs, slices and color bars
