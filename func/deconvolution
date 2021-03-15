@@ -1,0 +1,295 @@
+#!/bin/bash -e
+#===============================================================================
+# Deconvolution
+# Authors: Lauren Hopkins
+# Date: 2021-03-10
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(unname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
+    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvkln --long prefix:,\
+ts_bold:,mask:,polort:,goforit:,\
+stim_times:,ortvec,rmodel:,stim_times_im,x1d_stop,\
+fitts:,errts:,fout:,rout:,tout:,bucket:,jobs,automask,\
+dir-save:,dir-scratch:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+TS_BOLD=
+MASK=NULL
+AUTOMASK=false
+POLORT=A
+GOFORIT=0
+STIM_TIMES=
+ORTVEC=NULL
+RMODEL=
+STIM_TIMES_IM=true
+X1D_STOP=false
+FITTS=true
+ERRTS=true
+FOUT=true
+ROUT=true
+TOUT=true
+BUCKET=true
+JOBS=1
+DIR_SAVE=
+DIR_SCRATCH=${DIR_TMP}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=0
+KEEP=false
+
+
+## QUESTION FOR TIM - the way I have it setup now, fitts and errts get created automatically
+## as do various stat outputs (TOUT, ROUT, FOUT, BUCKET).
+## I have a FITTS variable (and the rest) defaulting to `true` so I can do either:
+# 1) Set FITTS default to false
+# 2) Make the flag NOFITTS for if they don't want it.
+# 3) Have them use the flag with a boolean (e.g. --fitts false)
+## Which do you prefer?
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --ts_bold) TS_BOLD="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
+    --polort) POLORT="$2" ; shift 2 ;;
+    --goforit) GOFORIT="$2" ; shift 2 ;;
+    --stim_times) STIM_TIMES="$2" ; shift 2 ;;
+    --ortvec) ORTVEC="$2" ; shift 2 ;;
+    --rmodel) RMODEL="$2" ; shift 2 ;;
+    --stim_times_im) STIM_TIMES_IM="$2" ; shift 2 ;;
+    --fitts) FITTS="$2" ; shift ;;
+    --errts) ERRTS="$2" ; shift ;;
+    --fout) FOUT="$2" ; shift ;;
+    --rout) ROUT="$2" ; shift ;;
+    --tour) TOUT="$2" ; shift ;;
+    --bucket) BUCKET="$2" ; shift ;;
+    --jobs) JOBS="$2" ; shift ;;
+    --x1d_stop) X1D_STOP=true ; shift ;;
+    --automask) AUTOMASK=true ; shift ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo "Usage: ${FCN_NAME}"
+  echo '  -h | --help              display command help'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --ts_bold <value>        Required. Path to preprocessed BOLD 4D'
+  echo '                           timeseries. This often will be the output'
+  echo '                           file from the nuisance regression step.'
+  echo '  --mask <value>           Optional. Mask corresponding to BOLD_TS'
+  echo '  --polort <value>         Degree of polynomial corresponding to the'
+  echo '                           baseline model. Value must be numeric and'
+  echo '                           greater than 0. If you dont know what this'
+  echo '                           means, use the default;'
+  echo '                           default: A (automatic)'
+  echo '  --goforit <value>        Optional. Use if you are worried about'
+  echo '                           colinearity or problems in your design matrix'
+  echo '                           that will cause 3dDeconvolution to not run.'
+  echo '                           Value must be numeric and greater than 0.'
+  echo '  --ortvec <value>         Comma separated list of regressors of no'
+  echo '                           interest to be regressed from the data'
+  echo '  --stim_times <value>     Comma separated list of stimulus timing'
+  echo '                           files. Can be in .txt or .1D format'
+  echo '  --stim_times_im          Each stimulus time specified in the variable'
+  echo '                           `stim_times` will output an individual regressor'
+  echo '  --rmodel <value>         Comma separated list of ?????????????????????'
+  echo '                           files. Can be in .txt or .1D format'
+  echo '  --jobs <value>           Make that CPU go vroom-vroom'
+  echo '                           Value must be numeric, greater than 0 and less'
+  echo '                           than or equal to your number of CPUs.'
+  echo '                           default: 1'
+  echo '  --automask               Will automatically mask input data.'
+  echo '                           If a mask is also provided, it will default to that mask.'
+  echo '  --fitts                  Output full model time series fit for 4D data'
+  echo '  --errts                  Output residual error for full model fit of 4D data'
+  echo '  --fout                   Output f statistics for each stimulus'
+  echo '  --rout                   Output r^2 statistics for each stimulus'
+  echo '  --tout                   Output t statistics for each stimulus'
+  echo '  --bucket                 Output single file with various parameters'
+  echo '                           including full model stats and IRF coefficents'
+  echo '  --dir-save <value>       directory to save output, default varies by'
+  echo '                           function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(${DIR_INC}/bids/get_dir.sh -i ${TS_BOLD})
+PID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f sub)
+SID=$(${DIR_INC}/bids/get_field.sh -i ${TS_BOLD} -f ses)
+if [[ -z "${PREFIX}" ]]; then
+  PREFIX="sub-${PID}"
+  if [[ -n "${SID}" ]]; then
+    PREFIX="${PREFIX}_ses-${SID}"
+  fi
+fi
+if [[ ! -f "${TS_BOLD}" ]]; then
+  echo "The BOLD file does not exist. aborting."
+  exit 1
+fi
+if [ -z "${DIR_SAVE}" ]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/deconvolution
+fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
+
+# partial out nuisance variance -----------------------------------------------
+ORTS=(${ORTVEC//,/ })
+N_ORT=${#ORTS[@]}
+
+# partial out stim times ------------------------------------------------------
+STIMULI=(${STIM_TIMES//,/ })
+N_STIM=${#STIMULI[@]}
+
+
+
+
+
+# let's do that decon
+decon_fcn="3dDeconvolution"
+decon_fcn="${decon_fcn} -input ${BOLD_TS}"
+for (( i=0; i<${N_ORT}; i++ )); do
+  decon_fcn="${decon_fcn} -ortvec ${ORTS[${i}]}"
+done
+decon_fcn="${decon_fcn} -polort ${POLORT}"
+decon_fcn="${decon_fcn} -num_stimts ${N_STIM}"
+for (( i=0; i<${N_STIM}; i++ )); do
+  decon_fcn="${decon_fcn} -stim_times ${i} ${STIMULI[${i}]} ${RMODEL[${i}]}"
+done
+decon_fcn="${decon_fcn} -jobs ${JOBS}"
+
+# x1D_stop
+if [[ "${X1D_STOP}" == "true" ]]; then
+  decon_fcn="${decon_fcn} -x1D_stop"
+fi
+
+# mask options
+if [[ -e "${MASK}" ]]; then
+  decon_fcn="${decon_fcn} -mask ${MASK}"
+elif [[ "${AUTOMASK}" == "true" ]]; then
+  decon_fcn="${decon_fcn} -automask"
+elif [[ -n "${MASK}" ]] && [[ ! -e "${MASK}" ]]; then
+  echo "Mask ${MASK} does not exist."
+  echo "Either get the right filename or"
+  echo "try -automask if you want (will take longer)."
+fi
+
+# output stat options
+# F-stat
+if [[ "${FOUT}" == "true" ]]; then
+  decon_fcn="${decon_fcn} -fout"
+fi
+# T-stats
+if [[ "${TOUT}" == "true" ]]; then
+  decon_fcn="${decon_fcn} -tout"
+fi
+# R^2
+if [[ "${ROUT}" == "true" ]]; then
+  decon_fcn="${decon_fcn} -rout"
+fi
+# bucket stat output (i.e. all)
+if [[ "${BUCKET}" == "true" ]]; then
+  decon_fcn="${decon_fcn} -bucket ${PREFIX}_bucket.nii.gz"
+fi
+
+
+
+decon_fcn="${decon_fcn} -r [${FIXED[0]},${MOVING[0]},1]"
+decon_fcn="${decon_fcn} -t Rigid[0.2]"
+for (( i=0; i<${N}; i++ )); do
+  decon_fcn="${decon_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
+done
+if [[ "${MOVING_MASK}" != "NULL" ]]; then
+  decon_fcn="${decon_fcn} -x [NULL,NULL]"
+fi
+decon_fcn="${decon_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
+decon_fcn="${decon_fcn} -f 8x8x4x2x1"
+decon_fcn="${decon_fcn} -s 4x3x2x1x0vox"
+
+
+if [[ -n "${MASK}" -a -a ${MASK} ]]; then
+  decon_fcn="${decon_fcn} -mask ${MASK}"
+fi
+if [[ ${GOFORIT} -gt 0 ]]; then
+  decon_fcn="${decon_fcn} -GOFORIT ${GOFORIT}"
+fi
+
+
+  for (( i=0; i<${N}; i++ )); do
+    decon_fcn="${decon_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
+  done
+  if [[ "${MOVING_MASK}" != "NULL" ]]; then
+    decon_fcn="${decon_fcn} -x [NULL,NULL]"
+  fi
+  decon_fcn="${decon_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
+  decon_fcn="${decon_fcn} -f 8x8x4x2x1"
+  decon_fcn="${decon_fcn} -s 4x3x2x1x0vox"
