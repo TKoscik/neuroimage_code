@@ -138,9 +138,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts_bold <value>        Required. Path to preprocessed BOLD 4D'
-  echo '                           timeseries. This often will be the output'
-  echo '                           file from the nuisance regression step.'
-  echo '  --mask <value>           Optional. Mask corresponding to BOLD_TS'
+  echo '                           timeseries.'
+  echo '  --mask <value>           Optional. Mask corresponding to ts_bold'
   echo '  --polort <value>         Degree of polynomial corresponding to the'
   echo '                           baseline model. Value must be numeric and'
   echo '                           greater than 0. If you dont know what this'
@@ -157,7 +156,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --stim_times_im          Each stimulus time specified in the variable'
   echo '                           `stim_times` will output an individual regressor'
   echo '  --rmodel <value>         Comma separated list of ?????????????????????'
-  echo '                           files. Can be in .txt or .1D format'
   echo '  --jobs <value>           Make that CPU go vroom-vroom'
   echo '                           Value must be numeric, greater than 0 and less'
   echo '                           than or equal to your number of CPUs.'
@@ -210,20 +208,26 @@ N_ORT=${#ORTS[@]}
 STIMULI=(${STIM_TIMES//,/ })
 N_STIM=${#STIMULI[@]}
 
+# partial out stimulus models -------------------------------------------------
+RMODELS=(${RMODEL//,/ })
+N_MODEL=${#RMODELS[@]}
+
 
 
 
 
 # let's do that decon
+# Note - right now the names are shit and numeric only til I have more time
 decon_fcn="3dDeconvolution"
 decon_fcn="${decon_fcn} -input ${BOLD_TS}"
 for (( i=0; i<${N_ORT}; i++ )); do
-  decon_fcn="${decon_fcn} -ortvec ${ORTS[${i}]}"
+  decon_fcn="${decon_fcn} -ortvec ${ORTS[${i}]} ortvec_${i}"
 done
 decon_fcn="${decon_fcn} -polort ${POLORT}"
 decon_fcn="${decon_fcn} -num_stimts ${N_STIM}"
 for (( i=0; i<${N_STIM}; i++ )); do
   decon_fcn="${decon_fcn} -stim_times ${i} ${STIMULI[${i}]} ${RMODEL[${i}]}"
+  decon_fcn="${decon_fcn} -stim_label ${i} stimulus_${i}"
 done
 decon_fcn="${decon_fcn} -jobs ${JOBS}"
 
@@ -241,6 +245,9 @@ elif [[ -n "${MASK}" ]] && [[ ! -e "${MASK}" ]]; then
   echo "Mask ${MASK} does not exist."
   echo "Either get the right filename or"
   echo "try -automask if you want (will take longer)."
+fi
+if [[ ${GOFORIT} -gt 0 ]]; then
+  decon_fcn="${decon_fcn} -GOFORIT ${GOFORIT}"
 fi
 
 # output stat options
@@ -262,34 +269,7 @@ if [[ "${BUCKET}" == "true" ]]; then
 fi
 
 
-
-decon_fcn="${decon_fcn} -r [${FIXED[0]},${MOVING[0]},1]"
-decon_fcn="${decon_fcn} -t Rigid[0.2]"
-for (( i=0; i<${N}; i++ )); do
-  decon_fcn="${decon_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
-done
-if [[ "${MOVING_MASK}" != "NULL" ]]; then
-  decon_fcn="${decon_fcn} -x [NULL,NULL]"
-fi
-decon_fcn="${decon_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
-decon_fcn="${decon_fcn} -f 8x8x4x2x1"
-decon_fcn="${decon_fcn} -s 4x3x2x1x0vox"
-
-
-if [[ -n "${MASK}" -a -a ${MASK} ]]; then
-  decon_fcn="${decon_fcn} -mask ${MASK}"
-fi
-if [[ ${GOFORIT} -gt 0 ]]; then
-  decon_fcn="${decon_fcn} -GOFORIT ${GOFORIT}"
-fi
-
-
-  for (( i=0; i<${N}; i++ )); do
-    decon_fcn="${decon_fcn} -m Mattes[${FIXED[${i}]},${MOVING[${i}]},1,32,Regular,0.25]"
-  done
-  if [[ "${MOVING_MASK}" != "NULL" ]]; then
-    decon_fcn="${decon_fcn} -x [NULL,NULL]"
-  fi
-  decon_fcn="${decon_fcn} -c [2000x2000x2000x2000x2000,1e-6,10]"
-  decon_fcn="${decon_fcn} -f 8x8x4x2x1"
-  decon_fcn="${decon_fcn} -s 4x3x2x1x0vox"
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
