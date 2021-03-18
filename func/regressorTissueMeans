@@ -132,21 +132,22 @@ mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # ANTs 3 Tissue Regressors (aCompCorr) ----------------------------------------
-ImageMath 4 ${DIR_SCRATCH}/${PREFIX}_acompcorr.nii.gz \
+ImageMath 4 ${DIR_SCRATCH}/temp.nii.gz \
   ThreeTissueConfounds ${TS_BOLD} ${LABEL_TISSUE} ${VALUE_CSF} ${VALUE_WM}
 
-cat ${DIR_SCRATCH}/${PREFIX}_acompcorr_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}/temp.1D
-cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
-cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
+cat ${DIR_SCRATCH}/temp_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}/temp.1D
+cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global.1D
+cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D
 
-sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D
-sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_global.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D
 
-mv ${DIR_SCRATCH}/${PREFIX}_global-anatomy.1D ${DIR_SAVE}/
-mv ${DIR_SCRATCH}/${PREFIX}_compcorr-anatomy.1D ${DIR_SAVE}/
+mv ${DIR_SCRATCH}/${PREFIX}_global.1D ${DIR_SAVE}/
+mv ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D ${DIR_SAVE}/
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

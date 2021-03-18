@@ -144,12 +144,15 @@ TMASK=${DIR_SCRATCH}/mask_temp.nii.gz
 
 # loop over label Files
 for (( i=0; i<${N_LABEL}; i++ )); do
+  unset TVOL
   TVOL=(${VOLUME[${i}]//,/ })
   for (( j=0; j<${#TVOL[@]}; j++ )); do
+    unset VOL_START VOL_STOP TVOL_RANGE
     if [[ "${TVOL[${j}]}" == "all" ]]; then
       VOL_START=0
       VOL_STOP=$(niiInfo -i ${LABEL[${i}]} -f volumes)
     elif [[ "${TVOL[${j}]}" == *":"* ]]; then
+      unset TVOL_RANGE
       TVOL_RANGE=(${TVOL[${j}]//\:/ })
       VOL_START=$((${TVOL_RANGE[0]}-1))
       VOL_STOP=${TVOL_RANGE[1]}
@@ -158,19 +161,23 @@ for (( i=0; i<${N_LABEL}; i++ )); do
       VOL_STOP=${TVOL[${j}]}
     fi
     for (( k=${VOL_START}; k<${VOL_STOP}; k++ )); do
+      unset TVAL
       fslroi ${LABEL[${i}]} ${TLABEL} ${k} 1
       TVAL=(${VALUE[${i}]//,/ })
-      TNVAL=${#TVAL[@]}
-      for (( l=0; l<${TNVAL}; l++ )); do
+echo "TVAL: ${TVAL}"
+      for (( l=0; l<${#TNVAL[@]}; l++ )); do
+        unset MAX
         MAX=$(fslstats ${MERGED} -p 100)
+        echo ${MAX}
         if [[ "${TVAL[${l}]}" == "all" ]]; then
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
         elif [[ "${TVAL[${l}]}" == *":"* ]]; then
+          unset TRANGE
           TRANGE=(${TVAL[${l}]//\:/ })
-          fslmaths ${LABEL[${i}]} -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
+          fslmaths ${TLABEL} -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
         else
-          fslmaths ${LABEL[${i}]} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
+          fslmaths ${TLABEL} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
         fi
         fslmaths ${TLABEL} -bin ${TMASK}
         fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}

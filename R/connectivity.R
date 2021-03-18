@@ -7,12 +7,8 @@ args <- commandArgs(trailingOnly = TRUE)
 #  "dirsave" "directory to save output" 
 
 # load libraries ---------------------------------------------------------------
-library(ggplot2)
-library(reshape2)
-library(tools)
-library(infotheo)
-library(transport)
-library(dtw)
+suppressMessages(suppressWarnings(library(reshape2)))
+suppressMessages(suppressWarnings(library(tools)))
 
 # default values ---------------------------------------------------------------
 ts <- NULL
@@ -20,8 +16,6 @@ lut <- NULL
 lut.col <- "label"
 df.type <- "long"
 do.plot <- TRUE
-color.ls <- "#0000af,#ffffff,#af0000"
-r.lims <- "-1,0,1"
 cat.with <- NULL
 dir.save <- NULL
 var.ls <- character()
@@ -54,9 +48,7 @@ for (i in 1:length(args)) {
   if (args[i] %in% c("short", "short_df")) { df.type <- "short" }
   if (args[i] %in% c("mx", "matrix")) { df.type <- "matrix" }
   if (args[i] %in% c("no_plot")) { do.plot <- FALSE }
-  if (args[i] %in% c("plot_colors", "colors", "color", "plot_color")) { color.ls <- args[i+1] }
-  if (args[i] %in% c("plot_limit", "plot_limits", "limit", "limits", "lim", "lims")) { color.lims <- args[i+1] }
-  if (args[i] %in% c("c", "cat", "concat", "concatenate")) { cat.with <- args[i+1] }
+  if (args[i] %in% c("c", "cat", "concat", "concatenate", "cat.with", "catwith")) { cat.with <- args[i+1] }
   if (args[i] %in% c("dir_save", "save_dir", "dirsave", "savedir", "save")) { dir.save <- args[i+1] }
 }
 
@@ -97,28 +89,27 @@ blabs <- blabs[upper.tri(blabs)]
 pid <- unlist(strsplit(unlist(strsplit(basename(ts), "_"))[1], "sub-"))[2]
 sid <- unlist(strsplit(unlist(strsplit(basename(ts), "_"))[2], "ses-"))[2]
 prefix <- file_path_sans_ext(basename(ts))
+date_calc <- format(Sys.time(),"%Y-%m-%dT%H:%M:%S")
 
 if (df.type == "long") {
-  pf <- data.frame(participant_id=rep(pid, length(alabs)),
-                   session_id=rep(sid, length(alabs)),
-                   date_calculated=rep(format(Sys.time(),"%Y-%m-%dT%H:%M:%S"),length(alabs)),
-                   A=alabs, B=blabs,
-                   matrix(as.numeric(NA), nrow=length(alabs), ncol=length(var.ls)))
+  pf <- data.frame(
+    participant_id=rep(pid, length(alabs)),
+    session_id=rep(sid, length(alabs)),
+    date_calculated=rep(date_calc, length(alabs)),
+    A=alabs, B=blabs,
+    matrix(as.numeric(NA), nrow=length(alabs), ncol=length(var.ls)))
   colnames(pf)[6:ncol(pf)] <- var.ls
 } else if (df.type == "short") {
-  pf <- data.frame(participant_id=rep(pid, length(var.ls)),
-                   session_id=rep(sid, length(var.ls)),
-                   date_calculated=rep(format(Sys.time(), "%Y-%m-%dT%H:%M:%S"), length(var.ls)),
-                   measure = var.ls, 
-                   matrix(as.numeric(NA), ncol=length(alabs), nrow=length(var.ls)))
+  pf <- data.frame(
+    participant_id=rep(pid, length(var.ls)),
+    session_id=rep(sid, length(var.ls)),
+    date_calculated=rep(date_calc, length(var.ls)),
+    measure = var.ls, 
+    matrix(as.numeric(NA), ncol=length(alabs), nrow=length(var.ls)))
   colnames(pf)[5:ncol(pf)] <- paste(alabs, blabs, sep="_")
 }
 
-
-if (do.plot) {
-  color.ls <- unlist(strsplit(color.ls, ","))
-  color.lims <- as.numeric(unlist(strsplit(color.lims, ",")))
-}
+if (do.plot) { suppressMessages(suppressWarnings(library(ggplot2))) }
 
 # do PEARSON CORRELATION --------------------------------------------------------
 if ("pearsonCorrelation" %in% var.ls) {
@@ -201,6 +192,7 @@ if ("crossCorrelationAB" %in% var.ls) {
 # do TRANSFER ENTROPY --------------------------------------------------------
 ### NOT READY IS NOT FULLY IMPLEMENTED FOR BOTH DIRECTIONS
 if ("transferEntropy" %in% var.ls) {
+  suppressMessages(suppressWarnings(library(RTransferEntropy)))
   tx <- matrix(NA,nrow=ncol(df), ncol=ncol(df))
   for (i in 1:(ncol(df)-1)) {
     for (j in (1+1):ncol(df)) {
@@ -225,7 +217,7 @@ if ("transferEntropy" %in% var.ls) {
       theme_void() +
       coord_equal() +
       scale_x_discrete(position="top") +
-      scale_fill_gradient2(low="#0000af", mid="#ffffff", high="#af0000", limits=c(-1,1)) +
+      scale_fill_viridis_d() +
       geom_raster() +
       labs(title= "Pearson Correlation") +
       theme(legend.title=element_blank(),
@@ -251,11 +243,32 @@ if ("coherence" %in% var.ls) {
     write.table(tx, file=paste0(dir.save, "/", prefix, "_coherence.csv"),
                 sep=",", quote=F, row.names=T, col.names=T)
   }
+  if (do.plot) {
+    tp <- melt(tx)
+    tp$Var2 <- factor(tp$Var2, levels=rev(colnames(tx)))
+    tplot <- ggplot(tp, aes(x=Var1, y=Var2, fill=value)) +
+      theme_void() +
+      coord_equal() +
+      scale_x_discrete(position="top") +
+      scale_fill_viridis_c() +
+      geom_raster() +
+      labs(title= "Coherence") +
+      theme(legend.title=element_blank(),
+            legend.position="right")
+    if (!is.null(lut)) {
+      tplot <- tplot +
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
+              axis.text.y=element_text())
+    }
+    ggsave(filename=paste0(dir.save, "/", prefix, "_coherence.png"),
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
+  }
 }
 
 # do WAVELET COHERENCE, not implemented properly
 if ("waveletCoherence" %in% var.ls) {
-  tx <- WaveletComp::analyze.coherency(df)
+  suppressMessages(suppressWarnings(library(WaveletComp)))
+  tx <- analyze.coherency(df)
   if (df.type == "long") { pf[ ,"waveletCoherence"] <- tx[upper.tri(tx)] }
   if (df.type == "short") { pf["waveletCoherence", ] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
@@ -263,10 +276,31 @@ if ("waveletCoherence" %in% var.ls) {
     write.table(tx, file=paste0(dir.save, "/", prefix, "_waveletCoherence.csv"),
                 sep=",", quote=F, row.names=T, col.names=T)
   }
+  if (do.plot) {
+    tp <- melt(tx)
+    tp$Var2 <- factor(tp$Var2, levels=rev(colnames(tx)))
+    tplot <- ggplot(tp, aes(x=Var1, y=Var2, fill=value)) +
+      theme_void() +
+      coord_equal() +
+      scale_x_discrete(position="top") +
+      scale_fill_viridis_d() +
+      geom_raster() +
+      labs(title= "Wavelet Coherence") +
+      theme(legend.title=element_blank(),
+            legend.position="right")
+    if (!is.null(lut)) {
+      tplot <- tplot +
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
+              axis.text.y=element_text())
+    }
+    ggsave(filename=paste0(dir.save, "/", prefix, "_waveletCoherence.png"),
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
+  }
 }
 
 # do MUTUAL INFORMATION
 if ("mutualInformation" %in% var.ls) {
+  suppressMessages(suppressWarnings(library(infotheo)))
   tx <- mutinformation(discretize(df))
   if (df.type == "long") { pf[ ,"mutualInformation"] <- tx[upper.tri(tx)] }
   if (df.type == "short") { pf["mutualInformation", ] <- tx[upper.tri(tx)] }
@@ -293,7 +327,7 @@ if ("mutualInformation" %in% var.ls) {
               axis.text.y=element_text())
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_mutualInformation.png"),
-           plot=tplot, device="png", width=3, height=3, units="in", dpi=340)
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
 
@@ -331,7 +365,7 @@ if ("euclideanDistance" %in% var.ls) {
               axis.text.y=element_text())
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_euclideanDistance.png"),
-           plot=tplot, device="png", width=3, height=3, units="in", dpi=340)
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
 
@@ -363,12 +397,13 @@ if ("manhattanDistance" %in% var.ls) {
               axis.text.y=element_text())
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_manhattanDistance.png"),
-           plot=tplot, device="png", width=3, height=3, units="in", dpi=340)
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
 # do DYNAMIC-TIME WARPING
 if ("dynamicTimeWarping" %in% var.ls) {
-  tx <- dtw::dtwDist(t(df))
+  suppressMessages(suppressWarnings(library(dtw)))
+  tx <- dtwDist(t(df))
   if (df.type == "long") { pf[ ,"dynamicTimeWarping"] <- tx[upper.tri(tx)] }
   if (df.type == "short") { pf["dynamicTimeWarping", ] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
@@ -394,12 +429,13 @@ if ("dynamicTimeWarping" %in% var.ls) {
               axis.text.y=element_text())
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_dynamicTimeWarping.png"),
-           plot=tplot, device="png", width=3, height=3, units="in", dpi=340)
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
 
 # do EARTHMOVER'S DISTANCE
 if ("earthmoversDistance" %in% var.ls) {
+  suppressMessages(suppressWarnings(library(transport)))
   tx <- matrix(NA,nrow=ncol(df), ncol=ncol(df))
   for (i in 1:(ncol(df)-1)) {
     for (j in (1+1):ncol(df)) {
@@ -431,7 +467,7 @@ if ("earthmoversDistance" %in% var.ls) {
               axis.text.y=element_text())
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_earthmoversDistance.png"),
-           plot=tplot, device="png", width=3, height=3, units="in", dpi=340)
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
 
@@ -449,4 +485,5 @@ if (!is.null(cat.with)) {
     write.table(pf, file=cat.with, sep=",", append=T, quote=F, row.names=F, col.names=F)
   }
 }
+
 

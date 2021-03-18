@@ -151,7 +151,7 @@ while true; do
     --roi-value) ROI_VALUE="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
-    --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
+    --roi-cbar) ROI_CBAR="true" ; shift ;;
     --layout) LAYOUT="$2" ; shift 2 ;;
     --offset) OFFSET="$2" ; shift 2 ;;
     --limits) LIMITS="$2" ; shift 2 ;;
@@ -372,7 +372,7 @@ ROI_VALUE=(${ROI_VALUE//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
-
+echo ${ROI_VALUE}
 OFFSET=(${OFFSET//,/ })
 
 # Get image information -------------------------------------------------------
@@ -473,6 +473,7 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
+echo ${ROI_VALUE}
   labelUnique --label ${ROI} --volume ${ROI_VOL} --value ${ROI_VALUE} \
     --dir-save ${DIR_SCRATCH} --prefix ROI
   ROI=${DIR_SCRATCH}/ROI.nii.gz
@@ -653,35 +654,24 @@ if [[ -n ${BG_MASK} ]]; then
     BG_MASK="${DIR_SCRATCH}/BG_mask.nii.gz"
   fi
 fi
-if [[ -n ${FG} ]]; then
-  for (( i=0; i<${#FG[@]}; i++ )); do
-    unset SPACE_CHK
-    SPACE_CHK=$(niiCompare -i ${BG} -j ${FG[${i}]} -f ${FIELD_CHK})
-    if [[ "${SPACE_CHK}" == "false" ]]; then
-      antsApplyTransforms -d 3 -n Linear \
-        -i ${FG[${i}]} -o ${DIR_SCRATCH}/FG_${i}.nii.gz -r ${BG}
-      FG[${i}]="${DIR_SCRATCH}/FG_${i}.nii.gz"
-    fi
-  done
-fi
 if [[ -n ${FG_MASK} ]]; then
   for (( i=0; i<${#FG_MASK[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(niiCompare -i ${BG} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(niiCompare -i ${FG[${i}]} -j ${FG_MASK[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n GenericLabel \
-        -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${BG}
+        -i ${FG_MASK[${i}]} -o ${DIR_SCRATCH}/FG_mask-${i}.nii.gz -r ${FG[${i}]}
       FG_MASK[${i}]="${DIR_SCRATCH}/FG_mask-${i}.nii.gz"
     fi
   done
 fi
 if [[ -n ${ROI} ]]; then
-  for (( i=0; i<${#ROI[@]}; i++ )); do
+  for (( i=1; i<${#ROI[@]}; i++ )); do
     unset SPACE_CHK
-    SPACE_CHK=$(niiCompare -i ${BG} -j ${ROI[${i}]} -f ${FIELD_CHK})
+    SPACE_CHK=$(niiCompare -i ${ROI[0]} -j ${ROI[${i}]} -f ${FIELD_CHK})
     if [[ "${SPACE_CHK}" == "false" ]]; then
       antsApplyTransforms -d 3 -n MultiLabel \
-        -i ${ROI[${i}]} -o ${DIR_SCRATCH}/ROI_${i}.nii.gz -r ${BG}
+        -i ${ROI[${i}]} -o ${DIR_SCRATCH}/ROI_${i}.nii.gz -r ${ROI[0]}
       ROI[${i}]="${DIR_SCRATCH}/ROI_${i}.nii.gz"
     fi
   done
@@ -902,7 +892,7 @@ if [[ -n ${FG} ]]; then
     for (( j=0; j<${NX}; j++ )); do
       unset comp_fcn
       comp_fcn="composite"
-      comp_fcn="${comp_fcn} -blend ${FG_ALPHA}x${BG_ALPHA}%"
+      comp_fcn="${comp_fcn} -dissolve ${FG_ALPHA}%"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/X${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
@@ -914,7 +904,7 @@ if [[ -n ${FG} ]]; then
     for (( j=0; j<${NY}; j++ )); do
       unset comp_fcn
       comp_fcn="composite"
-      comp_fcn="${comp_fcn} -blend ${FG_ALPHA}x${BG_ALPHA}%"
+      comp_fcn="${comp_fcn} -dissolve ${FG_ALPHA}%"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Y${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
@@ -926,7 +916,7 @@ if [[ -n ${FG} ]]; then
     for (( j=0; j<${NZ}; j++ )); do
       unset comp_fcn
       comp_fcn="composite"
-      comp_fcn="${comp_fcn} -blend ${FG_ALPHA}x${BG_ALPHA}%"
+      comp_fcn="${comp_fcn} -dissolve ${FG_ALPHA}%"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}_FG_${i}.png"
       comp_fcn="${comp_fcn} ${DIR_SCRATCH}/Z${j}.png"
       if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
@@ -942,6 +932,9 @@ fi
 if [[ -n ${ROI} ]]; then
   ## total number of ROIs
   ROI_N=$(fslstats ${ROI} -p 100)
+  if [[ -f ${ROI} ]]; then echo ROI exists; fi
+  echo ${ROI}
+  echo ${ROI_N}
   ## convert ROIs to outlines
   labelOutline --label ${ROI} --prefix ROI_OUTLINE --dir-save ${DIR_SCRATCH}
   # make ROI mask
@@ -1026,7 +1019,7 @@ for (( i=0; i<${NX}; i++ )); do
     fi
     LABEL_X="x=${LABEL_X}"
     mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -fill "${COLOR_TEXT}" -undercolor "transparent" \
       -gravity NorthWest -annotate +10+10 "${LABEL_X}" \
       ${DIR_SCRATCH}/X${i}.png
   fi
@@ -1043,7 +1036,7 @@ for (( i=0; i<${NY}; i++ )); do
     fi
     LABEL_Y="y=${LABEL_Y}"
     mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -fill "${COLOR_TEXT}" -undercolor "transparent" \
       -gravity NorthWest -annotate +10+10 "${LABEL_Y}" \
       ${DIR_SCRATCH}/Y${i}.png
   fi
@@ -1060,7 +1053,7 @@ for (( i=0; i<${NX}; i++ )); do
     fi
     LABEL_Z="z=${LABEL_Z}"
     mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-      -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+      -fill "${COLOR_TEXT}" -undercolor "transparent" \
       -gravity NorthWest -annotate +10+10 "${LABEL_Z}" \
       ${DIR_SCRATCH}/Z${i}.png
   fi
@@ -1152,7 +1145,7 @@ if [[ ${#CBAR_LS[@]} -gt 0 ]]; then
   montage_fcn="${montage_fcn} -tile x1"
   montage_fcn="${montage_fcn} -geometry +0+0"
   montage_fcn="${montage_fcn} -gravity center"
-  montage_fcn=${montage_fcn}' -background "'${COLOR_PANEL}'"'
+  montage_fcn=${montage_fcn}' -background "transparent"'
   montage_fcn="${montage_fcn} ${DIR_SCRATCH}/${FILENAME}.png"
   eval ${montage_fcn}
 else
@@ -1166,7 +1159,7 @@ if [[ "${LABEL_NO_LR}" == "false" ]]; then
     TTXT="L"
   fi
   mogrify -font ${FONT} -pointsize ${FONT_SIZE} \
-    -fill "${COLOR_TEXT}" -undercolor "${COLOR_PANEL}" \
+    -fill "${COLOR_TEXT}" -undercolor "transparent" \
     -gravity SouthWest -annotate +10+10 "${TTXT}" \
     ${DIR_SCRATCH}/${FILENAME}.png
 fi
@@ -1195,4 +1188,5 @@ fi
 # End of Function
 #-------------------------------------------------------------------------------
 exit 0
+
 
