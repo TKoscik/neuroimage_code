@@ -368,7 +368,7 @@ eval ${antsMOCO}
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # reformat vectors -------------------------------------------------------------
-cat ${DIR_SCRACTH}/xfm_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/xfm_temp.csv
+cat ${DIR_SCRATCH}/xfm_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/xfm_temp.csv
 cut -d, -f1-2 --complement ${DIR_SCRATCH}/xfm_temp.csv > ${DIR_SCRATCH}/regressor_moco-${SUFFIX}.1D
 
 ##Calculate Displacement (if 6df in suffix)

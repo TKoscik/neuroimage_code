@@ -53,23 +53,23 @@ df[ ,1:3] <- (df[ ,1:3] * 180) / pi
 # calculate rotational distance specified - - - - - - - - - - - - - - - - - - - 
 df[ ,1:3] <- 2 * pi * radius * (df[ ,1:3] / 360)
 # write displacement in mm file - - - - - - - - - - - - - - - - - - - - - - - - 
-write.table(df, file=paste0(file.prefix, "_AD+mm.1D"),
+write.table(df, file=paste0(file.prefix, "_displacement+absolute+mm.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # calculate change in displacement between timepoints --------------------------
 for (i in 1:ncol(df)) { df[ ,i] <- c(0, diff(df[ ,i])) }
 # write relative displacement in mm file - - - - - - - - - - - - - - - - - - - -
-write.table(df, file=paste0(file.prefix, "_RD+mm.1D"),
+write.table(df, file=paste0(file.prefix, "_displacement+relative+mm.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # get framewise displacement ---------------------------------------------------
 FD <- rowSums(abs(df))
-write.table(FD, file=paste0(file.prefix, "_FD.1D"),
+write.table(FD, file=paste0(file.prefix, "_displacement-framewise.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # calculate RMS ----------------------------------------------------------------
 RMS <- sqrt(c(0,diff(FD))^2)
-write.table(RMS, file=paste0(file.prefix, "_RMS.1D"),
+write.table(RMS, file=paste0(file.prefix, "_displacement-RMS.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # calculate spikes -------------------------------------------------------------

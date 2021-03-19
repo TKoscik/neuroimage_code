@@ -53,14 +53,89 @@ for (i in 1:length(regressor.ls)) {
   iter <- 0
   while (delim.chk) {
     iter <- iter + 1
-    tf <- read.csv(regressor.ls[1], header=F, sep=delims[iter], as.is=TRUE, stringsAsFactors = FALSE)
+    tf <- read.csv(regressor.ls[i], header=F, sep=delims[iter], as.is=TRUE, stringsAsFactors = FALSE)
     if (ncol(tf) > 1) { delim.chk <- FALSE  }
   }
   nTR <- nrow(tf)
   nVar <- ncol(tf)
   type.1d <- FALSE
-  if (i == 1) { df <- data.frame(TR=1:nTR) }
-  if (grepl("moco[+]6[.]1D", regressor.ls[i]) || grepl("6df[.]1D", regressor.ls[i])) {
+  
+  cor.include <- TRUE
+  if (grepl("moco[+]6", regressor.ls[i]) || grepl("6df", regressor.ls[i])) {
+    ptitle <- "Rigid Motion Correction"
+    which.plot <- "plot6df"
+    cls <- timbow(5)[c(2,4,5)]
+  } else if (grepl("moco[+]12", regressor.ls[i]) || grepl("12df", regressor.ls[i])) {
+    ptitle <- "Affine Motion Correction"
+    which.plot <- "plotMx"
+    cnames <- paste("Affine", 1:nVar)
+    cls <- timbow(nVar)
+  } else if (grepl("tissueMeans", regressor.ls[i])) {
+    ptitle <- "Tissue Mean Signal (Z)"
+    which.plot <- "plotMx"
+    cnames <- c("CSF", "WM")
+    cls <- c("#c82c2c", "#2c2cc8")
+  } else if (grepl("compcorr[+]csf", regressor.ls[i])) {
+    ptitle <- "CompCorr - CSF (Z)"
+    which.plot <- "plotMx"
+    cnames <- paste("CSF", 1:nVar)
+    cls <- timbow(nVar)
+  } else if (grepl("compcorr[+]wm", regressor.ls[i])) {
+    ptitle <- "CompCorr - WM (Z)"
+    which.plot <- "plotMx"
+    cnames <- paste("WM", 1:nVar)
+    cls <- timbow(nVar)
+  } else if (grepl("compcorr[+]temporal", regressor.ls[i])) {
+    ptitle <- "CompCorr - Temporal (Z)"
+    which.plot <- "plotMx"
+    cnames <- paste("Temporal", 1:nVar)
+    cls <- timbow(nVar)
+  } else if (grepl("global", regressor.ls[i])) {
+    ptitle <- "Global Signal (Z)"
+    which.plot <- "plotVec"
+    cls <- "#000000"
+  } else if (grepl("displacement+absolute[+]mm", regressor.ls[i])) {
+    ptitle <- "Absolute Displacement (mm)"
+    which.plot <- "plot6df"
+    cls <- timbow(5)[c(2,4,5)]
+  } else if (grepl("displacement+relative[+]mm", regressor.ls[i])) {
+    ptitle <- "Relative Displacement (mm)"
+    which.plot <- "plot6df"
+    cls <- timbow(5)[c(2,4,5)]
+  } else if (grepl("displacement+framewise", regressor.ls[i])) {
+    ptitle <- "Framewise Displacement"
+    which.plot <- "plotVec"    
+    cls <- "#000000"
+  } else if (grepl("displacement+RMS", regressor.ls[i])) {
+    ptitle <- "Displacement Root Mean Squared"
+    which.plot <- "plotVec"
+    cls <- "#000000"
+  } else if (grepl("spike", regressor.ls[i])) {
+    ptitle <- "Spike"
+    which.plot <- "plotVec"
+    cls <- "#000000"
+  }  else if (grepl("ts+processing", regressor.ls[i])) {
+    ptitle <- "time-series Processing"
+    which.plot <- "plotMx"
+    cnames <- c("Raw","MOCO","Residual")
+    cls <- c("#000000", "#cf00cf","#00cf00")
+    corr.include <- FALSE
+  } else {
+    ptitle <- "Regressor"
+    which.plot <- "plot.mx"
+    cnames <- paste("Regressor", 1:nVar)
+    cls <- timbow(nVar)
+  }
+
+  if (grepl("quad[+]deriv", regressor.ls[i])) {
+    ptitle <- paste0(ptitle, " - Quadratic, Derivative")
+  } else if (grepl("quad", regressor.ls[i])) {
+    ptitle <- paste0(ptitle, " - Quadratic")
+  } else if (grepl("deriv", regressor.ls[i])) {
+    ptitle <- paste0(ptitle, " - Derivative")
+  }
+
+  if (which.plot == "plot6df") {
     plot.count <- c(plot.count, 2)
     type.1d <- TRUE
     colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
@@ -73,311 +148,53 @@ for (i in 1:length(regressor.ls)) {
                        levels=c("X", "Y", "Z"))
     plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
       theme_minimal() +
-      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
+      scale_color_manual(values = cls) +
       scale_x_continuous(expand=c(0,0)) +
       facet_grid(xfm ~ ., scales="free_y") +
       geom_line(size=1) +
       geom_hline(yintercept = 0, linetype="dotted") +
-      labs(title="Rigid Body Motion Correction", y=NULL, x=NULL) +
+      labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj
     tf <- tf[ ,-ncol(tf)] 
   }
-  if (grepl("moco[+]6[+]deriv[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 2)
+  if (which.plot == "plotVec") {
+    plot.count <- c(plot.count, 1)
     type.1d <- TRUE
-    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
-                      "Rotation:X", "Rotation:Y", "Rotation:Z")
-    tf$TR <- 1:nTR
-    pf <- melt(tf, id.vars="TR")
-    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
-                     levels=c("Translation", "Rotation"))
-    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
-                       levels=c("X", "Y", "Z"))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
+    pf <- data.frame(TR=1:nTR, value=scale(as.numeric(unlist(tf[,1]))))
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
       theme_minimal() +
-      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
       scale_x_continuous(expand=c(0,0)) +
-      facet_grid(xfm ~ ., scales="free_y") +
-      geom_line(size=1) +
-      geom_hline(yintercept = 0, linetype="dotted") +
-      labs(title="Rigid Body Motion Correction - 1st derivative", y=NULL, x=NULL) +
-      theme_obj
-    tf <- tf[ ,-ncol(tf)] 
+      geom_line(size=1, color=cls) +
+      labs(title=ptitle, y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
   }
-  if (grepl("moco[+]6[+]quad[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 2)
-    type.1d <- TRUE
-    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
-                      "Rotation:X", "Rotation:Y", "Rotation:Z")
-    tf$TR <- 1:nTR
-    pf <- melt(tf, id.vars="TR")
-    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
-                     levels=c("Translation", "Rotation"))
-    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
-                       levels=c("X", "Y", "Z"))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
-      scale_x_continuous(expand=c(0,0)) +
-      facet_grid(xfm ~ ., scales="free_y") +
-      geom_line(size=1) +
-      geom_hline(yintercept = 0, linetype="dotted") +
-      labs(title="Rigid Body Motion Correction - squared", y=NULL, x=NULL) +
-      theme_obj
-    tf <- tf[ ,-ncol(tf)] 
-  }
-  if (grepl("moco[+]6[+]quad[+]deriv[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 2)
-    type.1d <- TRUE
-    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
-                      "Rotation:X", "Rotation:Y", "Rotation:Z")
-    tf$TR <- 1:nTR
-    pf <- melt(tf, id.vars="TR")
-    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
-                     levels=c("Translation", "Rotation"))
-    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
-                       levels=c("X", "Y", "Z"))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
-      scale_x_continuous(expand=c(0,0)) +
-      facet_grid(xfm ~ ., scales="free_y") +
-      geom_line(size=1) +
-      geom_hline(yintercept = 0, linetype="dotted") +
-      labs(title="Rigid Body Motion Correction - squared, 1st derivative", y=NULL, x=NULL) +
-      theme_obj
-    tf <- tf[ ,-ncol(tf)]
-  }
-  if (grepl("compcorr-anatomy[.]1D", regressor.ls[i])) {
+  if (grepl("plotMx", regressor.ls[i])) {
     plot.count <- c(plot.count, 1)
     type.1d <- TRUE
     uf <- tf
     for (j in 1:nVar) { uf[ ,j] <- (uf[ ,j] - mean(uf[ ,j], na.rm=T)) / sd(uf[ ,j], na.rm=T) }
-    colnames(uf) <- colnames(tf) <- c("CSF", "WM")
+    colnames(uf) <- colnames(tf) <- cnames
     uf$TR <- 1:nTR
     pf <- melt(uf, id.vars="TR")
-    q <- quantile(pf$value, c(0.025, 0.975))
     plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=variable)) +
       theme_minimal() +
-      scale_color_manual(values = c("#c82c2c", "#2c2cc8")) +
+      scale_color_manual(values = cls) +
       scale_x_continuous(expand=c(0,0)) +
-      coord_cartesian(ylim=q) +
       geom_line(size=1) +
-      geom_hline(yintercept=q, linetype="dashed") +
-      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
-               x=Inf, y=q[1]+2, vjust=0, hjust=1, size=3) +
-      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
-               x=Inf, y=q[2]-2, vjust=1, hjust=1, size=3) +
-      labs(title="CompCorr - Anatomical - scaled", y=NULL, x=NULL) +
+      labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
   }
-  if (grepl("compcorr-temporal[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    uf <- tf
-    for (j in 1:nVar) { uf[ ,j] <- (uf[ ,j] - mean(uf[ ,j], na.rm=T)) / sd(uf[ ,j], na.rm=T) }
-    colnames(uf) <- colnames(tf) <- paste("Comp", 1:nVar)
-    uf$TR <- 1:nTR
-    pf <- melt(uf, id.vars="TR")
-    pf$group <- factor(unlist(strsplit(as.character(pf$variable), split=":")))
-    q <- quantile(pf$value, c(0.025, 0.975))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=group)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(nVar)) +
-      scale_x_continuous(expand=c(0,0)) +
-      coord_cartesian(ylim=q) +
-      geom_line(size=1) +
-      geom_hline(yintercept=q, linetype="dashed") +
-      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
-               x=Inf, y=q[1]*0.95, vjust=0, hjust=1, size=3) +
-      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
-               x=Inf, y=q[2]*0.95, vjust=1, hjust=1, size=3) +
-      labs(title="CompCorr - Temporal - scaled", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right")
-  }
-  if (grepl("global-anatomy[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    pf <- data.frame(TR=1:nTR,
-                     value = scale(as.numeric(unlist(tf[,1]))))
-    q <- quantile(pf$value, c(0.025, 0.975))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
-      theme_minimal() +
-      scale_x_continuous(expand=c(0,0)) +
-      coord_cartesian(ylim=q) +
-      geom_line(size=1) +
-      geom_hline(yintercept=q, linetype="dashed") +
-      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
-               x=Inf, y=q[1]*0.95, vjust=0, hjust=1, size=3) +
-      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
-               x=Inf, y=q[2]*0.95, vjust=1, hjust=1, size=3) +
-      labs(title="Global Anatomical - scaled", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right")
-  }
-  if (grepl("global-temporal[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    pf <- data.frame(TR=1:nTR,
-                     value = scale(as.numeric(unlist(tf[,1]))))
-    q <- quantile(pf$value, c(0.025, 0.975))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
-      theme_minimal() +
-      scale_x_continuous(expand=c(0,0)) +
-      coord_cartesian(ylim=q) +
-      geom_line(size=1) +
-      geom_hline(yintercept=q, linetype="dashed") +
-      annotate("text", label=sprintf("IQR 2.5%% = %0.2f", q[1]),
-               x=Inf, y=q[1]+2, vjust=0, hjust=1, size=3) +
-      annotate("text", label=sprintf("IQR 97.5%% = %0.2f", q[2]),
-               x=Inf, y=q[2]-2, vjust=1, hjust=1, size=3) +
-      labs(title="Global Temporal - scaled", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right")
-  }
-  if (grepl("AD[+]mm[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 2)
-    type.1d <- TRUE
-    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
-                      "Rotation:X", "Rotation:Y", "Rotation:Z")
-    tf$TR <- 1:nTR
-    pf <- melt(tf, id.vars="TR")
-    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
-                     levels=c("Translation", "Rotation"))
-    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
-                       levels=c("X", "Y", "Z"))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
-      scale_x_continuous(expand=c(0,0)) +
-      facet_grid(xfm ~ ., scales="free_y") +
-      geom_line(size=1) +
-      geom_hline(yintercept = 0, linetype="dotted") +
-      labs(title="Absolute Displacement (mm)", y=NULL, x=NULL) +
-      theme_obj
-    tf <- tf[ ,-ncol(tf)]
-  }
-  if (grepl("RD[+]mm[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 2)
-    type.1d <- TRUE
-    colnames(tf) <- c("Translation:X", "Translation:Y", "Translation:Z",
-                      "Rotation:X", "Rotation:Y", "Rotation:Z")
-    tf$TR <- 1:nTR
-    pf <- melt(tf, id.vars="TR")
-    pf$xfm <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(1,2*nVar*nTR,2)],
-                     levels=c("Translation", "Rotation"))
-    pf$plane <- factor(unlist(strsplit(as.character(pf$variable), split=":"))[seq(2,2*nVar*nTR,2)],
-                       levels=c("X", "Y", "Z"))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=plane)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(5)[c(2,4,5)]) +
-      scale_x_continuous(expand=c(0,0)) +
-      facet_grid(xfm ~ ., scales="free_y") +
-      geom_line(size=1) +
-      geom_hline(yintercept = 0, linetype="dotted") +
-      labs(title="Relative Displacement (mm)", y=NULL, x=NULL) +
-      theme_obj
-    tf <- tf[ ,-ncol(tf)]
-  }
-  if (grepl("FD[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    pf <- data.frame(TR=1:nTR, value = as.numeric(unlist(tf[,1])))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
-      theme_minimal() +
-      scale_x_continuous(expand=c(0,0)) +
-      geom_line(size=1) +
-      labs(title="Framewise Displacement", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right")
-  }
-  if (grepl("RMS[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    pf <- data.frame(TR=1:nTR, value = as.numeric(unlist(tf[,1])))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
-      theme_minimal() +
-      scale_x_continuous(expand=c(0,0)) +
-      geom_line(size=1) +
-      labs(title="RMS", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right")
-  }
-  if (grepl("spike[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    pf <- data.frame(TR=1:nTR, value = as.numeric(unlist(tf[,1])))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value)) +
-      theme_minimal() +
-      scale_x_continuous(expand=c(0,0)) +
-      geom_line(size=1) +
-      labs(title="Spike", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right")
-  }
-  if (grepl("moco[+]12[.]1D", regressor.ls[i])) {
-    type.1d <- TRUE
-    plot.count <- c(plot.count, 1)
-    uf <- tf
-    for (j in 1:nVar) { uf[ ,j] <- scale(uf[ ,j]) }
-    pf <- data.frame(TR=rep(1:nTR,nVar),
-                     group = c(sort(rep(paste("Affine", 1:nVar), nTR))),
-                     value = as.numeric(unlist(uf)))
-    pf$group <- factor(pf$group, levels=paste("Affine", 1:nVar))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=group)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(nVar)) +
-      guides(color=guide_legend(ncol=3)) +
-      scale_x_continuous(expand=c(0,0)) +
-      geom_line(size=1) +
-      geom_hline(yintercept=0, linetype="dashed") +
-      labs(title="Affine Motion Correction", subtitle="(scaled)", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="right", legend.spacing = unit(0,"lines"))
-  }
-  if (grepl("PrePost[.]1D", regressor.ls[i])) {
-    plot.count <- c(plot.count, 1)
-    type.1d <- TRUE
-    colnames(tf) <- c("PreMOCO", "PostMOCO")
-    tf$PreMOCO <- scale(tf$PreMOCO)
-    tf$PostMOCO <- scale(tf$PostMOCO)
-    tf$TR <- 1:nTR
-    pf <- melt(tf, id.vars="TR")
-    pf$variable <- factor(pf$variable, levels=c("PreMOCO", "PostMOCO"))
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=variable)) +
-      theme_minimal() +
-      scale_color_manual(values = c("#cf00cf", "#00cf00")) +
-      scale_x_continuous(expand=c(0,0)) +
-      geom_line(size=1) +
-      labs(title="Pre- and Post-Motion Correction", subtitle="(scaled)", y=NULL, x=NULL) +
-      theme_obj
-    tf <- tf[ ,-ncol(tf)]
-  }
-  if (type.1d == FALSE) {
-    plot.count <- c(plot.count, 1)
-    pf <- data.frame(TR=rep(1:nTR,nVar),
-                     group = c(sort(rep(paste("Regressor", 1:nVar), nTR))),
-                     value = as.numeric(unlist(tf)))
-    pf$group <- factor(pf$group)
-    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=group)) +
-      theme_minimal() +
-      scale_color_manual(values = timbow(nVar)) +
-      scale_x_continuous(expand=c(0,0)) +
-      geom_line(size=1) +
-      labs(title="Affine Motion Correction", y=NULL, x=NULL) +
-      theme_obj + theme(legend.position="none")
-  }
-  df <- cbind(df,tf)
+  if (i==1) {df <- data.frame(TR=1:nTR) }
+  if (corr.include) { df <- cbind(df,tf) }
 }
 
 plot_fcn <- "rgr_plot <- arrangeGrob("
-for (i in 1:length(regressor.ls)) {
-  plot_fcn <- paste0(plot_fcn, "plots[[", i, "]], ")
-}
+for (i in 1:length(regressor.ls)) { plot_fcn <- paste0(plot_fcn, "plots[[", i, "]], ") }
 plot_fcn=paste0(plot_fcn, 'ncol=1, heights=c(', paste(plot.count, collapse=","), '), top="Nuisance Regressors")')
 eval(parse(text=plot_fcn))
 
-ggsave(filename = paste0(prefix, "_regressors", suffix, ".png"),
-       path = dir.save,
-       plot = rgr_plot,
-       device = "png",
-       width = 7.5,
-       height=sum(plot.count),
-       dpi=320)
+ggsave(filename=paste0(prefix, "_regressors", suffix, ".png"), path=dir.save,
+       plot=rgr_plot, device="png", width=7.5, height=sum(plot.count), dpi=320)
 
 if (do.corr) {
   df <- df[ ,-1]
@@ -392,11 +209,8 @@ if (do.corr) {
     theme(legend.title = element_blank(),
           legend.text = element_text(size=8),
           plot.title = element_text(size=10))
-  ggsave(filename = paste0(prefix, "_regressorsCorr", suffix, ".png"),
-         path = dir.save,
-         plot = plot.corr,
-         device = "png",
-         width = 3.5, height = 3.5, dpi=320)
+  ggsave(filename=paste0(prefix, "_regressorsCorr", suffix, ".png"), path=dir.save,
+         plot=plot.corr, device="png", width=4, height=4, dpi=320)
 }
 
 

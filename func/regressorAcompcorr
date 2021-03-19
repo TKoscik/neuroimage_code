@@ -143,15 +143,15 @@ fi
 
 3dmaskSVD -vnorm -polort 1 -sval ${NCOMP} \
   -mask ${LABEL_TISSUE}"<${VALUE_CSF}..${VALUE_CSF}" \
-  ${TS_BOLD} > ${DIR_SAVE}/${PREFIX}_acompcorr+csf+${NCOMP}.1D
+  ${TS_BOLD} > ${DIR_SAVE}/${PREFIX}_compcorr+csf+${NCOMP}.1D
 3dmaskSVD -vnorm -polort 1 -sval ${NCOMP} \
   -mask ${LABEL_TISSUE}"<${VALUE_WM}..${VALUE_WM}" \
-  ${TS_BOLD} > ${DIR_SAVE}/${PREFIX}_acompcorr+wm+${NCOMP}.1D
+  ${TS_BOLD} > ${DIR_SAVE}/${PREFIX}_compcorr+wm+${NCOMP}.1D
 
-sed i- 's/  */,/g' ${DIR_SAVE}/${PREFIX}_acompcorr+csf+${NCOMP}.1D
-sed i- 's/  */,/g' ${DIR_SAVE}/${PREFIX}_acompcorr+wm+${NCOMP}.1D
-sed i- 's/,//' ${DIR_SAVE}/${PREFIX}_acompcorr+csf+${NCOMP}.1D
-sed i- 's/,//' ${DIR_SAVE}/${PREFIX}_acompcorr+wm+${NCOMP}.1D
+sed i- 's/  */,/g' ${DIR_SAVE}/${PREFIX}_compcorr+csf+${NCOMP}.1D
+sed i- 's/  */,/g' ${DIR_SAVE}/${PREFIX}_compcorr+wm+${NCOMP}.1D
+sed i- 's/,//' ${DIR_SAVE}/${PREFIX}_compcorr+csf+${NCOMP}.1D
+sed i- 's/,//' ${DIR_SAVE}/${PREFIX}_compcorr+wm+${NCOMP}.1D
 
 #===============================================================================
 # End of Function

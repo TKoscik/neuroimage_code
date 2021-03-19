@@ -68,6 +68,7 @@ TS_BOLD=
 MASK_BRAIN=
 PASS_LO=99999
 PASS_HI=0
+POLY_ORDER=1
 REGRESSOR=
 TEMPLATE=HCPICBM
 SPACE=2mm
@@ -88,6 +89,7 @@ while true; do
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
     --pass-lo) PASS_LO="$2" ; shift 2 ;;
     --pass-hi) PASS_HI="$2" ; shift 2 ;;
+    --poly-order) POLY_ORDER="$2" ; shift 2 ;;
     --regressor) REGRESSOR="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
@@ -157,7 +159,17 @@ N_REG=${#REGRESSOR[@]}
 AFNI_CALL="3dTproject -input ${TS_BOLD}"
 AFNI_CALL="${AFNI_CALL} -prefix ${DIR_SCRATCH}/resid.nii.gz"
 AFNI_CALL="${AFNI_CALL} -mask ${MASK_BRAIN}"
+
 AFNI_CALL="${AFNI_CALL} -bandpass ${PASS_HI} ${PASS_LO}"
+
+if [[ ${PASS_HI} -gt 0 ]] && [[ ${POLY_ORDER} -gt 2 ]]; then
+  echo "You should not combine a high pass filter and a >2dn degree polynomial"
+  echo "POLY_ORDER is set to 2"
+  POLY_ORDER=2
+fi
+if [[ "${POLY_ORDER},," != "null" ]]; then
+  AFNI_CALL="${AFNI_CALL} -polort ${POLY_ORDER}"
+fi
 for (( i=0; i<${N_REG}; i++ )); do
   AFNI_CALL="${AFNI_CALL} -ort ${REGRESSOR[${i}]}"
 done

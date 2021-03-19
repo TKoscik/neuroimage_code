@@ -141,8 +141,8 @@ for (( i=0; i<${N_FLS}; i++)); do
   fi
   
   # Check for same name files and append a run flag
-  TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_${SUFFIX}*.nii.gz))
-  if [[ "${TLS}" > "1" ]]; then
+  TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_${SUFFIX}*.nii.gz 2>/dev/null))
+  if [[ "${#TLS[@]}" > "1" ]]; then
     unset PARTS
     PARTS=(${SUFFIX//_/ })
     for (( j=0; j<${#PARTS[@]}; j++ )); do
@@ -178,7 +178,7 @@ for (( i=0; i<${N_FLS}; i++)); do
   DIR_DCM_TEMP=${DIR_DCM[${i}]//${DIR_INPUT}\/}
   echo -ne "${DIR_DCM_TEMP}\t" >> ${QC_TSV}
   echo -ne "${CHK_DESC}\t" >> ${QC_TSV}
-  echo -ne "${SCAN_DATE}\t" >> ${QC_TSV}
+  echo -ne "${TEMP[2]:0:8}\t" >> ${QC_TSV}
   echo -ne "${BNAME}\t" >> ${QC_TSV}
   echo -ne "sub-${PID}_ses-${SID}_${SUFFIX}\t" >> ${QC_TSV}
   echo -ne "-\t" >> ${QC_TSV}

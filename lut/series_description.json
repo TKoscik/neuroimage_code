@@ -38,8 +38,8 @@
         "acq-b2000_dwi": ["MBDifB200035DIR","MBDifB200035DIRREVPE","MBDifB200036DIR","MBDifB200036DIRREVPE","MBDifB200036DIR17","MBDifB200036DIR17REVPE","MBDiffB200035DIR","MBDiffB200035DIRREVPE","MBDiffB200036DIR","MBDiffB200036DIRREVPE","DWIB200015Dir"],
         "acq-b3000_dwi": ["DWIB300060Dir"],
         "acq-dki_dwi": ["DKIb180060DirMB","DKIb100060DirMB","DKI30Dirb1000","DKI30Dirb2000","DTI30Directions","DTI30DIRECTIONSB15","DTI64DIRECTIONS","axdkiPA","axdkiPAADC","axdkiPATRACEW","axdkiPAFA","axdkiPAColFA","dkitopupAP","dkitopupPA"],
-        "acq-fieldmap_dwi": ["DTIFLIPPHASE","DTIFlipPhase","DTIFlipPhaseNew","DTITopUpFlipPhase","DTIFieldmapP","DTIFieldmapA","SEMapDWIPE1","SEMapDWIPE2","DWIChANGEHDPE1","DWIB0REVPEt31444","DWIB0t31444","DKI27MMISOEXTRAB0","ABCDdMRIDistortionMapPA","ABCDdMRIDistortionMapAP","SEMapDWIPE1t9859","SEMapDWIPE2t9859","DTITopUpSEFlipPhase"],
-        "acq-multishell_dwi": ["DWIMultiBvalue","DKI27MMISO30DIRB10002000","dti32ch56dircmrrb5001k2k3k"],
+        "acq-fieldmap_dwi": ["dtiapADC","dtiapFA","dtiapColFA","DTIFLIPPHASE","DTIFlipPhase","DTIFlipPhaseNew","DTITopUpFlipPhase","DTIFieldmapP","DTIFieldmapA","SEMapDWIPE1","SEMapDWIPE2","DWIChANGEHDPE1","DWIB0REVPEt31444","DWIB0t31444","DKI27MMISOEXTRAB0","ABCDdMRIDistortionMapPA","ABCDdMRIDistortionMapAP","SEMapDWIPE1t9859","SEMapDWIPE2t9859","DTITopUpSEFlipPhase"],
+        "acq-multishell_dwi": ["dtiapTRACEW","dtiap","dticmrrvx2b2kAP","DWIMultiBvalue","DKI27MMISO30DIRB10002000","dti32ch56dircmrrb5001k2k3k"],
         "acq-unk_dwi": ["DTI","AxDWI","Diffusion6Direction","Diffusion12Direction","DTITopUp","MBDiffusionRun198DIR","MSDTISCAPCN","7DTI30DIRECTIONSB15","DTI30Directionse1","dticmrrvx2b2k","DTI1","DTI2","DTI70Directions","DTI12DIRECTIONS","DIFF64DIR","DTI30DIRECTIONS","ABCDdMRI","DTITopUpSE32Dir","DTI30dir1b0run1","DTI30dir1b0run1ADC","DTI30dir1b0run1TRACEW","DTI30dir1b0run1FA","DTI30dir1b0run1ColFA"]
     },
     "loc": {

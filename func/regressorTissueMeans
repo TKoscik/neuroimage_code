@@ -50,7 +50,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hl --long prefix:,\
-ts-bold:,label-tissue:,value-csf:,value-wm:,\
+ts:,mask:,label:,csf:,wm:,\
 dir-save:,dir-scratch:,\
 help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -61,10 +61,11 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-TS_BOLD=
-LABEL_TISSUE=
-VALUE_CSF=1
-VALUE_WM=3
+TS=
+MASK=
+LABEL=
+CSF=1
+WM=3
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -75,10 +76,11 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --ts-bold) TS_BOLD="$2" ; shift 2 ;;
-    --label-tissue) LABEL_TISSUE="$2" ; shift 2 ;;
-    --value-csf) VALUE_CSF="$2" ; shift 2 ;;
-    --value-wm) VALUE_WM="$2" ; shift 2 ;;
+    --ts) TS="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
+    --label) LABEL="$2" ; shift 2 ;;
+    --csf) CSF="$2" ; shift 2 ;;
+    --wm) WM="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -92,58 +94,52 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
-  echo '  --ts-bold <value>        Full path to single, run timeseries'
-  echo '  --label-tissue <value>   Full path to file containing tissue type labels'
-  echo '  --value-csf <value>      numeric value indicating CSF in label file, default=1'
-  echo '  --value-wm <value>       numeric value indicating WM in label file, default=3'
-  echo '  --dir-save <value>       directory to save output, default:'
-  echo '                             DIR_PROJECT/derivatives/inc/func/regressor/sub-###/ses-###'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --prefix                 scan prefix, default: sub-123_ses-1234abcd'
+  echo '  --ts                     Full path to single, run timeseries'
+  echo '  --label                  Full path to file containing tissue type labels'
+  echo '  --csf                    numeric value indicating CSF in label file, default=1'
+  echo '  --wm                     numeric value indicating WM in label file, default=3'
+  echo '  --dir-save               directory to save output, default:'
+  echo '                             DIR_PROJECT/derivatives/inc/func/regressor/sub-/ses-'
+  echo '  --dir-scratch            directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
 fi
+
 #===============================================================================
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${TS_BOLD})
-PID=$(getField -i ${TS_BOLD} -f sub)
-SID=$(getField -i ${TS_BOLD} -f ses)
-if [[ ! -f "${TS_BOLD}" ]]; then
+DIR_PROJECT=$(getDir -i ${TS})
+PID=$(getField -i ${TS} -f sub)
+SID=$(getField -i ${TS} -f ses)
+if [[ ! -f "${TS}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
-DIR_SUBSES="sub-${PID}"
-if [[ -n ${SID} ]]; then
-  DIR_SUBSES="${DIR_SUBSES}/ses-${SID}"
-fi
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(getBidsBase -s -i ${TS_BOLD})
-fi
-if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIR_SUBSES}
-fi
+DIRPID="sub-${PID}"
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
+if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${TS}); fi
+if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIRPID}; fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # ANTs 3 Tissue Regressors (aCompCorr) ----------------------------------------
-ImageMath 4 ${DIR_SCRATCH}/temp.nii.gz \
-  ThreeTissueConfounds ${TS_BOLD} ${LABEL_TISSUE} ${VALUE_CSF} ${VALUE_WM}
-
+ImageMath 4 ${DIR_SCRATCH}/temp.nii.gz ThreeTissueConfounds ${TS} ${LABEL} ${CSF} ${WM}
 cat ${DIR_SCRATCH}/temp_compcorr.csv | tail -n+2 > ${DIR_SCRATCH}/temp.1D
-cut -d, -f1-1 ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_global.1D
 cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D
-
-sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_global.1D
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D
-
-mv ${DIR_SCRATCH}/${PREFIX}_global.1D ${DIR_SAVE}/
 mv ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D ${DIR_SAVE}/
+
+if [[ -n ${MASK_BRAIN} ]]; then
+  fslmeants -i ${TS} -o ${DIR_SCRATCH}/${PREFIX}_global.1D --label=${MASK}
+  sed -i s/"  "/","/g ${DIR_SCRATCH}/${PREFIX}_global.1D
+  sed -i s/",$"//g ${DIR_SCRATCH}/${PREFIX}_global.1D
+  mv ${DIR_SCRATCH}/${PREFIX}_global.1D ${DIR_SAVE}/
+fi
 
 #===============================================================================
 # End of Function
