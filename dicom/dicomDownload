@@ -115,7 +115,7 @@ if [[ -z ${PI} ]] |
    [[ -z ${PROJECT} ]]; then
   XNAT_LS=($(getColumn -i ${INC_DB}/projects.tsv -f xnat_project))
   for (( i=1; i<${#XNAT_LS[@]}; i++ )); do
-    if [[ "${XNAT_LS[${i}]" == "${XNAT_PROJECT}" ]]; then
+    if [[ "${XNAT_LS[${i}]}" == "${XNAT_PROJECT}" ]]; then
       WHICH_PROJECT=${i}
       break
     fi
