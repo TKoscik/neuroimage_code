@@ -1,8 +1,10 @@
 # TO DO =======================================================================
 ## Version: 0.0.0.0
-## Updated: 2020-11-16
+## Updated: 2020-11-16, 2021-06-25
 
 # general ---------------------------------------------------------------------
+[ ] remove png maker from functions, add as examples to help in png maker functions
+[ ] update log strings, make sure blank inputs do not cause an issue
 [x] initialization file
     [x] set software and versions, modules
     [x] write R setup script
@@ -37,8 +39,8 @@
     [x] regressor_tcompcorr.sh
     [x] regressor_deriv.sh
     [x] regressor_quad.sh
-    [ ] regressor_frame-disp.sh
-    [ ] regressor_spike.sh
+    [x] regressor_frame-disp.sh
+    [x] regressor_spike.sh
 [ ] ts_deconvolve.sh
     - simultaneously to nuisance_regression? or does that interfere with LSS?
     [ ] LSS and LSA options (LSS as default)
