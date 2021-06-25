@@ -191,9 +191,9 @@ if [[ "${METHOD,,}" == *"ants"* ]]; then
   for (( j=0; j<${#IMAGE[@]}; j++ )); do
     ants_fcn="${ants_fcn} -a ${IMAGE[${j}]}"
   done
-  ants_fcn="${ants_fcn} -e ${INC_TEMPLATE}/T_template0.nii.gz"
-  ants_fcn="${ants_fcn} -m ${INC_TEMPLATE}/T_template0_BrainCerebellumProbabilityMask.nii.gz"
-  ants_fcn="${ants_fcn} -f ${INC_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
+  ants_fcn="${ants_fcn} -e ${DIR_TEMPLATE}/T_template0.nii.gz"
+  ants_fcn="${ants_fcn} -m ${DIR_TEMPLATE}/T_template0_BrainCerebellumProbabilityMask.nii.gz"
+  ants_fcn="${ants_fcn} -f ${DIR_TEMPLATE}/T_template0_BrainCerebellumRegistrationMask.nii.gz"
   ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/ants-bex_"
   eval ${ants_fcn}
   CopyImageHeaderInformation ${IMAGE[${j}]} \

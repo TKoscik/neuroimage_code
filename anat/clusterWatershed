@@ -1,0 +1,326 @@
+#!/bin/bash -e
+#===============================================================================
+# Cluster regions within NIFTI image based on local intensity, using a
+# watershed algorithm to split apart adjacent clusters.
+# Authors: Timothy Koscik, PhD
+# Date: 2021-05-25
+# CHANGELOG: <description of major changes to functionality>
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    logBenchmark --operator ${OPERATOR} \
+    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    if [[ -n "${DIR_PROJECT}" ]]; then
+      logProject --operator ${OPERATOR} \
+      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      if [[ -n "${SID}" ]]; then
+        logSession --operator ${OPERATOR} \
+        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
+        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
+        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+      fi
+    fi
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvl --long prefix:,\
+value-nii:,value-vol:,mask-nii:,mask-vol:,\
+datum:,direction:,min-size:,use-mm:,\
+dir-save:,dir-scratch:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+VALUE_NII=
+VALUE_VOL=
+MASK_NII=
+MASK_VOL=1
+DATUM=0
+DIRECTION="bidirectional"
+MIN_SZ=
+USE_MM="false"
+DIR_SAVE=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --value-nii) VALUE_NII="$2" ; shift 2 ;;
+    --value-vol) VALUE_VOL="$2" ; shift 2 ;;
+    --mask-nii) MASK_NII="$2" ; shift 2 ;;
+    --mask-vol) MASK_VOL="$2" ; shift 2 ;;
+    --datum) DATUM="$2" ; shift 2 ;;
+    --direction) DIRECTION="$2" ; shift 2 ;;
+    --min-size) MIN_SZ="$2" ; shift 2 ;;
+    --use-mm) USE_MM=true ; shift ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo "  Splits values into clusters based on 'watershed' lines, such that"
+  echo "  adjacent peaks or clusters that touch and are combined by standard"
+  echo "  clustering methods are separate by local troughs or valleys."
+  echo "  This process is analagous to how a continuous mountain range can be"
+  echo "  divided into individual peaks based on their topography."
+  echo "  This function applies the MATLAB implementation of the Fernand Meyer"
+  echo "  algorithm."
+  echo "  Citation: Meyer F (1994) Topographic distance and watershed lines."
+  echo "            Signal Processing, 38, 113-125."
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix  <optional>     filename, without extension to use for file'
+  echo '                     ${DIR_SAVE}/${PREFIX}_vol-#_clsz-#_watershed.nii.gz'
+  echo '  --value-nii <filename>   filename for input file of intensity values'
+  echo '                           to use for clustering'
+  echo '  --value-vol <values>     which volumes to generate clusters for'
+  echo '                             e.g., 1,3:5,8 = 1,3,4,5,8'
+  echo '  --mask-nii <filename>    filename for image(s) to use to mask values'
+  echo '                           these inputs will be binarized, and the'
+  echo '                           intersection of all masks will be used'
+  echo '  --mask-vol <values>      which volumes to generate clusters for'
+  echo '                             e.g., 1,3:5,8 = 1,3,4,5,8'
+  echo '  --datum <value>          reference value for watershed calculation'
+  echo '                             default=0'
+  echo '  --direction <option>     direction to calculate watershed'
+  echo '    i|inc|increase|p|pos|positive: values increase from datum to peak'
+  echo '    d|dec|decrease|n|neg|negative: values decrease from datum to peak'
+  echo '    b|bi|bidirectional|both|duplex: both increasing and decreasing'
+  echo '    a|abs|absolute: absolute value increases from datum to peak'
+  echo '                     B                         | A | B | C |'
+  echo '            A      /¯¯¯\             increasing| Y | Y | N |'
+  echo '           /¯\    /     \            decreasing| N | N | Y |'
+  echo '          /   \  /       \       C     absolute| Y | Y | Y |'
+  echo '         /     \/         \     ( )�                        '
+  echo '        /                  \   (   )                        '
+  echo '       /                    \ (     )                       '
+  echo '  ----/----------------------\-----  /---------------- datum'
+  echo '                              \     /                       '
+  echo '                               \   /                        '
+  echo '                                \_/                         '
+  echo '                                 C                          '
+  echo '                                                            '
+  echo '  --min-size <value>       minimum cluster size to keep,'
+  echo '                           default is number of contiguous voxels'
+  echo '                           cluster connectivity is 26 neighbor'
+  echo '  --use-mm                 toggle minimum cluster size in mm^3'
+  echo '  --dir-save               location to save output'
+  echo '  --dir-scratch            location for temporary files'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+# SET UP BIDS COMPLIANT VARIABLES AND WORKSPACE --------------------------------
+DIR_PROJECT=$(getDir -i ${VALUE_NII})
+PID=$(getField -i ${VALUE_NII} -f sub)
+SID=$(getField -i ${VALUE_NII} -f ses)
+if [[ -z ${PREFIX} ]]; then
+  FBASE=$(basename ${VALUE_NII})
+  PREFIX=${FBASE%%.*}
+fi
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=$(dirname ${VALUE_NII})
+fi
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
+
+# EXTRACT VOLUMES FOR PROCESSING ===============================================
+MASK_START=$((${MASK_VOL} - 1))
+VALUE_START=$((${VALUE_VOL} - 1))
+fslroi ${MASK_NII} ${DIR_SCRATCH}/MASK.nii.gz ${MASK_START} 1
+fslroi ${VALUE_NII} ${DIR_SCRATCH}/VALUE.nii.gz ${VALUE_START} 1
+
+# PREP VALUES FOR WATERSHED ALGORITHM ==========================================
+## REMOVE NANS & MAKE NAN MASK -------------------------------------------------
+fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -nanm -binv ${DIR_SCRATCH}/NANMASK.nii.gz
+fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -nan ${DIR_SCRATCH}/VALUE.nii.gz
+
+## CENTER ON DATUM -------------------------------------------------------------
+fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -sub ${DATUM} ${DIR_SCRATCH}/VALUE.nii.gz
+
+## APPLY DIRECTION & MASK ------------------------------------------------------
+case ${DIRECTION,,} in
+  i|inc|increase|p|pos|positive)
+    fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -thr 0 ${DIR_SCRATCH}/VALUE_dir-pos.nii.gz
+    ;;
+  d|dec|decrease|n|neg|negative)
+    fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -uthr 0 ${DIR_SCRATCH}/VALUE_dir-neg.nii.gz
+    ;;
+  b|bi|bidirectional|both|duplex)
+    fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -thr 0 ${DIR_SCRATCH}/VALUE_dir-pos.nii.gz
+    fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -uthr 0 ${DIR_SCRATCH}/VALUE_dir-neg.nii.gz
+    ;;
+  a|abs|absolute)
+    fslmaths ${DIR_SCRATCH}/VALUE.nii.gz -abs ${DIR_SCRATCH}/VALUE_dir-abs.nii.gz
+    ;;
+esac
+
+## APPLY MASKS -----------------------------------------------------------------
+unset FLS
+FLS=($(ls ${DIR_SCRATCH}/VALUE_*))
+for (( i=0; i<${#FLS[@]}; i++ )); do
+  fslmaths ${FLS[${i}]} \
+    -mas ${DIR_SCRATCH}/MASK.nii.gz \
+    -mas ${DIR_SCRATCH}/NANMASK.nii.gz \
+    ${FLS[${i}]}
+done
+
+# RUN WATERSHED FUNCTION =======================================================
+MATLAB="${PINCAPP}/matlab/Linux/x86_64/R2020a/bin/matlab"
+unset FLS
+FLS=($(ls ${DIR_SCRATCH}/VALUE_*))
+for (( i=0; i<${#FLS[@]}; i++ )); do
+  gunzip ${FLS[${i}]}
+  FBASE=$(basename ${FLS[${i}]})
+  FNAME=${FBASE%%.*}
+  MNAME=${FNAME//-}
+  MFILE=${DIR_SCRATCH}/${MNAME}_watershed_script.m
+  echo "clear all" > ${MFILE}
+  echo 'addpath(genpath("'${DIR_INC}'/anat"));' >> ${MFILE}
+  echo "nii_in='${DIR_SCRATCH}/${FNAME}.nii';" >> ${MFILE}
+  echo "nii_out='${FNAME}_watershed';" >> ${MFILE}
+  echo "dir_save='${DIR_SCRATCH}';" >> ${MFILE}
+  echo "%setenv('TMPDIR', dir_save);" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "try" >> ${MFILE}
+  echo "  % load image ---------------------------------------------------------" >> ${MFILE}
+  echo "  nii = niftiread(nii_in);" >> ${MFILE}
+  echo "  hdr = niftiinfo(nii_in);" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "  % get image background -----------------------------------------------" >> ${MFILE}
+  echo "  bg = nii == 0;" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "  % rescale intensities interior of clusters is lower value ------------" >> ${MFILE}
+  echo "  nii = abs(nii);" >> ${MFILE}
+  echo "  minval = min(nii(~bg),[],'all');" >> ${MFILE}
+  echo "  maxval = max(nii(~bg),[],'all');" >> ${MFILE}
+  echo "  nii = abs((nii - minval)/(maxval - minval) - 1);" >> ${MFILE}
+  echo "  nii(bg) = Inf;" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "  % calculate watershed ------------------------------------------------" >> ${MFILE}
+  echo "  labs = watershed(nii);" >> ${MFILE}
+  echo "  labs(bg) = 0;" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "  % fix header numeric type for output ---------------------------------" >> ${MFILE}
+  echo "  switch class(labs)" >> ${MFILE}
+  echo "    case 'uint8'" >> ${MFILE}
+  echo "      hdr.raw.datatype = 2; hdr.BitsPerPixel = 8; hdr.raw.bitpix = 8;" >> ${MFILE}
+  echo "    case 'uint16'" >> ${MFILE}
+  echo "      hdr.raw.datatype = 512; hdr.BitsPerPixel = 16; hdr.raw.bitpix = 16;" >> ${MFILE}
+  echo "    case 'uint32'" >> ${MFILE}
+  echo "      hdr.raw.datatype = 768; hdr.BitsPerPixel = 32; hdr.raw.bitpix = 32;" >> ${MFILE}
+  echo "    case 'uint64'" >> ${MFILE}
+  echo "      hdr.raw.datatype = 1280; hdr.BitsPerPixel = 64; hdr.raw.bitpix = 64;" >> ${MFILE}
+  echo "    otherwise" >> ${MFILE}
+  echo "      labs = double(labs);" >> ${MFILE}
+  echo "      hdr.raw.datatype = 64; hdr.BitsPerPixel = 64; hdr.raw.bitpix = 64;" >> ${MFILE}
+  echo "  end" >> ${MFILE}
+  echo "  hdr.Datatype = class(labs);" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "  % save labels --------------------------------------------------------" >> ${MFILE}
+  echo "  niftiwrite(labs, sprintf('%s/%s', dir_save, nii_out), hdr);" >> ${MFILE}
+  echo "  %niftiwrite(labs, sprintf('%s/%s', dir_save, nii_out), hdr, 'Compressed', 1);" >> ${MFILE}
+  echo "catch exception" >> ${MFILE}
+  echo "  rethrow(exception)" >> ${MFILE}
+  echo "  quit" >> ${MFILE}
+  echo "end" >> ${MFILE}
+  echo "quit" >> ${MFILE}
+  echo "" >> ${MFILE}
+  echo "" >> ${MFILE}
+  #cat ${MFILE}
+  ${MATLAB} -nodisplay -nodesktop -nojvm -nosplash -sd ${DIR_SCRATCH} -r "${MNAME}_watershed_script"
+  gzip ${DIR_SCRATCH}/*.nii
+done  
+
+# APPLY CLUSTER THRESHOLD ======================================================
+FLS=($(ls ${DIR_SCRATCH}/*_watershed.nii.gz))
+if [[ -n ${MIN_SZ} ]]; then
+  for (( i=0; i<${#FLS[@]}; i++ )); do
+## GET CLUSTER SIZES -----------------------------------------------------------
+    cluster --in=${FLS[${i}]} --thresh=1 --no_table --osize=${DIR_SCRATCH}/TSIZE.nii.gz
+
+## CALCULATE THRESHOLD IF MM ARE USED ------------------------------------------
+    if [[ "${USE_MM,,}" == "true" ]]; then
+      PIXDIM=$(niiInfo -i ${FLS[${i}]} -f mm3)
+      MIN_SZ=$(expr "${MIN_SZ} / ${PIXDIM}" |bc -l)
+    fi
+
+## MAKE CLUSTER THRESHOLD MASK -------------------------------------------------
+    fslmaths ${DIR_SCRATCH}/TSIZE.nii.gz -thr ${MIN_SZ} -bin ${DIR_SCRATCH}/TSIZE_MASK.nii.gz
+
+## APPLY CLUSTER THRESHOLD MASK ------------------------------------------------
+    fslmaths ${FLS[${i}]} -mas ${DIR_SCRATCH}/TSIZE_MASK.nii.gz ${FLS[${i}]}
+
+## RENUMBER CLUSTERS -----------------------------------------------------------
+    cluster --in=${FLS[${i}]} --thresh=1 --no_table --oindex=${FLS[${i}]}
+  done
+fi
+
+# SAVE OUTPUT ==================================================================
+for (( i=0; i<${#FLS[@]}; i++ )); do
+  TDIR=$(getField -i ${FLS[${i}]} -f dir)
+  OUTNAME="${DIR_SAVE}/${PREFIX}_vol-${VALUE_VOL}+${TDIR}"
+  if [[ -n ${MIN_SZ} ]]; then OUTNAME="${OUTNAME}_clsz-${MIN_SZ}"; fi
+  OUTNAME="${OUTNAME}_watershed.nii.gz"
+  mv ${FLS[${i}]} ${OUTNAME}
+done
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
+

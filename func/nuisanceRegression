@@ -53,7 +53,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkl --long prefix:,template:,space:,\
-ts-bold:,mask-brain:,pass-lo:,pass-hi:,regressor:,\
+ts-bold:,mask-brain:,pass-lo:,pass-hi:,poly-order:,regressor:,\
 dir-save:,dir-scratch:,\
 keep,help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then

@@ -137,8 +137,8 @@ if ("pearsonCorrelation" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_pearsonR.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -154,8 +154,8 @@ if ("crossCorrelationAB" %in% var.ls) {
     pf[ ,"crossCorrelationBA"] <- txBA[upper.tri(txBA)]
   }
   if (df.type == "short") {
-    pf["crossCorrelationAB", ] <- txAB[upper.tri(txAB)]
-    pf["crossCorrelationBA", ] <- txBA[upper.tri(txBA)]
+    pf["crossCorrelationAB", 5:ncol(pf)] <- txAB[upper.tri(txAB)]
+    pf["crossCorrelationBA", 5:ncol(pf)] <- txBA[upper.tri(txBA)]
   }
   if (df.type == "matrix" ) {
     colnames(txAB) <- rownames(txAB) <- colnames(txBA) <- rownames(txBA) <- alabs
@@ -181,11 +181,11 @@ if ("crossCorrelationAB" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_crossCorrelation.png"),
-           plot=tplot, device="png", width=3, height=3, units="in", dpi=340)
+           plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
 
@@ -203,11 +203,11 @@ if ("transferEntropy" %in% var.ls) {
   }
   colnames(tx) <- rownames(tx) <- colnames(df)
   tf <- as.vector(tx[upper.tri(tx)])
-  if (df.type == "long" ) { pf[ , "pearsonCorrelation"] <- tf }
-  if (df.type == "short" ) { pf[pf$measure=="pearsonCorrelation", 5:ncol(pf)] <- tf }
+  if (df.type == "long" ) { pf[ , "transferEntropy"] <- tf }
+  if (df.type == "short" ) { pf[pf$measure=="transferEntropy", 5:ncol(pf)] <- tf }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
-    write.table(tx, file=paste0(dir.save, "/", prefix, "_pearsonR.csv"),
+    write.table(tx, file=paste0(dir.save, "/", prefix, "_transferEntropy.csv"),
                 sep=",", quote=F, row.names=T, col.names=T)
   }
   if (do.plot) {
@@ -219,15 +219,15 @@ if ("transferEntropy" %in% var.ls) {
       scale_x_discrete(position="top") +
       scale_fill_viridis_d() +
       geom_raster() +
-      labs(title= "Pearson Correlation") +
+      labs(title= "Transfer Entropy") +
       theme(legend.title=element_blank(),
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
-    ggsave(filename=paste0(dir.save, "/", prefix, "_pearsonR.png"),
+    ggsave(filename=paste0(dir.save, "/", prefix, "_transferEntropy.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
   }
 }
@@ -237,7 +237,7 @@ if ("coherence" %in% var.ls) {
   tx <- spectrum(df)
   tx <- apply(tx$coh, 2, function(x) max(x))
   if (df.type == "long") { pf[ ,"coherence"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["coherence", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="coherence", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
     write.table(tx, file=paste0(dir.save, "/", prefix, "_coherence.csv"),
@@ -257,8 +257,8 @@ if ("coherence" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_coherence.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -270,7 +270,7 @@ if ("waveletCoherence" %in% var.ls) {
   suppressMessages(suppressWarnings(library(WaveletComp)))
   tx <- analyze.coherency(df)
   if (df.type == "long") { pf[ ,"waveletCoherence"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["waveletCoherence", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="waveletCoherence", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
     write.table(tx, file=paste0(dir.save, "/", prefix, "_waveletCoherence.csv"),
@@ -290,8 +290,8 @@ if ("waveletCoherence" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_waveletCoherence.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -303,7 +303,7 @@ if ("mutualInformation" %in% var.ls) {
   suppressMessages(suppressWarnings(library(infotheo)))
   tx <- mutinformation(discretize(df))
   if (df.type == "long") { pf[ ,"mutualInformation"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["mutualInformation", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="mutualInformation", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
     write.table(tx, file=paste0(dir.save, "/", prefix, "_mutualInformation.csv"),
@@ -323,8 +323,8 @@ if ("mutualInformation" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_mutualInformation.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -332,7 +332,7 @@ if ("mutualInformation" %in% var.ls) {
 }
 
 ## make scaled dataset to scale distance between 0 and 1
-if (any(c("euclideanDistance", "manhattanDistance") %in% var.ls)) {
+if (any(c("euclideanDistance", "manhattanDistance", "earthmoversDistance") %in% var.ls)) {
   sf <- df
   for (i in 1:ncol(sf)) { sf[ ,i] <- (sf[,i] - min(sf[,i]))/(max(sf[,i]) - min(sf[,i])) }
 }
@@ -341,7 +341,7 @@ if (any(c("euclideanDistance", "manhattanDistance") %in% var.ls)) {
 if ("euclideanDistance" %in% var.ls) {
   tx <- as.matrix(dist(t(sf), method="euclidean")) / sqrt(ncol(sf))
   if (df.type == "long") { pf[ ,"euclideanDistance"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["euclideanDistance", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="euclideanDistance", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
     write.table(tx, file=paste0(dir.save, "/", prefix, "_euclideanDistance.csv"),
@@ -361,8 +361,8 @@ if ("euclideanDistance" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_euclideanDistance.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -373,10 +373,10 @@ if ("euclideanDistance" %in% var.ls) {
 if ("manhattanDistance" %in% var.ls) {
   tx <- as.matrix(dist(t(sf), method="manhattan", upper=T)) / ncol(sf)
   if (df.type == "long") { pf[ ,"manhattanDistance"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["manhattanDistance", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="manhattanDistance", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
-    write.table(tx, file=paste0(dir.save, "/", prefix, "_euclideanDistance.csv"),
+    write.table(tx, file=paste0(dir.save, "/", prefix, "_manhattanDistance.csv"),
                 sep=",", quote=F, row.names=T, col.names=T)
   }
   if (do.plot) {
@@ -393,8 +393,8 @@ if ("manhattanDistance" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_manhattanDistance.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -405,7 +405,7 @@ if ("dynamicTimeWarping" %in% var.ls) {
   suppressMessages(suppressWarnings(library(dtw)))
   tx <- dtwDist(t(df))
   if (df.type == "long") { pf[ ,"dynamicTimeWarping"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["dynamicTimeWarping", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="dynamicTimeWarping", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
     write.table(tx, file=paste0(dir.save, "/", prefix, "_dynamicTimeWarping.csv"),
@@ -425,8 +425,8 @@ if ("dynamicTimeWarping" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_dynamicTimeWarping.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -436,20 +436,21 @@ if ("dynamicTimeWarping" %in% var.ls) {
 # do EARTHMOVER'S DISTANCE
 if ("earthmoversDistance" %in% var.ls) {
   suppressMessages(suppressWarnings(library(transport)))
-  tx <- matrix(NA,nrow=ncol(df), ncol=ncol(df))
+  tx <- matrix(NA,nrow=ncol(sf), ncol=ncol(sf))
   for (i in 1:(ncol(df)-1)) {
     for (j in (1+1):ncol(df)) {
-      tx[i,j] <- tx[j,i] <- wasserstein1d(df[,i], df[,j])
+      tx[i,j] <- tx[j,i] <- wasserstein1d(sf[,i], sf[,j])
     }
   }
   if (df.type == "long") { pf[ ,"earthmoversDistance"] <- tx[upper.tri(tx)] }
-  if (df.type == "short") { pf["earthmoversDistance", ] <- tx[upper.tri(tx)] }
+  if (df.type == "short") { pf[pf$measure=="earthmoversDistance", 5:ncol(pf)] <- tx[upper.tri(tx)] }
   if (df.type == "matrix" ) {
     colnames(tx) <- rownames(tx) <- alabs
     write.table(tx, file=paste0(dir.save, "/", prefix, "_earthmoversDistance.csv"),
                 sep=",", quote=F, row.names=T, col.names=T)
   }
   if (do.plot) {
+    colnames(tx) <- rownames(tx) <- colnames(df)
     tp <- melt(tx)
     tp$Var2 <- factor(tp$Var2, levels=rev(colnames(tx)))
     tplot <- ggplot(tp, aes(x=Var1, y=Var2, fill=value)) +
@@ -463,8 +464,8 @@ if ("earthmoversDistance" %in% var.ls) {
             legend.position="right")
     if (!is.null(lut)) {
       tplot <- tplot +
-        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5),
-              axis.text.y=element_text())
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust=0.5, size=6),
+              axis.text.y=element_text(hjust=1, vjust=0.5, size=6))
     }
     ggsave(filename=paste0(dir.save, "/", prefix, "_earthmoversDistance.png"),
            plot=tplot, device="png", width=4, height=4, units="in", dpi=340)
@@ -473,7 +474,7 @@ if ("earthmoversDistance" %in% var.ls) {
 
 # save output --------------------------------------------------------------------------
 if (df.type %in% c("long", "short")) {
-  write.table(pf, file=paste0(dir.save, "/", prefix, "_connectivity_", df.type, "df.csv"),
+  write.table(pf, file=paste0(dir.save, "/", prefix, "_connectivity_", df.type, "_df.csv"),
               sep=",", quote=F, row.names=F, col.names=T)
 }
 

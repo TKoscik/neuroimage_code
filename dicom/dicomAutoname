@@ -153,7 +153,7 @@ for (( i=0; i<${N_FLS}; i++)); do
 #    done
 #    SUFFIX=($(IFS=_ ; echo "${PARTS[*]}"))
 #  fi
-        
+#### NOTE: This may break for multi echo / not be to BIDs standards but currently will work.  #### 
   unset PARTS
   PARTS=(${SUFFIX//_/ })
   ARR_N=$((${#PARTS[@]}-1))

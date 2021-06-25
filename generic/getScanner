@@ -12,7 +12,7 @@ OPERATOR=$(whoami)
 umask 007
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o ha --long dir-project:,all:,participant_id:,session_id:,dir-save:,help -n 'parse-options' -- "$@")
+OPTS=$(getopt -o ha --long dir-project:,participant-id:,session-id:,dir-save:,help -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -21,7 +21,6 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 DIR_PROJECT=
-ALL=true
 PID=
 SID=
 DIR_SAVE=
@@ -30,7 +29,7 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     --dir-project) DIR_PROJECT="$2" ; shift 2 ;;
-    --participant_id) PID="$2" ; shift 2 ;;
+    --participant-id) PID="$2" ; shift 2 ;;
     --session-id) SID="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -46,7 +45,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -a | --all               use participants.tsv and summarize all'
   echo '  --dir-project <value>    project directory'
   echo '  --participant-id <value> participant id, comma separated list'
   echo '  --session-id <value>     required if in directory structure,'
@@ -60,7 +58,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-if [[ "${ALL}" == "true" ]]; then
+if [[ -z ${PID} ]]; then
   PARTICIPANT_TSV=${DIR_PROJECT}/participants.tsv
   PID=($(getColumn -i ${PARTICIPANT_TSV} -f participant_id))
   SID=($(getColumn -i ${PARTICIPANT_TSV} -f session_id))

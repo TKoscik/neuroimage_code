@@ -8,18 +8,35 @@ function egress {
 }
 trap egress EXIT
 
+# parse input options ---------------------------------------------------------
+OPTS=$(getopt -o vrq --long version:,own-r,quiet -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+## default parameters
+INC_VERSION="dev"
+OWN_R="false"
+QUIET="false"
+
+while true; do
+  case "$1" in
+    -v | --version) INC_VERSION="$2" ; shift 2 ;;
+    -r | --own-r) OWN_R="true" ; shift ;;
+    -q | --quiet) QUIET="true" ; shift ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
 # Set system variables ---------------------------------------------------------
 HOSTNAME="$(uname -n)"
 HOSTNAME=(${HOSTNAME//-/ })
 HOSTNAME=${HOSTNAME[0],,}
 KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
-
-# set version number for INC code ----------------------------------------------
-INC_VERSION="$1"
-if [[ -z ${INC_VERSION} ]]; then
-  INC_VERSION="dev"
-fi
 
 # locate init.json -------------------------------------------------------------
 if [[ "${INC_VERSION}" == "dev" ]]; then
@@ -31,17 +48,23 @@ if [[ ! -f ${INIT} ]]; then
   echo "file not found: ${INIT}"
   exit 1
 fi
-echo "Setting up Iowa Neuroimage Processing Core Software - Version ${INC_VERSION^^}"
+if [[ "${QUIET}" == "false" ]]; then
+  echo "Setting up Iowa Neuroimage Processing Core Software - Version ${INC_VERSION^^}"
+fi
 export DIR_INC=$(dirname ${INIT})
-echo -e "\tDIR_INC=${DIR_INC}"
+if [[ "${QUIET}" == "false" ]]; then echo -e "\tDIR_INC=${DIR_INC}"; fi
+
+# use correct stack version on HPC ---------------------------------------------
+if [[ "${HOSTNAME}" == "argon" ]]; then
+  module load stack/2021.1
+fi
 
 # load JQ to read init info from JSON ------------------------------------------
 if [[ ! -x "$(command -v jq)" ]]; then
+  if [[ "${QUIET}" == "false" ]]; then echo -e "\tloading jq for JSON files"; fi
   if [[ "${HOSTNAME}" == "argon" ]]; then
-    echo -e "\tloading JSON modules"
-    module load stack/2020.2 jq/1.6_gcc-8.4.0
+    module load jq/1.6_gcc-9.3.0
   elif [[ "${HOSTNAME}" == *"psychiatry.uiowa.edu"* ]]; then
-    echo -e "\tloading jq for JSON files"
     PATH=${PATH}:/Shared/pinc/sharedopt/apps/jq/Linux/x86_64/1.6
   fi
   if [[ ! -x "$(command -v jq)" ]]; then
@@ -51,7 +74,7 @@ if [[ ! -x "$(command -v jq)" ]]; then
 fi
 
 # export directories -----------------------------------------------------------
-echo "EXPORTING VARIABLES:"
+if [[ "${QUIET}" == "false" ]]; then echo "EXPORTING VARIABLES:"; fi
 VAR_NAME=($(jq -r '.export_vars | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#VAR_NAME[@]}; i++ )); do
   VAR_VAL=($(jq -r ".export_vars.${VAR_NAME[${i}]}" < ${INIT} | tr -d ' [],"'))
@@ -67,25 +90,26 @@ for (( i=0; i<${#VAR_NAME[@]}; i++ )); do
   else
     export ${VAR_NAME[${i}]}=${VAR_VAL}
   fi
-  echo -e "\t${VAR_NAME[${i}]}=${VAR_VAL}"
+  if [[ "${QUIET}" == "false" ]]; then echo -e "\t${VAR_NAME[${i}]}=${VAR_VAL}"; fi
 done
 
 # set function aliases ---------------------------------------------------------
-echo "EXPORTING PATHS:"
+if [[ "${QUIET}" == "false" ]]; then echo "EXPORTING PATHS:"; fi
 FCN_PATHS=($(jq -r '.export_paths' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#FCN_PATHS[@]}; i++ )); do
   export PATH=${PATH}:${DIR_INC}/${FCN_PATHS[${i}]}
-  echo -e "\t${DIR_INC}/${FCN_PATHS[${i}]}"
+  if [[ "${QUIET}" == "false" ]]; then echo -e "\t${DIR_INC}/${FCN_PATHS[${i}]}"; fi
 done
 
 # run source files for software dependencies -----------------------------------
-echo "LOADING SOFTWARE DEPENDENCIES:"
+if [[ "${QUIET}" == "false" ]]; then echo "LOADING SOFTWARE DEPENDENCIES:"; fi
 SW_LS=($(jq -r '.software | keys_unsorted' < ${INIT} | tr -d ' [],"'))
 for (( i=0; i<${#SW_LS[@]}; i++ )); do
   unset SW_NAME SW_VERSION CMD_LS
   SW_NAME=${SW_LS[${i}]}
   WHICH_HOST=($(jq -r ".software.${SW_NAME}.hostname" < ${INIT} | tr -d ' [],"'))
   SW_VERSION=($(jq -r ".software.${SW_NAME}.version" < ${INIT} | tr -d ' [],"'))
+  if [[ "${QUIET}" == "false" ]]; then echo -e "\t${SW_NAME}/${SW_VERSION}"; fi
   CMD_LS=($(jq -r ".software.${SW_NAME}.command | keys_unsorted" < ${INIT} | tr -d ' [],"'))
   if [[ "${WHICH_HOST}" == "${HOSTNAME}" ]] || [[ "${WHICH_HOST}" == "all" ]]; then
     for (( j=0; j<${#CMD_LS[@]}; j++ )); do
@@ -95,13 +119,24 @@ for (( i=0; i<${#SW_LS[@]}; i++ )); do
       fi
     done
   fi
-  echo -e "\t${SW_NAME^^}/${SW_VERSION}"
 done
 
-# setup R packages -------------------------------------------------------------
-# run manually for now
-#Rscript ${DIR_INC}/r_setup.R
+# setup R ----------------------------------------------------------------------
+if [[ "${OWN_R}" == "false" ]] & [[ "${HOSTNAME,,}" == "argon" ]]; then
+  if [[ "${QUIET}" == "false" ]]; then echo "LOADING R MODULES:"; fi
+  PKG_LS=($(jq -r '.r_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+  for (( i=0; i<${#PKG_LS[@]}; i++ )); do
+    unset PKG_NAME PKG_VERSION
+    PKG_NAME=${PKG_LS[${i}]}
+    PKG_VERSION=($(jq -r ".r_modules.${PKG_NAME}" < ${INIT} | tr -d ' [],"'))
+    CMD="module load ${PKG_NAME//_/-}/${PKG_VERSION}"
+    eval ${CMD}
+  done
+fi
+
+if [[ "${QUIET}" == "false" ]]; then echo "CHECKING R PACKAGES:"; fi
+Rscript ${INC_R}/r_setup.R
+
 echo "INC CODE version ${INC_VERSION^^} has been setup."
-echo "If you haven't setup your R environment, please run:"
-echo "Rscript ${DIR_INC}/R/r_setup.R"
+
 

@@ -1,0 +1,171 @@
+available.packages            package:utils            R Documentation
+
+_L_i_s_t _A_v_a_i_l_a_b_l_e _P_a_c_k_a_g_e_s _a_t _C_R_A_N-_l_i_k_e _R_e_p_o_s_i_t_o_r_i_e_s
+
+_D_e_s_c_r_i_p_t_i_o_n:
+
+     ‘available.packages’ returns a matrix of details corresponding to
+     packages currently available at one or more repositories. The
+     current list of packages is downloaded over the internet (or
+     copied from a local mirror).
+
+_U_s_a_g_e:
+
+     available.packages(contriburl = contrib.url(repos, type), method,
+                        fields = NULL, type = getOption("pkgType"),
+                        filters = NULL, repos = getOption("repos"),
+                        ignore_repo_cache = FALSE, max_repo_cache_age,
+                        quiet = TRUE, ...)
+     
+_A_r_g_u_m_e_n_t_s:
+
+contriburl: URL(s) of the ‘contrib’ sections of the repositories.
+          Specify this argument only if your repository mirror is
+          incomplete, e.g., because you burned only the ‘contrib’
+          section on a CD.
+
+  method: download method, see ‘download.file’.
+
+    type: character string, indicate which type of packages: see
+          ‘install.packages’.
+
+          If ‘type = "both"’ this will use the source repository.
+
+  fields: a character vector giving the fields to extract from the
+          ‘PACKAGES’ file(s) in addition to the default ones, or ‘NULL’
+          (default).  Unavailable fields result in ‘NA’ values.
+
+ filters: a character vector or list or ‘NULL’ (default). See
+          ‘Details’.
+
+   repos: character vector, the base URL(s) of the repositories to use.
+
+ignore_repo_cache: logical.  If true, the repository cache is never
+          used (see ‘Details’).
+
+max_repo_cache_age: any cached values older than this in seconds will
+          be ignored. See ‘Details’.
+
+   quiet: logical, passed to ‘download.file()’; change only if you know
+          what you are doing.
+
+     ...: allow additional arguments to be passed from callers (which
+          might be arguments to future versions of this function).
+          Currently these are all passed to ‘download.file()’.
+
+_D_e_t_a_i_l_s:
+
+     The list of packages is either copied from a local mirror
+     (specified by a ‘file://’ URI) or downloaded.  If downloaded and
+     ‘ignore_repo_cache’ is false (the default), the list is cached for
+     the R session in a per-repository file in ‘tempdir()’ with a name
+     like
+
+     repos_http%3a%2f%2fcran.r-project.org%2fsrc%2fcontrib.rds
+     
+     The cached values are renewed when found to be too old, with the
+     age limit controlled _via_ argument ‘max_repo_cache_age’.  This
+     defaults to the current value of the environment variable
+     ‘R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE’, or if unset, to
+     ‘3600’ (one hour).
+
+     By default, the return value includes only packages whose version
+     and OS requirements are met by the running version of R, and only
+     gives information on the latest versions of packages.
+
+     Argument ‘filters’ can be used to select which of the packages on
+     the repositories are reported.  It is called with its default
+     value (‘NULL’) by functions such as ‘install.packages’: this value
+     corresponds to ‘getOption("available_packages_filters")’ and to
+     ‘c("R_version", "OS_type", "subarch", "duplicates")’ if that is
+     unset or set to ‘NULL’.
+
+     The built-in filters are
+
+     ‘"R_version"’ Exclude packages whose R version requirements are
+          not met.
+
+     ‘"OS_type"’ Exclude packages whose OS requirement is incompatible
+          with this version of R: that is exclude Windows-only packages
+          on a Unix-alike platform and _vice versa_.
+
+     ‘"subarch"’ For binary packages, exclude those with compiled code
+          that is not available for the current sub-architecture, e.g.
+          exclude packages only compiled for 32-bit Windows on a 64-bit
+          Windows R.
+
+     ‘"duplicates"’ Only report the latest version where more than one
+          version is available, and only report the first-named
+          repository (in ‘contriburl’) with the latest version if that
+          is in more than one repository.
+
+     ‘"license/FOSS"’ Include only packages for which installation can
+          proceed solely based on packages which can be verified as
+          Free or Open Source Software (FOSS, e.g., <URL:
+          https://en.wikipedia.org/wiki/FOSS>) employing the available
+          license specifications.  Thus both the package and any
+          packages that it depends on to load need to be _known to be_
+          FOSS.
+
+          Note that this does depend on the repository supplying
+          license information.
+
+     ‘"license/restricts_use"’ Include only packages for which
+          installation can proceed solely based on packages which are
+          known not to restrict use.
+
+     ‘"CRAN"’ Use CRAN versions in preference to versions from other
+          repositories (even if these have a higher version number).
+          This needs to be applied _before_ the default ‘"duplicates"’
+          filter, so cannot be used with ‘add = TRUE’.
+
+     If all the filters are from this set, then they can be specified
+     as a character vector; otherwise ‘filters’ should be a list with
+     elements which are character strings, user-defined functions or
+     ‘add = TRUE’ (see below).
+
+     User-defined filters are functions which take a single argument, a
+     matrix of the form returned by ‘available.packages’, and return a
+     matrix consisting of a subset of the rows of the argument.
+
+     The special ‘filter’ ‘add = TRUE’ appends the other elements of
+     the filter list to the default filters.
+
+_V_a_l_u_e:
+
+     A matrix with one row per package, row names the package names and
+     column names including ‘"Package"’, ‘"Version"’, ‘"Priority"’,
+     ‘"Depends"’, ‘"Imports"’, ‘"LinkingTo"’, ‘"Suggests"’,
+     ‘"Enhances"’, ‘"File"’ and ‘"Repository"’.  Additional columns can
+     be specified using the ‘fields’ argument.
+
+     Where provided by the repository, fields ‘"OS_type"’, ‘"License"’,
+     ‘"License_is_FOSS"’, ‘"License_restricts_use"’, ‘"Archs"’,
+     ‘"MD5sum"’ and ‘"NeedsCompilation"’ are reported for use by the
+     filters and package management tools, including
+     ‘install.packages’.
+
+_S_e_e _A_l_s_o:
+
+     ‘install.packages’, ‘download.packages’, ‘contrib.url’.
+
+     The ‘R Installation and Administration’ manual for how to set up a
+     repository.
+
+_E_x_a_m_p_l_e_s:
+
+     ## Not run:
+     
+     ## Restrict install.packages() (etc) to known-to-be-FOSS packages
+     options(available_packages_filters =
+       c("R_version", "OS_type", "subarch", "duplicates", "license/FOSS"))
+     ## or
+     options(available_packages_filters = list(add = TRUE, "license/FOSS"))
+     
+     ## Give priority to released versions on CRAN, rather than development
+     ## versions on Omegahat, R-Forge etc.
+     options(available_packages_filters =
+          c("R_version", "OS_type", "subarch", "CRAN", "duplicates"))
+     ## End(Not run)
+     
+

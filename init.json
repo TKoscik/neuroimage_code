@@ -22,14 +22,14 @@
         "log"
     ],
     "software": {
-        "OpenBLAS": {
+        "openblas": {
             "hostname": "argon",
-            "version": "0.2.19",
+            "version": "0.3.14_gcc-5.4.0",
             "command": {"cmd1": "module load ${SW_NAME}/${SW_VERSION}"}
         },
-        "R": {
+        "r": {
             "hostname": "argon",
-            "version": "3.5.1",
+            "version": "4.0.5_gcc-9.3.0",
             "command": {"cmd1": "module load ${SW_NAME}/${SW_VERSION}"}
         },
         "afni": {
@@ -75,5 +75,19 @@
             "version": "3.8.0-qt4-20190612",
             "command": {"cmd1": "export ${SW_NAME}=${PINCAPP}/itk-snap/Linux/x86_64/${SW_VERSION}/bin/itksnap"}
         }
+    },
+    "r_modules": {
+        "r_car": "3.0-10_gcc-9.3.0",
+        "r_devtools": "2.3.2_gcc-9.3.0",
+        "r_doparallel": "1.0.16_gcc-9.3.0",
+        "r_ggplot2": "3.3.3_gcc-9.3.0",
+        "r_gridextra": "2.3_gcc-9.3.0",
+        "r_hmisc": "4.4-2_gcc-9.3.0",
+        "r_jsonlite": "1.7.2_gcc-9.3.0",
+        "r_lme4": "1.1-26_gcc-9.3.0",
+        "r_mass": "7.3-53_gcc-9.3.0",
+        "r_r_utils": "2.10.1_gcc-9.3.0",
+        "r_reshape2": "1.4.4_gcc-9.3.0",
+        "r_viridis": "0.5.1_gcc-9.3.0"
     }
 }

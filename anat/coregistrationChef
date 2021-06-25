@@ -56,8 +56,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvld --long recipe-json:,recipe-name:,\
 fixed:,fixed-mask:,fixed-mask-dilation:,\
-moving:,moving-mask:,moving-mask-dilation:,\
-mask-procedure:,apply-to:,\
+moving:,moving-mask:,moving-mask-dilation:,mask-procedure:,\
 dir-template:,template:,space-source:,space-target:,\
 \
 dimensonality:,save-state:,restore-state:,write-composite-transform,\
@@ -69,7 +68,8 @@ use-estimate-learning-rate-once,winsorize-image-intensities:,float,random-seed:,
 ants-verbose,\
 \
 prefix:,label-xfm:,label-from:,label-to:,label-reg:,\
-apply-to:,make-overlay-png,make-gradient-png,keep-fwd-xfm,keep-inv-xfm,\
+apply-to:,apply-to-name:,\
+make-overlay-png,make-gradient-png,keep-fwd-xfm,keep-inv-xfm,\
 dir-save:,dir-xfm:,dir-png:,dir-scratch:,\
 verbose,help,no-log,dry-run -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -132,6 +132,7 @@ while true; do
     --label-reg) LABEL_REG="$2" ; shift 2 ;;
     --label-roi) LABEL_ROI="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;
+    --apply-to-name) APPLY_TO_NAME="$2" ; shift 2 ;;
     --make-overlay-png) MAKE_OVERLAY_PNG="true" ; shift ;;
     --make-gradient-png) MAKE_GRADIENT_PNG="true" ; shift ;;
     --png-overlay-bg-color) PNG_OVERLAY_BG_COLOR="$2" ; shift 2 ;;
@@ -457,11 +458,17 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -ne " MOVING"; fi
 
 APPLY_TO=(${APPLY_TO//,/ })
 if [[ "${APPLY_TO[0]}" != "optional" ]]; then
-  for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
-    APPLY_OUTPUT+=$(getBidsBase -s -i ${APPLY_TO[${i}]})
-    TMOD=$(getField -i ${APPLY_TO[${i}]} -f modality)
-    APPLY_OUTPUT[${i}]="${APPLY_OUTPUT[${i}]}_${LABEL_REG}_${TMOD}.nii.gz"
-  done
+  if [[ "${APPLY_TO_NAME[0]}" == "optional" ]]; then
+    for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
+      TSTR=$(getBidsBase -s -i ${APPLY_TO[${i}]})
+      APPLY_OUTPUT+=("${PREFIX}_${LABEL_REG}_${TSTR}")
+    done
+  else
+    APPLY_TO_NAME=(${APPLY_TO_NAME//,/ })
+    for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
+      APPLY_OUTPUT+=("${APPLY_TO_NAME[${i}]}.nii.gz")
+    done
+  fi
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne " EXTRA"; fi
 fi
 
@@ -709,6 +716,7 @@ if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 if [[ "${APPLY_TO[0]}" != "optional" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>apply transforms to ADDITIONAL IMAGES"; fi
   for (( i=0; i<${#APPLY_TO[@]}; i++ )); do
+    TMOD=$(getField -i ${APPLY_TO[${i}]} -f modality)
     apply_xfm="antsApplyTransforms -d 3"
     if [[ "${INTERPOLATION}" == "default" ]]; then
       if [[ "${TMOD}" == *"label"* ]]; then

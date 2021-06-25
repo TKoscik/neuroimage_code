@@ -8,9 +8,8 @@ iter <- 0
 while (delim.chk) {
   iter <- iter + 1
   df <- read.csv(args[1], header=F, sep=delims[iter], as.is=TRUE)
-  if (ncol(df) > 1) {
-    delim.chk <- FALSE
-  }
+  if (ncol(df) > 1) { delim.chk <- FALSE }
+  if (iter == length(delims)) { delim.chk <- FALSE }
 }
 
 df <- apply(df, 2, function(x) x^2)

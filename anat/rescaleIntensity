@@ -1,9 +1,8 @@
 #!/bin/bash -e
 #===============================================================================
-# Rician Denoising
+# rescaleImage
 # Authors: Timothy R. Koscik, PhD
-# Date: 2020-02-23
-# Software: ANTs
+# Date: 2021-04-19
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -16,7 +15,6 @@ HPC_SLOTS=${NSLOTS}
 KEEP=false
 NO_LOG=false
 umask 007
-
 # actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
@@ -51,49 +49,43 @@ function egress {
   fi
 }
 trap egress EXIT
-
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvklp --long prefix:,\
-dimension:,image:,mask:,model:,shrink:,patch:,search:,\
+image:,mask:,keep-neg,lo:,hi:,datatype:,\
 make-png,dir-save:,dir-png:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
 eval set -- "$OPTS"
-
 # Set default values for function ---------------------------------------------
 PREFIX=
-DIM=3
 IMAGE=
 MASK=
-MODEL=Rician
-SHRINK=1
-PATCH=1
-SEARCH=2
+RM_NEG="true"
+LO=0
+HI=0.999
+DATATYPE="INT"
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-MAKE_PNG=false
+MAKE_PNG=true
 DIR_PLOT=
 HELP=false
 VERBOSE=0
-
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -p | --make-png) MAKE_PNG=false ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
-    --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
-    --model) MODEL="$2" ; shift 2 ;;
-    --shrink) SHRINK="$2" ; shift 2 ;;
-    --patch) PATCH="$2" ; shift 2 ;;
-    --search) SEARCH="$2" ; shift 2 ;;
+    --keep-neg) RM_NEG="false" ; shift 2 ;;
+    --lo) LO="$2" ; shift 2 ;;
+    --hi) HI="$2" ; shift 2 ;;
+    --datatype) DATATYPE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-plot) DIR_PLOT="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -101,7 +93,6 @@ while true; do
     * ) break ;;
   esac
 done
-
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
   echo ''
@@ -129,7 +120,6 @@ if [[ "${HELP}" == "true" ]]; then
   NO_LOG=true
   exit 0
 fi
-
 #===============================================================================
 # Rician Denoising
 #===============================================================================
@@ -147,52 +137,57 @@ if [[ -z "${PREFIX}" ]]; then
     PREFIX=$(modField -i ${PREFIX} -r -f prep)
   fi
 fi
-
 if [[ -z "${DIR_SAVE}" ]]; then 
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
-
-# gather modailty for output
+# gather modality for output
 MOD=($(getField -i ${IMAGE} -f "modality"))
 
-# Denoise image
-dn_fcn="DenoiseImage -d ${DIM}"
-dn_fcn="${dn_fcn} -n ${MODEL}"
-dn_fcn="${dn_fcn} -s ${SHRINK}"
-dn_fcn="${dn_fcn} -p ${PATCH}"
-dn_fcn="${dn_fcn} -r ${SEARCH}"
-dn_fcn="${dn_fcn} -v ${VERBOSE}"
-dn_fcn="${dn_fcn} -i ${IMAGE}"
-if [ -n "${MASK}" ]; then
-  dn_fcn="${dn_fcn} -x ${MASK}"
+# set inputs and outputs
+SRC=${IMAGE}
+TRG=${DIR_SCRATCH}/${PREFIX}_prep-rescale_${MOD}.nii.gz
+
+# cutoff negative values if desired
+if [[ "${RM_NEG}" == "true" ]]; then
+  fslmaths ${IMAGE} -thr 0 ${TRG}
+  SRC=${TRG}
 fi
-dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz,"
-dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz]"
-eval ${dn_fcn}
+
+# truncate at desired percentile
+ImageMath 3 ${TRG} TruncateImageIntensity ${SRC} ${LO} ${HI} 100
+
+# convert datatype
+if [[ "${DATATYPE,,}" != "null" ]]; then
+  case ${DATATYPE,,} in
+    float) DT=0 ;;
+    uchar) DT=1 ;;
+    ushort) DT=2 ;;
+    uint) DT=3 ;;
+    ulong) DT=4 ;;
+    char) DT=5 ;;
+    short) DT=6 ;;
+    int) DT=7 ;;
+    long) DT=8 ;;
+    floatvec) DT=9 ;;
+    veccomp) DT=10 ;;
+    timecomp) DT=11 ;;
+    floatvec) DT=12 ;;
+  esac
+  ConvertImage 3 ${TRG} ${TRG} ${DT}
+fi
 
 #  copy output to final file
-mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise* ${DIR_SAVE}/
-TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz)
-
-if [[ "${KEEP}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise* ${DIR_SAVE}/
-  TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
-else
-  TO_PLOT+=(${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
-fi
+mv ${TRG} ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz
 
 if [[ "${MAKE_PNG}" == "true" ]]; then
   if [[ -z ${DIR_PLOT} ]]; then
     DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
   fi
   mkdir -p ${DIR_PLOT}
-  make3Dpng --bg ${TO_PLOT[0]} \
-    --filename ${PREFIX}_prep-${PREP}denoise_${MOD} \
-    --dir-save ${DIR_PLOT}
-  make3Dpng --bg ${TO_PLOT[1]} --bg-color "viridis" \
-    --filename ${PREFIX}_prep-${PREP}noise_${MOD} \
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz \
+    --filename ${PREFIX}_prep-rescale_${MOD}.nii.gz \
     --dir-save ${DIR_PLOT}
 fi
 

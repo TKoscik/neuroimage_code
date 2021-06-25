@@ -162,6 +162,8 @@ if [[ "${LESION}" == "true" ]] || [[ "${WM_HYPER}" == "true" ]]; then
         CONTRAST+=(0)
       fi
     done
+  else
+    CONTRAST=(${CONTRAST//,/ })
   fi
 fi
 

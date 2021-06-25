@@ -1,9 +1,9 @@
 #!/bin/bash -e
-
 #===============================================================================
-# Run Freesurfer
-# Authors: Josh Cochran
-# Date: 11/30/20
+# Generate T2star map by estimating R2* from non-linear fit to multi-echo data
+# Authors: Timothy Koscik PhD, Lauren Hopkins PhD
+# Date: 2021-06-09
+# CHANGELOG: <description of major changes to functionality>
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -53,45 +53,49 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o h --long \
-t1:,t2:,version:,\
-help -n 'parse-options' -- "$@")
-if [[ $? != 0 ]]; then
+OPTS=$(getopt -o hv --long prefix:,image:,te:,dir.save:,dir-scratch:,\
+help,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
 fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-T1=
-T2=
-VERSION=7.1.0
+PREFIX=
+IMAGE=
+TE=
+DIR_SAVE=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    --t1) T1="$2" ; shift 2 ;;
-    --t2) T2="$2" ; shift 2 ;;
-    --version) VERSION="$2" ; shift 2 ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --te) TE="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
 done
 
-
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  FCN_NAME=($(basename "$0"))
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  --t1 <value>             T1w images, can take multiple comma seperated images'
-  echo '  --t2 <value>             T2w images, can take multiple comma seperated images'
-  echo '  --version <value>        version of freesurfer to use; default: 7.1.0' 
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix  <optional>     prefix for filename'
+  echo '  --image                  list of images, can include * to find matches'
+  echo '  --te                     comma-separted list of echo times in ms'
+  echo '  --dir-save               location to save output'
+  echo '  --dir-scratch            location for temporary files'
   echo ''
   NO_LOG=true
   exit 0
@@ -100,40 +104,55 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+IMG=(${IMAGE//,/ })
+for (( i=0; i<${#IMG[@]}; i++ )); do
+  IMG_LS+=($(ls ${IMG[${i}]}))
+done
+TE=(${TE//,/ })
+N=${#IMG_LS[@]}
+
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${T1})
-PID=$(getField -i ${T1} -f sub)
-SID=$(getField -i ${T1} -f ses)
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(getBidsBase -s -i ${T1})
-fi
-mkdir -p ${DIR_PROJECT}/derivatives/freesurfer/subject_dir
+DIR_PROJECT=$(getDir -i ${IMG_LS[0]})
+PID=$(getField -i ${IMG_LS[0]} -f sub)
+SID=$(getField -i ${IMG_LS[0]} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
 
-T1=(${T1//,/ })
-T2=(${T2//,/ })
-N_T1=${#T1[@]}
-N_T2=${#T2[@]}
-
-unset IMAGES
-for (( i=0; i<${N_T1}; i++ )); do
-  IMAGES+=(-i ${T1[${i}]}) 
-done
-
-for (( i=0; i<${N_T2}; i++ )); do
-  IMAGES+=(-T2 ${T2[${i}]})
-done
-if [[ ${N_T2} -gt 0 ]];then
-  IMAGES+=(-T2pial)
+if [[ -z ${PREFIX} ]]; then
+  PREFIX=$(getBidsBase -i ${PIDSTR})
 fi
 
-#export FREESURFER_HOME=/Shared/pinc/sharedopt/apps/freesurfer/Linux/x86_64/${VERSION}
-#export SUBJECTS_DIR=${DIR_PROJECT}/derivatives/freesurfer/subject_dir
-#export FS_LICENSE=/Shared/inc_scratch/license/freesurfer/${VERSION}/license.txt
-#source ${FREESURFER_HOME}/FreeSurferEnv.sh
-recon-all -subject ${PREFIX} ${IMAGES[*]} -all
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+fi
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
+
+# fit echoes, calculate weights ------------------------------------------------
+fit_str="@compute_OC_weights"
+fit_str="${fit_str} -echo_times"
+for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${TE[${i}]}"; done
+fit_str="${fcn_str} -echo_dsets"
+for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${IMG_LS[${i}]}"; done
+fit_str="${fit_str} -prefix ${DIR_SCRATCH}/weights"
+eval ${fit_str}
+
+# weight echoes ----------------------------------------------------------------
+wt_str="3dMean"
+wt_str="${wt_str} -weightset ${DIR_SCRATCH}/weights+orig"
+wt_str="${wt_str} -prefix ${DIR_SCRATCH}/t2star.nii.gz"
+for (( i=0; i<${N}; i++ )); do wt_str="${wt_str} ${IMG_LS[${i}]}"; done
+eval ${wt_str}
+
+# move out to save location ----------------------------------------------------
+mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
+
 

@@ -170,10 +170,6 @@ IFS=x read -r -a pixdimTemp <<< $(PrintHeader ${LABEL} 1)
 PIXDIM="${pixdimTemp[0]}x${pixdimTemp[1]}x${pixdimTemp[2]}"
 
 # Summarize stats according to look up table -----------------------------------
-WHICH_SYS=$(uname --nodename)
-if grep -q "argon" <<< "${WHICH_SYS,,}"; then
-  module load R
-fi
 Rscript ${INC_R}/summarize3d.R \
   ${DIR_SCRATCH}/${PREFIX}_tempSummary.tsv \
   ${STATS_LS} \

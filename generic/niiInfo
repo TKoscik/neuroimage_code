@@ -55,6 +55,10 @@ elif [[ "${FIELD,,}" == "spacing" ]] || [[ "${FIELD,,}" == "space" ]]; then
 elif [[ "${FIELD,,}" == "size" ]] || [[ "${FIELD,,}" == "voxels" ]]; then
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:1:3})
+elif [[ "${FIELD,,}" == "voxel size" ]] || [[ "${FIELD,,}" == "mm3" ]]; then
+  TEMP=($(nifti_tool -disp_hdr -field pixdim -quiet -infiles ${IMAGE}))
+  TEMP=(${TEMP[@]:1:3})
+  OUTPUT=$(expr "${TEMP[0]} * ${TEMP[1]} * ${TEMP[2]}" | bc -l)
 elif [[ "${FIELD,,}" == "vols" ]] || [[ "${FIELD,,}" == "volumes" ]] || [[ "${FIELD,,}" == "numtr" ]] || [[ "${FIELD,,}" == "trs" ]]; then
   OUTPUT=($(nifti_tool -disp_hdr -field dim -quiet -infiles ${IMAGE}))
   OUTPUT=(${OUTPUT[@]:4:1})
