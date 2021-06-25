@@ -149,13 +149,12 @@ for (( i=0; i<${#DATE_LS[@]}; i++ )); do
   curl -X GET -u ${UP} ${URL} --fail --silent --show-error \
     | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
     | grep ${DATE_LS[${i}]} \
-    | cut -f1 \
     > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 
-  while read PID; do
+  while read PID DT; do
     URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/"${PID}"/scans/ALL/files?format=zip"
     curl -X GET -u $UP $URL --fail --silent --show-error \
-      > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_sub-"${PID}"_"${DATE_LS[${i}]//-}".zip"
+      > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_sub-"${PID}"_"${DT//-}".zip"
   done < ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
   rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 done
