@@ -59,13 +59,12 @@ ${INC_QC}/
     - evaluate acquisition quality, rating 0=good, 1=marginal, 2=poor, 3=needs review 
     - confirm orientation  
 #### INC LOG
-`${INC_DB}/qc/qc_FYYYYYQq.tsv`
-`${DIR_PROJECT}/rawdata/sub-${PID}/ses-${SID}/session.tsv`
+`${INC_DB}/qc/qc_FYYYYYQq.tsv`  
+`${DIR_PROJECT}/rawdata/sub-${PID}/ses-${SID}/session.tsv`  
 
-| pi | project | file_dir | file_name | action           | status | qc | comment | operator | proc_start  | proc_end |
-|----|---------|----------|-----------|------------------|--------|----|---------|----------|-------------|----------|
-|    |         |          |           | dicom_conversion |        |    |         |          |             |          |
-
+| pi | project | file_dir | file_name | action           | status | qc | comment | operator | proc_start | proc_end |
+|----|---------|----------|-----------|------------------|--------|----|---------|----------|------------|----------|
+|    |         |          |           | dicom_conversion |        |    |         |          |            |          |
 
 4. Move to proper destinations, append info to participants.tsv
 ```
