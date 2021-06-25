@@ -4,7 +4,8 @@
 
 # general ---------------------------------------------------------------------
 [ ] remove png maker from functions, add as examples to help in png maker functions
-[ ] update log strings, make sure blank inputs do not cause an issue
+[ ] update log strings, make sure blank inputs do not cause an issue, use new formats
+
 [x] initialization file
     [x] set software and versions, modules
     [x] write R setup script

@@ -33,21 +33,9 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
@@ -55,7 +43,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvklp --long prefix:,\
 dimension:,image:,mask:,model:,shrink:,patch:,search:,\
-make-png,dir-save:,dir-png:,dir-scratch:,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -74,8 +62,6 @@ PATCH=1
 SEARCH=2
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-MAKE_PNG=false
-DIR_PLOT=
 HELP=false
 VERBOSE=0
 
@@ -85,7 +71,6 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -p | --make-png) MAKE_PNG=false ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -95,7 +80,6 @@ while true; do
     --patch) PATCH="$2" ; shift 2 ;;
     --search) SEARCH="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-plot) DIR_PLOT="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -104,7 +88,6 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
-  echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
@@ -148,8 +131,8 @@ if [[ -z "${PREFIX}" ]]; then
   fi
 fi
 
-if [[ -z "${DIR_SAVE}" ]]; then 
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+if [[ -z "${DIR_SAVE}" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -174,13 +157,9 @@ eval ${dn_fcn}
 
 #  copy output to final file
 mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise* ${DIR_SAVE}/
-TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz)
 
 if [[ "${KEEP}" == "true" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise* ${DIR_SAVE}/
-  TO_PLOT+=(${DIR_SAVE}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
-else
-  TO_PLOT+=(${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz)
 fi
 
 if [[ "${MAKE_PNG}" == "true" ]]; then

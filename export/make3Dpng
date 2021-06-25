@@ -325,15 +325,8 @@ PID=$(getField -i ${BG} -f sub)
 SID=$(getField -i ${BG} -f ses)
 DIRPID=sub-${PID}
 if [[ -z "${FILENAME}" ]]; then
-  if [[ -n "${PID}" ]]; then
-    FILENAME="sub-${PID}"
-    if [[ -n "${SID}" ]]; then
-      FILENAME="${FILENAME}_ses-${SID}"
-    fi
-  else
-    FILENAME="overlay"
-  fi
-  FILENAME="${FILENAME}_${DATE_SUFFIX}"
+  FBASE=$(basename ${BG})
+  **** fix default filename
 fi
 
 # set default save directory
