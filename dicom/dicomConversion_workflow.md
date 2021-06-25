@@ -56,19 +56,16 @@ ${INC_QC}/
     - file destinations  
     - verify scan modalities  
     - verify/modify filename flags and values  
-    - evaluate acquisition quality, rating 0=good, 1=marginal, 2=poor 
+    - evaluate acquisition quality, rating 0=good, 1=marginal, 2=poor, 3=needs review 
     - confirm orientation  
-#### INC LOG, ${INC_DB}/qc_YYYYQq.tsv
-| pi | project | dir_project | participant_id | session_id | action           | comment | operator | proc_start | | proc_end |
-|----|---------|-------------|----------------|------------|------------------|---------|----------|-------------|----------|
-|    |         |             |                |            | dicom_conversion |         |          |             |          |
+#### INC LOG
+`${INC_DB}/qc/qc_FYYYYYQq.tsv`
+`${DIR_PROJECT}/rawdata/sub-${PID}/ses-${SID}/session.tsv`
 
-#### ${DIR_PROJECT}/rawdata/sub-${PID}/ses-${SID}/session.tsv
-|  file_name                            | status  | qc | comment       | operator | qc_datetime  |
-|---------------------------------------|---------|----|---------------|----------|--------------|
-| sub-12345_ses-YYMMDDhhmmss_cal.nii.gz | delete  | NA | calibration   | OPERATOR | YYMMDDhhmmss |
-| sub-12345_ses-YYMMDDhhmmss_T1w.nii.gz | ok      | 0  |               | OPERATOR | YYMMDDhhmmss |
-| sub-12345_ses-YYMMDDhhmmss_T2w.nii.gz | exclude | 2  | excess motion | OPERATOR | YYMMDDhhmmss |
+| pi | project | file_dir | file_name | action           | status | qc | comment | operator | proc_start  | proc_end |
+|----|---------|----------|-----------|------------------|--------|----|---------|----------|-------------|----------|
+|    |         |          |           | dicom_conversion |        |    |         |          |             |          |
+
 
 4. Move to proper destinations, append info to participants.tsv
 ```
