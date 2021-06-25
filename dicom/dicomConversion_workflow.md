@@ -24,8 +24,6 @@ ${INC_DB}/projects.tsv
 |---------------|--------------|----|--------------|-------------------|----------------------------|
 | HAWKID        | XNAT_PROJECT | PI | PROJECT      | DIR_PROJECT       | HAWKID1,HAWKID2,...HAWKIDN |
 
-
-
 ### Workflow
 1. DICOM files added to IMPORT FOLDER  
     - file format: `${INC_IMPORT}/pi-${PI}_project-${PROJECT}_sub-${PID}_${YYMMDDHHMMSS}.zip`  
