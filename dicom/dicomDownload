@@ -103,7 +103,7 @@ if [[ -z ${UP} ]]; then
   fi
 else [[ -f ${UP} ]]; then
   UP=$(cat ${UP})
-fi    
+fi
 
 # make save directory if non standard ------------------------------------------
 if [[ "${DIR_SAVE}" != "${INC_IMPORT}" ]]; then

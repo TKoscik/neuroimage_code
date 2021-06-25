@@ -11,7 +11,9 @@ OPERATOR=$(whoami)
 KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
 HPC_Q=${QUEUE}
+if [[ -n ${HPC_Q} ]]; then HPC_Q="NA"; fi
 HPC_SLOTS=${NSLOTS}
+if [[ -n ${HPC_SLOTS} ]]; then HPC_SLOTS="NA"; fi
 umask 007
 
 # actions on exit --------------------------------------------------------------
@@ -30,7 +32,7 @@ trap egress EXIT
 #===============================================================================
 PROJECT_LS=($(getColumn -i ${INC_DB}/projects.tsv -f xnat_project))
 N=${#PROJECT[@]}
-for (( i=0; i<${N}; i++ )); do
+for (( i=1; i<${N}; i++ )); do
   dicomDownload --xnat-project ${PROJECT_LS[${i}]}
 done
 
