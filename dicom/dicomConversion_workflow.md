@@ -58,10 +58,10 @@ ${INC_QC}/
     - verify/modify filename flags and values  
     - evaluate acquisition quality, rating 0=good, 1=marginal, 2=poor 
     - confirm orientation  
-#### QC LOG, ${INC_DB}/qc_YYYYQq.tsv
-| pi | project | dir_project | participant_id | session_id | action | file_name | comment | operator | qc_datetime |
-|----|---------|-------------|----------------|------------|--------|-----------|---------|----------|-------------|
-|    |         |             |                |            |        |           |         |          |             |
+#### INC LOG, ${INC_DB}/qc_YYYYQq.tsv
+| pi | project | dir_project | participant_id | session_id | action           | comment | operator | proc_start | | proc_end |
+|----|---------|-------------|----------------|------------|------------------|---------|----------|-------------|----------|
+|    |         |             |                |            | dicom_conversion |         |          |             |          |
 
 #### ${DIR_PROJECT}/rawdata/sub-${PID}/ses-${SID}/session.tsv
 |  file_name                            | status  | qc | comment       | operator | qc_datetime  |
