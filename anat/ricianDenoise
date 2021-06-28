@@ -44,7 +44,7 @@ trap egress EXIT
 OPTS=$(getopt -o hvklp --long prefix:,\
 dimension:,image:,mask:,model:,shrink:,patch:,search:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,fcn-verbose,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -63,12 +63,14 @@ SEARCH=2
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
+VERBOSE=false
+FCN_VERBOSE=0
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    --fcn-verbose) FCN_VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
@@ -88,26 +90,25 @@ done
 
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
+  echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         prefix for output,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  -d | --dimension <value> image dimension, 3=3D (default) or 4=4D'
-  echo '  --image <value>          full path to image to denoise'
-  echo '  --mask <value>           full path to binary mask'
-  echo '  --model <value>          Rician (default) or Gaussian noise model'
-  echo '  --shrink <value>         shrink factor, large images are time-'
-  echo '                           consuming. default: 1'
-  echo '  --patch <value>          patch radius, default:1 (1x1x1)'
-  echo '  --search <value>         search radius, default:2 (2x2x2)'
-  echo '  --dir-save <value>       directory to save output,'
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  -h | --help         display command help'
+  echo '  -v | --verbose      add verbose output to terminal'
+  echo '  -k | --keep         keep noise image'
+  echo '  -l | --no-log       disable writing to output log'
+  echo '  --prefix            prefix for output, default: sub-123_ses-1234abcd'
+  echo '  -d | --dimension    image dimension, 3=3D (default) or 4=4D'
+  echo '  --image             full path to image to denoise'
+  echo '  --mask              full path to binary mask'
+  echo '  --model             Rician (default) or Gaussian noise model'
+  echo '  --shrink            shrink factor (1), large images are time-consuming'
+  echo '  --patch             patch radius, default:1 (1x1x1)'
+  echo '  --search            search radius, default:2 (2x2x2)'
+  echo '  --dir-save          directory to save output,'
+  echo '    default: ${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}/ses-${SID}'
+  echo '  --dir-scratch       directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -137,47 +138,46 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-# gather modailty for output
+# get modailty for output ------------------------------------------------------
 MOD=($(getField -i ${IMAGE} -f "modality"))
 
-# Denoise image
+# Denoise image ----------------------------------------------------------------
 dn_fcn="DenoiseImage -d ${DIM}"
 dn_fcn="${dn_fcn} -n ${MODEL}"
 dn_fcn="${dn_fcn} -s ${SHRINK}"
 dn_fcn="${dn_fcn} -p ${PATCH}"
 dn_fcn="${dn_fcn} -r ${SEARCH}"
-dn_fcn="${dn_fcn} -v ${VERBOSE}"
+dn_fcn="${dn_fcn} -v ${FCN_VERBOSE}"
 dn_fcn="${dn_fcn} -i ${IMAGE}"
-if [ -n "${MASK}" ]; then
-  dn_fcn="${dn_fcn} -x ${MASK}"
-fi
+if [ -n "${MASK}" ]; then dn_fcn="${dn_fcn} -x ${MASK}"; fi
 dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz,"
 dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz]"
+
+if [[ ${VERBOSE} == "true" ]]; then
+  echo "Denoising Image >>>"
+  echo -e "\t${dn_fcn}"
+fi
+writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s ${dn_fcn}
 eval ${dn_fcn}
 
-#  copy output to final file
+# copy output to final file ----------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e "\tmoving denoised output to ${DIR_SAVE}"
+fi
 mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise* ${DIR_SAVE}/
 
+# copy noise image if selected -------------------------------------------------
 if [[ "${KEEP}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise* ${DIR_SAVE}/
-fi
-
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  if [[ -z ${DIR_PLOT} ]]; then
-    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo -e "\tmoving noise image to ${DIR_SAVE}"
   fi
-  mkdir -p ${DIR_PLOT}
-  make3Dpng --bg ${TO_PLOT[0]} \
-    --filename ${PREFIX}_prep-${PREP}denoise_${MOD} \
-    --dir-save ${DIR_PLOT}
-  make3Dpng --bg ${TO_PLOT[1]} --bg-color "viridis" \
-    --filename ${PREFIX}_prep-${PREP}noise_${MOD} \
-    --dir-save ${DIR_PLOT}
+  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise* ${DIR_SAVE}/
 fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 exit 0
 
 
