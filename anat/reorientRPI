@@ -32,21 +32,9 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
@@ -65,7 +53,6 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 DIR_SAVE=
-DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 
 while true; do
@@ -75,6 +62,7 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -93,7 +81,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          directory listing of image to process'
   echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -122,17 +109,22 @@ if [[ -z "${DIR_SAVE}" ]]; then
   fi
 fi
 mkdir -p ${DIR_SAVE}
-mkdir -p ${DIR_SCRATCH}
 
 # Reorient image ---------------------------------------------------------------
 MOD=$(getField -i ${IMAGE} -f modality)
 OUTNAME=${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz
-3dresample -orient rpi -prefix ${DIR_SCRATCH}/${OUTNAME} -input ${IMAGE}
-mv ${DIR_SCRATCH}/${OUTNAME} ${DIR_SAVE}
+rs_fcn="3dresample -orient rpi -prefix ${DIR_SAVE}/${OUTNAME} -input ${IMAGE}"
+writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s ${rs_fcn}
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "Reorient Image to RPI >>>"
+  echo -e "\t${rs_fcn}"
+fi
+eval ${rs_fcn}
 
 #===============================================================================
 # End of Function
 #===============================================================================
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 exit 0
 
 

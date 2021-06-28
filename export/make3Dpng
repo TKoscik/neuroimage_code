@@ -33,27 +33,9 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
-    if [[ "${FCN_NAME}" == *"QC"* ]]; then
-      logQC --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
-      --notes ${NOTES}
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
@@ -326,13 +308,11 @@ SID=$(getField -i ${BG} -f ses)
 DIRPID=sub-${PID}
 if [[ -z "${FILENAME}" ]]; then
   FBASE=$(basename ${BG})
-  **** fix default filename
+  FILENAME="${FBASE%%.*}"  
 fi
 
 # set default save directory
-if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/png
-fi
+if [[ -z ${DIR_SAVE} ]]; then DIR_SAVE=$(dirname ${BG}); fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
