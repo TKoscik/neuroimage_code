@@ -127,8 +127,11 @@ if [[ "${ACTION,,}" == "add" ]]; then
     TFLAG+=(${FIELD,,})
     TVALUE+=(${VALUE_NEW})
   fi
+  TMOD=${VALUE[-1]}
   FLAG=(${TFLAG[@]})
   VALUE=(${TVALUE[@]})
+  FLAG+=("modality")
+  VALUE+=("${TMOD}")
 fi
 
 # write output string ---------------------------------------------------------

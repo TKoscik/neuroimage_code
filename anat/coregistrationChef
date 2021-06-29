@@ -34,21 +34,9 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
@@ -69,8 +57,8 @@ ants-verbose,\
 \
 prefix:,label-xfm:,label-from:,label-to:,label-reg:,\
 apply-to:,apply-to-name:,\
-make-overlay-png,make-gradient-png,keep-fwd-xfm,keep-inv-xfm,\
-dir-save:,dir-xfm:,dir-png:,dir-scratch:,\
+keep-fwd-xfm,keep-inv-xfm,\
+dir-save:,dir-xfm:,dir-scratch:,\
 verbose,help,no-log,dry-run -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -133,26 +121,10 @@ while true; do
     --label-roi) LABEL_ROI="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;
     --apply-to-name) APPLY_TO_NAME="$2" ; shift 2 ;;
-    --make-overlay-png) MAKE_OVERLAY_PNG="true" ; shift ;;
-    --make-gradient-png) MAKE_GRADIENT_PNG="true" ; shift ;;
-    --png-overlay-bg-color) PNG_OVERLAY_BG_COLOR="$2" ; shift 2 ;;
-    --png-overlay-bg-alpha) PNG_OVERLAY_BG_ALPHA="$2" ; shift 2 ;;
-    --png-overlay-bg-thresh) PNG_OVERLAY_BG_THRESH="$2" ; shift 2 ;;
-    --png-overlay-fg-color) PNG_OVERLAY_FG_COLOR="$2" ; shift 2 ;;
-    --png-overlay-fg-alpha) PNG_OVERLAY_FG_ALPHA="$2" ; shift 2 ;;
-    --png-overlay-fg-thresh) PNG_OVERLAY_FG_THRESH="$2" ; shift 2 ;;
-    --png-overlay-layout) PNG_OVERLAY_LAYOUT="$2" ; shift 2 ;;
-    --png-overlay-offset) PNG_OVERLAY_OFFSET="$2" ; shift 2 ;;
-    --png-overlay-filename) PNG_OVERLAY_FILENAME="$2" ; shift 2 ;;
-    --png-grad-color) PNG_GRAD_COLOR="$2" ; shift 2 ;;
-    --png-grad-layout) PNG_GRAD_LAYOUT="$2" ; shift 2 ;;
-    --png-grad-offset) PNG_GRAD_OFFSET="$2" ; shift 2 ;;
-    --png-grad-filename) PNG_GRAD_FILENAME="$2" ; shift 2 ;;
     --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
     --keep-inv-xfm) KEEP_INV_XFM="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
-    --dir-png) DIR_PNG="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -252,7 +224,11 @@ DIR_PROJECT=$(getDir -i ${MOVING[0]})
 PID=$(getField -i ${MOVING[0]} -f sub)
 SID=$(getField -i ${MOVING[0]} -f ses)
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then
+  DIRPID=${DIRPID}/ses-${SID}
+  PIDSTR=${PIDSTR}_ses-${SID}
+fi
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # set defaults as necessary ----------------------------------------------------
@@ -680,11 +656,11 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>make output directories"; fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then mkdir -p ${DIR_XFM}; fi
-if [[ "${MAKE_PNG}" == "true" ]]; then mkdir -p ${DIR_PNG}; fi
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # run coregistration -----------------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>run coregistration"; fi
+writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${antsCoreg}"
 eval "${antsCoreg}"
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
@@ -708,6 +684,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   fi
   apply_xfm="${apply_xfm} -r ${FIXED[0]}"
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
+  writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
   eval ${apply_xfm}
 done
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
@@ -739,6 +716,7 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     fi
     apply_xfm="${apply_xfm} -r ${FIXED[0]}"
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
+    writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
     eval ${apply_xfm}
   done
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
@@ -758,50 +736,6 @@ if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
   mv ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ${DIR_XFM}/${INV_OUTPUT}
 fi
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
-fi
-
-# plot output for review -------------------------------------------------------
-if [[ "${MAKE_OVERLAY_PNG}" == "true" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>generate results PNG"; fi
-  overlay_png="make3Dpng"
-  overlay_png="${overlay_png} --bg ${FIXED[0]}"
-  overlay_png=${overlay_png}' --bg-color "'${PNG_OVERLAY_BG_COLOR}'"'
-  overlay_png="${overlay_png} --bg-alpha ${PNG_OVERLAY_BG_ALPHA}"
-  overlay_png=${overlay_png}' --bg-thresh "'${PNG_OVERLAY_BG_THRESH}'"'
-  overlay_png="${overlay_png} --fg ${DIR_SAVE}/${MOVING_OUTPUT[0]}"
-  overlay_png=${overlay_png}' --fg-color "'${PNG_OVERLAY_FG_COLOR}'"'
-  overlay_png="${overlay_png} --fg-alpha ${PNG_OVERLAY_FG_ALPHA}"
-  overlay_png=${overlay_png}' --fg-thresh "'${PNG_OVERLAY_FG_THRESH}'"'
-  overlay_png="${overlay_png} --fg-cbar"
-  overlay_png=${overlay_png}' --layout "'${PNG_OVERLAY_LAYOUT}'"'
-  overlay_png=${overlay_png}' --offset "'${PNG_OVERLAY_OFFSET}'"'
-  overlay_png=${overlay_png}' --filename "'${PNG_OVERLAY_FILENAME}'"'
-  overlay_png="${overlay_png} --dir-save ${DIR_PNG}"
-  eval ${overlay_png}
-  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
-fi
-if [[ "${MAKE_GRADIENT_PNG}" == "true" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>generate results PNG"; fi
-  FIXED_SZ=($(niiInfo -i ${FIXED[0]} -f spacing))
-  VXL_SZ=$(echo "scale=1; ${FIXED_SZ[0]}*${FIXED_SZ[1]}*${FIXED_SZ[2]}" | bc -l)
-  GRAD_SIGMA=$(echo "scale=1; ${VXL_SZ}/2" | bc -l)
-  ImageMath 3 ${DIR_SCRATCH}/grad_fixed.nii.gz \
-    Grad ${FIXED[0]} ${GRAD_SIGMA} 1
-  ImageMath 3 ${DIR_SCRATCH}/grad_moving.nii.gz \
-    Grad ${DIR_SAVE}/${MOVING_OUTPUT[0]} ${GRAD_SIGMA} 1  
-  ImageMath 3 ${DIR_SCRATCH}/grad_moving_histMatch.nii.gz \
-    HistogramMatch ${DIR_SCRATCH}/grad_moving.nii.gz ${DIR_SCRATCH}/grad_fixed.nii.gz
-  ImageMath 3 ${DIR_SCRATCH}/grad_diff.nii.gz \
-    - ${DIR_SCRATCH}/grad_moving.nii.gz ${DIR_SCRATCH}/grad_fixed.nii.gz
-  grad_png="make3Dpng"
-  grad_png="${grad_png} --bg ${DIR_SCRATCH}/grad_diff.nii.gz"
-  grad_png=${grad_png}' --bg-color "'${PNG_GRAD_COLOR}'"'
-  grad_png=${grad_png}' --layout "'${PNG_GRAD_LAYOUT}'"'
-  grad_png=${grad_png}' --offset "'${PNG_GRAD_OFFSET}'"'
-  grad_png=${grad_png}' --filename "'${PNG_GRAD_FILENAME}'"'
-  grad_png="${grad_png} --dir-save ${DIR_PNG}"
-  eval ${grad_png}
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
 

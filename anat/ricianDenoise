@@ -157,7 +157,7 @@ if [[ "${VERBOSE}" == "true" ]]; then
   echo "Denoising Image >>>"
   echo -e "\t${dn_fcn}"
 fi
-writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s ${dn_fcn}
+writeScript -d ${DIR_PROJECT} -p ${PREFIX} -s "${dn_fcn}"
 eval ${dn_fcn}
 
 # copy output to final file ----------------------------------------------------

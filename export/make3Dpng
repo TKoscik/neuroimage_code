@@ -163,7 +163,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help       display command help'
   echo '  -v | --verbose    add verbose output to log file'
   echo '  -l | --no-log     disable writing to output log'
@@ -345,12 +344,11 @@ ROI_VALUE=(${ROI_VALUE//;/ })
 ROI_COLOR=(${ROI_COLOR//;/ })
 ROI_ORDER=(${ROI_ORDER//;/ })
 ROI_CBAR=(${ROI_CBAR//;/ })
-echo ${ROI_VALUE}
 OFFSET=(${OFFSET//,/ })
 
 # Get image information -------------------------------------------------------
 unset DIMS PIXDIM ORIGIN ORIENT
-DIMS=($(niiInfo -i ${BG} -f "voxels"))
+DIMS=($(niiInfo -i ${BG} -f voxels))
 PIXDIM=($(niiInfo -i ${BG} -f spacing))
 ORIGIN=($(niiInfo -i ${BG} -f origin))
 ORIENT=($(niiInfo -i ${BG} -f orient))
@@ -446,7 +444,7 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
-echo ${ROI_VALUE}
+#echo ${ROI_VALUE}
   labelUnique --label ${ROI} --volume ${ROI_VOL} --value ${ROI_VALUE} \
     --dir-save ${DIR_SCRATCH} --prefix ROI
   ROI=${DIR_SCRATCH}/ROI.nii.gz

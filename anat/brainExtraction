@@ -32,28 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvklp --long prefix:,\
-image:,method:,suffix:,spatial-filter:,filter-radius:,\
+image:,method:,suffix:,spatial-filter:,filter-radius:,automask-clip:,\
 make-png,dir-save:,dir-png:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -91,6 +79,7 @@ while true; do
     --suffix) SUFFIX="$2" ; shift 2 ;;
     --spatial-filter) SPATIAL_FILTER="$2" ; shift 2 ;;
     --filter-radius) FILTER_RADIUS="$2" ; shift 2 ;;
+    --automask-clip) AUTOMASK_CLIP="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-png) DIR_PNG="$2" ; shift 2 ;;
@@ -129,7 +118,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --template <value>       For ANTs method, which template to use,'
   echo '                           default=OASIS'
   echo '  --dir-save <value>       directory to save output, '
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/mask'
   echo '  --dir-scratch <value>    directory for temporary workspace'
   echo ''
   NO_LOG=true
@@ -145,13 +133,10 @@ IMAGE=(${IMAGE//,/ })
 DIR_PROJECT=$(getDir -i ${IMAGE[0]})
 PID=$(getField -i ${IMAGE[0]} -f sub)
 SID=$(getField -i ${IMAGE[0]} -f ses)
-if [[ -z "${PREFIX}" ]]; then 
-  PREFIX=$(getBidsBase -s -i ${IMAGE[0]})
-fi
-
-if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/mask
-fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
+if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${IMAGE[0]}); fi
+if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}; fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
@@ -275,35 +260,7 @@ if [[ ${#METHOD[@]} > 1 ]]; then
 fi
 
 # move files to appropriate locations-------------------------------------------
-mv ${DIR_SCRATCH}/${PREFIX}_mask-brain* ${DIR_SAVE}
-
-echo ${MASK_LS[@]}
-# generate png outlines of brain masks -----------------------------------------
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>generating PNGs of results"; fi
-  if [[ -z ${DIR_PNG} ]]; then
-    DIR_PNG=${DIR_PROJECT}/derivatives/inc/png/sub-${PID}
-    if [[ -n ${SID} ]]; then DIR_PNG=${DIR_PNG}/ses-${SID}; fi
-  fi
-  mkdir -p ${DIR_PNG}
-  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
-    TNAME=${MASK_LS[${i}]%%.*}
-    png_fcn="make3Dpng --bg ${IMAGE[0]}"
-    if [[ "${TNAME}" == *"VENN" ]]; then
-      png_fcn="${png_fcn} --fg ${DIR_SAVE}/${MASK_LS[${i}]}"
-      png_fcn=${png_fcn}' --fg-color "rainbow"'
-      png_fcn=${png_fcn}' --fg-order "random"'
-    else
-      png_fcn="${png_fcn} --roi ${DIR_SAVE}/${MASK_LS[${i}]}"
-      png_fcn=${png_fcn}' --roi-color "#FF0000"'
-    fi
-    png_fcn=${png_fcn}' --layout "7:z;7:z;7:z;7:z;7:z"'
-    png_fcn=${png_fcn}' --offset "0,0,0"'
-    png_fcn="${png_fcn} --filename ${TNAME}"
-    png_fcn="${png_fcn} --dir-save ${DIR_PNG}"
-    eval ${png_fcn}
-  done
-fi
+mv ${DIR_SCRATCH}/*_mask-brain* ${DIR_SAVE}/
 
 #===============================================================================
 # End of Function

@@ -40,9 +40,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long prefix:,\
-image:,dir-save:,\
-help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hlv --long prefix:,image:,dir-save:,\
+help,no-log,verbose -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -54,10 +53,12 @@ PREFIX=
 IMAGE=
 DIR_SAVE=
 HELP=false
+VERBOSE=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -113,8 +114,8 @@ mkdir -p ${DIR_SAVE}
 # Reorient image ---------------------------------------------------------------
 MOD=$(getField -i ${IMAGE} -f modality)
 OUTNAME=${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz
-rs_fcn="3dresample -orient rpi -prefix ${DIR_SAVE}/${OUTNAME} -input ${IMAGE}"
-writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s ${rs_fcn}
+rs_fcn="3dresample -orient rpi -overwrite -prefix ${DIR_SAVE}/${OUTNAME} -input ${IMAGE}"
+writeScript -d ${DIR_PROJECT} -p "sub-${PID}_ses-${SID}" -s "${rs_fcn}"
 if [[ "${VERBOSE}" == "true" ]]; then
   echo "Reorient Image to RPI >>>"
   echo -e "\t${rs_fcn}"

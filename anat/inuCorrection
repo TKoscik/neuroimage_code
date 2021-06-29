@@ -34,32 +34,20 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvklp --long prefix:,\
+OPTS=$(getopt -o hvkl --long prefix:,\
 dimension:,image:,method:,mask:,\
 smooth-kernel:,\
 weight:,shrink:,convergence,bspline:,hist-sharpen:,\
-no-gm,urad:,do-t2,make-png,\
-dir-save:,dir-png:,dir-scratch:,\
+no-gm,urad:,do-t2,\
+dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
@@ -82,9 +70,7 @@ HIST_SHARPEN=[0.15,0.01,200]
 NO_GM=false
 URAD=30
 DO_T2=false
-MAKE_PNG=true
 DIR_SAVE=
-DIR_PNG=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
@@ -96,7 +82,6 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -p | --make-png) MAKE_PNG=false ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -112,7 +97,6 @@ while true; do
     --urad) URAD="$2" ; shift 2 ;;
     --do-t2) DO_T2=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-png) DIR_PNG="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -197,7 +181,7 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -256,13 +240,8 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
   # Move files to appropriate location
   mv ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T1w.nii.gz
   mv ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T2w.nii.gz
-  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T1w.nii.gz
-  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T2w.nii.gz
   if [[ "${KEEP}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${PREFIX}_biasField+T1T2.nii.gz
-    TO_PLOT+=${DIR_SAVE}/${PREFIX}_biasField+T1T2.nii.gz
-  else
-    TO_PLOT+=${DIR_SCRATCH}/${PREFIX}_biasField+T1T2.nii.gz
+    mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_biasField.nii.gz
   fi
 fi
 
@@ -284,17 +263,13 @@ if [[ "${METHOD,,}" == "n4" ]] \
   n4_fcn="${n4_fcn} -b ${BSPLINE}"
   n4_fcn="${n4_fcn} -t ${HIST_SHARPEN}"
   n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz,"
-  n4_fcn="${n4_fcn}${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz]"
+  n4_fcn="${n4_fcn}${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz]"
   n4_fcn="${n4_fcn} -v ${VERBOSE}"
   eval ${n4_fcn}
   
   mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz ${DIR_SAVE}/
-  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz
   if [[ "${KEEP,,}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz ${DIR_SAVE}/
-    TO_PLOT+=${DIR_SAVE}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz
-  else
-    TO_PLOT+=${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_biasField+N4.nii.gz
+    mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz ${DIR_SAVE}/
   fi
 fi
 
@@ -314,28 +289,6 @@ if [[ "${METHOD,,}" == "t1wm" ]] \
     t1wm_fcn="${t1wm_fcn} -T2"
   fi
   eval ${t1wm_fcn}
-  TO_PLOT+=${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1WM_${MOD}.nii.gz
-fi
-
-# make output plots ------------------------------------------------------------
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  if [[ -z ${DIR_PLOT} ]]; then
-    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
-  fi
-  mkdir -p ${DIR_PLOT}
-  if [[ "${METHOD,,}" == "t1t2" ]]; then
-    make3Dpng --bg ${TO_PLOT[0]} --filename ${PREFIX}_prep-${PREP}biasT1T2_T1w --dir-save ${DIR_PLOT}
-    make3Dpng --bg ${TO_PLOT[1]} --filename ${PREFIX}_prep-${PREP}biasT1T2_T2w --dir-save ${DIR_PLOT}
-    make3Dpng --bg ${TO_PLOT[2]} --bg-color "plasma" --filename ${PREFIX}_biasField+T1T2 --dir-save ${DIR_PLOT}
-  elif [[ "${METHOD,,}" == "n4" ]] \
-  || [[ "${METHOD,,}" == "ants" ]]; then
-    make3Dpng --bg ${TO_PLOT[0]} --filename ${PREFIX}_prep-${PREP}biasN4_${MOD} --dir-save ${DIR_PLOT}
-    make3Dpng --bg ${TO_PLOT[1]} --bg-color "plasma" --filename ${PREFIX}_mod-${MOD}_biasField+N4 --dir-save ${DIR_PLOT}
-  elif [[ "${METHOD,,}" == "t1wm" ]] \
-  || [[ "${METHOD,,}" == "afni" ]] \
-  || [[ "${METHOD,,}" == "3dunifize" ]]; then
-    make3Dpng --bg ${TO_PLOT[0]} --filename ${PREFIX}_prep-${PREP}biasT1WM_${MOD} --dir-save ${DIR_PLOT}
-  fi
 fi
 
 #===============================================================================
