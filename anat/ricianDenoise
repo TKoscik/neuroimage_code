@@ -41,10 +41,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvklp --long prefix:,\
+OPTS=$(getopt -o hvklnd --long prefix:,\
 dimension:,image:,mask:,model:,shrink:,patch:,search:,\
 dir-save:,dir-scratch:,\
-help,fcn-verbose,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,fcn-verbose,verbose,keep,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -65,6 +65,7 @@ DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
 FCN_VERBOSE=0
+NO_PNG=false
 
 while true; do
   case "$1" in
@@ -73,8 +74,9 @@ while true; do
     -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
-    --dimension) DIM="$2" ; shift 2 ;;
+    -d | --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --model) MODEL="$2" ; shift 2 ;;
@@ -98,8 +100,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose      add verbose output to terminal'
   echo '  -k | --keep         keep noise image'
   echo '  -l | --no-log       disable writing to output log'
-  echo '  --prefix            prefix for output, default: sub-123_ses-1234abcd'
+  echo '  -n | --no-png            disable PNG output'
   echo '  -d | --dimension    image dimension, 3=3D (default) or 4=4D'
+  echo '  --prefix            prefix for output, default: sub-123_ses-1234abcd'
   echo '  --image             full path to image to denoise'
   echo '  --mask              full path to binary mask'
   echo '  --model             Rician (default) or Gaussian noise model'
@@ -133,7 +136,7 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/anat
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -153,25 +156,26 @@ if [ -n "${MASK}" ]; then dn_fcn="${dn_fcn} -x ${MASK}"; fi
 dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz,"
 dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz]"
 
-if [[ "${VERBOSE}" == "true" ]]; then
-  echo "Denoising Image >>>"
-  echo -e "\t${dn_fcn}"
-fi
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "Denoising Image >>>\n\t${dn_fcn}"; fi
 writeScript -d ${DIR_PROJECT} -p ${PREFIX} -s "${dn_fcn}"
 eval ${dn_fcn}
 
 # copy output to final file ----------------------------------------------------
-if [[ "${VERBOSE}" == "true" ]]; then
-  echo -e "\tmoving denoised output to ${DIR_SAVE}"
-fi
-mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise* ${DIR_SAVE}/
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tmoving denoised output to ${DIR_SAVE}"; fi
+mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz ${DIR_SAVE}/
 
 # copy noise image if selected -------------------------------------------------
 if [[ "${KEEP}" == "true" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then
-    echo -e "\tmoving noise image to ${DIR_SAVE}"
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tmoving noise image to ${DIR_SAVE}"; fi
+  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz ${DIR_SAVE}/
+fi
+
+# generate PNG -----------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz --bg-thresh "5,99"
+  if [[ "${KEEP}" == "true" ]]; then
+    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz --bg-thresh "5,99" --bg-color "viridis"
   fi
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise* ${DIR_SAVE}/
 fi
 
 #===============================================================================

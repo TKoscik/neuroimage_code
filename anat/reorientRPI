@@ -40,8 +40,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hlv --long prefix:,image:,dir-save:,\
-help,no-log,verbose -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hlvn --long prefix:,image:,dir-save:,\
+help,no-log,no-png,verbose -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -54,12 +54,14 @@ IMAGE=
 DIR_SAVE=
 HELP=false
 VERBOSE=false
+NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -78,10 +80,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
+  echo '  -n | --no-png            disable PNG output'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --image <value>          directory listing of image to process'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-save <value>       directory to save output'
   echo ''
   NO_LOG=true
   exit 0
@@ -105,9 +108,8 @@ fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}
-  if [[ -n "${SID}" ]]; then
-    DIR_SAVE=${DIR_SAVE}/ses-${SID}
-  fi
+  if [[ -n "${SID}" ]]; then DIR_SAVE=${DIR_SAVE}/ses-${SID}; fi
+  DIR_SAVE=${DIR_SAVE}/anat
 fi
 mkdir -p ${DIR_SAVE}
 
@@ -123,6 +125,12 @@ writeScript -d ${DIR_PROJECT} -p "sub-${PID}_ses-${SID}" -s "${rs_fcn}"
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "Reorient Image to RPI >>>\n\t${rs_fcn}"; fi
 
 eval ${rs_fcn}
+
+# generate PNG -----------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz \
+    --bg-thresh "5,99"
+fi
 
 #===============================================================================
 # End of Function
