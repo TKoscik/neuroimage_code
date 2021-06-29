@@ -50,7 +50,7 @@ dir-template:,template:,space-source:,space-target:,\
 dimensonality:,save-state:,restore-state:,write-composite-transform,\
 print-similarity-measure-interval:,write-internal-volumes:,\
 collapse-output-transforms,initialize-transforms-per-stage,interpolation:,\
-restrict-deformation:,initial-fixed-transform:,initial-moving-transform,metric:,\
+restrict-deformation:,initial-fixed-transform:,initial-moving-transform:,metric:,\
 transform:,convergence:,smoothing-sigmas:,shrink-factors:,use-histogram-matching:,\
 use-estimate-learning-rate-once,winsorize-image-intensities:,float,random-seed:,\
 ants-verbose,\
