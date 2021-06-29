@@ -32,27 +32,9 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
-    if [[ "${FCN_NAME}" == *"QC"* ]]; then
-      logQC --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} --scan-date ${SCAN_DATE} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE} \
-      --notes ${NOTES}
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
@@ -142,42 +124,55 @@ fslmaths ${LABEL[0]} -mul 0 ${MERGED}
 TLABEL=${DIR_SCRATCH}/label_temp.nii.gz
 TMASK=${DIR_SCRATCH}/mask_temp.nii.gz
 
-# loop over label Files
+# loop over label files
 for (( i=0; i<${N_LABEL}; i++ )); do
   unset TVOL
   TVOL=(${VOLUME[${i}]//,/ })
   for (( j=0; j<${#TVOL[@]}; j++ )); do
     unset VOL_START VOL_STOP TVOL_RANGE
+    #echo -e "${TVOL[${j}]}"
     if [[ "${TVOL[${j}]}" == "all" ]]; then
+      #echo -e "\tall"
       VOL_START=0
       VOL_STOP=$(niiInfo -i ${LABEL[${i}]} -f volumes)
     elif [[ "${TVOL[${j}]}" == *":"* ]]; then
+      #echo -e "\trange"
       unset TVOL_RANGE
       TVOL_RANGE=(${TVOL[${j}]//\:/ })
       VOL_START=$((${TVOL_RANGE[0]}-1))
       VOL_STOP=${TVOL_RANGE[1]}
     else
+      #echo -e "\tvalue"
       VOL_START=$((${TVOL[${j}]}-1))
       VOL_STOP=${TVOL[${j}]}
     fi
+    #echo -e "\t${VOL_START} to ${VOL_STOP}"
     for (( k=${VOL_START}; k<${VOL_STOP}; k++ )); do
       unset TVAL
+      #echo "fslroi ${LABEL[${i}]} ${TLABEL} ${k} 1"
       fslroi ${LABEL[${i}]} ${TLABEL} ${k} 1
       TVAL=(${VALUE[${i}]//,/ })
-echo "TVAL: ${TVAL}"
-      for (( l=0; l<${#TNVAL[@]}; l++ )); do
+      for (( l=0; l<${#TVAL[@]}; l++ )); do
         unset MAX
         MAX=$(fslstats ${MERGED} -p 100)
-        echo ${MAX}
+        #echo -e "\t\tMAX=${MAX}"
+        #echo -e "\t\t${TVAL[${l}]}"
         if [[ "${TVAL[${l}]}" == "all" ]]; then
+          #echo -e "\t\tall"
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
         elif [[ "${TVAL[${l}]}" == *":"* ]]; then
+          #echo -e "\t\trange"
           unset TRANGE
           TRANGE=(${TVAL[${l}]//\:/ })
           fslmaths ${TLABEL} -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
           LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
         else
+          #echo -e "\t\tvalue"
+          #echo "fslmaths ${TLABEL} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}"
+          #fslstats ${TLABEL} -P 100
           fslmaths ${TLABEL} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
+          
+          #fslstats ${TLABEL} -P 100
         fi
         fslmaths ${TLABEL} -bin ${TMASK}
         fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}

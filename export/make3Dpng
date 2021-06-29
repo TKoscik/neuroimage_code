@@ -444,11 +444,9 @@ if [[ -n ${FG_MASK} ]]; then
 fi
 
 if [[ -n ${ROI} ]]; then
-#echo ${ROI_VALUE}
   labelUnique --label ${ROI} --volume ${ROI_VOL} --value ${ROI_VALUE} \
     --dir-save ${DIR_SCRATCH} --prefix ROI
   ROI=${DIR_SCRATCH}/ROI.nii.gz
-  cp ${DIR_SCRATCH}/ROI.nii.gz /Dedicated/inc_database/project/sca_iowa/derivatives/inc/func/prep/sub-105/ses-20190726/ 
   ROI_VOL=1
   ROI_VALUE="all"
 fi
@@ -903,9 +901,7 @@ fi
 if [[ -n ${ROI} ]]; then
   ## total number of ROIs
   ROI_N=$(fslstats ${ROI} -p 100)
-  if [[ -f ${ROI} ]]; then echo ROI exists; fi
-  echo ${ROI}
-  echo ${ROI_N}
+  #if [[ -f ${ROI} ]]; then echo ROI exists; fi
   ## convert ROIs to outlines
   labelOutline --label ${ROI} --prefix ROI_OUTLINE --dir-save ${DIR_SCRATCH}
   # make ROI mask
