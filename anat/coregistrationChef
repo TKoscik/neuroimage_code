@@ -42,7 +42,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvld --long recipe-json:,recipe-name:,\
+OPTS=$(getopt -o hvldn --long recipe-json:,recipe-name:,\
 fixed:,fixed-mask:,fixed-mask-dilation:,\
 moving:,moving-mask:,moving-mask-dilation:,mask-procedure:,\
 dir-template:,template:,space-source:,space-target:,\
@@ -59,7 +59,7 @@ prefix:,label-xfm:,label-from:,label-to:,label-reg:,\
 apply-to:,apply-to-name:,\
 keep-fwd-xfm,keep-inv-xfm,\
 dir-save:,dir-xfm:,dir-scratch:,\
-verbose,help,no-log,dry-run -n 'parse-options' -- "$@")
+verbose,help,no-log,dry-run,no-png -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -70,12 +70,14 @@ eval set -- "$OPTS"
 VERBOSE=false
 HELP=false
 DRY_RUN=false
+NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     -d | --dry-run) DRY_RUN=true ; shift ;;
     --recipe-json) RECIPE_JSON="$2" ; shift 2 ;;
     --recipe-name) RECIPE_NAME="$2" ; shift 2 ;;
@@ -737,6 +739,23 @@ if [[ -f ${DIR_SCRATCH}/xfm_1InverseWarp.nii.gz ]]; then
 fi
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+fi
+
+# generate PNG -----------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng \
+    --bg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
+      --bg-thresh "5,99" \
+    --dir-save ${DIR_SAVE}
+  make3Dpng \
+    --bg ${FIXED[0]} \
+      --bg-color "#000000,#00FF00,#FFFFFF" \
+      --bg-thresh "10,95" \
+    --fg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
+      --fg-thresh "10,95" --fg-color "#000000,#FF00FF,#FFFFFF" --fg-alpha 50 --fg-cbar \
+    --layout "7:x;7:y;7:z" --offset "0,0,0" \
+    --filename "${PIDSTR}_${LABEL_REG}" \
+    --dir-save ${DIR_SAVE}
 fi
 
 #===============================================================================
