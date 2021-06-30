@@ -358,6 +358,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
     done
   fi
 fi
+echo "test1"
 if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   FIXED_MASK=(${FIXED_MASK//,/ })
   if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
