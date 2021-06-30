@@ -358,7 +358,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
     done
   fi
 fi
-echo "test1"
+
 if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   FIXED_MASK=(${FIXED_MASK//,/ })
   if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
@@ -367,6 +367,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
     exit 5
   fi
   if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
+  echo "test1"
     for (( i=0; i<${#FIXED_MASK[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED_MASK[${i}]} -f modality)
       ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz \
@@ -375,6 +376,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
     done
   fi
   if [[ "${FIX_SPACE}" == "true" ]]; then
+  echo "test2" 
     for (( i=0; i<${#FIXED_MASK[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED_MASK[${i}]} -f modality)
       if [[ "${DRY_RUN}" == "false" ]]; then
@@ -393,6 +395,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
     done
   fi
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
+  echo "test3"
     for (( i=0; i<${#FIXED[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED[${i}]} -f modality)
       fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
