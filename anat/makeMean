@@ -41,9 +41,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvlnr --long prefix:,suffix:,image:,normalize,rescale,\
+OPTS=$(getopt -o hvlzrn --long prefix:,suffix:,image:,normalize,rescale,\
 dir.save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -60,14 +60,16 @@ DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
+NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -n | --normalize) NORMALIZE=true ; shift ;;
+    -z | --normalize) NORMALIZE=true ; shift ;;
     -r | --rescale) RESCALE=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --suffix) SUFFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -101,10 +103,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           average with files in list; i.e., TRs in a'
   echo '                           single FMRI run will be averaged before being'
   echo '                           averaged with other runs.'
-  echo '  -n | --normalize         disable normalize intensities for averaging'
+  echo '  -z | --normalize         disable normalize intensities for averaging'
   echo '                           between volumes, volumes within multivolume'
   echo '                           images are normalized independently'
   echo '  -r | --rescale           disable rescaling image to INT'
+  echo '  -n | --no-png            disable png output'
   echo '  --dir-save               location to save output'
   echo '  --dir-scratch            location for temporary files'
   echo ''

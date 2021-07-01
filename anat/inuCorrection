@@ -42,13 +42,13 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hvkln --long prefix:,\
 dimension:,image:,method:,mask:,\
 smooth-kernel:,\
 weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 no-gm,urad:,do-t2,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,verbose,keep,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -75,6 +75,7 @@ DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
 KEEP=false
+NO_PNG=false
 
 while true; do
   case "$1" in
@@ -82,6 +83,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dimension) DIM="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -109,11 +111,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
+  echo '  -n | --no-png            disable PNG output'
   echo '  --prefix <value>         prefix for output,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --dimension <value>      image dimension, 3=3D (default) or 4=4D'
@@ -237,6 +239,19 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
   fslmaths ${IMAGE[1]} -div ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
     ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz
 
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make3Dpng --bg ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz \
+      --filename ${PREFIX}_prep-${PREP}biasT1T2_T1w \
+      --dir-save ${DIR_SAVE}
+    make3Dpng --bg ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz \
+      --filename ${PREFIX}_prep-${PREP}biasT1T2_T2w \
+      --dir-save ${DIR_SAVE}
+    make3Dpng --bg ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
+      --bg-color "plasma" \
+      --filename ${PREFIX}_prep-${PREP}biasT1T2_biasField \
+      --dir-save ${DIR_SAVE}
+  fi
+
   # Move files to appropriate location
   mv ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T1w.nii.gz
   mv ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T2w.nii.gz
@@ -267,7 +282,16 @@ if [[ "${METHOD,,}" == "n4" ]] \
   n4_fcn="${n4_fcn} -v ${VERBOSE}"
   eval ${n4_fcn}
   
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz \
+      --dir-save ${DIR_SAVE}
+    make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz \
+      --bg-color "plasma" \
+      --dir-save ${DIR_SAVE}
+  fi
+
   mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz ${DIR_SAVE}/
+  if [[ "${NO_PNG}" == "false" ]]; then mv ${DIR_SCRATCH}/*.png ${DIR_SAVE}/; fi
   if [[ "${KEEP,,}" == "true" ]]; then
     mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz ${DIR_SAVE}/
   fi
@@ -289,6 +313,11 @@ if [[ "${METHOD,,}" == "t1wm" ]] \
     t1wm_fcn="${t1wm_fcn} -T2"
   fi
   eval ${t1wm_fcn}
+
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasT1WM_${MOD}.nii.gz \
+      --dir-save ${DIR_SAVE}
+  fi
 fi
 
 #===============================================================================

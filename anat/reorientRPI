@@ -128,8 +128,7 @@ eval ${rs_fcn}
 
 # generate PNG -----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz \
-    --bg-thresh "5,99"
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}reorient_${MOD}.nii.gz
 fi
 
 #===============================================================================
