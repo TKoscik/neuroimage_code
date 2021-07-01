@@ -130,53 +130,38 @@ for (( i=0; i<${N_LABEL}; i++ )); do
   TVOL=(${VOLUME[${i}]//,/ })
   for (( j=0; j<${#TVOL[@]}; j++ )); do
     unset VOL_START VOL_STOP TVOL_RANGE
-    #echo -e "${TVOL[${j}]}"
     if [[ "${TVOL[${j}]}" == "all" ]]; then
-      #echo -e "\tall"
       VOL_START=0
       VOL_STOP=$(niiInfo -i ${LABEL[${i}]} -f volumes)
     elif [[ "${TVOL[${j}]}" == *":"* ]]; then
-      #echo -e "\trange"
       unset TVOL_RANGE
       TVOL_RANGE=(${TVOL[${j}]//\:/ })
       VOL_START=$((${TVOL_RANGE[0]}-1))
       VOL_STOP=${TVOL_RANGE[1]}
     else
-      #echo -e "\tvalue"
       VOL_START=$((${TVOL[${j}]}-1))
       VOL_STOP=${TVOL[${j}]}
     fi
-    #echo -e "\t${VOL_START} to ${VOL_STOP}"
     for (( k=${VOL_START}; k<${VOL_STOP}; k++ )); do
       unset TVAL
-      #echo "fslroi ${LABEL[${i}]} ${TLABEL} ${k} 1"
       fslroi ${LABEL[${i}]} ${TLABEL} ${k} 1
       TVAL=(${VALUE[${i}]//,/ })
       for (( l=0; l<${#TVAL[@]}; l++ )); do
         unset MAX
         MAX=$(fslstats ${MERGED} -p 100)
-        #echo -e "\t\tMAX=${MAX}"
-        #echo -e "\t\t${TVAL[${l}]}"
         if [[ "${TVAL[${l}]}" == "all" ]]; then
-          #echo -e "\t\tall"
-          LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
+          3dRank -overwrite -prefix ${TLABEL} -input ${TLABEL}          
         elif [[ "${TVAL[${l}]}" == *":"* ]]; then
-          #echo -e "\t\trange"
           unset TRANGE
           TRANGE=(${TVAL[${l}]//\:/ })
           fslmaths ${TLABEL} -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
-          LabelClustersUniquely 3 ${TLABEL} ${TLABEL} 0
+          3dRank -overwrite -prefix ${TLABEL} -input ${TLABEL}          
         else
-          #echo -e "\t\tvalue"
-          #echo "fslmaths ${TLABEL} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}"
-          #fslstats ${TLABEL} -P 100
           fslmaths ${TLABEL} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
-          
-          #fslstats ${TLABEL} -P 100
         fi
         fslmaths ${TLABEL} -bin ${TMASK}
         fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}
-        LabelClustersUniquely 3 ${MERGED} ${MERGED} 0
+        3dRank -overwrite -prefix ${MERGED} -input ${MERGED}
       done
     done
   done

@@ -41,7 +41,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvl --long \
+OPTS=$(getopt -o hvl --long help,verbose,no-log,\
 bg:,bg-volume:,bg-mask:,bg-mask-volume:,bg-threshold:,bg-alpha:,bg-color:,bg-order:,bg-cbar,\
 fg:,fg-volume:,fg-mask:,fg-mask-volume:,fg-threshold:,fg-alpha:,fg-color:,fg-order:,fg-cbar,\
 roi:,roi-volume:,roi-value:,roi-color:,roi-order:,roi-cbar,\
@@ -49,8 +49,7 @@ layout:,offset:,limits,\
 no-slice-label,use-vox-label,no-lr-label,label-decimal:,\
 color-panel:,color-text:,color-decimal:,font:,font-size:,max-pixels:,\
 keep-slice,keep-cbar,\
-filename:,dir-save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+filename:,dir-save:,dir-scratch: -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -80,7 +79,7 @@ FG_CBAR="true"
 
 ROI=
 ROI_VOL=1
-ROI_VALUE=1
+ROI_VALUE="all"
 ROI_COLOR="#FF69B4"
 ROI_ORDER="random"
 ROI_CBAR="false"
@@ -901,7 +900,6 @@ fi
 if [[ -n ${ROI} ]]; then
   ## total number of ROIs
   ROI_N=$(fslstats ${ROI} -p 100)
-  #if [[ -f ${ROI} ]]; then echo ROI exists; fi
   ## convert ROIs to outlines
   labelOutline --label ${ROI} --prefix ROI_OUTLINE --dir-save ${DIR_SCRATCH}
   # make ROI mask

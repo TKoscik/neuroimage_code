@@ -28,6 +28,16 @@ no.png <- FALSE
 dir.save <- "~"
 prefix <- NULL
 
+# DEBUG ====
+# color.palette <- "timbow"
+# color.n <- 0.00000
+# color.order <- "random"
+# color.bg <- "#000000"
+# no.png <- FALSE
+# dir.save <- "~"
+# prefix <- NULL
+# ====
+
 for (i in seq(1,length(args))) {
   if (args[i] == "palette") {
     color.palette <- args[i+1]
@@ -67,22 +77,21 @@ if (color.palette %in% c("viridis", "magma", "inferno", "plasma", "cividis")) {
   color.ls <- cpal(color.n)
 }
 if (grepl("cubehelix", color.palette)) {
-  temp <- unlist(strsplit(color.palette, split=","))
+  params <- unlist(strsplit(color.palette, split=","))
   start <- 0.5
   r <- -1.5
   hue <- 2
   gamma <- 1
-  if (length(temp) > 1) {
-    for (i in 2:length(temp)) {
-      params <- unlist(strsplit(temp[i]))
-      if (params[1] == "start") {
-        start <- as.numeric(params[2])
-      } else if (params[1] == "r") {
-        r <- as.numeric(params[2])
-      } else if (params[1] == "hue") {
-        hue <- as.numeric(params[2])
-      } else if (params[1] == "gamma") {
-        gamma <- as.numeric(params[2])
+  if (length(params) > 1) {
+    for (i in 2:length(params)) {
+      if (params[i] == "start") {
+        start <- as.numeric(params[i+1])
+      } else if (params[i] == "r") {
+        r <- as.numeric(params[i+1])
+      } else if (params[i] == "hue") {
+        hue <- as.numeric(params[i+1])
+      } else if (params[i] == "gamma") {
+        gamma <- as.numeric(params[i+1])
       }
     }
   }
@@ -94,7 +103,7 @@ if (grepl("cubehelix", color.palette)) {
   cpal = l + hue * l * (1 - l)/2 * (M %*% t)
   cpal = pmin(pmax(cpal, 0), 1)
   cpal = apply(cpal, 2, function(x) rgb(x[1], x[2], x[3]))
-  color.ls <- cpal(color.n)
+  color.ls <- cpal
 }
 if (color.palette == "hot") {
   cpal <- colorRampPalette(c("#7F0000", "#FF0000", "#FF7F00", "#FFFF00", "#FFFF7F"))
@@ -136,7 +145,6 @@ if (no.png == FALSE) {
         path = dir.save, plot = color.bar,
         device = "png", width=0.5, height=5, units = "cm", dpi = 320)
 }
-
 color.rgb <- format(t(col2rgb(color.ls))/255, digits=4)
 color.bg <- format(t(col2rgb(color.bg))/255, digits=4)
 
