@@ -1,0 +1,199 @@
+#!/bin/bash -e
+#===============================================================================
+# Average Images
+# Authors: Timothy R. Koscik
+# Date: <date of initial commit>
+# CHANGELOG: <description of major changes to functionality>
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvlnr --long prefix:,suffix:,image:,normalize,rescale,\
+dir.save:,dir-scratch:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+SUFFIX="modality"
+IMAGE=
+NORMALIZE=true
+RESCALE=true
+DIR_SAVE=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -n | --normalize) NORMALIZE=true ; shift ;;
+    -r | --rescale) RESCALE=true ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --suffix) SUFFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix                 prefix for filename,'
+  echo '                             default=sub${PID}_ses-${SID}'
+  echo '  --suffix                 suffix for filename. literal string to be'
+  echo '                           appended to prefix spearated by an underscore'
+  echo '                           or special cases:'
+  echo '                             modality = modality of first image in list'
+  echo '                             append = modality of first image in list'
+  echo '                                      with +mean appended,'
+  echo '                                      e.g., bold+mean B0+mean'
+  echo '  --image                  comma separated list of images to average,'
+  echo '                           multivolume images will have all volumes'
+  echo '                           collapsed to a single volume, then used in'
+  echo '                           average with files in list; i.e., TRs in a'
+  echo '                           single FMRI run will be averaged before being'
+  echo '                           averaged with other runs.'
+  echo '  -n | --normalize         disable normalize intensities for averaging'
+  echo '                           between volumes, volumes within multivolume'
+  echo '                           images are normalized independently'
+  echo '  -r | --rescale           disable rescaling image to INT'
+  echo '  --dir-save               location to save output'
+  echo '  --dir-scratch            location for temporary files'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+IMAGE=(${IMAGE//,/ })
+NIMG=${#IMAGE[@]}
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${INPUT})
+PID=$(getField -i ${INPUT} -f sub)
+SID=$(getField -i ${INPUT} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+
+if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
+if [[ "${SUFFIX,,}" == "modality" ]]; then
+  SUFFIX=$(getField -i ${IMAGE[0]} -f modality)
+fi
+if [[ "${SUFFIX,,}" == "append" ]]; then
+  SUFFIX="$(getField -i ${IMAGE[0]} -f modality)+mean"
+fi
+
+if [[ -n ${DIR_SAVE} ]]; then 
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
+fi
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
+
+# initialize temporary files ---------------------------------------------------
+TEMP=${DIR_SCRATCH}/TEMP.nii.gz
+MEAN=${DIR_SCRATCH}/MEAN.nii.gz
+fslroi ${IMAGE[0]} ${MEAN} 0 1
+fslmaths ${MEAN} -mul 0 ${MEAN}
+
+NDIV=0
+ORIG_M=0
+ORIG_SD=0
+for (( i=0; i<${#NIMG[@]}; i++ )); do
+  NVOL=$(niiInfo -i ${IMAGE[${i}]} -f volumes)
+  for (( j=0; j<${NVOL}; j++ )); do
+    NDIV=$((${NDIV} + 1))
+    if [[ ${NVOL} -gt 1 ]]; then
+      fslroi ${IMAGE[i]} ${TEMP} 0 1
+    else
+      cp ${IMAGE[${i}]} ${TEMP}
+    fi
+    fslmaths ${TEMP} -nan ${TEMP}
+    
+    VOL_M=$(fslstats ${TEMP} -M)
+    VOL_SD=$(fslstats ${TEMP} -S)
+    if [[ "${NORMALIZE}" == "true" ]]; then
+      fslmaths ${TEMP} -sub ${VOL_M} -div ${VOL_SD} ${TEMP} -odt float
+    fi
+    if [[ "${RESCALE}" == "false" ]]; then
+      ORIG_M=$(ezMath --expression "${ORIG_M}+${VOL_M}" --digits 3)
+      ORIG_SD=$(ezMath --expression "${ORIG_SD}+${VOL_M}" --digits 3)
+    fi
+
+    fslmaths ${MEAN} -add ${TEMP} ${MEAN}
+  done
+done
+flsmaths ${MEAN} -div ${NDIV} ${MEAN}
+
+if [[ "${RESCALE}" == "true" ]]; then
+  rescaleIntensity ${MEAN} --keep-neg --lo 0 --hi 1 --no-png
+else
+  ORIG_M=$(ezMath --expression "${ORIG_M}/${NDIV}" --digits 3)
+  ORIG_SD=$(ezMath --expression "${ORIG_SD}/${NDIV}" --digits 3)
+  fslmaths ${MEAN} -mul ${ORIG_SD} -add ${ORIG_M} ${MEAN} -odt float
+fi
+
+mv ${MEAN} ${DIR_SAVE}/${PIDSTR}_${SUFFIX}.nii.gz
+
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SAVE}/${PIDSTR}_${SUFFIX}.nii.gz
+fi
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
+
+
