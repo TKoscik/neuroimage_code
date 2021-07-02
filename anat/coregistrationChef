@@ -248,7 +248,7 @@ if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>parsing MOVING images"; fi
 MOVING=(${MOVING//,/ })
 for (( i=0; i<${#MOVING[@]}; i++ )); do
-  MOD+=($(getField -i ${MOVING[@]} -f modality))
+  MOD+=($(getField -i ${MOVING[${i}]} -f modality))
 done
 MOD_STR="${MOD[@]}"
 MOD_STR=${MOD_STR// /+}
@@ -647,8 +647,6 @@ elif [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
   done
 fi
 
-echo -e "\n${FIXED_MASK[@]}\n${MOVING_MASK[@]}\n"}
-
 if [[ "${MASK_PROCEDURE}" == "restrict" ]] \
 && [[ "${FIXED_MASK[0]}" != "optional" ]] \
 && [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
@@ -791,37 +789,22 @@ fi
 if [[ "${NO_PNG}" == "false" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>make PNGs"; fi
   make3Dpng \
-    --bg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
-      --bg-thresh "5,99" \
+    --bg ${DIR_SAVE}/${MOVING_OUTPUT[0]} \
+      --bg-threshold "5,99" \
     --dir-save ${DIR_SAVE}
   make3Dpng \
     --bg ${FIXED[0]} \
       --bg-color "#000000,#00FF00,#FFFFFF" \
       --bg-thresh "10,95" \
-    --fg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
-      --fg-thresh "10,95" --fg-color "#000000,#FF00FF,#FFFFFF" --fg-alpha 50 --fg-cbar \
-    --layout "7:x;7:x;7:x;7:x;7:x" --offset "0,0,0" \
-    --filename "${PIDSTR}_${LABEL_REG}_X" \
+    --fg ${DIR_SAVE}/${MOVING_OUTPUT[0]} \
+      --fg-thresh "10,95" \
+      --fg-color "#000000,#FF00FF,#FFFFFF" \
+      --fg-alpha 50 \
+      --fg-cbar \
+    --layout "11:x;11:x;11:x;11:y;11:y;11:y;11:z;11:z;11:z" \
+    --offset "0,0,0" \
+    --filename ${PIDSTR}_${LABEL_REG} \
     --dir-save ${DIR_XFM}
-  make3Dpng \
-    --bg ${FIXED[0]} \
-      --bg-color "#000000,#00FF00,#FFFFFF" \
-      --bg-thresh "10,95" \
-    --fg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
-      --fg-thresh "10,95" --fg-color "#000000,#FF00FF,#FFFFFF" --fg-alpha 50 --fg-cbar \
-    --layout "7:y;7:y;7:y;7:y;7:y" --offset "0,0,0" \
-    --filename "${PIDSTR}_${LABEL_REG}_Y" \
-    --dir-save ${DIR_XFM}
-  make3Dpng \
-    --bg ${FIXED[0]} \
-      --bg-color "#000000,#00FF00,#FFFFFF" \
-      --bg-thresh "10,95" \
-    --fg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
-      --fg-thresh "10,95" --fg-color "#000000,#FF00FF,#FFFFFF" --fg-alpha 50 --fg-cbar \
-    --layout "7:z;7:z;7:z;7:z;7:z" --offset "0,0,0" \
-    --filename "${PIDSTR}_${LABEL_REG}_Z" \
-    --dir-save ${DIR_XFM}
-
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
 

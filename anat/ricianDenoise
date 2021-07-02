@@ -160,6 +160,15 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -e "Denoising Image >>>\n\t${dn_fcn}"
 writeScript -d ${DIR_PROJECT} -p ${PREFIX} -s "${dn_fcn}"
 eval ${dn_fcn}
 
+# generate PNG -----------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz \
+    --dir-save ${DIR_SAVE}
+  make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz \
+    --bg-color "viridis" \
+    --dir-save ${DIR_SAVE}
+fi
+
 # copy output to final file ----------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tmoving denoised output to ${DIR_SAVE}"; fi
 mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz ${DIR_SAVE}/
@@ -168,14 +177,6 @@ mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz ${DIR_SAVE}/
 if [[ "${KEEP}" == "true" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tmoving noise image to ${DIR_SAVE}"; fi
   mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz ${DIR_SAVE}/
-fi
-
-# generate PNG -----------------------------------------------------------------
-if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz --bg-thresh "5,99"
-  if [[ "${KEEP}" == "true" ]]; then
-    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz --bg-thresh "5,99" --bg-color "viridis"
-  fi
 fi
 
 #===============================================================================
