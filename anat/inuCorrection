@@ -291,7 +291,6 @@ if [[ "${METHOD,,}" == "n4" ]] \
   fi
 
   mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz ${DIR_SAVE}/
-  if [[ "${NO_PNG}" == "false" ]]; then mv ${DIR_SCRATCH}/*.png ${DIR_SAVE}/; fi
   if [[ "${KEEP,,}" == "true" ]]; then
     mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz ${DIR_SAVE}/
   fi

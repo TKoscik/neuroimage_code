@@ -40,11 +40,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvl --long prefix:,\
+OPTS=$(getopt -o hvln --long prefix:,\
 xfm:,interpolation:,from:,to:,ref-image:,\
 log,geom,\
 dir-save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -64,12 +64,14 @@ DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=0
+NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --xfm) XFM="$2" ; shift 2 ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
@@ -181,6 +183,11 @@ CreateJacobianDeterminantImage 3 \
   ${XFM_JAC} \
   ${DIR_SAVE}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_NAME}_jac.nii.gz \
   ${LOG} ${GEOM}
+
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_NAME}_jac.nii.gz \
+    --bg-color "timbow"
+fi
 
 # keep stack xfm if desired
 if [[ "${KEEP}" == "true" ]]; then

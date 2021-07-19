@@ -40,10 +40,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvklp --long prefix:,\
+OPTS=$(getopt -o hvln --long prefix:,label:,\
 image:,method:,suffix:,spatial-filter:,filter-radius:,automask-clip:,\
 dir-save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -52,6 +52,7 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
+LABEL=brain
 IMAGE=
 METHOD=
 SUFFIX=
@@ -63,14 +64,16 @@ DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
+NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=true ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
+    --label) LABEL="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --method) METHOD="$2" ; shift 2 ;;
     --suffix) SUFFIX="$2" ; shift 2 ;;
@@ -91,30 +94,33 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  --image <value>          Images to use for brain extraction, multiple'
-  echo '                           images allowed, T1w should be first input'
-  echo '  --method <value>         One of AFNI, ANTs, FSL, multiple inputs'
-  echo '                           allowed.  If multiple inputs given, a'
-  echo '                           majority vote output will be given as well'
-  echo '  --suffix <value>         an optional suffix to append to filenames,'
-  echo '                           e.g., "0" or "prelim"'
-  echo '  --spatial-filter <value> Add a spatial filter step after extracting'
-  echo '                           brain mask using ImageMath, e.g., MD for'
-  echo '                           dilation, filter radius must be specified'
-  echo '                           as well. Options are: G, MD, ME, MO, MC,'
-  echo '                           GD, GE, GO, GC)'
-  echo '  --filter-radius <value>  Filter radius in voxels (unless filter is'
-  echo '                           G for Gaussian then mm)'
-  echo '  --template <value>       For ANTs method, which template to use,'
-  echo '                           default=OASIS'
-  echo '  --dir-save <value>       directory to save output, '
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  -h | --help        display command help'
+  echo '  -v | --verbose     add verbose output to log file'
+  echo '  -l | --no-log      disable writing to output log'
+  echo '  -n | --no-png      disable generating pngs of output'
+  echo '  --prefix           scan prefix, default: sub-123_ses-1234abcd'
+  echo '  --label            label to append to mask names, e.g., mask-${LABEL}'
+  echo '  --image            Images to use for brain extraction, multiple images'
+  echo '                     allowed, T1w should be first input'
+  echo '  --method           One of AFNI, ANTs, FSL, multiple inputs allowed.'
+  echo '                     If multiple inputs given, a majority vote output'
+  echo '                     and Venn-like overlap will be given as well'
+  echo '  --suffix           an optional suffix to append to filenames,'
+  echo '                     e.g., "0" or "prelim"'
+  echo '  --spatial-filter   Add a spatial filter step after extracting mask'
+  echo '                     using ImageMath, e.g., MD for dilation, filter'
+  echo '                     radius must be specified as well.'
+  echo '                     Recommended options are: MD, ME'
+  echo '   WARNING: As of 2021-07-02 the ImageMath implementation of MO and MC'
+  echo '            do not yield expected results on certain integer types.'
+  echo '            Better practice is to perform these operations'
+  echo '            independently afterward.'
+  echo '  --filter-radius    Filter radius in voxels (unless filter is G for'
+  echo '                     Gaussian then mm)'
+  echo '  --automask-clip    threshold value for AFNI based methods'
+  echo '  --template         For ANTs, which template to use, default=OASIS'
+  echo '  --dir-save         directory to save output'
+  echo '  --dir-scratch      directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -143,24 +149,23 @@ if [[ "${METHOD,,}" == *"skullstrip"* ]] \
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running AFNI 3dSkullstrip"; fi
   3dSkullStrip \
     -input ${IMAGE[0]} \
-    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
-  fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz \
-    -bin ${DIR_SCRATCH}/${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz
-  MASK_LS+=(${PREFIX}_mask-brain+AFNI${SUFFIX}.nii.gz)
+    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+AFNI${SUFFIX}.nii.gz
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+AFNI${SUFFIX}.nii.gz \
+    -bin ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+AFNI${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+AFNI${SUFFIX}.nii.gz)
 fi
 
 # run AFNI 3dAutomask -----------------------------------------------------
-if [[ "${METHOD,,}" == *"automask"* ]] \
-|| [[ "${METHOD,,}" == *"afni"* ]]; then
+if [[ "${METHOD,,}" == *"automask"* ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running AFNI 3dAutomask"; fi
   3dAutomask \
-    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz \
+    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+AUTO${SUFFIX}.nii.gz \
     -clfrac ${AUTOMASK_CLIP} -q \
     ${IMAGE[0]}
   CopyImageHeaderInformation ${IMAGE[0]} \
-    ${DIR_SCRATCH}/${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz \
-    ${DIR_SCRATCH}/${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz 1 1 1
-  MASK_LS+=(${PREFIX}_mask-brain+AUTO${SUFFIX}.nii.gz)
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+AUTO${SUFFIX}.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+AUTO${SUFFIX}.nii.gz 1 1 1
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+AUTO${SUFFIX}.nii.gz)
 fi
 
 # run ANTs brain extraction -------------------------------------------------
@@ -181,9 +186,9 @@ if [[ "${METHOD,,}" == *"ants"* ]]; then
     ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
     ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz 1 1 1
   mv ${DIR_SCRATCH}/ants-bex_BrainExtractionMask.nii.gz \
-    ${DIR_SCRATCH}/${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+ANTs${SUFFIX}.nii.gz
   rm ${DIR_SCRATCH}/ants-bex_BrainExtraction*
-  MASK_LS+=(${PREFIX}_mask-brain+ANTs${SUFFIX}.nii.gz)
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+ANTs${SUFFIX}.nii.gz)
 fi
 
 # run FSL's BET -------------------------------------------------------------
@@ -196,8 +201,8 @@ if [[ "${METHOD,,}" == *"fsl"* ]] || [[ "${METHOD,,}" == *"bet"* ]]; then
   fi
   fsl_fcn="${fsl_fcn} -m -R"
   eval ${fsl_fcn}
-  mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz
-  MASK_LS+=(${PREFIX}_mask-brain+FSL${SUFFIX}.nii.gz)
+  mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+FSL${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+FSL${SUFFIX}.nii.gz)
   rm ${DIR_SCRATCH}/fsl*
 fi
 
@@ -222,8 +227,8 @@ if [[ "${METHOD,,}" == *"fsurf"* ]] \
     -binv ${DIR_SCRATCH}/samseg/nonbrain.nii.gz
   fslmaths ${DIR_SCRATCH}/samseg/brain.nii.gz \
     -bin -mas ${DIR_SCRATCH}/samseg/nonbrain.nii.gz \
-    ${DIR_SCRATCH}/${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz
-  MASK_LS+=(${PREFIX}_mask-brain+SAMSEG${SUFFIX}.nii.gz)
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+SAMSEG${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+SAMSEG${SUFFIX}.nii.gz)
 fi
 
 if [[ "${SPATIAL_FILTER,,}" != "null" ]]; then
@@ -247,16 +252,42 @@ if [[ ${#METHOD[@]} > 1 ]]; then
   ## make Venn mask labelling overlapping regions in labels
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running making Venn-like overlap of masks"; fi
   maskVenn --mask-ls ${TLS} --label "brain+VENN${SUFFIX}" --prefix ${PREFIX} --dir-save ${DIR_SCRATCH}
-  MASK_LS+=(${PREFIX}_mask-brain+VENN${SUFFIX}.nii.gz)
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz)
 
   ## make MAJORITY VOTE for brain mask
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running majority vote of masks"; fi
-  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz MajorityVoting ${TLS//,/ }
-  MASK_LS+=(${PREFIX}_mask-brain+MALF${SUFFIX}.nii.gz)
+  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+MALF${SUFFIX}.nii.gz MajorityVoting ${TLS//,/ }
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+MALF${SUFFIX}.nii.gz)
+fi
+
+# make PNG ---------------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    unset png_fcn
+    TNAME=${MASK_LS[${i}]%%.*}
+    png_fcn="make3Dpng --bg ${IMAGE[0]}"
+    png_fcn=${png_fcn}' --bg-threshold "5,99"'
+    if [[ "${TNAME}" == *"VENN"* ]]; then
+      png_fcn="${png_fcn} --fg ${DIR_SCRATCH}/${MASK_LS[${i}]}"
+      png_fcn=${png_fcn}' --fg-color "timbow"'
+      png_fcn=${png_fcn}' --fg-order "random"'
+      png_fcn=${png_fcn}' --fg-alpha 50'
+      png_fcn=${png_fcn}' --fg-cbar'
+    else
+      png_fcn="${png_fcn} --roi ${DIR_SCRATCH}/${MASK_LS[${i}]}"
+      png_fcn=${png_fcn}' --roi-color "#FF0000"'
+    fi
+    png_fcn=${png_fcn}' --layout "9:x;9:x;9:x;9:x;9:y;9:y;9:y;9:y;9:z;9:z;9:z;9:z"'
+    png_fcn=${png_fcn}' --offset "0,0,0"'
+    png_fcn="${png_fcn} --filename ${TNAME}"
+    png_fcn="${png_fcn} --dir-save ${DIR_SCRATCH}"
+    eval ${png_fcn}
+  done
 fi
 
 # move files to appropriate locations-------------------------------------------
-mv ${DIR_SCRATCH}/*_mask-brain* ${DIR_SAVE}/
+mv ${DIR_SCRATCH}/*_mask-${LABEL}* ${DIR_SAVE}/
+
 
 #===============================================================================
 # End of Function
