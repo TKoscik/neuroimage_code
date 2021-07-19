@@ -98,9 +98,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix,'
+  echo '  -n | --no-png            disable PNG output'
+  echo '  --prefix                 scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
-  echo '  --xfm <value>            transforms to use to calculate the jacobian,'
+  echo '  --xfm                    transforms to use to calculate the jacobian,'
   echo '                           must be input as a comma separated string'
   echo '                           in the reverse order that they'
   echo '                           are to be applied in (ANTs convention)'
@@ -110,10 +111,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           mergin transforms'
   echo '  --log                    calculate log jacobian determinant, defaul=0'
   echo '  --geom                   calculate geometric determinant, default=0'
-  echo '  --from <value>           label for starting space,'
-  echo '  --to <value>             spacing of template to use, e.g., 1mm'
-  echo '  --dir-save <value>       directory to save output, default varies by function'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  --from                   label for starting space,'
+  echo '  --to                     spacing of template to use, e.g., 1mm'
+  echo '  --dir-save               directory to save output, default varies by function'
+  echo '  --dir-scratch            directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
@@ -122,7 +123,7 @@ fi
 #==============================================================================
 # Start of function
 #==============================================================================
-# Set up BIDs compliant variables and workspace
+# Set up BIDs compliant variables and workspace -------------------------------
 XFM=(${XFM//,/ })
 N_XFM=${#XFM[@]}
 DIR_PROJECT=$(getDir -i ${XFM[0]})
@@ -136,13 +137,9 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 mkdir -p ${DIR_SCRATCH}
 
-# parse xfm names for FROM and TO
-if [[ "${FROM}" == "NULL" ]]; then
-  FROM=$(getField -i ${XFM[0]} -f "from")
-fi
-if [[ "${TO}" == "NULL" ]]; then
-  TO=$(getField -i ${XFM[-1]} -f "to")
-fi
+# parse xfm names for FROM and TO ----------------------------------------------
+if [[ "${FROM}" == "NULL" ]]; then FROM=$(getField -i ${XFM[0]} -f "from"); fi
+if [[ "${TO}" == "NULL" ]]; then TO=$(getField -i ${XFM[-1]} -f "to"); fi
 
 XFM_TEMP=
 for (( i=${N_XFM}-1; i>=0; i-- )); do
@@ -152,13 +149,13 @@ done
 XFM_NAME=$(IFS=+ ; echo "${XFM_TEMP[*]}")
 XFM_NAME=${XFM_NAME:1}
 
-# create save directory
+# create save directory --------------------------------------------------------
 if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/jac_from-${FROM}_to-${TO}_xfm-${XFM_NAME}
 fi
 mkdir -p ${DIR_SAVE}
 
-# create temporary stack of transforms
+# create temporary stack of transforms -----------------------------------------
 if [[ "${N_XFM}" > 1 ]]; then
   if [[ "${REF_IMAGE}" == "NULL" ]]; then
     TEMP=(${TO//+/ })
@@ -178,26 +175,29 @@ else
   XFM_JAC=${XFM}
 fi
 
-# Create Jacobian Determinant imgae
+# Create Jacobian Determinant image --------------------------------------------
 CreateJacobianDeterminantImage 3 \
   ${XFM_JAC} \
   ${DIR_SAVE}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_NAME}_jac.nii.gz \
   ${LOG} ${GEOM}
 
-if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_NAME}_jac.nii.gz \
-    --bg-color "timbow"
-fi
-
-# keep stack xfm if desired
+# keep stack xfm if desired ----------------------------------------------------
 if [[ "${KEEP}" == "true" ]]; then
   DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${PREFIX//_/\/}
   mkdir -p ${DIR_XFM}
   mv ${DIR_SCRATCH}/${PREFIX}_from-${FROM}_to-${TO}_xfm-stack.nii.gz ${DIR_XFM}/
 fi
 
+# generate PNG of result -------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng \
+  --bg ${DIR_SAVE}/${PREFIX}_from-${FROM}_to-${TO}_xfm-${XFM_NAME}_jac.nii.gz \
+  --bg-color "timbow"
+fi
+
 #==============================================================================
 # End of function
 #==============================================================================
 exit 0
+
 
