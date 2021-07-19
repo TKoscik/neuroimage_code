@@ -729,7 +729,9 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
   fi
   apply_xfm="${apply_xfm} -r ${FIXED[0]}"
-  if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo -e "\t${apply_xfm//--/\n--}\n"
+  fi
   writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
   eval ${apply_xfm}
 done
