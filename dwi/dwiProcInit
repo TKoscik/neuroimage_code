@@ -34,29 +34,17 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long prefix:,\
+OPTS=$(getopt -o hlv --long prefix:,\
 dwi:,dir-prep:,\
-help,no-log -n 'parse-options' -- "$@")
+help,no-log,verbose -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -68,12 +56,13 @@ PREFIX=
 DWI=
 DIR_PREP=
 HELP=false
-VERBOSE=0
+VERBOSE=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --dwi) DWI="$2" ; shift 2 ;;
     --dir-prep) DIR_PREP="$2" ; shift 2 ;;
@@ -88,15 +77,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --group <value>          group permissions for project,'
-  echo '                           e.g., Research-kosciklab'
-  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
-  echo '  --dwi <value>            Comma-separated list of DWI files to process'
+  echo '  -v | --verbose           verbose, returns teemporary folder path'
+  echo '  --prefix                 scan prefix, default: sub-123_ses-1234abcd'
+  echo '  --dwi                    Comma-separated list of DWI files to process'
   echo '                           together'
-  echo '  --dir-prep <value>       directory to copy dwi files for processing'
+  echo '  --dir-prep               directory to copy dwi files for processing'
   echo '                           will be persistent after function'
   echo ''
   NO_LOG=true
@@ -133,7 +120,10 @@ for (( i=0; i<${N_DWI}; i++ )); do
   cp ${NAME_BASE}.bval ${DIR_PREP}/
   cp ${NAME_BASE}.bvec ${DIR_PREP}/
 done
-echo ${DIR_PREP}
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo ${DIR_PREP}
+fi
+
 #===============================================================================
 # End of Function
 #===============================================================================

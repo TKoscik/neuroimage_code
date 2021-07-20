@@ -32,29 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long prefix:,\
-dir-dwi:,dir-save:,dir-scratch:,\
-keep,help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hl --long dir-dwi:,dir-save:,dir-scratch:,\
+help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -62,7 +49,6 @@ fi
 eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
-PREFIX=
 DIR_DWI=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
@@ -72,7 +58,6 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    --prefix) PREFIX="$2" ; shift 2 ;;
     --dir-dwi) DIR_DWI="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) SCRATCH="$2" ; shift 2 ;;
@@ -87,11 +72,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
-  echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         scan prefix, default: sub-123_ses-1234abcd'
   echo '  --dir-dwi <value>        location of the raw DWI data'
   echo '  --dir-save <value>       directory to save output, default varies by function'
   echo '  --dir-scratch <value>    directory for temporary workspace'
@@ -110,9 +92,7 @@ DIR_PROJECT=$(getDir -i ${DWI_LS[0]})
 PID=$(getField -i ${DWI_LS[0]} -f sub)
 SID=$(getField -i ${DWI_LS[0]} -f ses)
 
-if [ -z "${DIR_SAVE}" ]; then
-  DIR_SAVE=${DIR_DWI}
-fi
+if [ -z "${DIR_SAVE}" ]; then DIR_SAVE=${DIR_DWI}; fi
 mkdir -p ${DIR_SAVE}
 
 # Check and Fix Odd Dimensions -------------------------------------------------
@@ -130,7 +110,8 @@ for (( i=0; i<${N_DWI}; i++ )); do
     fi
   done
   if [ ${DIMCHK} -eq 1 ]; then
-    fslroi ${DWI} ${DIR_SAVE}/${NAME_BASE}.nii.gz 0 ${DIM_TEMP[0]} 0 ${DIM_TEMP[1]} 0 ${DIM_TEMP[2]}
+    fslroi ${DWI} ${DIR_SAVE}/${NAME_BASE}.nii.gz \
+      0 ${DIM_TEMP[0]} 0 ${DIM_TEMP[1]} 0 ${DIM_TEMP[2]}
   fi
 done
 
