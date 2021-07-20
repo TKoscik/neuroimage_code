@@ -75,7 +75,6 @@ while true; do
     --hi) HI="$2" ; shift 2 ;;
     --datatype) DATATYPE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
-    --dir-plot) DIR_PLOT="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
