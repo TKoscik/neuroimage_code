@@ -31,7 +31,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long image:,xfm:,interpolation:,ref-image:,label-to:,\
-prefix:,dir.save:,\
+prefix:,filename:,dir-save:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -46,6 +46,7 @@ XFM=
 INTERPOLATION=
 REF_IMAGE=
 LABEL_TO=
+FILENAME=
 DIR_SAVE=
 HELP=false
 VERBOSE=false
@@ -61,6 +62,7 @@ while true; do
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
     --ref-image) REF_IMAGE="$2" ; shift 2 ;;
     --label-to) LABEL_TO="$2" ; shift 2 ;;
+    --filename) FILENAME="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -88,7 +90,8 @@ fi
 IMAGE=(${IMAGE//;/ })
 XFM=(${XFM//;/ })
 INTERPOLATION=(${INTERPOLATION//;/ })
-if [[ -z ${TO} ]]; then TO=$(getSpace -i ${REF_IMAGE}); fi
+FILENAME=(${FILENAME//;/ })
+if [[ -z ${LABEL_TO} ]]; then TO=$(getSpace -i ${REF_IMAGE}); fi
 DIR_SAVE=(${DIR_SAVE//;/ })
 
 # Set up BIDs compliant variables and workspace --------------------------------
@@ -96,27 +99,27 @@ DIR_PROJECT=$(getDir -i ${IMAGE[0]})
 PID=$(getField -i ${IMAGE[0]} -f sub)
 SID=$(getField -i ${IMAGE[0]} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
-
-## not sure if this works and will not always be applicable ----
-### may be easier to hard code the anat/func/dwi folders
-FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-FCN_TYPE=(${FCN_DIR//\// })
-## ----
-
-if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}
+if [[ -n ${SID} ]]; then
+  PIDSTR="${PIDSTR}_ses-${SID}"
+  DIRPID="${DIRPID}/ses-${SID}"
 fi
+if [[ -z ${DIR_SAVE} ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}; fi
 mkdir -p ${DIR_SAVE}
 
 # apply transforms to all input images -----------------------------------------
 for (( i=0; i<${#IMAGE[@]}; i++ )); do
   unset apply_xfm NVOL MOD
   NVOL=$(niiInfo -i ${IMAGE[${i}]} -f volumes)
-  if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -s -i ${IMAGE[${i}]}); fi
-  MOD=$(getField -i ${IMAGE[${i}]} -f modality)  
+  if [[ -z ${FILENAME} ]]; then
+    if [[ -z ${PREFIX} ]]; then
+      PREFIX=$(getBidsBase -s -i ${IMAGE[${i}]})
+    fi
+    MOD=$(getField -i ${IMAGE[${i}]} -f modality)
+    OUTPUT=${DIR_SAVE[${i}]}/${PREFIX}_reg-${TO}_${MOD}.nii.gz
+  else
+    OUTPUT=${DIR_SAVE[${i}]}/${FILENAME[${i}]}.nii.gz
+  fi
     
   apply_xfm="antsApplyTransforms -d 3"
   if [[ ${NVOL} -gt 1 ]]; then apply_xfm="${apply_xfm} -e 3"; fi
@@ -130,14 +133,14 @@ for (( i=0; i<${#IMAGE[@]}; i++ )); do
     fi
   fi
   apply_xfm="${apply_xfm} -i ${IMAGE[${i}]}"
-  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${PREFIX}_reg-${TO}_${MOD}.nii.gz"
+  apply_xfm="${apply_xfm} -o ${OUTPUT}"
   for (( j=0; j<${#XFM[@]}; j++ )); do
     apply_xfm="${apply_xfm} -t ${XFM[${j}]}"
   done
-  apply_xfm="${apply_xfm} -r ${REF_IMAGE}
+  apply_xfm="${apply_xfm} -r ${REF_IMAGE}"
   
   if [[ "${VERBOSE}" == "true" ]]; then
-    echo "IMAGE ${i}):"
+    echo "IMAGE ${i}:"
     echo ${apply_xfm}
   fi
   eval ${apply_xfm}

@@ -73,6 +73,7 @@ N=${#PID[@]}
 if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/rawdata
 fi
+mkdir -p ${DIR_SAVE}
 
 SAVE_FILE=${DIR_SAVE}/scanner.tsv
 TABS=$(printf '\t')
