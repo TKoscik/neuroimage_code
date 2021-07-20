@@ -1,0 +1,182 @@
+#!/bin/bash -e
+#===============================================================================
+# Start Freesurfer processing pipeline written to integrate with the rest of INC
+# processing pipeline (i.e., same native spacing, and fixed issues with
+# intensity normalization)
+# Authors: Timothy R. Koscik, PhD
+# Date: 2020-02-26
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvkl --long t1:,t2:,dir-sub:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+T1=
+T2=
+DIR_SUB=
+HELP=false
+VERBOSE=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    --t1) T1="$2" ; shift 2 ;;
+    --t2) T2="$2" ; shift 2 ;;
+    --dir-sub) DIR_SUB="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --t1                     T1w input'
+  echo '  --t2                     T2w input'
+  echo '  --dir-sub                location for subject directory'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${T1})
+PID=$(getField -i ${T1} -f sub)
+SID=$(getField -i ${T1} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${DIR_SUB} ]]; then DIR_SUB=${DIR_PROJECT}/derivatives/fsurf; fi
+export SUBJECTS_DIR=${DIR_SUB}
+DIR_PID=${DIR_SUB}/${PIDSTR}
+
+# set up freesurfer directories ------------------------------------------------
+mksubjdirs ${DIR_PID}
+
+# convert to MGZ format --------------------------------------------------------
+mri_convert ${T1} ${DIR_PID}/mri/orig/001.mgz
+if [[ -n ${T2} ]]; then
+  mri_convert --no_scale 1 ${T2} ${DIR_PID}/mri/orig/T2raw.mgz
+fi
+
+# [SKIP] motion correction (add back in if more than 1 T1w) -------------------
+cp ${DIR_PID}/mri/orig/001.mgz ${DIR_PID}/mri/rawavg.mgz
+mri_convert ${DIR_PID}/mri/rawavg.mgz ${DIR_PID}/mri/orig.mgz --conform_min
+mri_add_xform_to_header -c ${DIR_PID}/mri/transforms/talairach.xfm \
+  ${DIR_PID}/mri/orig.mgz ${DIR_PID}/mri/orig.mgz
+
+# [SKIP] initial non-uniform intensity correction ------------------------------
+mri_convert ${DIR_PID}/mri/orig.mgz ${DIR_PID}/mri/orig_nu.mgz --conform_min
+
+# Talairach transformation -----------------------------------------------------
+#   talairach_avi does not work unless in mri directory in subject folder,
+#   normally this is done within the INU correction step for some reason
+#   something in talairach_avi is hardcoded as a relative path
+cd ${DIR_PID}/mri
+talairach_avi \
+  --i ${DIR_PID}/mri/orig_nu.mgz \
+  --xfm ${DIR_PID}/mri/transforms/talairach.auto.xfm
+cp ${DIR_PID}/mri/transforms/talairach.auto.xfm \
+  ${DIR_PID}/mri/transforms/talairach.xfm
+lta_convert \
+  --src ${DIR_PID}/mri/orig.mgz \
+  --trg ${FREESURFER}/average/mni305.cor.mgz \
+  --inxfm ${DIR_PID}/mri/transforms/talairach.xfm \
+  --outlta ${DIR_PID}/mri/transforms/talairach.xfm.lta \
+  --subject fsaverage \
+  --ltavox2vox
+talairach_afd -T 0.005 -xfm ${DIR_PID}/mri/transforms/talairach.xfm
+awk -f ${FREESURFER}/bin/extract_talairach_avi_QA.awk ${DIR_PID}/mri/transforms/talairach_avi.log
+tal_QC_AZS ${DIR_PID}/mri/transforms/talairach_avi.log
+
+# [SKIP] nonuniform intensity correction, 2 ------------------------------------
+mri_convert ${DIR_PID}/mri/orig.mgz ${DIR_PID}/mri/nu.mgz --conform_min
+mri_add_xform_to_header -c ${DIR_PID}/mri/transforms/talairach.xfm \
+  ${DIR_PID}/mri/nu.mgz ${DIR_PID}/mri/nu.mgz
+
+# intensity normalization ------------------------------------------------------
+##  this normalizes the range of intensity values to expected values:
+##      -WM ~110, GM ~50, CSF ~25
+##  -noconform prevents conforming to 256^3 spacing
+mri_normalize -g 1 -seed 1234 -mprage -noconform \
+  ${DIR_PID}/mri/nu.mgz ${DIR_PID}/mri/T1.mgz
+
+# skull stripping --------------------------------------------------------------
+mri_em_register \
+  -skull ${DIR_PID}/mri/nu.mgz \
+  ${FREESURFER}/average/RB_all_withskull_2020_01_02.gca \
+  ${DIR_PID}/mri/transforms/talairach_with_skull.lta
+mri_watershed -T1 \
+  -brain_atlas ${FREESURFER}/average/RB_all_withskull_2020_01_02.gca \
+  ${DIR_PID}/mri/brainmask.auto.mgz
+cp ${DIR_PID}/mri/brainmask.auto.mgz ${DIR_PID}/mri/brainmask.mgz
+
+# Set up Expert Options --------------------------------------------------------
+EXOPTS=${DIR_PID}/expert.opts
+touch ${EXOPTS}
+echo "mris_inflate -n 100" >> ${EXOPTS}
+
+# Run Recon-all ----------------------------------------------------------------
+if [[ -z ${T2} ]]; then
+  recon-all -subject ${PID} -autorecon2 -autorecon3 -cm -expert ${EXOPTS}
+else
+  recon-all -subject ${PID} -autorecon2 -autorecon3 -T2pial -cm -expert ${EXOPTS}
+fi
+
+## fix potentially overinflated surface, for aesthetics
+mris_inflate -n 15 ${DIR_PID}/surf/lh.smoothwm ${DIR_PID}/surf/lh.inflated
+mris_inflate -n 15 ${DIR_PID}/surf/rh.smoothwm ${DIR_PID}/surf/rh.inflated
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0

@@ -38,10 +38,10 @@ function egress {
 }
 trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvklp --long prefix:,\
+OPTS=$(getopt -o hvkln --long prefix:,\
 image:,mask:,keep-neg,lo:,hi:,datatype:,\
-make-png,dir-save:,dir-png:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+dir-save:,dir-scratch:,\
+help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -51,26 +51,26 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 MASK=
-RM_NEG="true"
+KEEP_NEG=false
 LO=0
 HI=0.999
 DATATYPE="INT"
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
-MAKE_PNG=true
-DIR_PLOT=
 HELP=false
 VERBOSE=0
+NO_PNG=false
+
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
-    -p | --make-png) MAKE_PNG=false ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
-    --keep-neg) RM_NEG="false" ; shift 2 ;;
+    --keep-neg) KEEP_NEG=true ; shift ;;
     --lo) LO="$2" ; shift 2 ;;
     --hi) HI="$2" ; shift 2 ;;
     --datatype) DATATYPE="$2" ; shift 2 ;;
@@ -81,35 +81,38 @@ while true; do
     * ) break ;;
   esac
 done
+
 # Usage Help -------------------------------------------------------------------
 if [[ "${HELP}" == "true" ]]; then
   echo ''
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo '  -h | --help              display command help'
-  echo '  -v | --verbose           add verbose output to log file'
-  echo '  -k | --keep              keep preliminary processing steps'
-  echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix <value>         prefix for output,'
-  echo '                           default: sub-123_ses-1234abcd'
-  echo '  -d | --dimension <value> image dimension, 3=3D (default) or 4=4D'
-  echo '  --image <value>          full path to image to denoise'
-  echo '  --mask <value>           full path to binary mask'
-  echo '  --model <value>          Rician (default) or Gaussian noise model'
-  echo '  --shrink <value>         shrink factor, large images are time-'
-  echo '                           consuming. default: 1'
-  echo '  --patch <value>          patch radius, default:1 (1x1x1)'
-  echo '  --search <value>         search radius, default:2 (2x2x2)'
-  echo '  --dir-save <value>       directory to save output,'
-  echo '                           default: ${RESEARCHER}/${PROJECT}/derivatives/inc/anat/prep/sub-${PID}/ses-${SID}'
-  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo '  -h | --help      display command help'
+  echo '  -v | --verbose   add verbose output to log file'
+  echo '  -k | --keep      keep preliminary processing steps'
+  echo '  -l | --no-log    disable writing to output log'
+  echo '  --prefix         prefix for output, default: sub-123_ses-1234abcd'
+  echo '  --image          input nii.gz file'
+  echo '  --mask           estimate intensity limtis within mask'
+  echo '  --keep-neg       toggle to keep negative values, default no'
+  echo '  --lo             lower threshold as percentile of intensity,'
+  echo '                   default=0, applied after thresholding at 0 if'
+  echo '                   not keeping negative values'
+  echo '  -hi              upper threshold as percentil of intensity,'
+  echo '                   applied after discarding/keeping negative values'
+  echo '                   default=0.9999'
+  echo '  --datatype       desired output datatype, default="INT" (signed integer)'
+  echo '  --dir-save       directory to save output,'
+  echo '         default: ${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}/ses-${SID}'
+  echo '  --dir-scratch    directory for temporary workspace'
   echo ''
   NO_LOG=true
   exit 0
 fi
+
 #===============================================================================
-# Rician Denoising
+# Rescale Intensity
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMAGE})
@@ -126,10 +129,11 @@ if [[ -z "${PREFIX}" ]]; then
   fi
 fi
 if [[ -z "${DIR_SAVE}" ]]; then 
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
+
 # gather modality for output
 MOD=($(getField -i ${IMAGE} -f "modality"))
 
@@ -169,14 +173,8 @@ fi
 #  copy output to final file
 mv ${TRG} ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz
 
-if [[ "${MAKE_PNG}" == "true" ]]; then
-  if [[ -z ${DIR_PLOT} ]]; then
-    DIR_PLOT=${DIR_PROJECT}/derivatives/inc/png/${DIRPID}
-  fi
-  mkdir -p ${DIR_PLOT}
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz \
-    --filename ${PREFIX}_prep-rescale_${MOD}.nii.gz \
-    --dir-save ${DIR_PLOT}
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz
 fi
 
 #===============================================================================
