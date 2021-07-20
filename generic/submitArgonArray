@@ -1,0 +1,19 @@
+#!/bin/bash
+#$ -q ${1}
+#$ -pe ${2}
+#$ -j y
+#$ -o ${3}
+#$ -t 1-${4}:1
+
+mkdir -p ${3}
+SH=${5}
+#sg Research-INC_img_core "chmod g+x ${SH}"
+#sg Research-INC_img_core "bash ${SH}"
+
+echo "FCN NAME: ${0}"
+echo "HPC Q: ${1}"
+echo "HPC PE: ${2}"
+echo "DIR LOG: ${3}"
+echo "ARRAY N: ${4}"
+echo "SCRIPT NAME: ${5}"
+
