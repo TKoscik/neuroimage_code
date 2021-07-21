@@ -66,30 +66,20 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
-ts-bold:,target:,template:,space:,\
+OPTS=$(getopt -o hvkln --long prefix:,\
+ts-bold:,\
+native-anat:,native-mod:,native-mask:,which-mask:,native-align:,\
+template:,template_mod:,space:,\
 dir-save:,dir-scratch:,\
-keep,help,verbose,no-log -n 'parse-options' -- "$@")
+keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -99,14 +89,20 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 TS_BOLD=
-TARGET=T1w
-TEMPLATE=
-SPACE=
+NATIVE_ANAT=
+NATIVE_MOD=T1w
+NATIVE_MASK=
+WHICH_MASK=ANTs
+NATIVE_ALIGN=
+TEMPLATE=HCPICBM
+TEMPLATE_MOD=T1w
+SPACE=2mm
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=1
 KEEP=false
+NO_PNG=false
 
 while true; do
   case "$1" in
@@ -114,10 +110,16 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
-    --target) TARGET="$2" ; shift 2 ;;
+    --native-anat) NATIVE_ANAT="$2" ; shift 2 ;;
+    --native-mod) NATIVE_MOD="$2" ; shift 2 ;;
+    --native-mask) NATIVE_MASK="$2" ; shift 2 ;;
+    --which-mask) WHICH_MASK="$2" ; shift 2 ;;
+    --native-align) NATIVE_ALIGN="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
+    --template-mod) TEMPLATE_MOD="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -132,11 +134,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
   echo '  -l | --no-log            disable writing to output log'
+  echo '  -n | --no-png            disable PNG output'
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
@@ -161,36 +163,36 @@ if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. Exiting."
   exit 1
 fi
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX=$(getBidsBase -s -i ${TS_BOLD})
-fi
-if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func
-fi
-DIR_SUBSES=sub-${PID}
-SUBSES=sub-${PID}
+if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${TS_BOLD}); fi
+if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func; fi
+PIDSTR=sub-${PID}
+DIRPID=sub-${PID}
 if [[ -n "${SID}" ]]; then
-  DIR_SUBSES=${DIR_SUBSES}/ses-${SID}
-  SUBSES=${SUBSES}_ses-${SID}
+  PIDSTR=${PIDSTR}_ses-${SID}
+  DIRPID=${DIRPID}/ses-${SID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # Native anatomical, brain mask, and rigid alignment transform - - - - - - - - -
-ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${SUBSES}*${TARGET}.nii.gz))
-if [[ -z "${ANAT}" ]]; then
+if [[ -z ${NATIVE_ANAT} ]]; then
+  NATIVE_ANAT=($(ls ${DIR_ANAT}/native/${PIDSTR}*${NATIVE_MOD}.nii.gz))
+fi
+if [[ -z ${NATIVE_ANAT} ]] || [[ ! -f ${NATIVE_ANAT} ]]; then
   echo "Native anatomical not found, aborting."
   exit 1
 fi
 
-ANAT_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${SUBSES}*mask-brain*.nii.gz))
-if [[ -z "${ANAT_MASK}" ]]; then
+if [[ -z ${NATIVE_MASK} ]]; then
+  NATIVE_MASK=($(ls ${DIR_ANAT}/mask/${PIDSTR}*mask-brain*${WHICH_MASK}*.nii.gz))
+fi
+if [[ -z ${NATIVE_MASK} ]] || [[ ! -f ${NATIVE_MASK} ]]; then
   echo "Native anatomical mask not found, aborting."
   exit 1
 fi
-
-DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIR_SUBSES}
-XFM_ALIGN=($(ls ${DIR_XFM}/${SUBSES}*from-native_to-${TEMPLATE}*_xfm-rigid.mat))
+#####################
+DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+XFM_ALIGN=($(ls ${DIR_XFM}/${PIDSTR}*from-native_to-${TEMPLATE}*_xfm-rigid.mat))
 if [[ -n "${XFM_ALIGN}" ]]; then
   INIT_XFM=${XFM_ALIGN}
 else
@@ -356,7 +358,7 @@ fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
 rm ${MERGE_LS[@]}
 
 # Move files to appropriate locations -----------------------------------------
-DIR_REGRESSOR=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIR_SUBSES}
+DIR_REGRESSOR=${DIR_SAVE}/regressors/${DIRPID}
 mkdir -p ${DIR_REGRESSOR}
 
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
@@ -365,23 +367,23 @@ sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
 mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+6.1D
 mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+12.1D
 
-mkdir -p ${DIR_PROJECT}/derivatives/inc/func/mask
+mkdir -p ${DIR_SAVE}/mask
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-  ${DIR_PROJECT}/derivatives/inc/func/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
+  ${DIR_SAVE}/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/inc/func/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
+  ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
 
-mkdir -p ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}
+mkdir -p ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
+  ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
 
-mkdir -p ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}_mean
+mkdir -p ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}_mean
 mv ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
-  ${DIR_PROJECT}/derivatives/inc/func/moco_${TEMPLATE}+${SPACE}_mean/${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold.nii.gz
+  ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}_mean/${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold.nii.gz
 
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/inc/func/prep/${DIR_SUBSES}
-  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/func/prep/${DIR_SUBSES}/
+  mkdir -p ${DIR_SAVE}/prep/${DIRPID}
+  mv ${DIR_SCRATCH}/* ${DIR_SAVE}/prep/${DIRPID}/
 fi
 
 #===============================================================================
