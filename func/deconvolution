@@ -32,17 +32,9 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    ${DIR_INC}/log/logBenchmark.sh --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logProject.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    ${DIR_INC}/log/logSession.sh --operator ${OPERATOR} \
-    --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
