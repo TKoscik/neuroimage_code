@@ -161,7 +161,7 @@ if [[ -n ${MASK} ]]; then
   fi
   fcn_str="${fcn_str} -mask ${MASK}"
 fi
-fcn_str="${fcn_str} -prefix ${DIR_SCRATCH}/${PREFIX}_"
+fcn_str="${fcn_str} -prefix ${DIR_SCRATCH}/${PREFIX}"
 fcn_str="${fcn_str} ${LO} ${HI} ${TS}"
 eval ${fcn_str}
 
@@ -170,8 +170,12 @@ FLS=($(ls ${DIR_SCRATCH}/*.HEAD))
 for (( i=0; i<${#FLS[@]}; i++ )); do
   unset MOD
   MOD=$(getField -i ${FLS[${i}]} -f modality)
-  3dAFNItoNIFTI -prefix ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz ${FLS[${i}]}
+  3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz ${FLS[${i}]}
 done
+rename "+orig" "" ${DIR_SCRATCH}/*
+
+# move to output directory -----------------------------------------------------
+mv ${DIR_SCRATCH}/*.nii.gz ${DIR_SAVE}/
 
 #===============================================================================
 # End of Function
