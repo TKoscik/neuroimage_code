@@ -1,16 +1,8 @@
 #!/bin/bash -e
 #===============================================================================
-# Wrapper for generating resting state functional connectivity measures using
-# AFNIs 3dRSFC and saving output to INC/BIDS format
+# Merge time series into single file (i.e., multiple runs)
 # Authors: Timothy Koscik, PhD
 # Date: 2021-07-22
-#
-#  If you use this program, please reference the introductory/description
-#  paper for the FATCAT toolbox:
-#        Taylor PA, Saad ZS (2013).  FATCAT: (An Efficient) Functional
-#        And Tractographic Connectivity Analysis Toolbox. Brain 
-#        Connectivity 3(5):523-535.
-#
 # CHANGELOG: <description of major changes to functionality>
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
@@ -49,10 +41,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvl --long prefix:,ts:,mask:,\
-lo:,hi:,transients,detrend,despike,normalize\
-dir.save:,dir-scratch:,\
-help,no-log,verbose -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hvkl --long prefix:,other:,dir.save:,dir-scratch:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -62,13 +52,8 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 TS=
-MASK=
 LO=0
 HI=99999
-TRANS=false
-DETREND=false
-DESPIKE=false
-NORM=false
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -77,17 +62,11 @@ VERBOSE=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --ts) TS="$2" ; shift 2 ;;
-    --mask) MASK="$2" ; shift 2 ;;
-    --lo) LO="$2" ; shift 2 ;;
-    --hi) HI="$2" ; shift 2 ;;
-    --trans) TRANS=true ; shift ;;
-    --detrend) DETREND=true ; shift ;;
-    --despike) DESPIKE=true ; shift ;;
-    --normalize) NORM=true ; shift ;;
+    --other) OTHER="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -102,19 +81,16 @@ if [[ "${HELP}" == "true" ]]; then
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
   echo '  -h | --help              display command help'
-  echo '  -v | --verbose           print AFNI verbose output'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix                 filename, without extension to use for file'
-  echo '  --ts                     time-series, e.g., BOLD time-series, re-fMRI'
-  echo '  --lo                     lower boundary for bandpass filter, default 0'
-  echo '  --hi                     upper boundary for bandpass filter, default 999999'
-  echo '  --transients             toggle transients check, default off'
-  echo '  --detrend                toggle detrending of time-series, default off'
-  echo '  --despike                toggle time-series despiking, default off'
-  echo '  --normalize              toggle L2 norm=1, i.e., all sum of sq. = 1,'
-  echo '                           default off'
+  echo '  --prefix  <optional>     filename, without extension to use for file'
+  echo '  --other                  other inputs as needed'
   echo '  --dir-save               location to save output'
   echo '  --dir-scratch            location for temporary files'
+  echo 'If you use this program, please reference the introductory/description'
+  echo 'paper for the FATCAT toolbox:'
+  echo '  Taylor PA, Saad ZS (2013). FATCAT: (An Efficient) Functional'
+  echo '  and Tractographic Connectivity Analysis Toolbox. Brain Connectivity,'
+  echo '  3(5), 523-535.'
   echo ''
   NO_LOG=true
   exit 0
@@ -124,59 +100,43 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${TS})
-PID=$(getField -i ${TS} -f sub)
-SID=$(getField -i ${TS} -f ses)
+DIR_PROJECT=$(getDir -i ${INPUT})
+PID=$(getField -i ${INPUT} -f sub)
+SID=$(getField -i ${INPUT} -f ses)
 PIDSTR=sub-${PID}
-DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
-if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${TS} -s); fi
+
+if [[ -z ${PREFIX} ]]; then
+  PREFIX=$(getBidsBase -i ${TS})
+  PREP=$(getField -i ${PREFIX} -f prep)
+  if [[ -n ${PREP} ]]; then
+    PREFIX=$(modField -i ${PREFIX} -m -f prep -v "${PREP}+pad${PAD}")
+  else
+    PREFIX=$(modField -i ${PREFIX} -a -f prep -v "pad${PAD}")
+  fi
+fi
+
+## not sure if this works and will not always be applicable ----
+### may be easier to hard code the anat/func/dwi folders
+FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+FCN_TYPE=(${FCN_DIR//\// })
+## ----
+
 if [[ -z ${DIR_SAVE} ]]; then
-  SPACE_LABEL=$(getSpace -i ${TS})
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/rsfc_${SPACE_LABEL}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
-fcn_str="3dRSFC"
-if [[ "${VERBOSE}" == "false" ]]; then
-  fcn_str="${fcn_str} -quiet"
-fi
-if [[ "${TRANSIENTS}" == "false" ]]; then
-  fcn_str="${fcn_str} -notrans"
-fi
-if [[ "${DETREND}" == "false" ]]; then
-  fcn_str="${fcn_str} -nodetrend"
-fi
-if [[ "${DESPIKE}" == "true" ]]; then
-  fcn_str="${fcn_str} -despike"
-fi
-if [[ "${NORM}" == "true" ]]; then
-  fcn_str="${fcn_str} -norm"
-fi
-if [[ -n ${MASK} ]]; then
-  if [[ "${MASK,,}" == "auto" ]]; then
-    fcn_str="${fcn_str} -automask
-  fi
-  fcn_str="${fcn_str} -mask ${MASK}"
-fi
-fcn_str="${fcn_str} -prefix ${DIR_SCRATCH}/${PREFIX}_"
-fcn_str="${fcn_str} ${LO} ${HI} ${TS}"
-eval ${fcn_str}
-
-# convert HEAD/BRIK to NIFTI ---------------------------------------------------
-FLS=($(ls ${DIR_SCRATCH}/*.HEAD))
-for (( i=0; i<${#FLS[@]}; i++ )); do
-  unset MOD
-  MOD=$(getField -i ${FLS[${i}]} -f modality)
-  3dAFNItoNIFTI -prefix ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz ${FLS[${i}]}
-done
+# body of function here --------------------------------------------------------
+## insert comments for important chunks
+## use dashes as above to separate chunks of code visually
+## move files to appropriate locations
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
-
-
 
