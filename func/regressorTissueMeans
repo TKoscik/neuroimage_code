@@ -125,7 +125,7 @@ cut -d, -f1-1 --complement ${DIR_SCRATCH}/temp.1D > ${DIR_SCRATCH}/${PREFIX}_tis
 sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D
 mv ${DIR_SCRATCH}/${PREFIX}_tissueMeans.1D ${DIR_SAVE}/
 
-if [[ -n ${MASK_BRAIN} ]]; then
+if [[ -n ${MASK} ]]; then
   fslmeants -i ${TS} -o ${DIR_SCRATCH}/${PREFIX}_global.1D --label=${MASK}
   sed -i s/"  "/","/g ${DIR_SCRATCH}/${PREFIX}_global.1D
   sed -i s/",$"//g ${DIR_SCRATCH}/${PREFIX}_global.1D
