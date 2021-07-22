@@ -84,12 +84,11 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-DIR_PROJECT=$(getDir -i ${REGRESSOR})
-PID=$(getField -i ${REGRESSOR} -f sub)
-SID=$(getField -i ${REGRESSOR} -f ses)
-if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=$(dirname ${REGRESSOR})
-fi
+FLS=(${REGRESSOR//,/ })
+DIR_PROJECT=$(getDir -i ${FLS[0]})
+PID=$(getField -i ${FLS[0]} -f sub)
+SID=$(getField -i ${FLS[0]} -f ses)
+if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=$(dirname ${FLS[0]}); fi
 mkdir -p ${DIR_SAVE}
 
 Rscript ${INC_R}/regressorPlot.R \
