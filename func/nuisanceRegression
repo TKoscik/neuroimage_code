@@ -151,7 +151,7 @@ AFNI_CALL="${AFNI_CALL} -mask ${MASK_BRAIN}"
 AFNI_CALL="${AFNI_CALL} -bandpass ${PASS_HI} ${PASS_LO}"
 
 if [[ ${PASS_HI} -gt 0 ]] && [[ ${POLY_ORDER} -gt 2 ]]; then
-  echo "You should not combine a high pass filter and a >2dn degree polynomial"
+  echo "You should not combine a high pass filter and a >2nd degree polynomial"
   echo "POLY_ORDER is set to 2"
   POLY_ORDER=2
 fi
