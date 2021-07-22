@@ -41,7 +41,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hl --long prefix:,\
-ts:,mask:,label:,csf:,wm:,\
+ts:,label:,csf:,wm:,mask:,\
 dir-save:,dir-scratch:,\
 help,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
