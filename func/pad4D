@@ -32,27 +32,16 @@ function egress {
     fi
   fi
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-    if [[ -n "${DIR_PROJECT}" ]]; then
-      logProject --operator ${OPERATOR} \
-      --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-      --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-      --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      if [[ -n "${SID}" ]]; then
-        logSession --operator ${OPERATOR} \
-        --dir-project ${DIR_PROJECT} --pid ${PID} --sid ${SID} \
-        --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-        --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
-      fi
-    fi
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long ts:,pad:,dir.save:,dir-scratch:,help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hl --long ts:,pad:,dir.save:,dir-scratch:,\
+help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -107,8 +96,8 @@ DIR_PROJECT=$(getDir -i ${INPUT})
 PID=$(getField -i ${INPUT} -f sub)
 SID=$(getField -i ${INPUT} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
 if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
 
 if [[ -z ${PREFIX} ]]; then
@@ -141,7 +130,8 @@ fslsplit ${TS} ${DIR_SCRATCH}/v -t
 # pad each volume in 3D space --------------------------------------------------
 for (( i=0; i<${NTR}; i++ )); do
   NV=$(printf "%04d" ${i})
-  ImageMath 3 ${DIR_SCRATCH}/v${NV}.nii.gz PadImage ${DIR_SCRATCH}/v${NV}.nii.gz 5
+  ImageMath 3 ${DIR_SCRATCH}/v${NV}.nii.gz \
+    PadImage ${DIR_SCRATCH}/v${NV}.nii.gz ${PAD}
 done
 
 # merge padded files back together ---------------------------------------------
@@ -152,5 +142,4 @@ fslmerge -tr ${DIR_PREP}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
 # End of Function
 #===============================================================================
 exit 0
-
 

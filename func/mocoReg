@@ -36,7 +36,6 @@
 #   unless stack is present
 # --fixed handling of voxel spacing
 # -changed the way lack of session variables are handled to be more efficient
-# TODO: Add QC function or source QC script
 # ------------------------------------------------------------------------------
 # UPDATE BY T. KOSCIK 2021-07-21
 # - update logging procedure
@@ -45,8 +44,11 @@
 # - add resampling of template to desired space
 # - add optional padding and variable padding amounts
 # - add PNG output of mean bold and timeseries
+# - update to pad4D function
+# - fix depadded version not being output due to bad naming in fslmerge
 # - various non-functional, code cleaning changes
 #===============================================================================
+
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
@@ -270,16 +272,8 @@ fi
 # Motion correction ===========================================================
 # pad image for better registration -------------------------------------------
 if [[ ${PAD} -ne 0 ]]; then
-  fslsplit ${TS_BOLD} ${DIR_SCRATCH}/vol -t
-  for (( i=0; i<${NTR}; i++ )); do
-    NV=$(printf "%04d" ${i})
-    ImageMath 3 ${DIR_SCRATCH}/vol${NV}.nii.gz \
-      PadImage ${DIR_SCRATCH}/vol${NV}.nii.gz ${PAD}
-  done
-  MERGE_LS=($(ls ${DIR_SCRATCH}/vol*))
-  fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold+pad.nii.gz ${MERGE_LS[@]} ${TR}
-  TS_BOLD=${DIR_SCRATCH}/${PREFIX}_bold+pad.nii.gz
-  rm ${MERGE_LS[@]}
+  pad4D --ts ${TS_BOLD} --pad ${PAD} --dir-save ${DIR_SCRATCH}
+  TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}_prep-pad${PAD}_bold.nii.gz)
 fi
 
 # initialize mean BOLD ---------------------------------------------------------
@@ -378,7 +372,7 @@ xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat"
 xfm_fcn="${xfm_fcn} -r ${TRG}"
 eval ${xfm_fcn}
 
-# apply to brain mask as well - - - - - - - - - - - - - - - - - - - - - - - - - 
+# push bold brain mask to template as well, useful for QC ----------------------
 unset xfm_fcn
 xfm_fcn="antsApplyTransforms -d 3 -n NearestNeighbor"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz"
@@ -414,15 +408,9 @@ antsMotionCorr \
 # Depad images ----------------------------------------------------------------
 if [[ ${PAD} -ne 0 ]]; then 
   DEPAD=$(ezMath -x "${PAD} * -1" -d 0)
-  fslsplit ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz ${DIR_SCRATCH}/vol -t
-  for (( i=0; i<${NTR}; i++ )); do
-    NV=$(printf "%04d" ${i})
-    ImageMath 3 ${DIR_SCRATCH}/vol${NV}.nii.gz \
-      PadImage ${DIR_SCRATCH}/vol${NV}.nii.gz ${DEPAD}
-  done
-  MERGE_LS=($(ls ${DIR_SCRATCH}/vol*))
-  fslmerge -tr ${DIR_SCRATCH}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
-  rm ${MERGE_LS[@]}
+  pad4D --ts ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz --pad ${PAD} --dir-save ${DIR_SCRATCH}
+  mv ${DIR_SCRATCH}/${PREFIX}_prep-pad${PAD}_moco+warp.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz
 fi
 
 # Move files to appropriate locations -----------------------------------------

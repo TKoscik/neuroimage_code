@@ -139,6 +139,7 @@ fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
+# calculate vars ---------------------------------------------------------------
 fcn_str="3dRSFC"
 if [[ "${VERBOSE}" == "false" ]]; then
   fcn_str="${fcn_str} -quiet"
@@ -181,6 +182,4 @@ mv ${DIR_SCRATCH}/*.nii.gz ${DIR_SAVE}/
 # End of Function
 #===============================================================================
 exit 0
-
-
 
