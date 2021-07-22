@@ -41,6 +41,11 @@
 # UPDATE BY T. KOSCIK 2021-07-21
 # - update logging procedure
 # - add inputs to specify native anatomical better
+# - add inputs to specify normalization transforms
+# - add resampling of template to desired space
+# - add optional padding and variable padding amounts
+# - add PNG output of mean bold and timeseries
+# - various non-functional, code cleaning changes
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
