@@ -180,9 +180,10 @@ SUMMARY_FILE=${DIR_SAVE}/${PROJECT}_${MOD}_label-${LABEL_NAME}.tsv
 HEADER=$(head -n 1 ${LUT})
 HEADER=(${HEADER///})
 HEADER=("${HEADER[@]:1}")
-HEADER=(${HEADER[@]// /\t})
+HDR_STR=$(echo ${HEADER[@]})
+HDR_STR=${HDR_STR// /\t}
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  echo -e "participant_id\tsession_id\tsummary_date\tmeasure\t${HEADER[@]}" >> ${SUMMARY_FILE}
+  echo -e "participant_id\tsession_id\tsummary_date\tmeasure\t${HDR_STR[@]}" >> ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not
