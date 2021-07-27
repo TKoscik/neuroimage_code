@@ -371,7 +371,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
 
   ## dilate masks if requested
   if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
-    for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    for (( i=0; i<=${#MASK_LS[@]}; i++ )); do
       ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
         MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
       MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
@@ -379,7 +379,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   fi
 
   if [[ ${#MASK_LS[@]} -eq 1 ]]; then
-    for (( i<0; i<${#TRANSFORM[@]}; i++ )); do
+    for (( i<0; i<=${#TRANSFORM[@]}; i++ )); do
       MOVING_MASK+=(${MASK_LS[0]})
     done
   elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
@@ -390,7 +390,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   fi
 
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
-    for (( i=0; i<${#MOVING[@]}; i++ )); do
+    for (( i=0; i<=${#MOVING[@]}; i++ )); do
       TMOD=$(getField -i ${MOVING[${i}]} -f modality)
       fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[0]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
       MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
@@ -406,7 +406,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
 
   ## dilate masks if requested
   if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
-    for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    for (( i=0; i<=${#MASK_LS[@]}; i++ )); do
       ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
         MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
       MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
@@ -416,7 +416,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   ## check spacing
   CHK_FIX=$(niiInfo -i ${FIXED} -f spacing)
   CHK_FIX=${CHK_FIX// /x}
-  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+  for (( i=0; i<=${#MASK_LS[@]}; i++ )); do
     CHK_MASK=$(niiInfo -i ${MASK_LS[${i}]} -f spacing)
     CHK_MASK=${CHK_MASK// /x}
     if [[ "${CHK_FIX}" != "${CHK_MASK}" ]]; then
@@ -429,7 +429,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   done
 
   if [[ ${#MASK_LS[@]} -eq 1 ]]; then
-    for (( i<0; i<${#TRANSFORM[@]}; i++ )); do
+    for (( i<0; i<=${#TRANSFORM[@]}; i++ )); do
       FIXED_MASK+=(${MASK_LS[0]})
     done
   elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
@@ -440,7 +440,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   fi
 
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
-    for (( i=0; i<${#FIXED[@]}; i++ )); do
+    for (( i=0; i<=${#FIXED[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED[${i}]} -f modality)
       fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
       FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
