@@ -780,11 +780,21 @@ fi
 
 # generate PNG -----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>make PNGs"; fi
-  make3Dpng \
-    --bg ${DIR_SAVE}/${MOVING_OUTPUT[0]} \
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>> make PNGs"; fi
+  for (( i=0; i<${#MOVING_OUTPUT[@]}; i++ )); do
+    make3Dpng \
+      --bg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
       --bg-threshold "5,99" \
-    --dir-save ${DIR_SAVE}
+      --dir-save ${DIR_SAVE}
+  done
+  if [[ "${APPLY_TO[0]}" != "optional" ]]; then
+    for (( i=0; i<${#APPLY_OUTPUT[@]}; i++ )); do
+        make3Dpng \
+          --bg ${DIR_SAVE}/${APPLY_OUTPUT[${i}]} \
+          --bg-threshold "5,99" \
+          --dir-save ${DIR_SAVE}
+    done
+  fi
   make3Dpng \
     --bg ${FIXED[0]} \
       --bg-color "#000000,#00FF00,#FFFFFF" \
