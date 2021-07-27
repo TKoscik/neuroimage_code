@@ -327,7 +327,7 @@ if [[ "${SPACE_TARGET}" == "moving" ]]; then
   SPACE_REF=$(niiInfo -i ${MOVING[0]} -f spacing)
   SPACE_REF="${SPACE_REF// /x}"
 elif [[ "${SPACE_TARGET}" != "fixed" ]]; then
-  SPACE_REF=$(conSpacing -i ${SPACE_TARGET})
+  SPACE_REF=$(convSpacing -i ${SPACE_TARGET})
 else
   SPACE_REF=$(niiInfo -i ${FIXED[0]} -f spacing)
 fi
@@ -337,7 +337,7 @@ if [[ "${SPACE_REF}" != "${SPACE_FIXED}" ]]; then
   REF_IMAGE=${DIR_SCRATCH}/REFERENCE_IMAGE.nii.gz
   ResampleImage 3 ${FIXED[0]} ${REF_IMAGE} ${SPACE_REF} 0
 fi
-if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo -e"\t ${SPACE_REF} DONE"; fi
 
 ## check spacing ----------------------------------------------------------------
 #if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>checking image spacing for output"; fi
