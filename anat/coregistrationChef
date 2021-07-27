@@ -321,31 +321,49 @@ else
 fi
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
-# check spacing ----------------------------------------------------------------
-if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>checking image spacing for output"; fi
-FIX_SPACE="false"
+# set reference spacing for output ----------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>setting spacing for output"; fi
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
-  SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
-  SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
-  if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
-    NEW_SPACE=${SPACE_MOVING// /x}
-    FIX_SPACE="true"
-  fi
-elif [[ "${SPACE_TARGET}" != "fixed" ]] && [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
-  NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
-  FIX_SPACE="true"
+  SPACE_REF=$(niiInfo -i ${MOVING[0]} -f spacing)
+  SPACE_REF="${SPACE_REF// /x}"
+elif [[ "${SPACE_TARGET}" ~= "fixed" ]]; then
+  SPACE_REF=$(conSpacing -i ${SPACE_TARGET})
+else
+  SPACE_REF=$(niiInfo -i ${FIXED[0]} -f spacing)
 fi
-if [[ "${FIX_SPACE}" == "true" ]]; then
-  for (( i=0; i<${#FIXED[@]}; i++ )); do
-    TMOD=$(getField -i ${FIXED[${i}]} -f modality)
-    if [[ "${DRY_RUN}" == "false" ]]; then
-      mkdir -p ${DIR_SCRATCH}
-      ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz ${NEW_SPACE} 0
-    fi
-    FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
-  done
+
+SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+if [[ "${SPACE_REF}" != "${SPACE_FIXED}" ]]; then
+  REF_IMAGE=${DIR_SCRATCH}/REFERENCE_IMAGE.nii.gz
+  ResampleImage 3 ${FIXED[0]} ${REF_IMAGE} ${SPACE_REF} 0
 fi
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+## check spacing ----------------------------------------------------------------
+#if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>checking image spacing for output"; fi
+#FIX_SPACE="false"
+#if [[ "${SPACE_TARGET}" == "moving" ]]; then
+#  SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
+#  SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+#  if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
+#    NEW_SPACE=${SPACE_MOVING// /x}
+#    FIX_SPACE="true"
+#  fi
+#elif [[ "${SPACE_TARGET}" != "fixed" ]] && [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
+#  NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
+#  FIX_SPACE="true"
+#fi
+#if [[ "${FIX_SPACE}" == "true" ]]; then
+#  for (( i=0; i<${#FIXED[@]}; i++ )); do
+#    TMOD=$(getField -i ${FIXED[${i}]} -f modality)
+#    if [[ "${DRY_RUN}" == "false" ]]; then
+#      mkdir -p ${DIR_SCRATCH}
+#      ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz ${NEW_SPACE} 0
+#    fi
+#    FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+#  done
+#fi
+#if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # check for histogram matching -------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>set histogram matching"; fi
@@ -429,7 +447,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
         FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
       else
         echo "ERROR [INC ${FCN_NAME}] pre-applying multiple masks on multiple input images is not sup
-ported. IT is unclear what the purpose or result of this would even be."
+ported. It is unclear what the purpose or result of this would even be."
         exit 5
       fi
     done
@@ -718,7 +736,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
   fi
-  apply_xfm="${apply_xfm} -r ${FIXED[0]}"
+  apply_xfm="${apply_xfm} -r ${REF_IMAGE}"
   if [[ "${VERBOSE}" == "true" ]]; then
     echo -e "\t${apply_xfm//--/\n--}\n"
   fi
@@ -752,7 +770,7 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     if [[ -f ${DIR_SCRATCH}/xfm_0GenericAffine.mat ]]; then
       apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_0GenericAffine.mat"
     fi
-    apply_xfm="${apply_xfm} -r ${FIXED[0]}"
+    apply_xfm="${apply_xfm} -r ${REF_IMAGE}"
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
     writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
     eval ${apply_xfm}
@@ -804,5 +822,4 @@ fi
 # End of Function
 #===============================================================================
 exit 0
-
 
