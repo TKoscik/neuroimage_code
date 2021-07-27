@@ -82,7 +82,7 @@ label-xfm:,\
 label-from:,\
 label-to:,\
 label-reg:,\
-ref-image:,
+ref-image:,\
 apply-to:,\
 apply-to-name:,\
 keep-fwd-xfm,\
