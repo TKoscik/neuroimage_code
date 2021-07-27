@@ -366,76 +366,90 @@ if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 # check masks ------------------------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>check masks"; fi
 if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
-  MOVING_MASK=(${MOVING_MASK//,/ })
-  if [[ ${#MOVING_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
-     [[ ${#MOVING_MASK[@]} -ne 1 ]]; then
+  MASK_LS=(${MOVING_MASK//,/ })
+  unset MOVING_MASK
+
+  ## dilate masks if requested
+  if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
+    for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+      ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
+        MD ${MOVING_MASK[${i}]} ${MOVING_MASK_DILATION}
+      MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+    done
+  fi
+
+  if [[ ${#MASK_LS[@]} -eq 1 ]]; then
+    for (( i<0; i<${#TRANSFORM[@]}; i++ )); do
+      MOVING_MASK+=${MASK_LS[0]}
+    done
+  elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
+    MOVING_MASK=($(echo ${MASK_LS[@]}))
+  else
     echo "ERROR [INC ${FCN_NAME}] number of moving masks must equal 1 or the number of transforms"
     exit 4
   fi
-  if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
-    for (( i=0; i<${#MOVING_MASK[@]}; i++ )); do
-      TMOD=$(getField -i ${MOVING_MASK[${i}]} -f modality)
-      ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}_${TMOD}.nii.gz \
-        MD ${MOVING_MASK[${i}]} ${MOVING_MASK_DILATION}
-      MOVING_MASK[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}_${TMOD}.nii.gz
-    done
-  fi
+
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#MOVING[@]}; i++ )); do
       TMOD=$(getField -i ${MOVING[${i}]} -f modality)
-      if [[ ${#MOVING_MASK[@]} -eq 1 ]]; then
-        fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[0]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
-        MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
-      else
-        echo "ERROR [INC ${FCN_NAME}] pre-applying multiple masks on multiple input images is not supported. IT is unclear what the purpose or result of this would even be."
-        exit 5
-      fi
+      fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[0]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+      MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
     done
+    unset MASK_LS
+    MOVING_MASK="optional"
   fi
 fi
 
 if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
-  FIXED_MASK=(${FIXED_MASK//,/ })
-  if [[ ${#FIXED_MASK[@]} -ne ${#TRANSFORM[@]} ]] &&
-     [[ ${#FIXED_MASK[@]} -ne 1 ]]; then
+  MASK_LS=(${FIXED_MASK//,/ })
+  unset FIXED_MASK
+
+  ## dilate masks if requested
+  if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
+    for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+      ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+        MD ${FIXED_MASK[${i}]} ${FIXED_MASK_DILATION}
+      MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+    done
+  fi
+
+  ## check spacing
+  CHK_FIX=$(niiInfo -i ${FIXED} -f spacing)
+  CHK_FIX=${CHK_FIX// /x}
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    CHK_MASK=$(niiInfo -i ${MASK_LS[${i}]} -f spacing)
+    CHK_MASK=${CHK_MASK// /x}
+    if [[ "${CHK_FIX}" != "${CHK_MASK}" ]]; then
+      antsApplyTransforms -d 3 -n GenericLabel \
+        -i ${MASK_LS[${i}]} \
+        -o ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+        -r ${FIXED[0]}
+      MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+    fi
+  done
+
+  if [[ ${#MASK_LS[@]} -eq 1 ]]; then
+    for (( i<0; i<${#TRANSFORM[@]}; i++ )); do
+      FIXED_MASK+=${MASK_LS[0]}
+    done
+  elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
+    FIXED_MASK=($(echo ${MASK_LS[@]}))
+  else
     echo "ERROR [INC ${FCN_NAME}] number of fixed masks must equal 1 or the number of transforms"
     exit 5
   fi
-  if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
-    for (( i=0; i<${#FIXED_MASK[@]}; i++ )); do
-      TMOD=$(getField -i ${FIXED_MASK[${i}]} -f modality)
-      ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz \
-        MD ${FIXED_MASK[${i}]} ${FIXED_MASK_DILATION}
-      FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz
-    done
-  fi
-  if [[ "${FIX_SPACE}" == "true" ]]; then
-    for (( i=0; i<${#FIXED_MASK[@]}; i++ )); do
-      TMOD=$(getField -i ${FIXED_MASK[${i}]} -f modality)
-      if [[ "${DRY_RUN}" == "false" ]]; then
-        mkdir -p ${DIR_SCRATCH}
-        antsApplyTransforms -d 3 -n GenericLabel \
-          -i ${FIXED_MASK[${i}]} \
-          -o ${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz \
-          -r ${FIXED[0]}
-      fi
-      FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz
-    done
-  fi
+
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#FIXED[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED[${i}]} -f modality)
-      if [[ ${#FIXED_MASK[@]} -eq 1 ]]; then
-        fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[0]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
-        FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
-      else
-        echo "ERROR [INC ${FCN_NAME}] pre-applying multiple masks on multiple input images is not sup
-ported. It is unclear what the purpose or result of this would even be."
-        exit 5
-      fi
+      fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+      FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
     done
+    unset MASK_LS
+    FIXED_MASK="optional"
   fi
 fi
+
 if [[ "${MOVING_MASK[0]}" != "optional" ]] && \
    [[ "${FIXED_MASK[0]}" != "optional" ]] && \
    [[ ${#FIXED_MASK[@]} -ne ${#MOVING_MASK[@]} ]]; then
