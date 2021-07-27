@@ -82,6 +82,7 @@ label-xfm:,\
 label-from:,\
 label-to:,\
 label-reg:,\
+ref-image:,
 apply-to:,\
 apply-to-name:,\
 keep-fwd-xfm,\
@@ -155,6 +156,7 @@ while true; do
     --label-to) LABEL_TO="$2" ; shift 2 ;;
     --label-reg) LABEL_REG="$2" ; shift 2 ;;
     --label-roi) LABEL_ROI="$2" ; shift 2 ;;
+    --ref-image) REF_IMAGE="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;
     --apply-to-name) APPLY_TO_NAME="$2" ; shift 2 ;;
     --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
@@ -323,47 +325,28 @@ if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # set reference spacing for output ----------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>setting spacing for output"; fi
-if [[ "${SPACE_TARGET}" == "moving" ]]; then
-  SPACE_REF=$(niiInfo -i ${MOVING[0]} -f spacing)
-  SPACE_REF="${SPACE_REF// /x}"
-elif [[ "${SPACE_TARGET}" != "fixed" ]]; then
-  SPACE_REF=$(convSpacing -i ${SPACE_TARGET})
-else
-  SPACE_REF=$(niiInfo -i ${FIXED[0]} -f spacing)
+if [[ "${REF_IMAGE}" == "default" ]]; then
+  SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
+  SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
+  if [[ "${SPACE_TARGET}" == "moving" ]]; then
+    SPACE_REF="${SPACE_MOVING// /x}"
+  elif [[ "${SPACE_TARGET}" == "fixed" ]]; then
+    SPACE_REF="${SPACE_FIXED// /x}"
+  else
+    SPACE_REF=$(convSpacing -i ${SPACE_TARGET})
+  fi
+  SPACE_CHK="${SPACE_FIXED// /x}"
+  if [[ "${SPACE_REF}" == "${SPACE_CHK}" ]]; then
+    REF_IMAGE=${FIXED[0]}
+  else
+    REF_IMAGE=${DIR_SCRATCH}/REFERENCE_IMAGE.nii.gz
+    ResampleImage 3 ${FIXED[0]} ${REF_IMAGE} ${SPACE_REF} 0
+  fi
 fi
-
-SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
-if [[ "${SPACE_REF}" != "${SPACE_FIXED}" ]]; then
-  REF_IMAGE=${DIR_SCRATCH}/REFERENCE_IMAGE.nii.gz
-  ResampleImage 3 ${FIXED[0]} ${REF_IMAGE} ${SPACE_REF} 0
+if [[ "${VERBOSE}" == "true" ]]; then
+  SPACE_REF=$(niiInfo -i ${REF_IMAGE} -f spacing)
+  echo -e "\t${SPACE_REF} DONE"
 fi
-if [[ "${VERBOSE}" == "true" ]]; then echo -e"\t ${SPACE_REF} DONE"; fi
-
-## check spacing ----------------------------------------------------------------
-#if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>checking image spacing for output"; fi
-#FIX_SPACE="false"
-#if [[ "${SPACE_TARGET}" == "moving" ]]; then
-#  SPACE_MOVING=$(niiInfo -i ${MOVING[0]} -f spacing)
-#  SPACE_FIXED=$(niiInfo -i ${FIXED[0]} -f spacing)
-#  if [[ "${SPACE_MOVING}" != "${SPACE_FIXED}" ]]; then
-#    NEW_SPACE=${SPACE_MOVING// /x}
-#    FIX_SPACE="true"
-#  fi
-#elif [[ "${SPACE_TARGET}" != "fixed" ]] && [[ "${SPACE_TARGET}" != "${SPACE_SOURCE}" ]]; then
-#  NEW_SPACE=$(convSpacing -i ${SPACE_TARGET})
-#  FIX_SPACE="true"
-#fi
-#if [[ "${FIX_SPACE}" == "true" ]]; then
-#  for (( i=0; i<${#FIXED[@]}; i++ )); do
-#    TMOD=$(getField -i ${FIXED[${i}]} -f modality)
-#    if [[ "${DRY_RUN}" == "false" ]]; then
-#      mkdir -p ${DIR_SCRATCH}
-#      ResampleImage 3 ${FIXED[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz ${NEW_SPACE} 0
-#    fi
-#    FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
-#  done
-#fi
-#if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # check for histogram matching -------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>set histogram matching"; fi
@@ -811,7 +794,7 @@ if [[ "${NO_PNG}" == "false" ]]; then
       --fg-color "#000000,#FF00FF,#FFFFFF" \
       --fg-alpha 50 \
       --fg-cbar \
-    --layout "11:x;11:x;11:x;11:y;11:y;11:y;11:z;11:z;11:z" \
+    --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z" \
     --offset "0,0,0" \
     --filename ${PIDSTR}_${LABEL_REG} \
     --dir-save ${DIR_XFM}

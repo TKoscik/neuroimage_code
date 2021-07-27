@@ -40,6 +40,7 @@
         "label-to": ["default"],
         "label-reg": ["default"],
         "label-roi": ["default"],
+        "ref-image": ["default"],
         "apply-to": ["optional"],
         "apply-to-name": ["optional"],
         "make-overlay-png": ["false"],
