@@ -326,7 +326,7 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>setting spacing for output"; 
 if [[ "${SPACE_TARGET}" == "moving" ]]; then
   SPACE_REF=$(niiInfo -i ${MOVING[0]} -f spacing)
   SPACE_REF="${SPACE_REF// /x}"
-elif [[ "${SPACE_TARGET}" ~= "fixed" ]]; then
+elif [[ "${SPACE_TARGET}" != "fixed" ]]; then
   SPACE_REF=$(conSpacing -i ${SPACE_TARGET})
 else
   SPACE_REF=$(niiInfo -i ${FIXED[0]} -f spacing)
