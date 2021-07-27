@@ -379,11 +379,6 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
       MOVING_MASK[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}_${TMOD}.nii.gz
     done
   fi
-#  if [[ ${#MOVING_MASK[@]} -eq 1 ]] && [[ ${#MOVING[@]} -gt 1 ]]; then
-#    for (( i=1; i<${#MOVING[@]}; i++ )); do
-#      MOVING_MASK+=(${MOVING_MASK[0]})
-#    done
-#  fi
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#MOVING[@]}; i++ )); do
       TMOD=$(getField -i ${MOVING[${i}]} -f modality)
@@ -426,11 +421,6 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
       FIXED_MASK[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}_${TMOD}.nii.gz
     done
   fi
-#  if [[ ${#FIXED_MASK[@]} -eq 1 ]] && [[ ${#FIXED[@]} -gt 1 ]]; then
-#    for (( i=1; i<${#FIXED[@]}; i++ )); do
-#      FIXED_MASK+=(${FIXED_MASK[0]})
-#    done
-#  fi
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#FIXED[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED[${i}]} -f modality)
