@@ -1064,9 +1064,9 @@ done
 
 FLS=($(ls ${DIR_SCRATCH}/image_row*.png))
 if [[ ${#FLS[@]} -gt 1 ]]; then
-  montage_fcn="montage ${DIR_SCRATCH}/image_row0.png"
-  for (( i=1; i<${#FLS[@]}; i++ )); do
-    montage_fcn="${montage_fcn} ${FLS[${i}]}"
+  montage_fcn="montage"
+  for (( i=0; i<${#FLS[@]}; i++ )); do
+    montage_fcn="${montage_fcn} ${DIR_SCRATCH}/image_row${i}.png"
   done
   montage_fcn="${montage_fcn} -tile 1x"
   montage_fcn="${montage_fcn} -geometry +0+0"
