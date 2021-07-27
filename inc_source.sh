@@ -9,7 +9,7 @@ function egress {
 trap egress EXIT
 
 # parse input options ---------------------------------------------------------
-OPTS=$(getopt -o vrq --long version:,own-r,quiet -n 'parse-options' -- "$@")
+OPTS=$(getopt -o vrnq --long version:,own-r,no-r-pkg,quiet -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -19,12 +19,14 @@ eval set -- "$OPTS"
 ## default parameters
 INC_VERSION="dev"
 OWN_R="false"
+NO_R_PKG="false"
 QUIET="false"
 
 while true; do
   case "$1" in
     -v | --version) INC_VERSION="$2" ; shift 2 ;;
     -r | --own-r) OWN_R="true" ; shift ;;
+    -n | --no-r-pkg) NO_R_PKG="true" ; shift ;;
     -q | --quiet) QUIET="true" ; shift ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -122,20 +124,21 @@ for (( i=0; i<${#SW_LS[@]}; i++ )); do
 done
 
 # setup R ----------------------------------------------------------------------
-if [[ "${OWN_R}" == "false" ]] & [[ "${HOSTNAME,,}" == "argon" ]]; then
-  if [[ "${QUIET}" == "false" ]]; then echo "LOADING R MODULES:"; fi
-  PKG_LS=($(jq -r '.r_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
-  for (( i=0; i<${#PKG_LS[@]}; i++ )); do
-    unset PKG_NAME PKG_VERSION
-    PKG_NAME=${PKG_LS[${i}]}
-    PKG_VERSION=($(jq -r ".r_modules.${PKG_NAME}" < ${INIT} | tr -d ' [],"'))
-    CMD="module load ${PKG_NAME//_/-}/${PKG_VERSION}"
-    eval ${CMD}
-  done
+if [[ "${NO_R_PKG}" == "false" ]]; then
+  if [[ "${OWN_R}" == "false" ]] & [[ "${HOSTNAME,,}" == "argon" ]]; then
+    if [[ "${QUIET}" == "false" ]]; then echo "LOADING R MODULES:"; fi
+    PKG_LS=($(jq -r '.r_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
+    for (( i=0; i<${#PKG_LS[@]}; i++ )); do
+      unset PKG_NAME PKG_VERSION
+      PKG_NAME=${PKG_LS[${i}]}
+      PKG_VERSION=($(jq -r ".r_modules.${PKG_NAME}" < ${INIT} | tr -d ' [],"'))
+      CMD="module load ${PKG_NAME//_/-}/${PKG_VERSION}"
+      eval ${CMD}
+    done
+  fi
+  if [[ "${QUIET}" == "false" ]]; then echo "CHECKING R PACKAGES:"; fi
+  Rscript ${INC_R}/r_setup.R
 fi
-
-if [[ "${QUIET}" == "false" ]]; then echo "CHECKING R PACKAGES:"; fi
-Rscript ${INC_R}/r_setup.R
 
 echo "INC CODE version ${INC_VERSION^^} has been setup."
 
