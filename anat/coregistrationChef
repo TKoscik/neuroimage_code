@@ -394,16 +394,33 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
     exit 4
   fi
 
-  if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
-    for (( i=0; i<${#MOVING[@]}; i++ )); do
-      TMOD=$(getField -i ${MOVING[${i}]} -f modality)
-      if [[ "${DRY_RUN}" == "false" ]]; then
-        fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[0]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+  if [[ "${DRY_RUN}" == "false" ]]; then
+    if [[ "${MASK_PROCEDURE,,}" == "intersect" ]]; ||
+       [[ "${MASK_PROCEDURE,,}" == "union" ]]; then
+      if [[ ${#MASK_LS[@]} -gt 1 ]]; then
+        MASK_CSV=$(echo ${MASK_LS[@]})
+        MASK_CSV=${MASK_CSV//NULL}
+        MASK_CSV=${MASK_CSV// /,}
+        maskVenn --mask-ls ${MASK_CSV} --dir-save ${DIR_SCRATCH} --prefix MOVING
+        MASK_THRESH=0
+        if [[ "${MASK_PROCEDURE,,}" == "intersect" ]]; then
+          MASK_THRESH=$(fslstats ${DIR_SCRATCH}/MOVING_mask-venn.nii.gz -P 100)
+        fi
+        fslmaths ${DIR_SCRATCH}/MOVING_mask-venn.nii.gz \
+          -thr ${MASK_THRESH} -bin ${DIR_SCRATCH}/MOVING_MASK_APPLY.nii.gz
+      else
+        cp ${MASK_LS[0]} ${DIR_SCRATCH}/MOVING_MASK_APPLY.nii.gz
       fi
-      MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
-    done
-    unset MASK_LS
-    MOVING_MASK="optional"
+      for (( i=0; i<${#MOVING[@]}; i++ )); do
+        TMOD=$(getField -i ${MOVING[${i}]} -f modality)
+        fslmaths ${MOVING[${i}]} \
+          -mas ${DIR_SCRATCH}/MOVING_MASK_APPLY.nii.gz \
+          ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+        MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+      done
+      unset MASK_LS
+      MOVING_MASK="optional"
+    fi
   fi
 fi
 
@@ -434,16 +451,33 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
     exit 5
   fi
 
-  if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
-    for (( i=0; i<${#FIXED[@]}; i++ )); do
-      TMOD=$(getField -i ${FIXED[${i}]} -f modality)
-      if [[ "${DRY_RUN}" == "false" ]]; then
-        fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[0]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+  if [[ "${DRY_RUN}" == "false" ]]; then
+    if [[ "${MASK_PROCEDURE,,}" == "intersect" ]]; ||
+       [[ "${MASK_PROCEDURE,,}" == "union" ]]; then
+      if [[ ${#MASK_LS[@]} -gt 1 ]]; then
+        MASK_CSV=$(echo ${MASK_LS[@]})
+        MASK_CSV=${MASK_CSV//NULL}
+        MASK_CSV=${MASK_CSV// /,}
+        maskVenn --mask-ls ${MASK_CSV} --dir-save ${DIR_SCRATCH} --prefix FIXED
+        MASK_THRESH=0
+        if [[ "${MASK_PROCEDURE,,}" == "intersect" ]]; then
+          MASK_THRESH=$(fslstats ${DIR_SCRATCH}/FIXED_mask-venn.nii.gz -P 100)
+        fi
+        fslmaths ${DIR_SCRATCH}/FIXED_mask-venn.nii.gz \
+          -thr ${MASK_THRESH} -bin ${DIR_SCRATCH}/FIXED_MASK_APPLY.nii.gz
+      else
+        cp ${MASK_LS[0]} ${DIR_SCRATCH}/FIXED_MASK_APPLY.nii.gz
       fi
-      FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
-    done
-    unset MASK_LS
-    FIXED_MASK="optional"
+      for (( i=0; i<${#FIXED[@]}; i++ )); do
+        TMOD=$(getField -i ${FIXED[${i}]} -f modality)
+        fslmaths ${FIXED[${i}]} \
+          -mas ${DIR_SCRATCH}/FIXED_MASK_APPLY.nii.gz \
+          ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+        FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+      done
+      unset MASK_LS
+      FIXED_MASK="optional"
+    fi
   fi
 fi
 
