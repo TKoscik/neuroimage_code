@@ -373,11 +373,15 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   ## dilate masks if requested
   if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
     for (( i=0; i<${#MASK_LS[@]}; i++ )); do
-      ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
-        MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
-      fslmaths ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
-        -bin ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
-      MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+      if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
+        ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
+          MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
+        fslmaths ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
+          -bin ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+        MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+      else
+        MASK_LS[${i}]=NULL
+      fi
     done
   fi
 
@@ -410,11 +414,15 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   ## dilate masks if requested
   if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
     for (( i=0; i<${#MASK_LS[@]}; i++ )); do
-      ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
-        MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
-      fslmaths ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
-        -bin ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
-      MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+      if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
+        ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+          MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
+        fslmaths ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+          -bin ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+        MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+      else
+        MASK_LS[${i}]=NULL
+      fi
     done
   fi
 
@@ -422,14 +430,18 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   CHK_FIX=$(niiInfo -i ${FIXED} -f spacing)
   CHK_FIX=${CHK_FIX// /x}
   for (( i=0; i<${#MASK_LS[@]}; i++ )); do
-    CHK_MASK=$(niiInfo -i ${MASK_LS[${i}]} -f spacing)
-    CHK_MASK=${CHK_MASK// /x}
-    if [[ "${CHK_FIX}" != "${CHK_MASK}" ]]; then
-      antsApplyTransforms -d 3 -n GenericLabel \
-        -i ${MASK_LS[${i}]} \
-        -o ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
-        -r ${FIXED[0]}
-      MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+    if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
+      CHK_MASK=$(niiInfo -i ${MASK_LS[${i}]} -f spacing)
+      CHK_MASK=${CHK_MASK// /x}
+      if [[ "${CHK_FIX}" != "${CHK_MASK}" ]]; then
+        antsApplyTransforms -d 3 -n GenericLabel \
+          -i ${MASK_LS[${i}]} \
+          -o ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+          -r ${FIXED[0]}
+        MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+      fi
+    else
+      MASK_LS[${i}]=NULL
     fi
   done
 
@@ -447,7 +459,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#FIXED[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED[${i}]} -f modality)
-      fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[${i}]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+      fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[0]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
       FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
     done
     unset MASK_LS
