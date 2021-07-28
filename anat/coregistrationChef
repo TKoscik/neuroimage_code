@@ -397,7 +397,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   fi
 
   if [[ "${DRY_RUN}" == "false" ]]; then
-    if [[ "${MASK_PROCEDURE,,}" == "intersect" ]]; ||
+    if [[ "${MASK_PROCEDURE,,}" == "intersect" ]] || \
        [[ "${MASK_PROCEDURE,,}" == "union" ]]; then
       if [[ ${#MASK_LS[@]} -gt 1 ]]; then
         MASK_CSV=$(echo ${MASK_LS[@]})
@@ -454,7 +454,7 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   fi
 
   if [[ "${DRY_RUN}" == "false" ]]; then
-    if [[ "${MASK_PROCEDURE,,}" == "intersect" ]]; ||
+    if [[ "${MASK_PROCEDURE,,}" == "intersect" ]] || \
        [[ "${MASK_PROCEDURE,,}" == "union" ]]; then
       if [[ ${#MASK_LS[@]} -gt 1 ]]; then
         MASK_CSV=$(echo ${MASK_LS[@]})
