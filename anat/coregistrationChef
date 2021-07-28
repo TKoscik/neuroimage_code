@@ -334,6 +334,7 @@ if [[ "${REF_IMAGE}" == "default" ]]; then
     SPACE_REF="${SPACE_FIXED// /x}"
   else
     SPACE_REF=$(convSpacing -i ${SPACE_TARGET})
+    SPACE_REF="${SPACE_REF// /x}"
   fi
   SPACE_CHK="${SPACE_FIXED// /x}"
   if [[ "${SPACE_REF}" == "${SPACE_CHK}" ]]; then
