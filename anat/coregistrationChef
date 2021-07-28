@@ -334,7 +334,6 @@ if [[ "${REF_IMAGE}" == "default" ]]; then
     SPACE_REF="${SPACE_FIXED// /x}"
   else
     SPACE_REF=$(convSpacing -i ${SPACE_TARGET})
-    SPACE_REF="${SPACE_REF// /x}"
   fi
   SPACE_CHK="${SPACE_FIXED// /x}"
   if [[ "${SPACE_REF}" == "${SPACE_CHK}" ]]; then
@@ -346,6 +345,7 @@ if [[ "${REF_IMAGE}" == "default" ]]; then
 fi
 if [[ "${VERBOSE}" == "true" ]]; then
   SPACE_REF=$(niiInfo -i ${REF_IMAGE} -f spacing)
+  SPACE_REF="${SPACE_REF// /x}"
   echo -e "\t${SPACE_REF} DONE"
 fi
 
