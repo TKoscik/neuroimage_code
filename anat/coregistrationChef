@@ -381,6 +381,7 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   if [[ ${#MASK_LS[@]} -eq 1 ]]; then
     for (( i<0; i<${#TRANSFORM[@]}; i++ )); do
       MOVING_MASK+=(${MASK_LS[0]})
+      echo $i
     done
   elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
     MOVING_MASK=($(echo ${MASK_LS[@]}))
