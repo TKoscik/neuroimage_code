@@ -340,7 +340,7 @@ if [[ "${REF_IMAGE}" == "default" ]]; then
     REF_IMAGE=${FIXED[0]}
   else
     REF_IMAGE=${DIR_SCRATCH}/REFERENCE_IMAGE.nii.gz
-    if [[ "${DRY_RUN}" == "false ]]; then
+    if [[ "${DRY_RUN}" == "false" ]]; then
       ResampleImage 3 ${FIXED[0]} ${REF_IMAGE} ${SPACE_REF} 0
     fi
   fi
@@ -374,8 +374,10 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
     for (( i=0; i<${#MASK_LS[@]}; i++ )); do
       if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
-        ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
-        fslmaths ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz -bin ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+        if [[ "${DRY_RUN}" == "false" ]]; then
+          ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
+          fslmaths ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz -bin ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+        fi
         MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
       else
         MASK_LS[${i}]=NULL
@@ -395,7 +397,9 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#MOVING[@]}; i++ )); do
       TMOD=$(getField -i ${MOVING[${i}]} -f modality)
-      fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[0]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+      if [[ "${DRY_RUN}" == "false" ]]; then
+        fslmaths ${MOVING[${i}]} -mas ${MOVING_MASK[0]} ${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
+      fi
       MOVING[${i}]=${DIR_SCRATCH}/MOVING_${i}_${TMOD}.nii.gz
     done
     unset MASK_LS
@@ -410,8 +414,10 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
     for (( i=0; i<${#MASK_LS[@]}; i++ )); do
       if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
-        ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
-        fslmaths ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz -bin ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+        if [[ "${DRY_RUN}" == "false" ]]; then
+          ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
+          fslmaths ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz -bin ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+        fi
         MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
       else
         MASK_LS[${i}]=NULL
@@ -431,7 +437,9 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#FIXED[@]}; i++ )); do
       TMOD=$(getField -i ${FIXED[${i}]} -f modality)
-      fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[0]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+      if [[ "${DRY_RUN}" == "false" ]]; then
+        fslmaths ${FIXED[${i}]} -mas ${FIXED_MASK[0]} ${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
+      fi
       FIXED[${i}]=${DIR_SCRATCH}/FIXED_${i}_${TMOD}.nii.gz
     done
     unset MASK_LS
