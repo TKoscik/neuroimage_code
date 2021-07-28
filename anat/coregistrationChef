@@ -388,15 +388,6 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
     echo "ERROR [INC ${FCN_NAME}] number of moving masks must equal 1 or the number of transforms"
     exit 4
   fi
-echo "#####"
-echo "#####"
-echo "#####"
-echo ${#TRANSFORM[@]}
-echo ${#MOVING_MASK[@]}
-echo ${MOVING_MASK[@]}
-echo "#####"
-echo "#####"
-echo "#####"
 
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#MOVING[@]}; i++ )); do
@@ -447,14 +438,6 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
     echo "ERROR [INC ${FCN_NAME}] number of fixed masks must equal 1 or the number of transforms"
     exit 5
   fi
-echo "#####"
-echo "#####"
-echo "#####"
-echo ${#FIXED_MASK[@]}
-echo ${FIXED_MASK[@]}
-echo "#####"
-echo "#####"
-echo "#####"
 
   if [[ "${MASK_PROCEDURE,,}" == *"apply"* ]]; then
     for (( i=0; i<${#FIXED[@]}; i++ )); do
