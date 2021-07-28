@@ -85,6 +85,7 @@ label-reg:,\
 ref-image:,\
 apply-to:,\
 apply-to-name:,\
+rescale-intensity:,\
 keep-fwd-xfm,\
 keep-inv-xfm,\
 dir-save:,\
@@ -159,6 +160,7 @@ while true; do
     --ref-image) REF_IMAGE="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;
     --apply-to-name) APPLY_TO_NAME="$2" ; shift 2 ;;
+    --rescale-intensity) RESCALE_INTENSITY="$2" ; shift 2 ;;
     --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
     --keep-inv-xfm) KEEP_INV_XFM="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -623,12 +625,6 @@ if [[ "${DRY_RUN}" == "true" ]] || [[ "${VERBOSE}" == "true" ]]; then
     if [[ -n ${FWD_OUTPUT} ]]; then echo -e "\t\t${FWD_OUTPUT}"; fi
     if [[ -n ${INV_OUTPUT} ]]; then echo -e "\t\t${INV_OUTPUT}"; fi
   fi
-  if [[ "${MAKE_PNG}" == "true" ]]; then
-    echo "PNG:"
-    echo -e "\t${DIR_PNG}"
-    echo -e "\t\t${PNG_OVERLAY_FILENAME}"
-    echo -e "\t\t${PNG_GRAD_FILENAME}"
- fi
 fi
 
 ### write ANTS registration function ===========================================
@@ -767,7 +763,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
     apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
   fi
   apply_xfm="${apply_xfm} -i ${MOVING[${i}]}"
-  apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}"
+  apply_xfm="${apply_xfm} -o ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]}"
   if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
     apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
   fi
@@ -780,6 +776,17 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   fi
   writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
   eval ${apply_xfm}
+  
+  ## rescale intensity if selected ---------------------------------------------
+  if [[ "${RESCALE_INTENSITY,,}" != "false" ]]; then
+    RSVALS=(${RESCALE_INTENSITY//,/ })
+    rescaleIntensity --image ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} \
+      --lo ${RSVALS[0]} --hi ${RSVALS[1]} \
+      --dir-save ${DIR_SCRATCH}
+    mv ${DIR_SCRATCH}/*prep-rescale*.nii.gz ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
+  else
+    mv ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
+  fi
 done
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
@@ -801,7 +808,7 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
       apply_xfm="${apply_xfm} -n ${INTERPOLATION}"
     fi
     apply_xfm="${apply_xfm} -i ${APPLY_TO[${i}]}"
-    apply_xfm="${apply_xfm} -o ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}"
+    apply_xfm="${apply_xfm} -o ${DIR_SCRATCH}/${APPLY_OUTPUT[${i}]}"
     if [[ -f ${DIR_SCRATCH}/xfm_1Warp.nii.gz ]]; then
       apply_xfm="${apply_xfm} -t ${DIR_SCRATCH}/xfm_1Warp.nii.gz"
     fi
@@ -812,6 +819,17 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
     writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
     eval ${apply_xfm}
+    
+    ## rescale intensity if selected ---------------------------------------------
+    if [[ "${RESCALE_INTENSITY,,}" != "false" ]]; then
+      RSVALS=(${RESCALE_INTENSITY//,/ })
+      rescaleIntensity --image ${DIR_SCRATCH}/${APPLY_OUTPUT[${i}]} \
+        --lo ${RSVALS[0]} --hi ${RSVALS[1]} \
+        --dir-save ${DIR_SCRATCH}
+      mv ${DIR_SCRATCH}/*prep-rescale*.nii.gz ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}
+    else
+      mv ${DIR_SCRATCH}/${APPLY_OUTPUT[${i}]} ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}
+    fi
   done
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
@@ -853,9 +871,9 @@ if [[ "${NO_PNG}" == "false" ]]; then
   make3Dpng \
     --bg ${FIXED[0]} \
       --bg-color "#000000,#00FF00,#FFFFFF" \
-      --bg-thresh "10,95" \
+      --bg-thresh "10,99" \
     --fg ${DIR_SAVE}/${MOVING_OUTPUT[0]} \
-      --fg-thresh "10,95" \
+      --fg-thresh "10,99" \
       --fg-color "#000000,#FF00FF,#FFFFFF" \
       --fg-alpha 50 \
       --fg-cbar \
