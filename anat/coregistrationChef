@@ -645,7 +645,7 @@ elif [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
   done
 fi
 if [[ "${INITIAL_MOVING_TRANSFORM}" == "default" ]]; then
-  antsCoreg="${antsCoreg} --initial-moving-transform [${FIXED[0]},${MOVING[0]},1]"
+  antsCoreg="${antsCoreg} --initial-moving-transform [${FIXED[0]},${MOVING[0]},2]"
 elif [[ "${INITIAL_MOVING_TRANSFORM}" != "optional" ]]; then
   INITIAL_MOVING_TRANSFORM=(${INITIAL_MOVING_TRANSFORM//;/ })
   for (( i=0; i<${#INITIAL_MOVING_TRANSFORM[@]}; i++ )); do
