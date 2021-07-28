@@ -710,6 +710,16 @@ mkdir -p ${DIR_SAVE}
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then mkdir -p ${DIR_XFM}; fi
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
+##DEBUG
+mkdir -p /Shared/koscikt_scratch/toHOME/coregChef_test/
+cp ${FIXED[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/FIXED_0.nii.gz
+cp ${FIXED[1]} /Shared/koscikt_scratch/toHOME/coregChef_test/FIXED_1.nii.gz
+cp ${FIXED_MASK[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/FIXED_MASK.nii.gz
+cp ${MOVING[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/MOVING_0.nii.gz
+cp ${MOVING[1]} /Shared/koscikt_scratch/toHOME/coregChef_test/MOVING_1.nii.gz
+cp ${MOVING_MASK[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/MOVING_MASK.nii.gz
+exit 0
+
 # run coregistration -----------------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>run coregistration"; fi
 writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${antsCoreg}"
