@@ -375,6 +375,8 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
     for (( i=0; i<${#MASK_LS[@]}; i++ )); do
       ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
         MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
+      fslmaths ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
+        -bin ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
       MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
     done
   fi
@@ -410,6 +412,8 @@ if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
     for (( i=0; i<${#MASK_LS[@]}; i++ )); do
       ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
         MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
+      fslmaths ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+        -bin ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
       MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
     done
   fi
