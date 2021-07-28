@@ -46,9 +46,11 @@ OPTS=$(getopt -o hvldn --long recipe-json:,\
 recipe-name:,\
 fixed:,\
 fixed-mask:,\
+fixed-mask-threshold:,\
 fixed-mask-dilation:,\
 moving:,\
 moving-mask:,\
+moving-mask-threshold:,\
 moving-mask-dilation:,\
 mask-procedure:,\
 dir-template:,\
@@ -119,9 +121,11 @@ while true; do
     --recipe-name) RECIPE_NAME="$2" ; shift 2 ;;
     --fixed) FIXED="$2" ; shift 2 ;;
     --fixed-mask) FIXED_MASK="$2" ; shift 2 ;;
+    --fixed-mask-threshold) FIXED_MASK_THRESHOLD="$2" ; shift 2 ;;
     --fixed-mask-dilation) FIXED_MASK_DILATION="$2" ; shift 2 ;;
     --moving) MOVING="$2" ; shift 2 ;;
     --moving-mask) MOVING_MASK="$2" ; shift 2 ;;
+    --moving-mask-threshold) MOVING_MASK_THRESHOLD="$2" ; shift 2 ;;
     --moving-mask-dilation) MOVING_MASK_DILATION="$2" ; shift 2 ;;
     --mask-procedure) MASK_PROCEDURE="$2" ; shift 2 ;;
     --dir-template) DIR_TEMPLATE="$2" ; shift 2 ;;
@@ -372,23 +376,31 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>check masks"; fi
 if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
   MASK_LS=(${MOVING_MASK//,/ })
   unset MOVING_MASK
-  ## dilate masks if requested
-  if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
-    for (( i=0; i<${#MASK_LS[@]}; i++ )); do
-      if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
-        if [[ "${DRY_RUN}" == "false" ]]; then
-          ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz MD ${MASK_LS[${i}]} ${MOVING_MASK_DILATION}
-          fslmaths ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz -bin ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+
+  ## Prepare moving masks - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
+      if [[ "${DRY_RUN}" == "false" ]]; then
+        ### Threshold masks  -  -  -
+        fslmaths ${MASK_LS[${i}]} -thr ${MOVING_MASK_THRESHOLD} -bin \
+          ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+
+        ### Dilate masks  -  -  -
+        if [[ ${MOVING_MASK_DILATION} -ne 0 ]]; then
+          ImageMath 3 ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz \
+            MD ${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz ${MOVING_MASK_DILATION}
         fi
-        MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
-      else
-        MASK_LS[${i}]=NULL
       fi
-    done
-  fi
+      MASK_LS[${i}]=${DIR_SCRATCH}/MOVING_MASK_${i}.nii.gz
+    else
+      MASK_LS[${i}]=NULL
+    fi
+  done
 
   if [[ ${#MASK_LS[@]} -eq 1 ]]; then
-    for (( i=0; i<${#TRANSFORM[@]}; i++ )); do MOVING_MASK+=(${MASK_LS[0]}); done
+    for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
+      MOVING_MASK+=(${MASK_LS[0]})
+    done
   elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
     MOVING_MASK=($(echo ${MASK_LS[@]}))
   else
@@ -427,25 +439,34 @@ if [[ "${MOVING_MASK[0]}" != "optional" ]]; then
 fi
 
 if [[ "${FIXED_MASK[0]}" != "optional" ]]; then
+  unset MASK_LS
   MASK_LS=(${FIXED_MASK//,/ })
-  unset FIXED_MASK  
-  ## dilate masks if requested
-  if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
-    for (( i=0; i<${#MASK_LS[@]}; i++ )); do
-      if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
-        if [[ "${DRY_RUN}" == "false" ]]; then
-          ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz MD ${MASK_LS[${i}]} ${FIXED_MASK_DILATION}
-          fslmaths ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz -bin ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+  unset FIXED_MASK
+  
+  ## Prepare fixed masks - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  for (( i=0; i<${#MASK_LS[@]}; i++ )); do
+    if [[ "${MASK_LS[${i}]}" != "NULL" ]]; then
+      if [[ "${DRY_RUN}" == "false" ]]; then
+        ### Threshold masks  -  -  -
+        fslmaths ${MASK_LS[${i}]} -thr ${FIXED_MASK_THRESHOLD} -bin \
+          ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+
+        ### Dilate masks  -  -  -
+        if [[ ${FIXED_MASK_DILATION} -ne 0 ]]; then
+          ImageMath 3 ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz \
+            MD ${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz ${FIXED_MASK_DILATION}
         fi
-        MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
-      else
-        MASK_LS[${i}]=NULL
       fi
-    done
-  fi
+      MASK_LS[${i}]=${DIR_SCRATCH}/FIXED_MASK_${i}.nii.gz
+    else
+      MASK_LS[${i}]=NULL
+    fi
+  done
 
   if [[ ${#MASK_LS[@]} -eq 1 ]]; then
-    for (( i=0; i<${#TRANSFORM[@]}; i++ )); do FIXED_MASK+=(${MASK_LS[0]}); done
+    for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
+      FIXED_MASK+=(${MASK_LS[0]})
+    done
   elif [[ ${#MASK_LS[@]} -eq ${#TRANSFORM[@]} ]]; then
     FIXED_MASK=($(echo ${MASK_LS[@]}))
   else
