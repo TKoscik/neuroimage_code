@@ -81,6 +81,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix  <optional>     prefix for filename'
   echo '  --image                  list of images, can include * to find matches'
+  echo '                           must be comma-separated, not bash array'
   echo '  --te                     comma-separted list of echo times in ms'
   echo '  --dir-save               location to save output'
   echo '  --dir-scratch            location for temporary files'
@@ -92,6 +93,8 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+unset IMG_LS
+unset IMG
 IMG=(${IMAGE//,/ })
 for (( i=0; i<${#IMG[@]}; i++ )); do
   IMG_LS+=($(ls ${IMG[${i}]}))
@@ -99,14 +102,20 @@ done
 TE=(${TE//,/ })
 N=${#IMG_LS[@]}
 
+echo ${IMG_LS[@]}
+echo ${TE[@]}
+echo $N
+
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMG_LS[0]})
 PID=$(getField -i ${IMG_LS[0]} -f sub)
 SID=$(getField -i ${IMG_LS[0]} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+#if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then PIDSTR=${PIDSTR}_ses-${SID}; fi
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+#if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
 
 if [[ -z ${PREFIX} ]]; then
   PREFIX=$(getBidsBase -i ${PIDSTR})
@@ -119,10 +128,10 @@ mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
 # fit echoes, calculate weights ------------------------------------------------
-fit_str="@compute_OC_weights"
+fit_str='@compute_OC_weights "'
 fit_str="${fit_str} -echo_times"
 for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${TE[${i}]}"; done
-fit_str="${fcn_str} -echo_dsets"
+fit_str='"${fit_str} -echo_dsets'
 for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${IMG_LS[${i}]}"; done
 fit_str="${fit_str} -prefix ${DIR_SCRATCH}/weights"
 eval ${fit_str}
