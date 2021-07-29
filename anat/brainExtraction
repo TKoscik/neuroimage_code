@@ -270,6 +270,18 @@ if [[ ${#METHOD[@]} > 1 ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running majority vote of masks"; fi
   ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+MALF${SUFFIX}.nii.gz MajorityVoting ${TLS//,/ }
   MASK_LS+=(${PREFIX}_mask-${LABEL}+MALF${SUFFIX}.nii.gz)
+
+  ## make INTERSECTION mask
+  INTERSECT=$(ezMath -x "2^${#METHOD[@]}" -d 0)
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz \
+    -thr ${INTERSECT} -uthr ${INTERSECT} -bin \
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+INTERSECT${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+INTERSECT${SUFFIX}.nii.gz)
+
+  ## make UNION mask
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz \
+    -bin ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+UNION${SUFFIX}.nii.gz
+  MASK_LS+=(${PREFIX}_mask-${LABEL}+UNION${SUFFIX}.nii.gz)
 fi
 
 # make PNG ---------------------------------------------------------------------
