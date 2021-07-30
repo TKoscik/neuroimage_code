@@ -261,7 +261,7 @@ if [[ ${#METHOD[@]} > 1 ]]; then
     TLS="${TLS},${DIR_SCRATCH}/${MASK_LS[${i}]}"
   done
 
-  ## make Venn mask labelling overlapping regions in labels
+  ## make VENN mask labelling overlapping regions in labels
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running making Venn-like overlap of masks"; fi
   maskVenn --mask-ls ${TLS} --label "brain+VENN${SUFFIX}" --prefix ${PREFIX} --dir-save ${DIR_SCRATCH}
   MASK_LS+=(${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz)
@@ -272,7 +272,7 @@ if [[ ${#METHOD[@]} > 1 ]]; then
   MASK_LS+=(${PREFIX}_mask-${LABEL}+MALF${SUFFIX}.nii.gz)
 
   ## make INTERSECTION mask
-  INTERSECT=$(ezMath -x "2^${#METHOD[@]}" -d 0)
+  INTERSECT=$(ezMath -x "2^${#METHOD[@]}-1" -d 0)
   fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz \
     -thr ${INTERSECT} -uthr ${INTERSECT} -bin \
     ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+INTERSECT${SUFFIX}.nii.gz
