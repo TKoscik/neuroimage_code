@@ -40,7 +40,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long ts:,pad:,dir.save:,dir-scratch:,\
+OPTS=$(getopt -o hl --long ts:,pad:,dir-save:,dir-scratch:,\
 help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -92,13 +92,13 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${INPUT})
-PID=$(getField -i ${INPUT} -f sub)
-SID=$(getField -i ${INPUT} -f ses)
+DIR_PROJECT=$(getDir -i ${TS})
+PID=$(getField -i ${TS} -f sub)
+SID=$(getField -i ${TS} -f ses)
 PIDSTR=sub-${PID}
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 
 if [[ -z ${PREFIX} ]]; then
   PREFIX=$(getBidsBase -i ${TS})
@@ -136,7 +136,7 @@ done
 
 # merge padded files back together ---------------------------------------------
 MERGE_LS=($(ls ${DIR_SCRATCH}/v*))
-fslmerge -tr ${DIR_PREP}/${PREFIX}_bold.nii.gz ${MERGE_LS[@]} ${TR}
+fslmerge -tr ${DIR_SAVE}/${PREFIX}.nii.gz ${MERGE_LS[@]} ${TR}
 
 #===============================================================================
 # End of Function

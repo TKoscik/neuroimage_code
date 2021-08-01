@@ -105,7 +105,7 @@ TS_BOLD=
 NATIVE_ANAT=
 NATIVE_MOD=T1w
 NATIVE_MASK=
-WHICH_MASK=mask-brain+ANTs
+WHICH_MASK=mask-brain
 XFM_ALIGN=
 XFM_NORM=
 TEMPLATE=HCPICBM
@@ -217,9 +217,9 @@ fi
 
 # get alignment xfm ------------------------------------------------------------
 if [[ -z ${XFM_ALIGN} ]]; then
-  XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}*from-native_to-${TEMPLATE}*_xfm-rigid.mat))
+  XFM_ALIGN=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}_mod-${NATIVE_MOD}_from-raw_to-${TEMPLATE}_xfm-rigid.mat
 fi
-if [[ -z "${XFM_ALIGN}" ]]; then
+if [[ ! -f ${XFM_ALIGN} ]]; then
   echo "Alignment registration not found, continuing with ANTs default initialization."
   XFM_ALIGN=[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
 fi
@@ -273,6 +273,7 @@ fi
 # pad image for better registration -------------------------------------------
 if [[ ${PAD} -ne 0 ]]; then
   pad4D --ts ${TS_BOLD} --pad ${PAD} --dir-save ${DIR_SCRATCH}
+  ls ${DIR_SCRATCH}/${PREFIX}*
   TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}_prep-pad${PAD}_bold.nii.gz)
 fi
 
@@ -283,10 +284,10 @@ antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NTR} -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
-  -t Rigid[0.1]
+  -t Rigid[0.1] \
   -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
-  -i 20x15x5x1
-  -s 3x2x1x0
+  -i 20x15x5x1 \
+  -s 3x2x1x0 \
   -f 4x3x2x1
 
 cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv

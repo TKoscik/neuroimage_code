@@ -97,7 +97,7 @@ DWI=(${DWI//,/ })
 N_DWI=${#DWI[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir-i ${DWI[0]})
+DIR_PROJECT=$(getDir -i ${DWI[0]})
 PROJECT=$(getProject -i ${DWI[0]})
 PID=$(getField -i ${DWI[0]} -f sub)
 SID=$(getField -i ${DWI[0]} -f ses)
