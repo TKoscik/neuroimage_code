@@ -203,7 +203,6 @@ if [[ "${METHOD,,}" == *"fsl"* ]] || [[ "${METHOD,,}" == *"bet"* ]]; then
   eval ${fsl_fcn}
   mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+FSL${SUFFIX}.nii.gz
   MASK_LS+=(${PREFIX}_mask-${LABEL}+FSL${SUFFIX}.nii.gz)
-  rm ${DIR_SCRATCH}/fsl*
 fi
 
 # run FSL's BET for B0-------------------------------------------------------------
@@ -215,7 +214,6 @@ if [[ "${METHOD,,}" == *"b0"* ]]; then
   eval ${fsl_fcn}
   mv ${DIR_SCRATCH}/fsl_bet_mask.nii.gz ${DIR_SCRATCH}/${PREFIX}_mod-B0_mask-${LABEL}+FSL${SUFFIX}.nii.gz
   MASK_LS+=(${PREFIX}_mod-B0_mask-${LABEL}+FSL${SUFFIX}.nii.gz)
-  rm ${DIR_SCRATCH}/fsl*
 fi
 
 # SAMSEG labelling for brain mask ----------------------------------------------
