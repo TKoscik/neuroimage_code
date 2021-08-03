@@ -45,7 +45,7 @@ trap egress EXIT
 OPTS=$(getopt -o hvkln --long prefix:,\
 dimension:,image:,method:,mask:,\
 smooth-kernel:,\
-weight:,shrink:,convergence,bspline:,hist-sharpen:,\
+no-rescale,weight:,shrink:,convergence,bspline:,hist-sharpen:,\
 no-gm,urad:,do-t2,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log,no-png -n 'parse-options' -- "$@")
@@ -63,6 +63,7 @@ METHOD=
 MASK=
 SMOOTH_KERNEL=5
 WEIGHT=
+RESCALE=1
 SHRINK=4
 CONVERGENCE=[50x50x50x50,0.0]
 BSPLINE=[200,3]
@@ -90,6 +91,7 @@ while true; do
     --method) METHOD="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --smooth-kernel) SMOOTH_KERNEL="$2" ; shift 2 ;;
+    --no-rescale) RESCALE=0 ; shift ;;
     --weight) WEIGHT="$2" ; shift 2 ;;
     --shrink) SHRINK="$2" ; shift 2 ;;
     --convergence) CONVERGENCE="$2" ; shift 2 ;;
