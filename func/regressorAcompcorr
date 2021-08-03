@@ -128,10 +128,10 @@ fi
 3dmaskSVD -vnorm -polort 1 -sval ${N} -mask ${LABEL}"<${CSF}..${CSF}" ${TS} > ${DIR_SAVE}/${PREFIX}_compcorr+csf+${N}.1D
 3dmaskSVD -vnorm -polort 1 -sval ${N} -mask ${LABEL}"<${WM}..${WM}" ${TS} > ${DIR_SAVE}/${PREFIX}_compcorr+wm+${N}.1D
 
-sed i- 's/  */,/g' ${DIR_SAVE}/${PREFIX}_compcorr+csf+${N}.1D
-sed i- 's/  */,/g' ${DIR_SAVE}/${PREFIX}_compcorr+wm+${N}.1D
-sed i- 's/,//' ${DIR_SAVE}/${PREFIX}_compcorr+csf+${N}.1D
-sed i- 's/,//' ${DIR_SAVE}/${PREFIX}_compcorr+wm+${N}.1D
+sed -i 's/  */,/g' ${DIR_SAVE}/${PREFIX}_compcorr+csf+${N}.1D
+sed -i 's/  */,/g' ${DIR_SAVE}/${PREFIX}_compcorr+wm+${N}.1D
+sed -i 's/,//' ${DIR_SAVE}/${PREFIX}_compcorr+csf+${N}.1D
+sed -i 's/,//' ${DIR_SAVE}/${PREFIX}_compcorr+wm+${N}.1D
 
 #===============================================================================
 # End of Function

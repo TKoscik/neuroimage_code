@@ -55,12 +55,12 @@ for (i in 1:length(regressor.ls)) {
     iter <- iter + 1
     tf <- read.csv(regressor.ls[i], header=F, sep=delims[iter], as.is=TRUE, stringsAsFactors = FALSE)
     if (ncol(tf) > 1) { delim.chk <- FALSE  }
+    if (iter == length(delims)) { delim.chk <- FALSE  }
   }
   nTR <- nrow(tf)
   nVar <- ncol(tf)
   type.1d <- FALSE
   
-  cor.include <- TRUE
   if (grepl("moco[+]6", regressor.ls[i]) || grepl("6df", regressor.ls[i])) {
     ptitle <- "Rigid Motion Correction"
     which.plot <- "plot6df"
@@ -102,11 +102,11 @@ for (i in 1:length(regressor.ls)) {
     ptitle <- "Relative Displacement (mm)"
     which.plot <- "plot6df"
     cls <- timbow(5)[c(2,4,5)]
-  } else if (grepl("displacement+framewise", regressor.ls[i])) {
+  } else if (grepl("displacement-framewise", regressor.ls[i])) {
     ptitle <- "Framewise Displacement"
     which.plot <- "plotVec"    
     cls <- "#000000"
-  } else if (grepl("displacement+RMS", regressor.ls[i])) {
+  } else if (grepl("displacement-RMS", regressor.ls[i])) {
     ptitle <- "Displacement Root Mean Squared"
     which.plot <- "plotVec"
     cls <- "#000000"
@@ -119,10 +119,10 @@ for (i in 1:length(regressor.ls)) {
     which.plot <- "plotMx"
     cnames <- c("Raw","MOCO","Residual")
     cls <- c("#000000", "#cf00cf","#00cf00")
-    corr.include <- FALSE
+    do.corr <- FALSE
   } else {
     ptitle <- "Regressor"
-    which.plot <- "plot.mx"
+    which.plot <- "plotMx"
     cnames <- paste("Regressor", 1:nVar)
     cls <- timbow(nVar)
   }
@@ -168,7 +168,7 @@ for (i in 1:length(regressor.ls)) {
       labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
   }
-  if (grepl("plotMx", regressor.ls[i])) {
+  if (which.plot == "plotMx") {
     plot.count <- c(plot.count, 1)
     type.1d <- TRUE
     uf <- tf
@@ -184,13 +184,15 @@ for (i in 1:length(regressor.ls)) {
       labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
   }
+print(plot.count)
   if (i==1) {df <- data.frame(TR=1:nTR) }
-  if (corr.include) { df <- cbind(df,tf) }
+  if (do.corr) { df <- cbind(df,tf) }
 }
 
 plot_fcn <- "rgr_plot <- arrangeGrob("
 for (i in 1:length(regressor.ls)) { plot_fcn <- paste0(plot_fcn, "plots[[", i, "]], ") }
 plot_fcn=paste0(plot_fcn, 'ncol=1, heights=c(', paste(plot.count, collapse=","), '), top="Nuisance Regressors")')
+print(plot_fcn)
 eval(parse(text=plot_fcn))
 
 ggsave(filename=paste0(prefix, "_regressors", suffix, ".png"), path=dir.save,

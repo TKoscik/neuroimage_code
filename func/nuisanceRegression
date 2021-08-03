@@ -124,10 +124,7 @@ DIR_PROJECT=$(getDir -i ${TS_BOLD})
 PID=$(getField -i ${TS_BOLD} -f sub)
 SID=$(getField -i ${TS_BOLD} -f ses)
 if [[ -z "${PREFIX}" ]]; then
-  PREFIX="sub-${PID}"
-  if [[ -n "${SID}" ]]; then
-    PREFIX="${PREFIX}_ses-${SID}"
-  fi
+  PREFIX=$(getBidsBase -s -i ${TS_BOLD})
 fi
 if [[ ! -f "${TS_BOLD}" ]]; then
   echo "The BOLD file does not exist. aborting."
@@ -150,7 +147,7 @@ AFNI_CALL="${AFNI_CALL} -mask ${MASK_BRAIN}"
 
 AFNI_CALL="${AFNI_CALL} -bandpass ${PASS_HI} ${PASS_LO}"
 
-if [[ ${PASS_HI} -gt 0 ]] && [[ ${POLY_ORDER} -gt 2 ]]; then
+if [[ "${PASS_HI}" != "0" ]] && [[ ${POLY_ORDER} -gt 2 ]]; then
   echo "You should not combine a high pass filter and a >2nd degree polynomial"
   echo "POLY_ORDER is set to 2"
   POLY_ORDER=2

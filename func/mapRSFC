@@ -129,8 +129,8 @@ PID=$(getField -i ${TS} -f sub)
 SID=$(getField -i ${TS} -f ses)
 PIDSTR=sub-${PID}
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${TS} -s); fi
 if [[ -z ${DIR_SAVE} ]]; then
   SPACE_LABEL=$(getSpace -i ${TS})
@@ -158,7 +158,7 @@ if [[ "${NORM}" == "true" ]]; then
 fi
 if [[ -n ${MASK} ]]; then
   if [[ "${MASK,,}" == "auto" ]]; then
-    fcn_str="${fcn_str} -automask
+    fcn_str="${fcn_str} -automask"
   fi
   fcn_str="${fcn_str} -mask ${MASK}"
 fi
@@ -178,6 +178,19 @@ rename "+orig" "" ${DIR_SCRATCH}/*
 # move to output directory -----------------------------------------------------
 mv ${DIR_SCRATCH}/*.nii.gz ${DIR_SAVE}/
 
+if [[ "${NO_PNG}" == "false" ]]; then
+  CH=$(ezMath -x "0.3*0" -d 1)
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_ALFF.nii.gz --bg-color "cubehelix,start,${CH}"
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_LFF.nii.gz --bg-color "cubehelix,start,${CH}"
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_RSFA.nii.gz --bg-color "cubehelix,start,${CH}"
+  CH=$(ezMath -x "0.3*1" -d 1)
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_fALFF.nii.gz --bg-color "cubehelix,start,${CH}"
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_fRSFA.nii.gz --bg-color "cubehelix,start,${CH}"
+  CH=$(ezMath -x "0.3*2" -d 1)
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_mALFF.nii.gz --bg-color "cubehelix,start,${CH}"
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_mRSFA.nii.gz --bg-color "cubehelix,start,${CH}"
+fi
+ 
 #===============================================================================
 # End of Function
 #===============================================================================

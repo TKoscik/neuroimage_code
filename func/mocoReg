@@ -347,7 +347,7 @@ if [[  -f ${TRG} ]]; then
   MINSZ=99999
   SZ=($(ls ${INC_TEMPLATE}/${TEMPLATE}))
   for (( i=0; i<${#SZ[@]}; i++ )); do
-    if [[ "${SZ[${i}]}" == *"mm"* ]];
+    if [[ "${SZ[${i}]}" == *"mm"* ]]; then
       SZ[${i}]=$(ezMath -x "${SZ[${i}]::-2}*1000" -d 0)
     else
       SZ[${i}]=$(echo ${SZ[${i}]::-2})
@@ -407,12 +407,13 @@ antsMotionCorr \
     -f 4x3x2x1
 
 # Depad images ----------------------------------------------------------------
-if [[ ${PAD} -ne 0 ]]; then 
-  DEPAD=$(ezMath -x "${PAD} * -1" -d 0)
-  pad4D --ts ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz --pad ${PAD} --dir-save ${DIR_SCRATCH}
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-pad${PAD}_moco+warp.nii.gz \
-    ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz
-fi
+## taking this out, i don't think it should be done since the target space it is going to is not padded.
+#if [[ ${PAD} -ne 0 ]]; then 
+#  DEPAD=$(ezMath -x "${PAD} * -1" -d 0)
+#  pad4D --ts ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz --pad ${DEPAD} --dir-save ${DIR_SCRATCH}
+#  mv ${DIR_SCRATCH}/${PREFIX}_prep-pad${DEPAD}_moco+warp.nii.gz \
+#    ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz
+#fi
 
 # Move files to appropriate locations -----------------------------------------
 DIR_REGRESSOR=${DIR_SAVE}/regressors/${DIRPID}
@@ -449,12 +450,16 @@ if [[ "${NO_PNG}" == "false" ]]; then
     --fg-mask ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz \
     --fg-color "hot" \
     --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z" \
-    --offset "0,0,0"
+    --offset "0,0,0" \
+    --filename ${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold \
+    --dir-save ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}
   ## image of slices in 4d
   make4Dpng --bg ${TRG} \
     --fg ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz \
     --fg-mask ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz \
-    --fg-color "hot" --layout "5x11" --plane "z" --slice 0.51
+    --fg-color "hot" --layout "5x11" --plane "z" --slice 0.51 \
+    --filename ${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold \
+    --dir-save ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}
 fi
 
 #===============================================================================
