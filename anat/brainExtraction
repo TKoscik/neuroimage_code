@@ -197,7 +197,7 @@ if [[ "${METHOD,,}" == *"fsl"* ]] || [[ "${METHOD,,}" == *"bet"* ]]; then
   fsl_fcn="bet ${IMAGE[0]}"
   fsl_fcn="${fsl_fcn} ${DIR_SCRATCH}/fsl_bet.nii.gz"
   if [[ ${#IMAGE[@]} -gt 1 ]]; then
-    fsl_fcn="${fsl_fcn} -A2 ${IMAGE[0]}"
+    fsl_fcn="${fsl_fcn} -A2 ${IMAGE[1]}"
   fi
   fsl_fcn="${fsl_fcn} -m -R"
   eval ${fsl_fcn}
