@@ -173,6 +173,8 @@ fi
 #==============================================================================
 # Start of Function
 #==============================================================================
+TS_RAW=${TS_BOLD}
+
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${TS_BOLD})
 PID=$(getField -i ${TS_BOLD} -f sub)
@@ -292,6 +294,7 @@ antsMotionCorr \
 
 cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
 cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
 rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
 
@@ -307,6 +310,7 @@ antsMotionCorr \
 
 cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
 cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
 rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 
@@ -406,34 +410,45 @@ antsMotionCorr \
     -s 3x2x1x0 \
     -f 4x3x2x1
 
-# Depad images ----------------------------------------------------------------
-## taking this out, i don't think it should be done since the target space it is going to is not padded.
-#if [[ ${PAD} -ne 0 ]]; then 
-#  DEPAD=$(ezMath -x "${PAD} * -1" -d 0)
-#  pad4D --ts ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz --pad ${DEPAD} --dir-save ${DIR_SCRATCH}
-#  mv ${DIR_SCRATCH}/${PREFIX}_prep-pad${DEPAD}_moco+warp.nii.gz \
-#    ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz
-#fi
-
 # Move files to appropriate locations -----------------------------------------
 DIR_REGRESSOR=${DIR_SAVE}/regressors/${DIRPID}
 mkdir -p ${DIR_REGRESSOR}
-sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
-sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
-mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+6.1D
-mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+12.1D
-
 mkdir -p ${DIR_SAVE}/mask
+mkdir -p ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}
+mkdir -p ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}
+
+mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D \
+  ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+6.1D
+mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D \
+  ${DIR_REGRESSOR}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_moco+12.1D
+
+## move raw space brain mask - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Depad brain mask
+if [[ ${PAD} -ne 0 ]]; then
+  DEPAD=$(ezMath -x "${PAD} * -1" -d 0)
+  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+    PadImage ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz ${DEPAD}
+fi
+
+# get raw whole brain time series
+fslmeants -i ${TS_RAW} -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+raw.1D \
+  --label=${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz 
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
   ${DIR_SAVE}/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
+
+## move normalized brain mask - - - - - - - - - - - - - - - - - - - - - - - - -
+# get mocoReg whole brain time series
+fslmeants -i ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
+  -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+mocoReg.1D \
+  --label=${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
   ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz
 
-mkdir -p ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}
+## move moco+normalized bold TS - - - - - - - - - - - - - - - - - - - - - - - -
 mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
   ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz
 
-mkdir -p ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}
+## move moco+normalized mean bold - - - - - - - - - - - - - - - - - - - - - - -
 mv ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
   ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold.nii.gz
 

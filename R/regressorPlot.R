@@ -60,78 +60,80 @@ for (i in 1:length(regressor.ls)) {
   nTR <- nrow(tf)
   nVar <- ncol(tf)
   type.1d <- FALSE
-  
-  if (grepl("moco[+]6", regressor.ls[i]) || grepl("6df", regressor.ls[i])) {
+
+  tname <- unlist(strsplit(regressor.ls[i], split="/"))
+  tname <- tname[length(tname)]
+  if (grepl("moco[+]6", tname) || grepl("6df", tname)) {
     ptitle <- "Rigid Motion Correction"
     which.plot <- "plot6df"
     cls <- timbow(5)[c(2,4,5)]
-  } else if (grepl("moco[+]12", regressor.ls[i]) || grepl("12df", regressor.ls[i])) {
+  } else if (grepl("moco[+]12", tname) || grepl("12df", tname)) {
     ptitle <- "Affine Motion Correction"
     which.plot <- "plotMx"
     cnames <- paste("Affine", 1:nVar)
     cls <- timbow(nVar)
-  } else if (grepl("tissueMeans", regressor.ls[i])) {
+  } else if (grepl("tissueMeans", tname)) {
     ptitle <- "Tissue Mean Signal (Z)"
     which.plot <- "plotMx"
     cnames <- c("CSF", "WM")
     cls <- c("#c82c2c", "#2c2cc8")
-  } else if (grepl("compcorr[+]csf", regressor.ls[i])) {
+  } else if (grepl("compcorr[+]csf", tname)) {
     ptitle <- "CompCorr - CSF (Z)"
     which.plot <- "plotMx"
     cnames <- paste("CSF", 1:nVar)
     cls <- timbow(nVar)
-  } else if (grepl("compcorr[+]wm", regressor.ls[i])) {
+  } else if (grepl("compcorr[+]wm", tname)) {
     ptitle <- "CompCorr - WM (Z)"
     which.plot <- "plotMx"
     cnames <- paste("WM", 1:nVar)
     cls <- timbow(nVar)
-  } else if (grepl("compcorr[+]temporal", regressor.ls[i])) {
+  } else if (grepl("compcorr[+]temporal", tname)) {
     ptitle <- "CompCorr - Temporal (Z)"
     which.plot <- "plotMx"
     cnames <- paste("Temporal", 1:nVar)
     cls <- timbow(nVar)
-  } else if (grepl("global", regressor.ls[i])) {
+  } else if (grepl("global", tname)) {
     ptitle <- "Global Signal (Z)"
     which.plot <- "plotVec"
     cls <- "#000000"
-  } else if (grepl("displacement+absolute[+]mm", regressor.ls[i])) {
+  } else if (grepl("displacement[+]absolute[+]mm", tname)) {
     ptitle <- "Absolute Displacement (mm)"
     which.plot <- "plot6df"
     cls <- timbow(5)[c(2,4,5)]
-  } else if (grepl("displacement+relative[+]mm", regressor.ls[i])) {
+  } else if (grepl("displacement[+]relative[+]mm", tname)) {
     ptitle <- "Relative Displacement (mm)"
     which.plot <- "plot6df"
     cls <- timbow(5)[c(2,4,5)]
-  } else if (grepl("displacement-framewise", regressor.ls[i])) {
+  } else if (grepl("displacement-framewise", tname)) {
     ptitle <- "Framewise Displacement"
     which.plot <- "plotVec"    
     cls <- "#000000"
-  } else if (grepl("displacement-RMS", regressor.ls[i])) {
+  } else if (grepl("displacement-RMS", tname)) {
     ptitle <- "Displacement Root Mean Squared"
     which.plot <- "plotVec"
     cls <- "#000000"
-  } else if (grepl("spike", regressor.ls[i])) {
+  } else if (grepl("spike", tname)) {
     ptitle <- "Spike"
     which.plot <- "plotVec"
     cls <- "#000000"
-  }  else if (grepl("ts+processing", regressor.ls[i])) {
-    ptitle <- "time-series Processing"
-    which.plot <- "plotMx"
+  }  else if (grepl("ts-processing", tname)) {
+    ptitle <- "Time-series Processing"
+    which.plot <- "plotTS"
     cnames <- c("Raw","MOCO","Residual")
     cls <- c("#000000", "#cf00cf","#00cf00")
     do.corr <- FALSE
   } else {
-    ptitle <- "Regressor"
+    ptitle <- "Time-series"
     which.plot <- "plotMx"
-    cnames <- paste("Regressor", 1:nVar)
+    cnames <- paste("Time-series", 1:nVar)
     cls <- timbow(nVar)
   }
 
-  if (grepl("quad[+]deriv", regressor.ls[i])) {
+  if (grepl("quad[+]deriv", tname)) {
     ptitle <- paste0(ptitle, " - Quadratic, Derivative")
-  } else if (grepl("quad", regressor.ls[i])) {
+  } else if (grepl("quad", tname)) {
     ptitle <- paste0(ptitle, " - Quadratic")
-  } else if (grepl("deriv", regressor.ls[i])) {
+  } else if (grepl("deriv", tname)) {
     ptitle <- paste0(ptitle, " - Derivative")
   }
 
@@ -155,7 +157,8 @@ for (i in 1:length(regressor.ls)) {
       geom_hline(yintercept = 0, linetype="dotted") +
       labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj
-    tf <- tf[ ,-ncol(tf)] 
+    tf <- tf[ ,-ncol(tf)]
+    top.title <- "Time-series Regressors"
   }
   if (which.plot == "plotVec") {
     plot.count <- c(plot.count, 1)
@@ -167,6 +170,7 @@ for (i in 1:length(regressor.ls)) {
       geom_line(size=1, color=cls) +
       labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
+    top.title <- "Time-series Regressors"
   }
   if (which.plot == "plotMx") {
     plot.count <- c(plot.count, 1)
@@ -183,20 +187,41 @@ for (i in 1:length(regressor.ls)) {
       geom_line(size=1) +
       labs(title=ptitle, y=NULL, x=NULL) +
       theme_obj + theme(legend.position="right")
+    top.title <- "Time-series Regressors"
   }
-print(plot.count)
+  if (which.plot == "plotTS") {
+    plot.count <- c(plot.count, 3)
+    type.1d <- TRUE
+    uf <- tf
+    for (j in 1:nVar) { uf[ ,j] <- (uf[ ,j] - mean(uf[ ,j], na.rm=T)) / sd(uf[ ,j], na.rm=T) }
+    colnames(uf) <- colnames(tf) <- cnames
+    uf$TR <- 1:nTR
+    pf <- melt(uf, id.vars="TR")
+    plots[[i]] <- ggplot(pf, aes(x=TR, y=value, color=variable)) +
+      theme_minimal() +
+      scale_color_manual(values = cls) +
+      scale_x_continuous(expand=c(0,0)) +
+      geom_line(size=1) +
+      facet_grid(variable ~., scales="free_y") +
+      labs(title=ptitle, y=NULL, x=NULL) +
+      theme_obj + theme(legend.position="right")
+    top.title <- "Time-series"
+  }
   if (i==1) {df <- data.frame(TR=1:nTR) }
   if (do.corr) { df <- cbind(df,tf) }
 }
 
 plot_fcn <- "rgr_plot <- arrangeGrob("
 for (i in 1:length(regressor.ls)) { plot_fcn <- paste0(plot_fcn, "plots[[", i, "]], ") }
-plot_fcn=paste0(plot_fcn, 'ncol=1, heights=c(', paste(plot.count, collapse=","), '), top="Nuisance Regressors")')
-print(plot_fcn)
+plot_fcn=paste0(plot_fcn, 'ncol=1, heights=c(', paste(plot.count, collapse=","), '), top="', top.title, '")')
 eval(parse(text=plot_fcn))
-
-ggsave(filename=paste0(prefix, "_regressors", suffix, ".png"), path=dir.save,
-       plot=rgr_plot, device="png", width=7.5, height=sum(plot.count), dpi=320)
+if ("Time-series Processing" == ptitle) {
+  ggsave(filename=paste0(prefix, "_ts-processing.png"), path=dir.save,
+         plot=rgr_plot, device="png", width=7.5, height=sum(plot.count), dpi=320)
+} else {
+  ggsave(filename=paste0(prefix, "_regressors", suffix, ".png"), path=dir.save,
+         plot=rgr_plot, device="png", width=7.5, height=sum(plot.count), dpi=320)
+}
 
 if (do.corr) {
   df <- df[ ,-1]

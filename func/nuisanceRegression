@@ -40,10 +40,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,template:,space:,\
+OPTS=$(getopt -o hvkln --long prefix:,template:,space:,\
 ts-bold:,mask-brain:,pass-lo:,pass-hi:,poly-order:,regressor:,\
 dir-save:,dir-scratch:,\
-keep,help,verbose,no-log -n 'parse-options' -- "$@")
+keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -65,6 +65,7 @@ DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 KEEP=false
 VERBOSE=0
 HELP=false
+NO_PNG=false
 
 while true; do
   case "$1" in
@@ -72,6 +73,7 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --mask-brain) MASK_BRAIN="$2" ; shift 2 ;;
@@ -162,10 +164,46 @@ AFNI_CALL="${AFNI_CALL} -TR ${TR}"
 
 eval ${AFNI_CALL}
 
+## export time series
+DIR_RGR=$(dirname ${REGRESSOR[0]})
+fslmeants -i ${DIR_SCRATCH}/resid.nii.gz \
+  -o ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D \
+  --label=${MASK_BRAIN}
+
+if [[ ${NO_PNG} == "false" ]]; then
+  unset TSLS
+  if [[ -f ${DIR_RGR}/${PREFIX}_ts-brain+raw.1D ]]; then
+    TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+raw.1D)
+  fi
+  if [[ -f ${DIR_RGR}/${PREFIX}_ts-brain+mocoReg.1D ]]; then
+    TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+mocoReg.1D)
+  fi
+  if [[ -f ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D ]]; then
+    TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+resid.1D)
+  fi
+  if [[ ${#TSLS} -gt 1 ]]; then
+    fcn_str="paste -d' ' "
+    for (( i=0; i<${#TSLS[@]}; i++ )); do
+      fcn_str="${fcn_str} ${TSLS[${i}]}"
+    done
+    ${DIR_RGR}/${PREFIX}_ts-brain+raw.1D \
+    ${DIR_RGR}/${PREFIX}_ts-brain+mocoReg.1D \
+    ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D \
+    fcn_str="${fcn_str} > ${DIR_RGR}/${PREFIX}_ts-processing.1D"
+    sed -i 's/  */\t/g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
+    sed -i 's/\t$//g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
+    TOPLOT=${DIR_RGR}/${PREFIX}_ts-processing.1D
+  else
+    TOPLOT=${TSLS}
+  fi
+  regressorPlot --regressor ${TOPLOT}
+fi
+
 mv ${DIR_SCRATCH}/resid.nii.gz ${DIR_SAVE}/${PREFIX}_resid.nii.gz
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

@@ -64,12 +64,12 @@ write.table(df, file=paste0(file.prefix, "_displacement+relative+mm.1D"),
 
 # get framewise displacement ---------------------------------------------------
 FD <- rowSums(abs(df))
-write.table(FD, file=paste0(file.prefix, "_displacement-framewise.1D"),
+write.table(FD, file=paste0(file.prefix, "_displacement+framewise.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # calculate RMS ----------------------------------------------------------------
 RMS <- sqrt(c(0,diff(FD))^2)
-write.table(RMS, file=paste0(file.prefix, "_displacement-RMS.1D"),
+write.table(RMS, file=paste0(file.prefix, "_displacement+RMS.1D"),
   quote=F, row.names=F, col.names=F, sep="\t")
 
 # calculate spikes -------------------------------------------------------------
