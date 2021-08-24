@@ -107,9 +107,9 @@ DIR_PROJECT=$(getDir -i ${IMAGE})
 PID=$(getField -i ${IMAGE} -f sub)
 SID=$(getField -i ${IMAGE} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 
 if [[ -z ${PREFIX} ]]; then
   PREFIX=$(getBidsBase -i ${IMAGE})

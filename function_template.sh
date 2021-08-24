@@ -97,9 +97,9 @@ DIR_PROJECT=$(getDir -i ${INPUT})
 PID=$(getField -i ${INPUT} -f sub)
 SID=$(getField -i ${INPUT} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 
 if [[ -z ${PREFIX} ]]; then
   PREFIX=$(getBidsBase -i ${TS})
