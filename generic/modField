@@ -125,7 +125,7 @@ BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording
 N_BIDS=${#BIDS_LS[@]}
 
 ORDER=
-for (( i=0; i<${NFLAG}; i++ )); do
+for (( i=0; i<${#FLAG[@]}; i++ )); do
   for (( j=0; j<${#BIDS_LS[@]}; j++ )); do
     if [[ "${FLAG[${i}]}" == "${BIDS_LS[${j}]}" ]]; then
       ORDER[${i}]=${j}
