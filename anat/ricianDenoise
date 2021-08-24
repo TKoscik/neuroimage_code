@@ -157,7 +157,7 @@ dn_fcn="${dn_fcn} -o [${DIR_SCRATCH}/${PREFIX}_prep-${PREP}denoise_${MOD}.nii.gz
 dn_fcn="${dn_fcn}${DIR_SCRATCH}/${PREFIX}_prep-${PREP}noise_${MOD}.nii.gz]"
 
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "Denoising Image >>>\n\t${dn_fcn}"; fi
-writeScript -d ${DIR_PROJECT} -p ${PREFIX} -s "${dn_fcn}"
+#writeScript -d ${DIR_PROJECT} -p ${PREFIX} -s "${dn_fcn}"
 eval ${dn_fcn}
 
 # generate PNG -----------------------------------------------------------------
