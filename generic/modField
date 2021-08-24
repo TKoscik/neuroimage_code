@@ -116,7 +116,7 @@ if [[ "${ACTION,,}" == "add" ]]; then
     done
   else
     FLAG+=(${FIELD,,})
-    VALUE=(${VALUE_NEW})
+    VALUE+=(${VALUE_NEW})
   fi
 fi
 
