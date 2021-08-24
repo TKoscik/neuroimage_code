@@ -128,10 +128,10 @@ mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
 # fit echoes, calculate weights ------------------------------------------------
-fit_str='@compute_OC_weights "'
-fit_str="${fit_str} -echo_times"
+fit_str="@compute_OC_weights"
+fit_str="${fit_str} -echo_times \""
 for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${TE[${i}]}"; done
-fit_str='"${fit_str} -echo_dsets'
+fit_str="${fit_str}\" -echo_dsets"
 for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${IMG_LS[${i}]}"; done
 fit_str="${fit_str} -prefix ${DIR_SCRATCH}/weights"
 eval ${fit_str}
