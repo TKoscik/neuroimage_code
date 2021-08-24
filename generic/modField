@@ -106,45 +106,60 @@ if [[ "${ACTION,,}" == "remove" ]]; then
 fi
 
 ## Add flag -------------------------------------------------------------------
-BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
-N_BIDS=${#BIDS_LS[@]}
+### will append to flag if it already exists
 if [[ "${ACTION,,}" == "add" ]]; then
-  TFLAG=
-  TVALUE=
-  for (( i=0; i<${N_BIDS}; i++ )); do
-    if [[ "${FIELD,,}" == "${BIDS_LS[${i}]}" ]]; then
-      TFLAG+=(${FIELD,,})
-      TVALUE+=(${VALUE_NEW})
-    fi
-    for (( j=0; j<${NFLAG}; j++ )); do
-      if [[ "${FLAG[${j}]}" == "${BIDS_LS[${i}]}" ]]; then
-        TFLAG+=(${FLAG[${j}]})
-        TVALUE+=(${VALUE[${j}]})
+  if [[ *"${FIELD,,}"* == "${FLAG[@]}" ]]; then
+    for (( i=0; i<${NFLAG}; i++ )); do
+      if [[ "${FLAG[${i}],,}" == "${FIELD,,}" ]]; then
+        VALUE[${i}]="${VALUE[${i}]}+${VALUE_NEW}"
       fi
     done
-  done
-  if [[ ! "${BIDS_LS[@]}" =~ "${FIELD,,}" ]]; then
-    TFLAG+=(${FIELD,,})
-    TVALUE+=(${VALUE_NEW})
+  else
+    FLAG+=(${FIELD,,})
+    VALUE=(${VALUE_NEW})
   fi
-  TMOD=${VALUE[-1]}
-  FLAG=(${TFLAG[@]})
-  VALUE=(${TVALUE[@]})
-  FLAG+=("modality")
-  VALUE+=("${TMOD}")
 fi
+
+## sort flags -----------------------------------------------------------------
+BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
+N_BIDS=${#BIDS_LS[@]}
+
+ORDER=
+for (( i=0; i<${NFLAG}; i++ )); do
+  for (( j=0; j<${#BIDS_LS[@]}; j++ )); do
+    if [[ "${FLAG[${i}]}" == "${BIDS_LS[${j}]}" ]]; then
+      ORDER[${i}]=${j}
+    fi
+  done
+done
+MAX=0
+for n in "${ORDER[@]}" ; do
+  ((n > MAX)) && MAX=$n
+done
+for (( i=0; i<${#FLAG[@]}; i++ )); do
+  if [[ -z ${ORDER[${i}]} ]]; then
+    MAX=$(ezMath -x "${MAX} + 1" -d 0)
+    ORDER[${i}]=${MAX}
+  fi
+done
+
+
 
 # write output string ---------------------------------------------------------
 OUT_STR=
 if [[ "${DIR_NAME}" != "null" ]]; then OUT_STR="${DIR_NAME}/"; fi
-for (( i=0; i<${#FLAG[@]}; i++ )); do
-  if [[ "${FLAG[${i}]}" != "remove" ]]; then
-    if [[ "${FLAG[${i}]}" != "modality" ]]; then
-      OUT_STR="${OUT_STR}${FLAG[${i}]}-${VALUE[${i}]}_"
-    else
-      OUT_STR="${OUT_STR}${VALUE[${i}]}"
+for (( i=0; i<${MAX}; i++ )); do
+  for (( j=0; j<${#FLAG[@]}; j++ )); do
+    if [[ ${ORDER[${j}]} -eq ${i} ]]; then
+      if [[ "${FLAG[${j}]}" != "remove" ]]; then
+        if [[ "${FLAG[${j}]}" != "modality" ]]; then
+          OUT_STR="${OUT_STR}${FLAG[${j}]}-${VALUE[${j}]}_"
+        else
+          OUT_STR="${OUT_STR}${VALUE[${j}]}"
+        fi
+      fi
     fi
-  fi
+  done
 done
 if [[ "${EXT}" != "null" ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
 OUT_STR=${OUT_STR%_}
