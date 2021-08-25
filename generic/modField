@@ -151,7 +151,7 @@ fi
 # write output string ---------------------------------------------------------
 OUT_STR=
 if [[ "${DIR_NAME}" != "null" ]]; then OUT_STR="${DIR_NAME}/"; fi
-for (( i=0; i<${#FLAG[@]; i++ )); do
+for (( i=0; i<${#FLAG[@]}; i++ )); do
   for (( j=0; j<${#FLAG[@]}; j++ )); do
     if [[ ${ORDER[${j}]} -eq ${i} ]]; then
       if [[ "${FLAG[${j}]}" != "remove" ]]; then
