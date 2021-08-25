@@ -126,7 +126,8 @@ mkdir -p ${DIR_SCRATCH}
 
 # body of function here --------------------------------------------------------
 MASK=${DIR_SCRATCH}/${PREFIX}_mask-clip.nii.gz
-TIMG=${DIR_SCRATCH}/${PREFIX}.nii.gz
+MOD=$(getField -i ${IMAGE} -f modality)
+TIMG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
 3dAutomask -q -prefix ${MASK} -clfrac ${CLIP} ${IMAGE}
 XYZ=($(3dAutobox -noclust -input ${MASK} 2>&1))
