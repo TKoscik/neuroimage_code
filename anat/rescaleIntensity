@@ -138,7 +138,8 @@ MOD=($(getField -i ${IMAGE} -f "modality"))
 
 # set inputs and outputs
 SRC=${IMAGE}
-TRG=${DIR_SCRATCH}/${PREFIX}_prep-rescale_${MOD}.nii.gz
+NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v rescale)
+TRG=${DIR_SCRATCH}/${NEW_PREFIX}_${MOD}.nii.gz
 
 # cutoff negative values if desired
 if [[ "${RM_NEG}" == "true" ]]; then
@@ -170,10 +171,10 @@ if [[ "${DATATYPE,,}" != "null" ]]; then
 fi
 
 #  copy output to final file
-mv ${TRG} ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz
+mv ${TRG} ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
 
 if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_prep-rescale_${MOD}.nii.gz
+  make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
 fi
 
 #===============================================================================
