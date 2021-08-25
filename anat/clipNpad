@@ -143,15 +143,14 @@ if [[ ${PAD} -ne 0 ]]; then
 fi
 
 if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}.nii.gz
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 fi
 
 if [[ "${KEEP}" == "true" ]]; then
   ImageMath 3 ${MASK} PadImage ${MASK} ${PAD}
-  CopyImageHeaderInformation ${DIR_SAVE}/${PREFIX}.nii.gz ${MASK} ${MASK} 1 1 1
+  CopyImageHeaderInformation ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz ${MASK} ${MASK} 1 1 1
   ConvertImage 3 ${MASK} ${MASK} 5
   mv ${MASK} ${DIR_SAVE}/
-  echo "MASKED"
 fi
 
 #===============================================================================
