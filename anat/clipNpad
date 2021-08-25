@@ -151,6 +151,7 @@ if [[ "${KEEP}" == "true" ]]; then
   CopyImageHeaderInformation ${DIR_SAVE}/${PREFIX}.nii.gz ${MASK} ${MASK} 1 1 1
   ConvertImage 3 ${MASK} ${MASK} 5
   mv ${MASK} ${DIR_SAVE}/
+  echo "MASKED"
 fi
 
 #===============================================================================
