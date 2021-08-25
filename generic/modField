@@ -7,7 +7,8 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hmarsi:f:v: --long input:,modify,add,remove,no-sort,field:,value:,help -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hmarsi:f:v: --long input:,modify,add,remove,\
+no-sort,sort-list:,field:,value:,help -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -20,6 +21,7 @@ FIELD=
 VALUE_NEW=
 ACTION=
 NO_SORT=false
+SORT_LS="sub,ses,task,acq,ce,rec,dir,run,mod,echo,recording,proc,site,mask,label,from,to,reg,prep,resid,xfm"
 HELP=false
 
 while true; do
@@ -30,6 +32,7 @@ while true; do
     -a | --add) ACTION=add ; shift ;;
     -r | --remove) ACTION=remove ; shift ;;
     -s | --no-sort) NO_SORT=true ; shift ;;
+    --sort-list) SORT_LIST="$2" ; shift 2 ;;
     -f | --field) FIELD="$2" ; shift 2 ;;
     -v | --value) VALUE_NEW="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -48,6 +51,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -m | --modify            modify an existing flag'
   echo '  -a | --add               add an additional flag'
   echo '  -r | --remove            remove an existing flag'
+  echo '  -s | --sort              toggle to disable sorting of flags'
+  echo '  --sort-list 		   comma separated sorting list for flag order,'
+  echo '                           defaults to BIDS preferred'
+  echo '                           order with INC additions:'
+  echo '                             sub,ses,task,acq,ce,rec,dir,run,mod,echo,'
+  echo '                             recording,proc,site,mask,label,from,to,'
+  echo '                             reg,prep,resid,xfm'
   echo '  -f | --field <value>     field to act on'
   echo '  -v | --value <value>     value to use'
   echo '  field options (in order):'
@@ -124,13 +134,14 @@ fi
 
 ## sort flags -----------------------------------------------------------------
 if [[ "${NO_SORT}" == "false" ]]; then
-  BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
-  N_BIDS=${#BIDS_LS[@]}
+  SORT_LS=(${SORT_LS//,/ })
   ORDER=
+  COUNT=0
   for (( i=0; i<${#FLAG[@]}; i++ )); do
-    for (( j=0; j<${#BIDS_LS[@]}; j++ )); do
-      if [[ "${FLAG[${i}]}" == "${BIDS_LS[${j}]}" ]]; then
-        ORDER[${i}]=${j}
+    for (( j=0; j<${#SORT_LS[@]}; j++ )); do
+      if [[ "${FLAG[${i}]}" == "${SORT_LS[${j}]}" ]]; then
+        COUNT=$(ezMath -x "${COUNT} + 1" -d 0)
+        ORDER[${i}]=${COUNT}
       fi
     done
   done
@@ -150,9 +161,8 @@ fi
 
 # write output string ---------------------------------------------------------
 OUT_STR=
-LAST_FLAG=$(ezMath -x "${#FLAG[@]} - 1" -d 0)
 if [[ "${DIR_NAME}" != "null" ]]; then OUT_STR="${DIR_NAME}/"; fi
-for (( i=0; i<${#FLAG[@]}; i++ )); do
+for (( i=0; i<=${#FLAG[@]}; i++ )); do
   for (( j=0; j<${#FLAG[@]}; j++ )); do
     if [[ ${ORDER[${j}]} -eq ${i} ]]; then
       if [[ "${FLAG[${j}]}" != "remove" ]]; then
@@ -162,7 +172,7 @@ for (( i=0; i<${#FLAG[@]}; i++ )); do
         else
           TSTR="${VALUE[${j}]}"
         fi
-        if [[ ${j} -ne ${LAST_FLAG} ]]; then
+        if [[ ${i} -ne ${#FLAG[@]} ]]; then
           OUT_STR="${OUT_STR}${TSTR}_"
         else
           OUT_STR="${OUT_STR}${TSTR}"
@@ -181,4 +191,5 @@ echo ${OUT_STR}
 # End of function
 #==============================================================================
 exit 0
+
 
