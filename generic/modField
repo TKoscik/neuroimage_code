@@ -7,7 +7,7 @@
 #===============================================================================
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hmari:f:v: --long input:,modify,add,remove,field:,value:,help -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hmarsi:f:v: --long input:,modify,add,remove,no-sort,field:,value:,help -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -19,6 +19,7 @@ INPUT=
 FIELD=
 VALUE_NEW=
 ACTION=
+NO_SORT=false
 HELP=false
 
 while true; do
@@ -28,6 +29,7 @@ while true; do
     -m | --modify) ACTION=modify ; shift ;;
     -a | --add) ACTION=add ; shift ;;
     -r | --remove) ACTION=remove ; shift ;;
+    -s | --no-sort) NO_SORT=true ; shift ;;
     -f | --field) FIELD="$2" ; shift 2 ;;
     -v | --value) VALUE_NEW="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -121,34 +123,35 @@ if [[ "${ACTION,,}" == "add" ]]; then
 fi
 
 ## sort flags -----------------------------------------------------------------
-BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
-N_BIDS=${#BIDS_LS[@]}
-
-ORDER=
-for (( i=0; i<${#FLAG[@]}; i++ )); do
-  for (( j=0; j<${#BIDS_LS[@]}; j++ )); do
-    if [[ "${FLAG[${i}]}" == "${BIDS_LS[${j}]}" ]]; then
-      ORDER[${i}]=${j}
+if [[ "${NO_SORT}" == "false" ]]; then
+  BIDS_LS=("sub" "ses" "task" "acq" "ce" "rec" "dir" "run" "mod" "echo" "recording" "proc" "site" "mask" "label" "from" "to" "reg" "prep" "resid" "xfm")
+  N_BIDS=${#BIDS_LS[@]}
+  ORDER=
+  for (( i=0; i<${#FLAG[@]}; i++ )); do
+    for (( j=0; j<${#BIDS_LS[@]}; j++ )); do
+      if [[ "${FLAG[${i}]}" == "${BIDS_LS[${j}]}" ]]; then
+        ORDER[${i}]=${j}
+      fi
+    done
+  done
+  MAX=0
+  for n in "${ORDER[@]}" ; do
+    ((n > MAX)) && MAX=$n
+  done
+  for (( i=0; i<${#FLAG[@]}; i++ )); do
+    if [[ -z ${ORDER[${i}]} ]]; then
+      MAX=$(ezMath -x "${MAX} + 1" -d 0)
+      ORDER[${i}]=${MAX}
     fi
   done
-done
-MAX=0
-for n in "${ORDER[@]}" ; do
-  ((n > MAX)) && MAX=$n
-done
-for (( i=0; i<${#FLAG[@]}; i++ )); do
-  if [[ -z ${ORDER[${i}]} ]]; then
-    MAX=$(ezMath -x "${MAX} + 1" -d 0)
-    ORDER[${i}]=${MAX}
-  fi
-done
-
-
+else
+  ORDER=($(seq 0 ${#FLAG[@]} 1))
+fi
 
 # write output string ---------------------------------------------------------
 OUT_STR=
 if [[ "${DIR_NAME}" != "null" ]]; then OUT_STR="${DIR_NAME}/"; fi
-for (( i=0; i<${MAX}; i++ )); do
+for (( i=0; i<${#FLAG[@]; i++ )); do
   for (( j=0; j<${#FLAG[@]}; j++ )); do
     if [[ ${ORDER[${j}]} -eq ${i} ]]; then
       if [[ "${FLAG[${j}]}" != "remove" ]]; then
