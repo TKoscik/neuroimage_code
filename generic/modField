@@ -119,14 +119,15 @@ fi
 
 ## Add flag -------------------------------------------------------------------
 ### will append to flag if it already exists
+FLAG_EXISTS=false
 if [[ "${ACTION,,}" == "add" ]]; then
-  if [[ *"${FIELD,,}"* == "${FLAG[@]}" ]]; then
-    for (( i=0; i<${NFLAG}; i++ )); do
-      if [[ "${FLAG[${i}],,}" == "${FIELD,,}" ]]; then
-        VALUE[${i}]="${VALUE[${i}]}+${VALUE_NEW}"
-      fi
-    done
-  else
+  for (( i=0; i<${NFLAG}; i++ )); do
+    if [[ "${FLAG[${i}],,}" == "${FIELD,,}" ]]; then
+      VALUE[${i}]="${VALUE[${i}]}+${VALUE_NEW}"
+      FLAG_EXISTS=true
+    fi
+  done
+  if [[ "${FLAG_EXISTS}" == "false" ]]; then
     FLAG+=(${FIELD,,})
     VALUE+=(${VALUE_NEW})
   fi
@@ -172,17 +173,13 @@ for (( i=0; i<=${#FLAG[@]}; i++ )); do
         else
           TSTR="${VALUE[${j}]}"
         fi
-        if [[ ${i} -ne ${#FLAG[@]} ]]; then
-          OUT_STR="${OUT_STR}${TSTR}_"
-        else
-          OUT_STR="${OUT_STR}${TSTR}"
-        fi
+        OUT_STR="${OUT_STR}${TSTR}_"
       fi
     fi
   done
 done
-if [[ "${EXT}" != "null" ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
 OUT_STR=${OUT_STR%_}
+if [[ "${EXT}" != "null" ]]; then OUT_STR="${OUT_STR}.${EXT}"; fi
 
 # send output to terminal -----------------------------------------------------
 echo ${OUT_STR}
