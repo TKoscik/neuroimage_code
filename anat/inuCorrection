@@ -177,11 +177,6 @@ DIRPID=sub-${PID}
 if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${IMAGE[0]})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -r -f prep)
-  fi
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
@@ -240,25 +235,19 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
     ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz
   fslmaths ${IMAGE[1]} -div ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
     ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz
-
-  if [[ "${NO_PNG}" == "false" ]]; then
-    make3Dpng --bg ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz \
-      --filename ${PREFIX}_prep-${PREP}biasT1T2_T1w \
-      --dir-save ${DIR_SAVE}
-    make3Dpng --bg ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz \
-      --filename ${PREFIX}_prep-${PREP}biasT1T2_T2w \
-      --dir-save ${DIR_SAVE}
-    make3Dpng --bg ${DIR_SCRATCH}/biasT1T2_Field.nii.gz \
-      --bg-color "plasma" \
-      --filename ${PREFIX}_prep-${PREP}biasT1T2_biasField \
-      --dir-save ${DIR_SAVE}
+  
+  # Move files to appropriate location
+  NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasT1T2)
+  mv ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz ${DIR_SAVE}/${NEW_PREFIX}_T1w.nii.gz
+  mv ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz ${DIR_SAVE}/${NEW_PREFIX}_T2w.nii.gz
+  if [[ "${KEEP}" == "true" ]]; then
+    mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${NEW_PREFIX}_biasField.nii.gz
   fi
 
-  # Move files to appropriate location
-  mv ${DIR_SCRATCH}/biasT1T2_T1w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T1w.nii.gz
-  mv ${DIR_SCRATCH}/biasT1T2_T2w.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_T2w.nii.gz
-  if [[ "${KEEP}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1T2_biasField.nii.gz
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_T1w.nii.gz
+    make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_T2w.nii.gz
+    make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_biasField.nii.gz --bg-color "plasma"
   fi
 fi
 
@@ -284,27 +273,27 @@ if [[ "${METHOD,,}" == "n4" ]] \
   n4_fcn="${n4_fcn} -v ${VERBOSE}"
   eval ${n4_fcn}
   
-  if [[ "${NO_PNG}" == "false" ]]; then
-    make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz \
-      --dir-save ${DIR_SAVE}
-    make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz \
-      --bg-color "plasma" \
-      --dir-save ${DIR_SAVE}
+  NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasN4)
+  NEW_FIELD=$(modField -i ${NEW_PREFIX} -a -f prep -v ${MOD} )
+  mv ${DIR_SCRATCH}/${NEW_PREFIX}_${MOD}.nii.gz ${DIR_SAVE}/
+  if [[ "${KEEP,,}" == "true" ]]; then
+    mv ${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz ${DIR_SAVE}/
   fi
 
-  mv ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasN4_${MOD}.nii.gz ${DIR_SAVE}/
-  if [[ "${KEEP,,}" == "true" ]]; then
-    mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_prep-${PREP}biasN4_biasField.nii.gz ${DIR_SAVE}/
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz 
+    make3Dpng --bg ${DIR_SAVE}/${NEW_FIELD}_biasField.nii.gz --bg-color "plasma"
   fi
 fi
 
 # AFNI's 3dUnifize method ------------------------------------------------------
 ## based on WM intensities locally vs. globally
+NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasT1WM)
 if [[ "${METHOD,,}" == "t1wm" ]] \
 || [[ "${METHOD,,}" == "afni" ]] \
 || [[ "${METHOD,,}" == "3dunifize" ]]; then
   t1wm_fcn="3dUnifize"
-  t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${PREFIX}_prep-${PREP}biasT1WM_${MOD}.nii.gz"
+  t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz"
   t1wm_fcn="${t1wm_fcn} -input ${IMAGE[0]}"
   if [[ "${NO_GM,,}" == "false" ]]; then
     t1wm_fcn="${t1wm_fcn} -GM"
@@ -316,8 +305,7 @@ if [[ "${METHOD,,}" == "t1wm" ]] \
   eval ${t1wm_fcn}
 
   if [[ "${NO_PNG}" == "false" ]]; then
-    make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_prep-${PREP}biasT1WM_${MOD}.nii.gz \
-      --dir-save ${DIR_SAVE}
+    make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
   fi
 fi
 
