@@ -156,10 +156,16 @@ for (( i=0; i<${#FLAG[@]}; i++ )); do
   for (( j=0; j<${#FLAG[@]}; j++ )); do
     if [[ ${ORDER[${j}]} -eq ${i} ]]; then
       if [[ "${FLAG[${j}]}" != "remove" ]]; then
-        if [[ ${j} -ne ${LAST_FLAG} ]]; then
-          OUT_STR="${OUT_STR}${FLAG[${j}]}-${VALUE[${j}]}_"
+        unset TSTR
+        if [[ "${FLAG[${j}]}" != "modality" ]]; then
+          TSTR="${FLAG[${j}]}-${VALUE[${j}]}"
         else
-          OUT_STR="${OUT_STR}${VALUE[${j}]}"
+          TSTR="${VALUE[${j}]}"
+        fi
+        if [[ ${j} -ne ${LAST_FLAG} ]]; then
+          OUT_STR="${OUT_STR}${TSTR}_"
+        else
+          OUT_STR="${OUT_STR}${TSTR}"
         fi
       fi
     fi
