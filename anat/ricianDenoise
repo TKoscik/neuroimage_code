@@ -128,11 +128,6 @@ DIRPID=sub-${PID}
 if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${IMAGE})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -r -f prep)
-  fi
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
