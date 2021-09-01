@@ -129,14 +129,17 @@ MASK=${DIR_SCRATCH}/${PREFIX}_mask-clip.nii.gz
 MOD=$(getField -i ${IMAGE} -f modality)
 TIMG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
-3dAutomask -q -prefix ${MASK} -clfrac ${CLIP} ${IMAGE}
-XYZ=($(3dAutobox -noclust -input ${MASK} 2>&1))
-Z=${XYZ[-1]}; Z=${Z//z=}; Z=(${Z//../ })
-Y=${XYZ[-2]}; Y=${Y//y=}; Y=(${Y//../ })
-X=${XYZ[-3]}; X=${X//x=}; X=(${X//../ })
-
-fslroi ${IMAGE} ${TIMG} ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
-fslroi ${MASK} ${MASK}  ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
+if [[ ${CLIP} -ne 0 ]]; then
+  3dAutomask -q -prefix ${MASK} -clfrac ${CLIP} ${IMAGE}
+  XYZ=($(3dAutobox -noclust -input ${MASK} 2>&1))
+  Z=${XYZ[-1]}; Z=${Z//z=}; Z=(${Z//../ })
+  Y=${XYZ[-2]}; Y=${Y//y=}; Y=(${Y//../ })
+  X=${XYZ[-3]}; X=${X//x=}; X=(${X//../ })
+  fslroi ${IMAGE} ${TIMG} ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
+  fslroi ${MASK} ${MASK}  ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
+else
+  cp ${IMAGE} ${TIMG}
+fi
 if [[ ${PAD} -ne 0 ]]; then
   ImageMath 3 ${TIMG} PadImage ${TIMG} ${PAD}
   mv ${TIMG} ${DIR_SAVE}/
