@@ -129,7 +129,7 @@ MASK=${DIR_SCRATCH}/${PREFIX}_mask-clip.nii.gz
 MOD=$(getField -i ${IMAGE} -f modality)
 TIMG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
-if [[ ${CLIP} -ne 0 ]]; then
+if [[ "${CLIP}" == "0" ]]; then
   3dAutomask -q -prefix ${MASK} -clfrac ${CLIP} ${IMAGE}
   XYZ=($(3dAutobox -noclust -input ${MASK} 2>&1))
   Z=${XYZ[-1]}; Z=${Z//z=}; Z=(${Z//../ })
@@ -140,7 +140,7 @@ if [[ ${CLIP} -ne 0 ]]; then
 else
   cp ${IMAGE} ${TIMG}
 fi
-if [[ ${PAD} -ne 0 ]]; then
+if [[ "${PAD}" == "0" ]]; then
   ImageMath 3 ${TIMG} PadImage ${TIMG} ${PAD}
   mv ${TIMG} ${DIR_SAVE}/
 fi
