@@ -25,28 +25,31 @@ GITHUB.pkgs <- c("tkoscik/fsurfR",
                  "tkoscik/tkmisc")
 
 # Setup a library including the appropriate R packages -------------------------
-## maybe remove this and force people to run manually?
-#inc.r.path=sprintf("~/R/INC_library/%s.%s", R.Version()$major, R.Version()$minor)
-#if (!(inc.r.path %in% .libPaths())) {
-#  .libPaths( c( inc.r.path , .libPaths() ) )
-#  dir.create(inc.r.path, showWarnings=FALSE)
-#}
-lib.path <- .libPaths()
-lib.path <- lib.path[length(lib.path)-1]
+inc.r.path=sprintf("~/R/INC/%s.%s", R.Version()$major, R.Version()$minor)
+if (!(inc.r.path %in% .libPaths())) {
+  dir.create(inc.r.path, showWarnings=FALSE, recursive=TRUE)
+  .libPaths(c(inc.r.path , .libPaths()))
+  rprofile.fid <- file("~/.Rprofile")
+  out.str <- sprintf('.libPaths(c("~/R/INC/%s.%s", .libPaths()))',
+                     R.Version()$major,
+                     R.Version()$minor)
+  writeLines(out.str, con = rprofile.fid)
+  close(rprofile.fid)
+}
 
 pkgs <- as.character(unique(as.data.frame(installed.packages())$Package))
 
 # check and install missing packages from CRAN ---------------------------------
 CRAN.chk <- which(!(CRAN.pkgs %in% pkgs))
 if (length(CRAN.chk)>0) {
-  install.packages(pkgs=CRAN.pkgs[CRAN.chk], lib=lib.path, repos="http://cran.r-project.org")
+  install.packages(pkgs=CRAN.pkgs[CRAN.chk], lib=inc.r.path, repos="http://cran.r-project.org")
 }
 
 # check and install from github ------------------------------------------------
 library(devtools)
 library(withr)
-GITHUB.chk <- which(!(GITHUB.pkgs %in% pkgs))
-for (i in GITHUB.chk) {
-    with_libpaths(new=lib.path, install_github(GITHUB.pkgs[i]))
+GITHUB.chk <- which(!(unlist(strsplit(GITHUB.pkgs, "[/]"))[seq(2, length(GITHUB.pkgs)*2, 2)] %in% pkgs))
+for (i in 1:length(GITHUB.chk)) {
+    with_libpaths(new=inc.r.path, install_github(GITHUB.pkgs[i]))
 }
 

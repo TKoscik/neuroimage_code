@@ -1,0 +1,264 @@
+#!/bin/bash -e
+#===============================================================================
+# Generate Slice wise mask for each volume
+# - created to mask out artefacts due to motion in mouse brains that ruin slices
+#   not whole volumes
+# Authors: Timothy R. Koscik, PhD
+# Date: 2021-09-03
+# CHANGELOG: 
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvkl --long prefix:,\
+image:,zmap:,zdir:,zlo:,zhi:,zthresh:,plane:,nthresh:,method:,\
+no-z,no-mask,no-clean,\
+dir-z:,dir-mask:,dir-clean:,dir-scratch:,\
+help,verbose,no-log,no-png -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+IMAGE=
+ZMAP=
+ZDIR=abs
+ZLO=0.5
+ZHI=1
+ZTHRESH=1.5
+PLANE=z
+NTHRESH=0.15
+METHOD=spline
+NO_Z=false
+NO_MASK=false
+NO_CLEAN=false
+DIR_Z=
+DIR_MASK=
+DIR_CLEAN=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --zmap) ZMAP="$2" ; shift 2 ;;
+    --zdir) ZDIR="$2" ; shift 2 ;;
+    --zlo) ZLO="$2" ; shift 2 ;;
+    --zhi) ZHI="$2" ; shift 2 ;;
+    --zthresh) ZTHRESH="$2" ; shift 2 ;;
+    --plane) PLANE="$2" ; shift 2 ;;
+    --nthresh) NTHRESH="$2" ; shift 2 ;;
+    --method) METHOD="$2" ; shift 2 ;;
+    --no-z) NO_Z=true ; shift ;;
+    --no-mask) NO_MASK=true ; shift ;;
+    --no-clean) NO_CLEAN=true ; shift ;;
+    --dir-z) DIR_Z="$2" ; shift 2 ;;
+    --dir-mask) DIR_MASK="$2" ; shift 2 ;;
+    --dir-clean) DIR_CLEAN="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix  <optional>     filename, without extension to use for file'
+  echo '  --image                  4D NIfTI input file name'
+  echo '  --zmap                   pre-generated z-map or other 4D map to use'
+  echo '                           for thresholding the time series'
+  echo '  --zlo                    lower threshold for clamping intensity before'
+  echo '                           generating z values, input to tensorZ'
+  echo '                             default=0.5'
+  echo '  --zhi                    upper threshold for clamping intensity before'
+  echo '                           generating z values, input to tensorZ'
+  echo '                             default=1'
+  echo '  --zdir                   direction for thresholding,'
+  echo '                           options=(abs)/pos/neg'
+  echo '  --zthresh                value for thresholding, default=1.5'
+  echo '  --plane                  which plane to look at slices in, typically'
+  echo '                           this is the acquisition plane, default=z'
+  echo '  --nthresh                the percentage of voxels per slice inorder to'
+  echo '                           flag the slice as an artefact, deafult=0.15'
+  echo '  --replace                method or value to use for voxelwise'
+  echo '                           replacement in 4D file. (calculated/'
+  echo '                           interpolated values are on the 4th dimension'
+  echo '                           of the data'
+  echo '                           options: (spline) cubic spline interpolation'
+  echo '                                    linear   linear interpolation'
+  echo '                                    mean     mean of non-masked values'
+  echo '                                    median   median of non-masked values'
+  echo '                                    nan      non-numeric value'
+  echo '                                    <value>  specific numeric value,'
+  echo '  --no-z                   toggle not save z map, default is to save,'
+  echo '                           will not save if zmap is provided'
+  echo '  --no-mask                toggle to not save slice mask'
+  echo '  --no-clean               toggle not save cleaned output'
+  echo '  --dir-z                  location to save Z map, '
+  echo '       default=${PROJECT}/derivatives/inc/func/tensor-z/'
+  echo '  --dir-mask               location to save slice mask'
+  echo '       default=${PROJECT}/derivatives/inc/func/mask/${PREFIX}_mask-slice.nii.gz'
+  echo '  --dir-clean              location to save output'
+  echo '       default=${PROJECT}/derivatives/inc/func/deghost_raw/'
+  echo '  --dir-scratch            location for temporary files'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${IMAGE})
+PID=$(getField -i ${IMAGE} -f sub)
+SID=$(getField -i ${IMAGE} -f ses)
+PIDSTR=sub-${PID}
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
+
+if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${IMAGE} -s) fi
+
+# if zmap provided disable saving z output, regardless of input ----------------
+if [[ -n ${ZMAP} ]]; then NO_Z=true fi
+
+# set default save directories -------------------------------------------------
+if [[ "${NO_MASK}" == "true" ]] &&\
+   [[ "${NO_CLEAN}" == "true" ]]; then
+  echo "Please rethink what you are doing, you are saving the results."
+  exit 1
+fi
+FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+FCN_TYPE=(${FCN_DIR//\// })
+if [[ "${NO_Z}" == "false" ]]; then
+  if [[ -z ${DIR_Z} ]]; then
+    DIR_Z=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/tensor-z
+  fi
+  mkdir -p ${DIR_Z}
+fi
+if [[ "${NO_MASK}" == "false" ]]; then
+  if [[ -z ${DIR_MASK} ]]; then
+    DIR_MASK=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/mask
+  fi
+  mkdir -p ${DIR_MASK}
+fi
+if [[ "${NO_CLEAN}" == "false" ]]; then
+  if [[ -z ${DIR_CLEAN} ]]; then
+    DIR_CLEAN=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/deghost_raw
+  fi
+  mkdir -p ${DIR_CLEAN}
+fi
+mkdir -p ${DIR_SCRATCH}
+
+# generate z map if not specified ----------------------------------------------
+if [[ -z ${ZMAP} ]]; then
+  tensorZ --image ${IMAGE} --lo ${ZLO} --hi ${HI} --dir-save ${DIR_SCRATCH}
+else
+  cp ${ZMAP} ${DIR_SCRATCH}/
+fi
+
+# copy and unzip inputs to scratch ---------------------------------------------
+cp ${IMAGE} ${DIR_SCRATCH}/
+gunzip ${DIR_SCRATCH}/*.nii.gz
+
+# conduct slicewise deghosting -------------------------------------------------
+Rscript ${INC_R}/deghostSlice.R \
+  "image" ${IMAGE} \
+  "zmap" ${ZMAP} \
+  "zdir" ${ZDIR} \
+  "zthresh" ${ZTHRESH} \
+  "plane" ${PLANE} \
+  "nthresh" ${NTHRESH} \
+  "method" ${METHOD} \
+  "dir.save" ${DIR_SCRATCH}
+gzip ${DIR_SCRATCH}/*.nii
+
+# save desired output ----------------------------------------------------------
+if [[ "${NO_Z}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_tensor-z.nii.gz ${DIR_Z}/
+fi
+if [[ "${NO_MASK}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_mask-deghost.nii.gz ${DIR_MASK}/
+  # generate mask PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make4Dpng \
+      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_mask-deghost.nii.gz \
+      --fg-color "#000000,#FFFFFF";"#000000,#FF0000" \
+      --fg-alpha 50 \
+      --layout "5x11" --plane ${PLANE} --slice 0.51 \
+      --filename ${PREFIX}_mask-deghost \
+      --dir-save ${DIR_MASK}
+  fi
+fi
+if [[ "${NO_CLEAN}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz ${DIR_CLEAN}/
+  # generate deghosted PNG - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if [[ "${NO_PNG}" == "false" ]]; then
+    if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
+    if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="z"; fi
+    if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
+    make4Dpng \
+      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz \
+      --fg-color "#000000,#FF00FF";"#000000,#00FF00" \
+      --fg-alpha 50 \
+      --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
+      --filename ${PREFIX}_deghost \
+      --dir-save ${DIR_SCRATCH}
+  fi
+fi
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
+
+
