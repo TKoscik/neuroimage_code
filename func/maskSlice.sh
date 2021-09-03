@@ -43,8 +43,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,other:,dir.save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hvkl --long prefix:,\
+image:,zmap:,zdir:,zthresh:,plane:,nthresh:,replace:,\
+no-z,no-mask,no-clean,\
+dir-z:,dir-mask:,dir-clean:,dir-scratch:,\
+help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -53,8 +56,19 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER=
-DIR_SAVE=
+IMAGE=
+ZMAP=
+ZDIR=abs
+ZTHRESH=1.5
+PLANE=z
+NTHRESH=0.15
+REPLACE=spline ###ADD OPTIONS FOR NAN, MEAN, MEDIAN, LINEAR, SPLINE, VALUE (to replace with time series median, or APPROX or SPLINE for interpolating)
+NO_Z=false
+NO_MASK=false
+NO_CLEAN=false
+DIR_Z=
+DIR_MASK=
+DIR_CLEAN=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
@@ -64,10 +78,20 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other) OTHER="$2" ; shift 2 ;;
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --image) ="$2" ; shift 2 ;;
+    --zmap) ="$2" ; shift 2 ;;
+    --zdir) ="$2" ; shift 2 ;;
+    --zthresh) ="$2" ; shift 2 ;;
+    --plane) ="$2" ; shift 2 ;;
+    --nthresh) ="$2" ; shift 2 ;;
+    --replace) ="$2" ; shift 2 ;;
+    --no-z) NO_Z=true ; shift ;;
+    --no-mask) NO_MASK=true ; shift ;;
+    --no-clean) NO_CLEAN=true ; shift ;;
+    --dir-z) DIR_Z="$2" ; shift 2 ;;
+    --dir-mask) DIR_MASK="$2" ; shift 2 ;;
+    --dir-clean) DIR_CLEAN="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -83,8 +107,36 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix  <optional>     filename, without extension to use for file'
-  echo '  --other                  other inputs as needed'
-  echo '  --dir-save               location to save output'
+  echo '  --image                  4D NIfTI input file name'
+  echo '  --zmap                   pre-generated z-map or other 4D map to use'
+  echo '                           for thresholding the time series'
+  echo '  --zdir                   direction for thresholding,'
+  echo '                           options=(abs)/pos/neg'
+  echo '  --zthresh                value for thresholding, default=1.5'
+  echo '  --plane                  which plane to look at slices in, typically'
+  echo '                           this is the acquisition plane, default=z'
+  echo '  --nthresh                the percentage of voxels per slice inorder to'
+  echo '                           flag the slice as an artefact, deafult=0.15'
+  echo '  --replace                method or value to use for voxelwise'
+  echo '                           replacement in 4D file. (calculated/'
+  echo '                           interpolated values are on the 4th dimension'
+  echo '                           of the data'
+  echo '                           options: spline   cubic spline interpolation'
+  echo '                                    (linear) linear interpolation'
+  echo '                                    mean     mean of non-masked values'
+  echo '                                    median   median of non-masked values'
+  echo '                                    nan      non-numeric value'
+  echo '                                    <value>  specific numeric value,'
+  echo '  --no-z                   toggle not save z map, default is to save,'
+  echo '                           will not save if zmap is provided'
+  echo '  --no-mask                toggle to not save slice mask'
+  echo '  --no-clean               toggle not save cleaned output'
+  echo '  --dir-z                  location to save Z map, '
+  echo '       default=${PROJECT}/derivatives/inc/func/tensor-z/'
+  echo '  --dir-mask               location to save slice mask'
+  echo '       default=${PROJECT}/derivatives/inc/func/mask/${PREFIX}_mask-slice.nii.gz'
+  echo '  --dir-clean              location to save output'
+  echo '       default=${PROJECT}/derivatives/inc/func/raw_sliceCleaned/'
   echo '  --dir-scratch            location for temporary files'
   echo ''
   NO_LOG=true
@@ -95,29 +147,47 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${INPUT})
-PID=$(getField -i ${INPUT} -f sub)
-SID=$(getField -i ${INPUT} -f ses)
+DIR_PROJECT=$(getDir -i ${IMAGE})
+PID=$(getField -i ${IMAGE} -f sub)
+SID=$(getField -i ${IMAGE} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 
-if [[ -z ${PREFIX} ]]; then
-  PREFIX=$(getBidsBase -i ${TS})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREFIX=$(modField -i ${PREFIX} -m -f prep -v "${PREP}+pad${PAD}")
-  else
-    PREFIX=$(modField -i ${PREFIX} -a -f prep -v "pad${PAD}")
-  fi
-fi
+if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${IMAGE} -s) fi
 
-## not sure if this works and will not always be applicable ----
-### may be easier to hard code the anat/func/dwi folders
+# if zmap provided disable saving z output, regardless of input ----------------
+if [[ -n ${ZMAP} ]]; then NO_Z=true fi
+
+# set default save directories -------------------------------------------------
+if [[ "${NO_Z}" == "false" ]] &&\
+   [[ "${NO_MASK}" == "false" ]] &&\
+   [[ "${NO_CLEAN}" == "false" ]]; then
+  echo "Please rethink what you are doing, you are saving nothing."
+  exit 1
+fi
 FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 FCN_TYPE=(${FCN_DIR//\// })
-## ----
+if [[ "${NO_Z}" == "false" ]]; then
+  if [[ -z ${DIR_Z} ]]; then
+    DIR_Z=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/tensor-z
+  fi
+  mkdir -p ${DIR_Z}
+fi
+if [[ "${NO_MASK}" == "false" ]]; then
+  if [[ -z ${DIR_MASK} ]]; then
+    DIR_MASK=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/mask
+  fi
+  mkdir -p ${DIR_MASK}
+fi
+if [[ "${NO_CLEAN}" == "false" ]]; then
+  if [[ -z ${DIR_CLEAN} ]]; then
+    DIR_CLEAN=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/clean-slice
+  fi
+  mkdir -p ${DIR_CLEAN}
+fi
+
 
 if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}

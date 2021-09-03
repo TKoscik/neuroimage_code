@@ -41,7 +41,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvl --long prefix:,image:,dir.save:,dir-scratch:,\
+OPTS=$(getopt -o hvl --long prefix:,image:,lo:,hi:,\
+dir.save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -51,7 +52,9 @@ eval set -- "$OPTS"
 
 # Set default values for function ---------------------------------------------
 PREFIX=
-OTHER=
+IMAGE=
+LO=0.5
+HI=1
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -64,6 +67,8 @@ while true; do
     -v | --verbose) VERBOSE=1 ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
+    --lo) LO="$2" ; shift 2 ;;
+    --hi) HI="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -81,6 +86,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix  <optional>     filename, without extension to use for file'
   echo '  --image                  filepath to 4D NIfTI file'
+  echo '  --lo                     option to set intensity threshold, i.e.,'
+  echo '                           lower values will be set to 0'
+  echo '  --hi                     option to clip upper intensity at specified'
+  echo '                           quantile'
   echo '  --dir-save               location to save output'
   echo '  --dir-scratch            location for temporary files'
   echo ''
@@ -116,7 +125,7 @@ gunzip ${DIR_SCRATCH}/${TF}
 IMAGE=${DIR_SCRATCH}/${TF%%.*}.nii
 
 # Calculate temporal Z Score along 4th Dimension -------------------------------
-Rscript ${INC_R}/tensorZ.R ${IMAGE}
+Rscript ${INC_R}/tensorZ.R ${IMAGE} "lo" ${LO} "hi" ${HI}
 
 # move Z image to save directory
 MOD=$(getField -i ${IMAGE} -f modality)
