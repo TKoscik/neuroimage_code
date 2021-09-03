@@ -90,6 +90,7 @@ if (method != "none") {
   } else if (is.numeric(method)) {
     for (i in 1:nrow(ts)) { ts[i, is.na(ts[i, ])] <- value }    
   }
+  ts <- array(ts, dim=sz)
   init.nii(paste0(dir.save, "/", fname, "_deghost.nii"), sz, pixdim, orient)
   for (i in 1:sz[4]) {
     write.nii.volume(paste0(dir.save, "/", fname, "_deghost.nii"), i, ts[ , , ,i])
