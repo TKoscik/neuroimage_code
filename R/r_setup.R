@@ -47,11 +47,11 @@ if (length(CRAN.chk)>0) {
 }
 
 # check and install from github ------------------------------------------------
-library(devtools)
-library(withr)
 GITHUB.chk <- which(!(unlist(strsplit(GITHUB.pkgs, "[/]"))[seq(2, length(GITHUB.pkgs)*2, 2)] %in% pkgs))
 for (i in 1:length(GITHUB.chk)) {
-    with_libpaths(new=inc.r.path, install_github(GITHUB.pkgs[i], quiet=TRUE))
-    print(GITHUB.pkgs[i])
+  library(devtools)
+  library(withr)
+  with_libpaths(new=inc.r.path, install_github(GITHUB.pkgs[i], quiet=TRUE))
+  print(GITHUB.pkgs[i])
 }
 
