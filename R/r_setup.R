@@ -20,7 +20,8 @@ CRAN.pkgs <- c("car",
                "R.utils",
                "reshape2",
                "tools",
-               "viridis")
+               "viridis"
+               "withr")
 GITHUB.pkgs <- c("tkoscik/fsurfR",
                  "tkoscik/tkmisc")
 
