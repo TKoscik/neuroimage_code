@@ -113,7 +113,7 @@ if (color.palette == "cold") {
   cpal <- colorRampPalette(rev(c("#00007F", "#0000FF", "#007FFF", "#00FFFF", "#7FFFFF")))
   color.ls <- cpal(color.n)
 }
-if (color.palette %in% c("grayscale", "grayscale", "gray", "grey")) {
+if (color.palette %in% c("grayscale", "greyscale", "gray", "grey")) {
   cpal <- colorRampPalette(c("#000000", "#FFFFFF"))
   color.ls <- cpal(color.n)
 }

@@ -44,7 +44,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkl --long prefix:,\
-image:,zmap:,zdir:,zthresh:,plane:,nthresh:,replace:,\
+image:,zmap:,zdir:,zlo:,zhi:,zthresh:,plane:,nthresh:,method:,\
 no-z,no-mask,no-clean,\
 dir-z:,dir-mask:,dir-clean:,dir-scratch:,\
 help,verbose,no-log,no-png -n 'parse-options' -- "$@")
@@ -59,10 +59,12 @@ PREFIX=
 IMAGE=
 ZMAP=
 ZDIR=abs
+ZLO=0.5
+ZHI=1
 ZTHRESH=1.5
 PLANE=z
 NTHRESH=0.15
-REPLACE=spline ###ADD OPTIONS FOR NAN, MEAN, MEDIAN, LINEAR, SPLINE, VALUE (to replace with time series median, or APPROX or SPLINE for interpolating)
+METHOD=spline
 NO_Z=false
 NO_MASK=false
 NO_CLEAN=false
@@ -79,13 +81,15 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --image) ="$2" ; shift 2 ;;
-    --zmap) ="$2" ; shift 2 ;;
-    --zdir) ="$2" ; shift 2 ;;
-    --zthresh) ="$2" ; shift 2 ;;
-    --plane) ="$2" ; shift 2 ;;
-    --nthresh) ="$2" ; shift 2 ;;
-    --replace) ="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --zmap) ZMAP="$2" ; shift 2 ;;
+    --zdir) ZDIR="$2" ; shift 2 ;;
+    --zlo) ZLO="$2" ; shift 2 ;;
+    --zhi) ZHI="$2" ; shift 2 ;;
+    --zthresh) ZTHRESH="$2" ; shift 2 ;;
+    --plane) PLANE="$2" ; shift 2 ;;
+    --nthresh) NTHRESH="$2" ; shift 2 ;;
+    --method) METHOD="$2" ; shift 2 ;;
     --no-z) NO_Z=true ; shift ;;
     --no-mask) NO_MASK=true ; shift ;;
     --no-clean) NO_CLEAN=true ; shift ;;
@@ -110,6 +114,12 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --image                  4D NIfTI input file name'
   echo '  --zmap                   pre-generated z-map or other 4D map to use'
   echo '                           for thresholding the time series'
+  echo '  --zlo                    lower threshold for clamping intensity before'
+  echo '                           generating z values, input to tensorZ'
+  echo '                             default=0.5'
+  echo '  --zhi                    upper threshold for clamping intensity before'
+  echo '                           generating z values, input to tensorZ'
+  echo '                             default=1'
   echo '  --zdir                   direction for thresholding,'
   echo '                           options=(abs)/pos/neg'
   echo '  --zthresh                value for thresholding, default=1.5'
@@ -121,8 +131,8 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           replacement in 4D file. (calculated/'
   echo '                           interpolated values are on the 4th dimension'
   echo '                           of the data'
-  echo '                           options: spline   cubic spline interpolation'
-  echo '                                    (linear) linear interpolation'
+  echo '                           options: (spline) cubic spline interpolation'
+  echo '                                    linear   linear interpolation'
   echo '                                    mean     mean of non-masked values'
   echo '                                    median   median of non-masked values'
   echo '                                    nan      non-numeric value'
@@ -136,7 +146,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-mask               location to save slice mask'
   echo '       default=${PROJECT}/derivatives/inc/func/mask/${PREFIX}_mask-slice.nii.gz'
   echo '  --dir-clean              location to save output'
-  echo '       default=${PROJECT}/derivatives/inc/func/raw_sliceCleaned/'
+  echo '       default=${PROJECT}/derivatives/inc/func/deghost_raw/'
   echo '  --dir-scratch            location for temporary files'
   echo ''
   NO_LOG=true
@@ -161,10 +171,9 @@ if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${IMAGE} -s) fi
 if [[ -n ${ZMAP} ]]; then NO_Z=true fi
 
 # set default save directories -------------------------------------------------
-if [[ "${NO_Z}" == "false" ]] &&\
-   [[ "${NO_MASK}" == "false" ]] &&\
-   [[ "${NO_CLEAN}" == "false" ]]; then
-  echo "Please rethink what you are doing, you are saving nothing."
+if [[ "${NO_MASK}" == "true" ]] &&\
+   [[ "${NO_CLEAN}" == "true" ]]; then
+  echo "Please rethink what you are doing, you are saving the results."
   exit 1
 fi
 FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -183,22 +192,69 @@ if [[ "${NO_MASK}" == "false" ]]; then
 fi
 if [[ "${NO_CLEAN}" == "false" ]]; then
   if [[ -z ${DIR_CLEAN} ]]; then
-    DIR_CLEAN=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/clean-slice
+    DIR_CLEAN=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/deghost_raw
   fi
   mkdir -p ${DIR_CLEAN}
 fi
-
-
-if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}
-fi
-mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
-# body of function here --------------------------------------------------------
-## insert comments for important chunks
-## use dashes as above to separate chunks of code visually
-## move files to appropriate locations
+# generate z map if not specified ----------------------------------------------
+if [[ -z ${ZMAP} ]]; then
+  tensorZ --image ${IMAGE} --lo ${ZLO} --hi ${HI} --dir-save ${DIR_SCRATCH}
+else
+  cp ${ZMAP} ${DIR_SCRATCH}/
+fi
+
+# copy and unzip inputs to scratch ---------------------------------------------
+cp ${IMAGE} ${DIR_SCRATCH}/
+gunzip ${DIR_SCRATCH}/*.nii.gz
+
+# conduct slicewise deghosting -------------------------------------------------
+Rscript ${INC_R}/deghostSlice.R \
+  "image" ${IMAGE} \
+  "zmap" ${ZMAP} \
+  "zdir" ${ZDIR} \
+  "zthresh" ${ZTHRESH} \
+  "plane" ${PLANE} \
+  "nthresh" ${NTHRESH} \
+  "method" ${METHOD} \
+  "dir.save" ${DIR_SCRATCH}
+gzip ${DIR_SCRATCH}/*.nii
+
+# save desired output ----------------------------------------------------------
+if [[ "${NO_Z}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_tensor-z.nii.gz ${DIR_Z}/
+fi
+if [[ "${NO_MASK}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_mask-deghost.nii.gz ${DIR_MASK}/
+  # generate mask PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make4Dpng \
+      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_mask-deghost.nii.gz \
+      --fg-color "#000000,#FFFFFF";"#000000,#FF0000" \
+      --fg-alpha 50 \
+      --layout "5x11" --plane ${PLANE} --slice 0.51 \
+      --filename ${PREFIX}_mask-deghost \
+      --dir-save ${DIR_MASK}
+  fi
+fi
+
+if [[ "${NO_CLEAN}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz ${DIR_CLEAN}/
+  # generate deghosted PNG - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if [[ "${NO_PNG}" == "false" ]]; then
+    if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
+    if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="z"; fi
+    if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
+    make4Dpng \
+      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz \
+      --fg-color "#000000,#FF00FF";"#000000,#00FF00" \
+      --fg-alpha 50 \
+      --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
+      --filename ${PREFIX}_deghost \
+      --dir-save ${DIR_SCRATCH}
+  fi
+fi
 
 #===============================================================================
 # End of Function
