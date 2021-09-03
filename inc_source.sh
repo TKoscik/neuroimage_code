@@ -125,13 +125,14 @@ done
 
 # setup R ----------------------------------------------------------------------
 if [[ "${NO_R}" == "false" ]]; then
-  if [[ "${OWN_R}" == "false" ]] & [[ "${HOSTNAME,,}" == "argon" ]]; then
+  if [[ "${OWN_R}" == "false" ]] && [[ "${HOSTNAME,,}" == "argon" ]]; then
     if [[ "${QUIET}" == "false" ]]; then echo "LOADING R MODULES:"; fi
     PKG_LS=($(jq -r '.r_modules | keys_unsorted' < ${INIT} | tr -d ' [],"'))
     for (( i=0; i<${#PKG_LS[@]}; i++ )); do
       unset PKG_NAME PKG_VERSION
       PKG_NAME=${PKG_LS[${i}]}
       PKG_VERSION=($(jq -r ".r_modules.${PKG_NAME}" < ${INIT} | tr -d ' [],"'))
+      if [[ "${QUIET}" == "false" ]]; then echo -e "\t${PKG_NAME//_/-}/${PKG_VERSION}"; fi
       CMD="module load ${PKG_NAME//_/-}/${PKG_VERSION}"
       eval ${CMD}
     done
