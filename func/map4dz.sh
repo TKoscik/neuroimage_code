@@ -41,9 +41,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,image:,\
-dir.save:,dir-scratch:,\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hvl --long prefix:,image:,dir.save:,dir-scratch:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -63,9 +62,8 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-    -k | --keep) KEEP=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --other) OTHER="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -82,7 +80,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
   echo '  --prefix  <optional>     filename, without extension to use for file'
-  echo '  --other                  other inputs as needed'
+  echo '  --image                  filepath to 4D NIfTI file'
   echo '  --dir-save               location to save output'
   echo '  --dir-scratch            location for temporary files'
   echo ''
@@ -94,40 +92,31 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${INPUT})
-PID=$(getField -i ${INPUT} -f sub)
-SID=$(getField -i ${INPUT} -f ses)
+DIR_PROJECT=$(getDir -i ${IMAGE})
+PID=$(getField -i ${IMAGE} -f sub)
+SID=$(getField -i ${IMAGE} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
-
-if [[ -z ${PREFIX} ]]; then
-  PREFIX=$(getBidsBase -i ${TS})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREFIX=$(modField -i ${PREFIX} -m -f prep -v "${PREP}+pad${PAD}")
-  else
-    PREFIX=$(modField -i ${PREFIX} -a -f prep -v "pad${PAD}")
-  fi
-fi
-
-## not sure if this works and will not always be applicable ----
-### may be easier to hard code the anat/func/dwi folders
-FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-FCN_TYPE=(${FCN_DIR//\// })
-## ----
+if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${IMAGE} -s); fi
 
 if [[ -z ${DIR_SAVE} ]]; then
+  FCN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+  FCN_TYPE=(${FCN_DIR//\// })
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/${FCN_TYPE[-1]}/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
-# body of function here --------------------------------------------------------
-## insert comments for important chunks
-## use dashes as above to separate chunks of code visually
-## move files to appropriate locations
+# copy and unzip 4D file to scratch --------------------------------------------
+cp ${IMAGE} ${DIR_SCRATCH}/
+TF=$(basename ${IMAGE})
+gunzip ${DIR_SCRATCH}/${TF}
+IMAGE=${DIR_SCRATCH}/${TF%%.*}.nii
+
+# Calculate temporal Z Score along 4th Dimension -------------------------------
+Rscript ${INC_R}/tensorZ.R
 
 #===============================================================================
 # End of Function
