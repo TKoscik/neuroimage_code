@@ -238,7 +238,6 @@ if [[ "${NO_MASK}" == "false" ]]; then
       --dir-save ${DIR_MASK}
   fi
 fi
-
 if [[ "${NO_CLEAN}" == "false" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz ${DIR_CLEAN}/
   # generate deghosted PNG - - - - - - - - - - - - - - - - - - - - - - - - - - -
