@@ -86,7 +86,7 @@
         "r_gridextra": "2.3_gcc-9.3.0",
         "r_hmisc": "4.4-2_gcc-9.3.0",
         "r_jsonlite": "1.7.2_gcc-9.3.0",
-        "r_lmertest": "1.1-26_gcc-9.3.0",
+        "r_lmertest": "3.1-3_gcc-9.3.0",
         "r_mass": "7.3-53_gcc-9.3.0",
         "r_mixtools": "1.2.0_gcc-9.3.0",
         "r_r_utils": "2.10.1_gcc-9.3.0",
