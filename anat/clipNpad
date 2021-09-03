@@ -129,7 +129,8 @@ MASK=${DIR_SCRATCH}/${PREFIX}_mask-clip.nii.gz
 MOD=$(getField -i ${IMAGE} -f modality)
 TIMG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
-if [[ "${CLIP}" == "0" ]]; then
+if [[ "${CLIP}" != "0" ]]; then
+  echo "clipping"
   3dAutomask -q -prefix ${MASK} -clfrac ${CLIP} ${IMAGE}
   XYZ=($(3dAutobox -noclust -input ${MASK} 2>&1))
   Z=${XYZ[-1]}; Z=${Z//z=}; Z=(${Z//../ })
@@ -138,12 +139,14 @@ if [[ "${CLIP}" == "0" ]]; then
   fslroi ${IMAGE} ${TIMG} ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
   fslroi ${MASK} ${MASK}  ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
 else
+  echo "not clipping"
   cp ${IMAGE} ${TIMG}
 fi
-if [[ "${PAD}" == "0" ]]; then
+if [[ "${PAD}" != "0" ]]; then
+  echo "padding"
   ImageMath 3 ${TIMG} PadImage ${TIMG} ${PAD}
-  mv ${TIMG} ${DIR_SAVE}/
 fi
+mv ${TIMG} ${DIR_SAVE}/
 
 if [[ "${NO_PNG}" == "false" ]]; then
   make3Dpng --bg ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
