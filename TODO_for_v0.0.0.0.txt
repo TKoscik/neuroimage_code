@@ -1,47 +1,17 @@
 # TO DO =======================================================================
 ## Version: 0.0.0.0
-## Updated: 2020-11-16, 2021-06-25
+## Updated: 2020-11-16, 2021-06-25, 2021-09-07
 
-# general ---------------------------------------------------------------------
-[ ] remove png maker from functions, add as examples to help in png maker functions
-[ ] update log strings, make sure blank inputs do not cause an issue, use new formats
-
-[x] initialization file
-    [x] set software and versions, modules
-    [x] write R setup script
-[x] change DIR_CODE to DIR_INC
-[x] DIR_TEMPLATE -> /Dedicated/inc_database/templates
 [ ] check help for all files, update with only used and update arguments
-[x] replace backticks with $()
-[x] remove deprecated
 [ ] remove incomplete functions, keep for copy to dev branch after versioning
-[x] inc derivatives to ${DIR_PROJECT}/derivatives/inc
 [ ] update HCP templates (decide if MNI variant)
 [ ] add in ${DIR_TMP} for top level of scratch directory
-[ ] update log strings: LOG_STRING=$(date +"${OPERATOR}\t${HARDWARE}\t${KERNEL}\t${HPC_Q}\t${HPC_SLOTS}\t${FCN_NAME}\t${PROC_START}\t%Y-%m-%dT%H:%M:%S%z\t${EXIT_CODE}")
-
-# anatomical workflow ---------------------------------------------------------
-[x] add intensity based labels
-[x] added mask "venn" labeller
-[x] added samseg labeller
-[x] added wm hyperintensity based on samseg
-[x] fix myelin map normalization
 [ ] finish and debug make_template.sh
 [ ] check/debug T1rho function
-
-# diffusion workflow ----------------------------------------------------------
 [ ] check that diffusion tractography is using the methods we prefer
 [ ] correlation matrix to long output, with from and to columns, maybe a summary function to pull seed to seed connectivity
 
 # functional workflow ---------------------------------------------------------
-[x] fix moco+reg.sh, rename to moco_reg.sh
-[ ] regressor functions
-    [x] regressor_acompcorr.sh
-    [x] regressor_tcompcorr.sh
-    [x] regressor_deriv.sh
-    [x] regressor_quad.sh
-    [x] regressor_frame-disp.sh
-    [x] regressor_spike.sh
 [ ] ts_deconvolve.sh
     - simultaneously to nuisance_regression? or does that interfere with LSS?
     [ ] LSS and LSA options (LSS as default)

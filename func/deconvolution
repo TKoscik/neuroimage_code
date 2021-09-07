@@ -3,6 +3,16 @@
 # Deconvolution
 # Authors: Lauren Hopkins
 # Date: 2021-03-10
+# CHANGELOG:
+# - Need LSA/LSS method options (needs to go to 3dLSS, and I don't see it,
+#   perhaps thats been deprecated in AFNI?). should default to LSA (no extra
+#   3dLSS).
+# - need -x1d output for 3dLSS
+# - Can we simplify inputs to default saving what is need for LSS, set toggles appropriately
+# - for multi-run tasks need function to merge time series and onset files appropriately?
+# - stim-times-im does not appear to be implemented, but is necessary?
+# - is using stim-times compatable with stim-times-im (and 3dLSS which can use only 1)
+#   - maybe break into separate functions? deconvolve and deconvolveSTBs
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -41,8 +51,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
-ts_bold:,mask:,polort:,goforit:,\
-stim_times:,ortvec,rmodel:,stim_times_im,x1d_stop,\
+ts-bold:,mask:,polort:,goforit:,\
+stim-times:,ortvec,rmodel:,stim-times-im,x1d-stop,\
 fitts:,errts:,fout:,rout:,tout:,bucket:,jobs,automask,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
@@ -85,6 +95,7 @@ KEEP=false
 # 2) Make the flag NOFITTS for if they don't want it.
 # 3) Have them use the flag with a boolean (e.g. --fitts false)
 ## Which do you prefer?
+
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
@@ -92,14 +103,14 @@ while true; do
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
-    --ts_bold) TS_BOLD="$2" ; shift 2 ;;
+    --ts-bold) TS_BOLD="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --polort) POLORT="$2" ; shift 2 ;;
     --goforit) GOFORIT="$2" ; shift 2 ;;
-    --stim_times) STIM_TIMES="$2" ; shift 2 ;;
+    --stim-times) STIM_TIMES="$2" ; shift 2 ;;
     --ortvec) ORTVEC="$2" ; shift 2 ;;
     --rmodel) RMODEL="$2" ; shift 2 ;;
-    --stim_times_im) STIM_TIMES_IM="$2" ; shift 2 ;;
+    --stim-times-im) STIM_TIMES_IM="$2" ; shift 2 ;;
     --fitts) FITTS="$2" ; shift ;;
     --errts) ERRTS="$2" ; shift ;;
     --fout) FOUT="$2" ; shift ;;
@@ -107,7 +118,7 @@ while true; do
     --tour) TOUT="$2" ; shift ;;
     --bucket) BUCKET="$2" ; shift ;;
     --jobs) JOBS="$2" ; shift ;;
-    --x1d_stop) X1D_STOP=true ; shift ;;
+    --x1d-stop) X1D_STOP=true ; shift ;;
     --automask) AUTOMASK=true ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -143,9 +154,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           Value must be numeric and greater than 0.'
   echo '  --ortvec <value>         Comma separated list of regressors of no'
   echo '                           interest to be regressed from the data'
-  echo '  --stim_times <value>     Comma separated list of stimulus timing'
+  echo '  --stim-times <value>     Comma separated list of stimulus timing'
   echo '                           files. Can be in .txt or .1D format'
-  echo '  --stim_times_im          Each stimulus time specified in the variable'
+  echo '  --stim-times_im          Each stimulus time specified in the variable'
   echo '                           `stim_times` will output an individual regressor'
   echo '  --rmodel <value>         Comma separated list of ?????????????????????'
   echo '  --jobs <value>           Make that CPU go vroom-vroom'
@@ -204,10 +215,6 @@ N_STIM=${#STIMULI[@]}
 RMODELS=(${RMODEL//,/ })
 N_MODEL=${#RMODELS[@]}
 
-
-
-
-
 # let's do that decon
 # Note - right now the names are shit and numeric only til I have more time
 decon_fcn="3dDeconvolution"
@@ -260,8 +267,10 @@ if [[ "${BUCKET}" == "true" ]]; then
   decon_fcn="${decon_fcn} -bucket ${PREFIX}_bucket.nii.gz"
 fi
 
+eval ${decon_fcn}
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
