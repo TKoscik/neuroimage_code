@@ -231,18 +231,31 @@ Rscript ${INC_R}/deghostSlice.R \
 gzip ${DIR_SCRATCH}/*.nii
 
 # save desired output ----------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
+  if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="z"; fi
+  if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
+fi
 if [[ "${NO_Z}" == "false" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_tensor-z.nii.gz ${DIR_Z}/
+  # generate Z PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if [[ "${NO_PNG}" == "false" ]]; then
+    make4Dpng \
+      --fg "${DIR_Z}/${PREFIX}_mod-${MOD}_tensor-z.nii.gz" \
+      --fg-color "timbow" --fg-alpha 100 \
+      --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
+      --filename ${PREFIX}_mod-${MOD}_tensor-z \
+      --dir-save ${DIR_Z}
+  fi
 fi
 if [[ "${NO_MASK}" == "false" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz ${DIR_MASK}/
   # generate mask PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
     make4Dpng \
-      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz \
-      --fg-color "#000000,#FFFFFF;#000000,#FF0000" \
-      --fg-alpha 50 \
-      --layout "5x11" --plane ${PLANE} --slice 0.51 \
+      --fg "${IMAGE};${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz" \
+      --fg-color "#000000,#FFFFFF;#000000,#FF0000" --fg-alpha 100 \
+      --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
       --filename ${PREFIX}_mod-${MOD}_mask-deghost \
       --dir-save ${DIR_MASK}
   fi
@@ -251,16 +264,18 @@ if [[ "${NO_CLEAN}" == "false" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_deghost.nii.gz ${DIR_CLEAN}/
   # generate deghosted PNG - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
-    if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
-    if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="z"; fi
-    if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
     make4Dpng \
-      --fg ${INPUT},${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_deghost.nii.gz \
-      --fg-color "#000000,#FF00FF;#000000,#00FF00" \
-      --fg-alpha 50 \
+      --fg "${INPUT}" \
+      --fg-color "#000000,#FFFFFF" --fg-thresh "5,99" --fg-alpha 100 \
+      --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
+      --filename ${PREFIX}_mod-${MOD}_raw \
+      --dir-save ${DIR_CLEAN}
+    make4Dpng \
+      --fg "${DIR_CLEAN}/${PREFIX}_mod-${MOD}_deghost.nii.gz" \
+      --fg-color "#000000,#FFFFFF" --fg-alpha 100 --fg-thresh "5,99" \
       --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
       --filename ${PREFIX}_mod-${MOD}_deghost \
-      --dir-save ${DIR_SCRATCH}
+      --dir-save ${DIR_CLEAN}
   fi
 fi
 

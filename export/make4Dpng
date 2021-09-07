@@ -137,7 +137,7 @@ while true; do
     --roi-value) ROI_VALUE="$2" ; shift 2 ;;
     --roi-color) ROI_COLOR="$2" ; shift 2 ;;
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
-    --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
+    --roi-cbar) ROI_CBAR="true" ; shift ;;
     --plane) PLANE="$2" ; shift 2 ;;
     --slice) SLICE="$2" ; shift 2 ;;
     --slice-method) SLICE_METHOD="2" ; shift 2 ;;
@@ -327,21 +327,33 @@ mkdir -p ${DIR_SCRATCH}
 # parse parameters for FG and ROIs ---------------------------------------------
 if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> parse FG parameters"; fi
 FG=(${FG//;/ })
+FG_N=${#FG[@]}
 FG_MASK=(${FG_MASK//;/ })
 FG_MASK_VOL=(${FG_MASK_VOL//;/ })
 FG_THRESH=(${FG_THRESH//;/ })
 FG_COLOR=(${FG_COLOR//;/ })
 FG_ORDER=(${FG_COLOR_ORDER//;/ })
 FG_CBAR=(${FG_CBAR//;/ })
-FG_N=${#FG[@]}
-if [[ -n ${FG_MASK} ]]; then
-  if [[ ${FG_N} -gt 1 ]]; then
-    if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
-      for (( i=0; i<${FG_N}; i++ )); do
+if [[ ${FG_N} -gt 1 ]]; then
+  for (( i=0; i<${FG_N}; i++ )); do
+    if [[ -n ${FG_MASK} ]]; then
+      if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
         FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
-      done
+      fi
     fi
-  fi
+    if [[ ${#FG_THRESH[@]} -eq 1 ]]; then
+      FG_THRESH[${i}]=${FG_THRESH[0]}
+    fi
+    if [[ ${#FG_COLOR[@]} -eq 1 ]]; then
+      FG_COLOR[${i}]=${FG_COLOR[0]}
+    fi
+    if [[ ${#FG_COLOR_ORDER[@]} -eq 1 ]]; then
+      FG_COLOR_ORDER[${i}]=${FG_COLOR_ORDER[0]}
+    fi
+    if [[ ${#FG_CBAR[@]} -eq 1 ]]; then
+      FG_CBAR[${i}]=${FG_CBAR[0]}
+    fi
+  done
 fi
 
 if [[ -z ${BG} ]]; then
@@ -916,5 +928,6 @@ fi
 # End of Function
 #-------------------------------------------------------------------------------
 exit 0
+
 
 
