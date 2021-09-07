@@ -41,7 +41,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,other:,dir.save:,dir-scratch:,\
+OPTS=$(getopt -o hvkl --long prefix:,other:,dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2

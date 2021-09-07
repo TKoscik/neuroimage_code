@@ -42,7 +42,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,image:,lo:,hi:,\
-dir.save:,dir-scratch:,\
+dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -125,17 +125,18 @@ gunzip ${DIR_SCRATCH}/${TF}
 IMAGE=${DIR_SCRATCH}/${TF%%.*}.nii
 
 # Calculate temporal Z Score along 4th Dimension -------------------------------
-Rscript ${INC_R}/tensorZ.R ${IMAGE} "lo" ${LO} "hi" ${HI}
+Rscript ${INC_R}/tensorZ.R ${IMAGE} "lo" ${LO} "hi" ${HI} "dir-save" ${DIR_SCRATCH}
 
 # move Z image to save directory
 MOD=$(getField -i ${IMAGE} -f modality)
-ZIMG=$(modField -i ${IMAGE} -m -f modality -v tensor-z)
+ZIMG=$(modField -i ${IMAGE} -m -f modality -v "tensor-z")
 ZIMG=$(modField -i ${ZIMG} -a -f mod -v ${MOD})
 gzip ${ZIMG}
-mv ${ZIMG} ${DIR_SAVE}/
+mv ${ZIMG}.gz ${DIR_SAVE}/
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

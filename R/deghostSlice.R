@@ -11,7 +11,7 @@ value <- as.numeric(NA)
 # parse command arguments ------------------------------------------------------
 for (i in 1:length(args)) {
   if (args[i] %in% c("i", "img", "image")) { nii <- args[i+1] }
-  if (args[i] %in% c("z", "zmap")) { zmap <- args[i+1] }
+  if (args[i] %in% c("zmap")) { zmap <- args[i+1] }
   if (args[i] %in% c("zdir", "direction")) { zdir <- args[i+1] }
   if (args[i] %in% c("zt", "zthresh")) { zthresh <- as.numeric(args[i+1]) }
   if (args[i] %in% c("p", "plane")) { plane <- args[i+1] }
@@ -23,9 +23,9 @@ for (i in 1:length(args)) {
 if (!exists(dir.save)) { dir.save <- dirname(nii)}
 
 # setup environment ------------------------------------------------------------
-library(nifti.io, quietly=TRUE)
-library(tools, quietly=TRUE)
-library(zoo, quietly=TRUE)
+library(nifti.io, quietly=TRUE, warn.conflicts=FALSE)
+library(tools, quietly=TRUE, warn.conflicts=FALSE)
+library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
 sz <- nii.dims(nii)
@@ -40,8 +40,8 @@ ts <- array(0, dim=sz)
 z <- array(0, dim=sz)
 mask <- array(0, dim=sz)
 for (i in 1:sz[4]) {
-  ts[ ,i] <- read.nii.volume(nii, i)
-  z[ ,i] <- read.nii.volume(zmap, i)
+  ts[ , , , i] <- read.nii.volume(nii, i)
+  z[ , , , i] <- read.nii.volume(zmap, i)
 }
 
 # set direction of zmap --------------------------------------------------------
@@ -59,7 +59,7 @@ for (i in 1:sz[plane.idx]) {
       `1` = tmp <- sum(z[i, , ,j] > zthresh, na.rm=TRUE),
       `2` = tmp <- sum(z[ ,i, ,j] > zthresh, na.rm=TRUE),
       `3` = tmp <- sum(z[ , ,i,j] > zthresh, na.rm=TRUE))
-    if (tmp > (prod(sz[in.plane]) * n.thresh)) { mask[ , ,i,j] <- 1 }
+    if (tmp > (prod(sz[in.plane]) * nthresh)) { mask[ , ,i,j] <- 1 }
   }
 }
 

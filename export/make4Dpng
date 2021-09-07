@@ -42,11 +42,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvl --long \
-bg:,bg-volume:,bg-mask:,bg-mask-volume:,\
+OPTS=$(getopt -o hvl --long bg:,\
+bg-volume:,bg-mask:,bg-mask-volume:,\
 bg-threshold:,bg-alpha:,bg-color:,bg-order:,bg-cbar,\
-fg:,fg-mask:,fg-mask-volume:,\
-fg-threshold:,fg-alpha:,fg-color:,fg-direction:,fg-cbar,\
+fg:,fg-mask:,fg-mask-volume:,fg-threshold:,fg-alpha:,fg-color:,fg-direction:,fg-cbar,\
 roi:,roi-volume:,roi-value:,roi-color:,roi-order:,roi-cbar,\
 plane:,slice:,slice-method:,layout:,\
 no-slice-label,use-vox-label,no-lr-label,no-volume-label,use-volume-number,label-decimal:,\
@@ -140,7 +139,7 @@ while true; do
     --roi-order) ROI_ORDER="$2" ; shift 2 ;;
     --roi-cbar) ROI_CBAR="true" ; shift 2 ;;
     --plane) PLANE="$2" ; shift 2 ;;
-    --slice) SLICE="2" ; shift 2 ;;
+    --slice) SLICE="$2" ; shift 2 ;;
     --slice-method) SLICE_METHOD="2" ; shift 2 ;;
     --layout) LAYOUT="$2" ; shift 2 ;;
     --no-slice-label) LABEL_NO_SLICE="true" ; shift ;;
@@ -302,13 +301,13 @@ fi
 # Start of Function
 #===============================================================================
 # set default filename
-DIR_PROJECT=$(getDir -i ${BG})
-PID=$(getField -i ${BG} -f sub)
-SID=$(getField -i ${BG} -f ses)
+DIR_PROJECT=$(getDir -i ${FG})
+PID=$(getField -i ${FG} -f sub)
+SID=$(getField -i ${FG} -f ses)
 PIDSTR=sub-${PID}
-if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
-if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 if [[ -z "${FILENAME}" ]]; then
   if [[ -n "${PID}" ]]; then
     FILENAME="${PIDSTR}"
@@ -335,11 +334,13 @@ FG_COLOR=(${FG_COLOR//;/ })
 FG_ORDER=(${FG_COLOR_ORDER//;/ })
 FG_CBAR=(${FG_CBAR//;/ })
 FG_N=${#FG[@]}
-if [[ ${FG_N} -gt 1 ]]; then
-  if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
-    for (( i=0; i<${FG_N}; i++ )); do
-      FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
-    done
+if [[ -n ${FG_MASK} ]]; then
+  if [[ ${FG_N} -gt 1 ]]; then
+    if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
+      for (( i=0; i<${FG_N}; i++ )); do
+        FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
+      done
+    fi
   fi
 fi
 
@@ -382,7 +383,7 @@ FG_PIXDIM=($(niiInfo -i ${FG[0]} -f spacing))
 FG_ORIGIN=($(niiInfo -i ${FG[0]} -f origin))
 FG_ORIENT=($(niiInfo -i ${FG[0]} -f orient))
 FG_VOLS=($(niiInfo -i ${FG[0]} -f volumes))
-FG_TR=$(niiInfo -i ${FG[0]} -f tr)
+FG_TR=($(niiInfo -i ${FG[0]} -f tr))
 
 # get slice percentage --------------------------------------------------------
 if [[ "${VERBOSE,,}" == "true" ]]; then echo ">>> calculate slice location"; fi
@@ -417,11 +418,12 @@ if [[ -z ${SLICE} ]]; then
   fi
   SLICE_PCT=$(ezMath -x "${COORDS[${PLANE_NUM}]}/${FG_DIMS[${PLANE_NUM}]}" -d 4)
 else
-  if [[ ${SLICE} -lt 0 ]]; then
+  CHK=$(ezMath -x "${SLICE} * 100" -d 0)
+  if [[ ${CHK} -lt 0 ]]; then
     SLICE_PCT=$(ezMath -x "sqrt(((${SLICE}/${PIXDIM[${PLANE_NUM}]})/${FG_DIMS[${PLANE_NUM}]})^2)" -d 4)
-  elif [[ ${SLICE} -lt 1 ]]; then
+  elif [[ ${CHK} -lt 100 ]]; then
     SLICE_PCT=${SLICE}
-  elif [[ ${SLICE} -ge 1 ]]; then
+  elif [[ ${CHK} -ge 100 ]]; then
     SLICE_PCT=$(ezMath -x "${SLICE}/${FG_DIMS[${PLANE_NUM}]}" -d 4)
   fi
 fi
@@ -702,9 +704,11 @@ for (( i=0; i<${#FG[@]}; i++ )); do
     SNUM=$(printf "%04.0f" ${V[${j}]})
     fslmaths ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz -thr ${LO} \
       ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz
-    if [[ -n ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
-      fslmaths ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz \
-        -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz
+    if [[ -n ${FG_MASK} ]]; then
+      if [[ "${FG_MASK[${i}]}" != "null" ]]; then
+        fslmaths ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz \
+          -mas ${FG_MASK[${i}]} ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz
+      fi
     fi
     fslmaths ${DIR_SCRATCH}/FG_${i}_${SNUM}.nii.gz \
       -bin ${DIR_SCRATCH}/FGMASK_${i}_${SNUM}.nii.gz

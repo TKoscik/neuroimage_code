@@ -74,12 +74,14 @@ DIR_CLEAN=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
+NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --zmap) ZMAP="$2" ; shift 2 ;;
@@ -156,6 +158,7 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
+INPUT=${IMAGE}
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMAGE})
 PID=$(getField -i ${IMAGE} -f sub)
@@ -165,10 +168,11 @@ DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 
-if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${IMAGE} -s) fi
+if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -i ${IMAGE} -s); fi
+MOD=$(getField -i ${IMAGE} -f modality)
 
 # if zmap provided disable saving z output, regardless of input ----------------
-if [[ -n ${ZMAP} ]]; then NO_Z=true fi
+if [[ -n ${ZMAP} ]]; then NO_Z=true; fi
 
 # set default save directories -------------------------------------------------
 if [[ "${NO_MASK}" == "true" ]] &&\
@@ -200,14 +204,19 @@ mkdir -p ${DIR_SCRATCH}
 
 # generate z map if not specified ----------------------------------------------
 if [[ -z ${ZMAP} ]]; then
-  tensorZ --image ${IMAGE} --lo ${ZLO} --hi ${HI} --dir-save ${DIR_SCRATCH}
+  tensorZ --image ${IMAGE} --lo ${ZLO} --hi ${ZHI} --dir-save ${DIR_SCRATCH}
+  ZMAP=${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_tensor-z.nii
 else
   cp ${ZMAP} ${DIR_SCRATCH}/
+  ZMAP=$(basename ${ZMAP})
+  ZMAP=${ZMAP%%.*}
+  ZMAP=${DIR_SCRATCH}/${ZMAP}.nii
 fi
 
 # copy and unzip inputs to scratch ---------------------------------------------
 cp ${IMAGE} ${DIR_SCRATCH}/
 gunzip ${DIR_SCRATCH}/*.nii.gz
+IMAGE=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii
 
 # conduct slicewise deghosting -------------------------------------------------
 Rscript ${INC_R}/deghostSlice.R \
@@ -223,34 +232,34 @@ gzip ${DIR_SCRATCH}/*.nii
 
 # save desired output ----------------------------------------------------------
 if [[ "${NO_Z}" == "false" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_tensor-z.nii.gz ${DIR_Z}/
+  mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_tensor-z.nii.gz ${DIR_Z}/
 fi
 if [[ "${NO_MASK}" == "false" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_mask-deghost.nii.gz ${DIR_MASK}/
+  mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz ${DIR_MASK}/
   # generate mask PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
     make4Dpng \
-      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_mask-deghost.nii.gz \
-      --fg-color "#000000,#FFFFFF";"#000000,#FF0000" \
+      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz \
+      --fg-color "#000000,#FFFFFF;#000000,#FF0000" \
       --fg-alpha 50 \
       --layout "5x11" --plane ${PLANE} --slice 0.51 \
-      --filename ${PREFIX}_mask-deghost \
+      --filename ${PREFIX}_mod-${MOD}_mask-deghost \
       --dir-save ${DIR_MASK}
   fi
 fi
 if [[ "${NO_CLEAN}" == "false" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz ${DIR_CLEAN}/
+  mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_deghost.nii.gz ${DIR_CLEAN}/
   # generate deghosted PNG - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
     if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
     if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="z"; fi
     if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
     make4Dpng \
-      --fg ${IMAGE},${DIR_SCRATCH}/${PREFIX}_deghost.nii.gz \
-      --fg-color "#000000,#FF00FF";"#000000,#00FF00" \
+      --fg ${INPUT},${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_deghost.nii.gz \
+      --fg-color "#000000,#FF00FF;#000000,#00FF00" \
       --fg-alpha 50 \
       --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
-      --filename ${PREFIX}_deghost \
+      --filename ${PREFIX}_mod-${MOD}_deghost \
       --dir-save ${DIR_SCRATCH}
   fi
 fi
