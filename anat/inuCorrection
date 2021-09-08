@@ -187,6 +187,7 @@ mkdir -p ${DIR_SAVE}
 
 # INU correction --------------------------------------------------------------
 if [[ "${METHOD,,}" == "t1t2" ]]; then
+  if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>DEBIAS T1T2 Method"; fi
   NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasT1T2)
 
   # Form sqrt(T1w*T2w), mask this and normalise by the mean
@@ -244,19 +245,23 @@ if [[ "${METHOD,,}" == "t1t2" ]]; then
   if [[ "${KEEP}" == "true" ]]; then
     mv ${DIR_SCRATCH}/biasT1T2_Field.nii.gz ${DIR_SAVE}/${NEW_PREFIX}_biasField.nii.gz
   fi
+  if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
 
   if [[ "${NO_PNG}" == "false" ]]; then
+    if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>GENERATING PNGS"; fi
     make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_T1w.nii.gz
     make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_T2w.nii.gz
     if [[ "${KEEP}" == "true" ]]; then
       make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_biasField.nii.gz --bg-color "plasma"
     fi
+    if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
   fi
 fi
 
 # gather modality for output
 if [[ "${METHOD,,}" == "n4" ]] \
 || [[ "${METHOD,,}" == "ants" ]]; then
+  if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>DEBIAS N4 METHOD"; fi
   NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasN4)
   NEW_FIELD=$(modField -i ${NEW_PREFIX} -a -f mod -v ${MOD[0]})
   
@@ -283,15 +288,16 @@ if [[ "${METHOD,,}" == "n4" ]] \
   if [[ "${KEEP,,}" == "true" ]]; then
     mv ${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz ${DIR_SAVE}/
   fi
+  if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
 
   if [[ "${NO_PNG}" == "false" ]]; then
+    if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>GENERATING PNGS"; fi
     make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD[0]}.nii.gz
     if [[ "${KEEP,,}" == "true" ]]; then
       make3Dpng --bg ${DIR_SAVE}/${NEW_FIELD}_biasField.nii.gz --bg-color "plasma"
     fi
+    if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
   fi
-  
-
 fi
 
 # AFNI's 3dUnifize method ------------------------------------------------------
@@ -300,6 +306,7 @@ NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasT1WM)
 if [[ "${METHOD,,}" == "t1wm" ]] \
 || [[ "${METHOD,,}" == "afni" ]] \
 || [[ "${METHOD,,}" == "3dunifize" ]]; then
+  if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>DEBIAS T1WM METHOD"; fi
   t1wm_fcn="3dUnifize"
   t1wm_fcn="${t1wm_fcn} -prefix ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz"
   t1wm_fcn="${t1wm_fcn} -input ${IMAGE[0]}"
@@ -311,9 +318,12 @@ if [[ "${METHOD,,}" == "t1wm" ]] \
     t1wm_fcn="${t1wm_fcn} -T2"
   fi
   eval ${t1wm_fcn}
+  if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
 
   if [[ "${NO_PNG}" == "false" ]]; then
+    if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>GENERATING PNGS"; fi
     make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
+    if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
   fi
 fi
 
