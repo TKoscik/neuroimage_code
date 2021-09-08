@@ -148,6 +148,7 @@ mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
 # fit echoes, calculate weights ------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COMPUTING WEIGHTS"; fi
 fit_str="@compute_OC_weights"
 fit_str="${fit_str} -echo_times \""
 for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${TE[${i}]}"; done
@@ -155,20 +156,27 @@ fit_str="${fit_str}\" -echo_dsets"
 for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${IMG_LS[${i}]}"; done
 fit_str="${fit_str} -prefix ${DIR_SCRATCH}/weights"
 eval ${fit_str}
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # weight echoes ----------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>WEIGHTING ECHOES"; fi
 wt_str="3dMean"
 wt_str="${wt_str} -weightset ${DIR_SCRATCH}/weights+orig"
 wt_str="${wt_str} -prefix ${DIR_SCRATCH}/t2star.nii.gz"
 for (( i=0; i<${N}; i++ )); do wt_str="${wt_str} ${IMG_LS[${i}]}"; done
 eval ${wt_str}
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # move out to save location ----------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>SAVING OUTPUT"; fi
 mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # generate png -----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATING PNG"; fi
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"  
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 fi
 
 #===============================================================================
