@@ -41,7 +41,9 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvn --long prefix:,image:,te:,dir-save:,dir-scratch:,\
+OPTS=$(getopt -o hvn --long prefix:,image:,te:,\
+coreg:,ref-image:,from:,to:,\
+dir-save:,dir-scratch:,\
 help,no-log,no-png,verbose -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -53,6 +55,10 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 TE=
+COREG=
+REF=
+FROM=raw
+TO=native
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -67,6 +73,10 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --te) TE="$2" ; shift 2 ;;
+    --coreg) COREG="$2" ; shift 2 ;;
+    --ref-image) REF="$2" ; shift 2 ;;
+    --from) FROM="$2" ; shift 2 ;;
+    --to) TO="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -138,7 +148,11 @@ if [[ -n ${SID} ]]; then
 fi
 if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
 if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/anat
+  if [[ -z ${COREG} ]]; then
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/anat
+  else
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/T2star_${TO}
+  fi
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
@@ -161,11 +175,24 @@ wt_str="${wt_str} -weightset ${DIR_SCRATCH}/weights+orig"
 wt_str="${wt_str} -prefix ${DIR_SCRATCH}/t2star.nii.gz"
 for (( i=0; i<${N}; i++ )); do wt_str="${wt_str} ${IMG_LS[${i}]}"; done
 eval ${wt_str}
+mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+
+# coregistration (if specified) ------------------------------------------------
+if [[ -n ${COREG} ]]; then
+  if [[ -z ${REF} ]]; then
+    REF=${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_T1w.nii.gz
+  fi
+  coregistrationChef --recipe-name ${COREG} \
+    --fixed ${REF} --label-to ${TO} \
+    --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz --label-from ${FROM} \
+    --dir-save ${DIR_SCRATCH}
+  rename "reg-${COREG}+${TO}_" "" ${DIR_SCRATCH}/*.nii.gz
+fi
 
 # move out to save location ----------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>SAVING OUTPUT"; fi
-mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
+mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz ${DIR_SAVE}/
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # generate png -----------------------------------------------------------------
