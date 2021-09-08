@@ -41,8 +41,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hv --long prefix:,image:,te:,dir.save:,dir-scratch:,\
-help,no-log -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hvn --long prefix:,image:,te:,dir-save:,dir-scratch:,\
+help,no-log,no-png -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -61,6 +61,7 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --te) TE="$2" ; shift 2 ;;
@@ -111,14 +112,15 @@ DIR_PROJECT=$(getDir -i ${IMG_LS[0]})
 PID=$(getField -i ${IMG_LS[0]} -f sub)
 SID=$(getField -i ${IMG_LS[0]} -f ses)
 PIDSTR=sub-${PID}
-#if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
-if [[ -n ${SID} ]]; then PIDSTR=${PIDSTR}_ses-${SID}; fi
 DIRPID=sub-${PID}
-#if [[ -n ${SID} ]]; then ${DIRPID}="${DIRPID}/ses-${SID}"; fi
-if [[ -n ${SID} ]]; then DIRPID=${DIRPID}/ses-${SID}; fi
+if [[ -n ${SID} ]]; then
+  PIDSTR=${PIDSTR}_ses-${SID}
+  DIRPID=${DIRPID}/ses-${SID}
+fi
 
 if [[ -z ${PREFIX} ]]; then
-  PREFIX=$(getBidsBase -i ${PIDSTR})
+  PREFIX=$(getBidsBase -i ${IMG_LS[0]} -s)
+  PREFIX=$(modField -i ${PREFIX} -r -f echo)
 fi
 
 if [[ -z ${DIR_SAVE} ]]; then
@@ -145,6 +147,11 @@ eval ${wt_str}
 
 # move out to save location ----------------------------------------------------
 mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
+
+# generate png -----------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"
+fi
 
 #===============================================================================
 # End of Function
