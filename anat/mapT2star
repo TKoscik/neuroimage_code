@@ -108,6 +108,7 @@ N=${#IMG_LS[@]}
 # get TE values from JSON files ------------------------------------------------
 if [[ -z ${TE} ]]; then
   for (( i=0; i<${N}; i++ )); do
+    echo ${i}
     unset TMP
     TMP=($(jq -r '.EchoTime' < ${IMG[${i}]%%.*}.json | tr -d ' [],"'))
     TE+=($(ezMath -x "${TMP}*1000" -d 3))
@@ -119,9 +120,9 @@ fi
 # if verbose, print out input --------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then
   echo "[INC:${FCN_NAME}]"
-  echo -e "\tT2star input images:
+  echo -e "\tT2star input images:"
   for (( i=0; i<${N}; i++ )); do echo -e "\t\t${IMG_LS[${i}]}"; done
-  echo -e "\tEcho Times:
+  echo -e "\tEcho Times:"
   for (( i=0; i<${N}; i++ )); do echo -e "\t\t${TE[${i}]}"; done
 fi
 
