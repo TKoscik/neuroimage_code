@@ -156,6 +156,11 @@ fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
+# copy data to scratch so that AFNI doesn't mess up with existing directories --
+for (( i=0; i<${N}; i++ )); do
+  cp ${IMG_LS[${i}]} ${DIR_SCRATCH}/
+done
+
 # fit echoes, calculate weights ------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COMPUTING WEIGHTS"; fi
 fit_str="@compute_OC_weights"
