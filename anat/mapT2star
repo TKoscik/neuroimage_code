@@ -119,7 +119,6 @@ N=${#IMG_LS[@]}
 if [[ -z ${TE} ]]; then
   TE=
   for (( i=0; i<${N}; i++ )); do
-    echo ${i}
     unset TMP
     TMP=($(jq -r '.EchoTime' < ${IMG_LS[${i}]%%.*}.json | tr -d ' [],"'))
     TE[${i}]=$(ezMath -x "${TMP}*1000" -d 3)
@@ -131,10 +130,9 @@ fi
 # if verbose, print out input --------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then
   echo "[INC:${FCN_NAME}]"
-  echo -e "\tT2star input images:"
-  for (( i=0; i<${N}; i++ )); do echo -e "\t\t${IMG_LS[${i}]}"; done
-  echo -e "\tEcho Times:"
-  for (( i=0; i<${N}; i++ )); do echo -e "\t\t${TE[${i}]}"; done
+  echo -e "  T2star input images:"
+  for (( i=0; i<${N}; i++ )); do echo -e "    ${IMG_LS[${i}]}"; done
+  echo -e "  Echo Times:  ${TE[${i}]}"
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
