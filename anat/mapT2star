@@ -137,7 +137,7 @@ if [[ -n ${SID} ]]; then
 fi
 if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
 if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/anat/${DIRPID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/anat
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
