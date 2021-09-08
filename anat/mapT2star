@@ -142,7 +142,7 @@ if [[ -z ${PREFIX} ]]; then
 fi
 
 if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/${DIRPID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/anat/${DIRPID}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
