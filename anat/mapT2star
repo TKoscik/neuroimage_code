@@ -132,7 +132,7 @@ if [[ "${VERBOSE}" == "true" ]]; then
   echo "[INC:${FCN_NAME}]"
   echo -e "  T2star input images:"
   for (( i=0; i<${N}; i++ )); do echo -e "    ${IMG_LS[${i}]}"; done
-  echo -e "  Echo Times:  ${TE[${i}]}"
+  echo -e "  Echo Times:  ${TE[@]}"
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
