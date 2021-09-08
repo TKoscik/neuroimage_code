@@ -135,12 +135,7 @@ if [[ -n ${SID} ]]; then
   PIDSTR=${PIDSTR}_ses-${SID}
   DIRPID=${DIRPID}/ses-${SID}
 fi
-
-if [[ -z ${PREFIX} ]]; then
-  PREFIX=$(getBidsBase -i ${IMG_LS[0]} -s)
-  PREFIX=$(modField -i ${PREFIX} -r -f echo)
-fi
-
+if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
 if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/anat/${DIRPID}
 fi
