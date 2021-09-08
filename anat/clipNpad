@@ -41,8 +41,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hlkn --long prefix:,image:,clip:,pad:,dir-save:,dir-scratch:,\
-help,no-log,keep,no-png -n 'parse-options' -- "$@")
+OPTS=$(getopt -o hlknv --long prefix:,image:,clip:,pad:,dir-save:,dir-scratch:,\
+help,no-log,keep,no-png,verbose -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -58,6 +58,7 @@ DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 NO_PNG=false
+VERBOSE=false
 
 while true; do
   case "$1" in
@@ -65,6 +66,7 @@ while true; do
     -l | --no-log) NO_LOG=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -n | --no-png) NO_PNG=true ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --clip) CLIP="$2" ; shift 2 ;;
@@ -130,7 +132,8 @@ MOD=$(getField -i ${IMAGE} -f modality)
 TIMG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
 if [[ "${CLIP}" != "0" ]]; then
-  echo "clipping"
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo "clipping"; fi
+  export AFNI_NIFTI_TYPE_WARN=NO
   3dAutomask -q -prefix ${MASK} -clfrac ${CLIP} ${IMAGE}
   XYZ=($(3dAutobox -noclust -input ${MASK} 2>&1))
   Z=${XYZ[-1]}; Z=${Z//z=}; Z=(${Z//../ })
@@ -139,20 +142,22 @@ if [[ "${CLIP}" != "0" ]]; then
   fslroi ${IMAGE} ${TIMG} ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
   fslroi ${MASK} ${MASK}  ${X[0]} ${X[1]} ${Y[0]} ${Y[1]} ${Z[0]} ${Z[1]}
 else
-  echo "not clipping"
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo "not clipping"; fi
   cp ${IMAGE} ${TIMG}
 fi
 if [[ "${PAD}" != "0" ]]; then
-  echo "padding"
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo "padding"; fi
   ImageMath 3 ${TIMG} PadImage ${TIMG} ${PAD}
 fi
 mv ${TIMG} ${DIR_SAVE}/
 
 if [[ "${NO_PNG}" == "false" ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo "making PNG"; fi
   make3Dpng --bg ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 fi
 
 if [[ "${KEEP}" == "true" ]]; then
+  if [[ "${VERBOSE,,}" == "true" ]]; then echo "padding mask"; fi
   ImageMath 3 ${MASK} PadImage ${MASK} ${PAD}
   CopyImageHeaderInformation ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz ${MASK} ${MASK} 1 1 1
   ConvertImage 3 ${MASK} ${MASK} 5
