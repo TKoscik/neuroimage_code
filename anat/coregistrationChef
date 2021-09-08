@@ -1052,7 +1052,7 @@ if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
 # run coregistration -----------------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>run coregistration"; fi
-writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${antsCoreg}"
+#writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${antsCoreg}"
 eval "${antsCoreg}"
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
@@ -1078,7 +1078,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   if [[ "${VERBOSE}" == "true" ]]; then
     echo -e "\t${apply_xfm//--/\n--}\n"
   fi
-  writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
+  #writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
   eval ${apply_xfm}
   
   ## rescale intensity if selected ---------------------------------------------
@@ -1121,7 +1121,7 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     fi
     apply_xfm="${apply_xfm} -r ${REF_IMAGE}"
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "${apply_xfm}"; fi
-    writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
+    #writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
     eval ${apply_xfm}
     
     ## rescale intensity if selected ---------------------------------------------
