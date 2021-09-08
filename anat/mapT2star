@@ -183,11 +183,13 @@ if [[ -n ${COREG} ]]; then
   if [[ -z ${REF} ]]; then
     REF=${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_T1w.nii.gz
   fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COREGISTERING T2STAR MAP"; fi
   coregistrationChef --recipe-name ${COREG} \
     --fixed ${REF} --label-to ${TO} \
     --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz --label-from ${FROM} \
     --dir-save ${DIR_SCRATCH}
   rename "reg-${COREG}+${TO}_" "" ${DIR_SCRATCH}/*.nii.gz
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 fi
 
 # move out to save location ----------------------------------------------------
