@@ -3,7 +3,10 @@
 # Generate T2star map by estimating R2* from non-linear fit to multi-echo data
 # Authors: Timothy Koscik PhD, Lauren Hopkins PhD
 # Date: 2021-06-09
-# CHANGELOG: <description of major changes to functionality>
+# CHANGELOG: 2021-09-08 - debug add in work_dir specifier to @compute_OC_weights
+#                       - added feature to read TE times from JSON files
+#                       - added option to coregister, specify registration type
+#                       - added PNGs for output
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -93,10 +96,20 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo '  -h | --help              display command help'
   echo '  -l | --no-log            disable writing to output log'
-  echo '  --prefix  <optional>     prefix for filename'
+  echo '  -n | --no-png            disable PNG output'
+  echo '  -v | --verbose           add verbose output to terminal'
+  echo '  --prefix                 prefix for filename'
   echo '  --image                  list of images, can include * to find matches'
   echo '                           must be comma-separated, not bash array'
   echo '  --te                     comma-separted list of echo times in ms'
+  echo '  --coreg                  name of coregistration recipe, e.g., "rigid"'
+  echo '                           s[ecifying this will toggle coregistration'
+  echo '  --ref-image              fixed image for coregistration, default is'
+  echo '         ${DIR_PROJECT}/derivatives/inc/anat/native/${PREFIX}_T1w.nii.gz'
+  echo '  --from                   string for fixed registration label,'
+  echo '                             e.g., raw'
+  echo '  --to                     string for moving registration label,'
+  echo '                             e.g., native'
   echo '  --dir-save               location to save output'
   echo '  --dir-scratch            location for temporary files'
   echo ''
@@ -214,7 +227,7 @@ if [[ -n ${COREG} ]]; then
       --fg-cbar \
     --layout "6:x;6:x;6:x;6:y;6:y;6:y;6:z;6:z;6:z" \
     --offset "0,0,0" \
-    --filename ${PIDSTR}_reg-${COREG}-${TO} \
+    --filename ${PIDSTR}_mod-T2star_reg-${TO}_xfm-rigid \
     --dir-save ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
   fi
