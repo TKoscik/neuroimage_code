@@ -263,8 +263,10 @@ fi
 if [[ "${METHOD,,}" == "n4" ]] \
 || [[ "${METHOD,,}" == "ants" ]]; then
   NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v biasN4)
-  NEW_FIELD=$(modField -i ${NEW_PREFIX} -a -f mod -v ${MOD})
-
+  NEW_FIELD=$(modField -i ${NEW_PREFIX} -a -f mod -v ${MOD[0]})
+  echo ${NEW_PREFIX}
+  echo ${NEW_FIELD}
+  
   n4_fcn="N4BiasFieldCorrection"
   n4_fcn="${n4_fcn} -d ${DIM}"
   n4_fcn="${n4_fcn} -i ${IMAGE[0]}"
@@ -279,14 +281,16 @@ if [[ "${METHOD,,}" == "n4" ]] \
   n4_fcn="${n4_fcn} -c ${CONVERGENCE}"
   n4_fcn="${n4_fcn} -b ${BSPLINE}"
   n4_fcn="${n4_fcn} -t ${HIST_SHARPEN}"
-  n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${NEW_PREFIX}_${MOD}.nii.gz,"
+  n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${NEW_PREFIX}_${MOD[0]}.nii.gz,"
   n4_fcn="${n4_fcn}${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz]"
   n4_fcn="${n4_fcn} -v ${VERBOSE}"
   eval ${n4_fcn}
   
+  ls ${DIR_SCRATCH}
+
   if [[ "${NO_PNG}" == "false" ]]; then
-    make3Dpng --bg ${DIR_SCRATCH}/${NEW_PREFIX}_${MOD}.nii.gz \
-      --filename ${NEW_PREFIX}_${MOD} \
+    make3Dpng --bg ${DIR_SCRATCH}/${NEW_PREFIX}_${MOD[0]}.nii.gz \
+      --filename ${NEW_PREFIX}_${MOD[0]} \
       --dir-save ${DIR_SAVE}
     make3Dpng --bg ${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz \
       --bg-color "plasma" \
