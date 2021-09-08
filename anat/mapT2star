@@ -206,8 +206,10 @@ if [[ -n ${COREG} ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COREGISTERING T2STAR MAP"; fi
   coreg_fcn="coregistrationChef --no-png"
   coreg_fcn="${coreg_fcn} --recipe-name ${COREG}"
-  coreg_fcn="${coreg_fcn} --fixed ${REF} --label-to ${TO}"
-  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz --label-from ${FROM}"
+  coreg_fcn="${coreg_fcn} --fixed ${REF}"
+  coreg_fcn="${coreg_fcn} --label-to ${TO}"
+  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
+  coreg_fcn="${coreg_fcn} --label-from ${FROM}"
   coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
   if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
   eval ${coreg_fcn}
