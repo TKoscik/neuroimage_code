@@ -129,12 +129,9 @@ N_IMAGE=${#IMAGE[@]}
 DIR_PROJECT=$(getDir -i ${IMAGE[0]})
 PID=$(getField -i ${IMAGE} -f sub)
 SID=$(getField -i ${IMAGE} -f ses)
-if [[ -z "${PREFIX}" ]]; then
-  PREFIX="sub-${PID}"
-  if [[ -n ${SESSION} ]]; then
-    PREFIX="${PREFIX}_ses-${SID}"
-  fi
-fi
+PIDSTR="sub-${PID}"
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+if [[ -z "${PREFIX}" ]]; then PREFIX=${PIDSTR}; fi
 mkdir -p ${DIR_SCRATCH}
 
 # Set up contrasts if not specified --------------------------------------------
