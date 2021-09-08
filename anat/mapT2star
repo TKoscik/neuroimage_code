@@ -117,11 +117,12 @@ N=${#IMG_LS[@]}
 
 # get TE values from JSON files ------------------------------------------------
 if [[ -z ${TE} ]]; then
+  TE=
   for (( i=0; i<${N}; i++ )); do
     echo ${i}
     unset TMP
     TMP=($(jq -r '.EchoTime' < ${IMG_LS[${i}]%%.*}.json | tr -d ' [],"'))
-    TE+=($(ezMath -x "${TMP}*1000" -d 3))
+    TE[${i}]=($(ezMath -x "${TMP}*1000" -d 3))
   done
 else
   TE=(${TE//,/ })
