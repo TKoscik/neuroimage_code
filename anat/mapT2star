@@ -63,6 +63,7 @@ DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
+NO_PNG=false
 
 while true; do
   case "$1" in
@@ -174,11 +175,12 @@ eval ${fit_str}
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # weight echoes ----------------------------------------------------------------
-if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>WEIGHTING ECHOES"; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>WEIGHTING ECHOES"; fi
 wt_str="3dMean"
 wt_str="${wt_str} -weightset ${DIR_SCRATCH}/weights+orig"
 wt_str="${wt_str} -prefix ${DIR_SCRATCH}/t2star.nii.gz"
 for (( i=0; i<${N}; i++ )); do wt_str="${wt_str} ${IMG_LS[${i}]}"; done
+if [[ "${VERBOSE}" == "true" ]]; then echo ${wt_str}; fi
 eval ${wt_str}
 mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
@@ -189,13 +191,33 @@ if [[ -n ${COREG} ]]; then
     REF=${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_T1w.nii.gz
   fi
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COREGISTERING T2STAR MAP"; fi
-  coregistrationChef --recipe-name ${COREG} \
-    --fixed ${REF} --label-to ${TO} \
-    --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz --label-from ${FROM} \
-    --dir-save ${DIR_SCRATCH} \
-    --verbose
+  coreg_fcn="coregistrationChef --no-png"
+  coreg_fcn="${coreg_fcn} --recipe-name ${COREG}"
+  coreg_fcn="${coreg_fcn} --fixed ${REF} --label-to ${TO}"
+  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz --label-from ${FROM}"
+  coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
+  if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
+  eval ${coreg_fcn}
   rename "reg-${COREG}+${TO}_" "" ${DIR_SCRATCH}/*.nii.gz
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+
+  if [[ "${NO_PNG}" == "false" ]]; then
+    if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATE COREG PNG"; fi
+    make3Dpng \
+    --bg ${REF} \
+      --bg-color "#000000,#00FF00,#FFFFFF" \
+      --bg-thresh "10,99" \
+    --fg ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
+      --fg-thresh "10,99" \
+      --fg-color "#000000,#FF00FF,#FFFFFF" \
+      --fg-alpha 50 \
+      --fg-cbar \
+    --layout "6:x;6:x;6:x;6:y;6:y;6:y;6:z;6:z;6:z" \
+    --offset "0,0,0" \
+    --filename ${PIDSTR}_reg-${COREG}-${TO} \
+    --dir-save ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+    if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+  fi
 fi
 
 # move out to save location ----------------------------------------------------
