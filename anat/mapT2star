@@ -165,10 +165,15 @@ done
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COMPUTING WEIGHTS"; fi
 fit_str="@compute_OC_weights"
 fit_str="${fit_str} -echo_times \""
-for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${TE[${i}]}"; done
+for (( i=0; i<${N}; i++ )); do
+  fit_str="${fit_str} ${TE[${i}]}"
+done
 fit_str="${fit_str}\" -echo_dsets"
-for (( i=0; i<${N}; i++ )); do fit_str="${fit_str} ${IMG_LS[${i}]}"; done
+for (( i=0; i<${N}; i++ )); do
+  fit_str="${fit_str} ${IMG_LS[${i}]}"
+done
 fit_str="${fit_str} -prefix ${DIR_SCRATCH}/weights"
+if [[ "${VERBOSE}" == "true" ]]; then echo ${fit_str}; fi
 eval ${fit_str}
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
