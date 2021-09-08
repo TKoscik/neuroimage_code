@@ -188,7 +188,8 @@ if [[ -n ${COREG} ]]; then
   coregistrationChef --recipe-name ${COREG} \
     --fixed ${REF} --label-to ${TO} \
     --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz --label-from ${FROM} \
-    --dir-save ${DIR_SCRATCH}
+    --dir-save ${DIR_SCRATCH} \
+    --verbose
   rename "reg-${COREG}+${TO}_" "" ${DIR_SCRATCH}/*.nii.gz
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 fi
