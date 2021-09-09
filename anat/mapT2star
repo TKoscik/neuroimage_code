@@ -45,7 +45,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvn --long prefix:,image:,te:,\
-coreg:,ref-image:,from:,to:,\
+coreg-rigid,coreg-affine,coreg-syn,coreg-ref:,coreg-from:,coreg-to:,\
+norm,norm-xfm:,norm-ref:,\
 dir-save:,dir-scratch:,\
 help,no-log,no-png,verbose -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -58,11 +59,19 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 TE=
-COREG=
-REF=
-FROM=raw
-TO=native
+COREG_RIGID=false
+COREG_AFFINE=false
+COREG_SYN=false
+COREG_REF=
+COREG_FROM=raw
+COREG_TO=native
+NORM=
+NORM_XFM=
+NORM_REF=
+NORM_TEMPLATE=HCPICBM
+NORM_SPACE=1mm
 DIR_SAVE=
+DIR_XFM=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
@@ -77,11 +86,19 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --te) TE="$2" ; shift 2 ;;
-    --coreg) COREG="$2" ; shift 2 ;;
-    --ref-image) REF="$2" ; shift 2 ;;
-    --from) FROM="$2" ; shift 2 ;;
-    --to) TO="$2" ; shift 2 ;;
+    --coreg-rigid) COREG_RIGID=true ; shift ;;
+    --coreg-affine) COREG_AFFINE=true ; shift ;;
+    --coreg-syn) COREG_SYN=true ; shift ;;
+    --coreg-ref) COREG_REF="$2" ; shift 2 ;;
+    --coreg-from) COREG_FROM="$2" ; shift 2 ;;
+    --coreg-to) COREG_TO="$2" ; shift 2 ;;
+    --norm) NORM=true ; shift ;;
+    --norm-xfm) NORM_XFM="$2" ; shift 2 ;;
+    --norm-ref) NORM_REF="$2" ; shift 2 ;;
+    --norm-template) NORM_TEMPLATE="$2" ; shift 2 ;;
+    --norm-space) NORM_SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -103,7 +120,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                           must be comma-separated, not bash array'
   echo '  --te                     comma-separted list of echo times in ms'
   echo '  --coreg                  name of coregistration recipe, e.g., "rigid"'
-  echo '                           s[ecifying this will toggle coregistration'
   echo '  --ref-image              fixed image for coregistration, default is'
   echo '         ${DIR_PROJECT}/derivatives/inc/anat/native/${PREFIX}_T1w.nii.gz'
   echo '  --from                   string for fixed registration label,'
@@ -161,11 +177,7 @@ if [[ -n ${SID} ]]; then
 fi
 if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
 if [[ -z ${DIR_SAVE} ]]; then
-  if [[ -z ${COREG} ]]; then
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/anat
-  else
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/T2star_${TO}
-  fi
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/T2star
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
@@ -199,24 +211,41 @@ mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # coregistration (if specified) ------------------------------------------------
-if [[ -n ${COREG} ]]; then
-  if [[ -z ${REF} ]]; then
-    REF=${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_T1w.nii.gz
-  fi
+if [[ "${NORM}" == "true" ]] \
+&& [[ "${COREG_SYN}" == "false" ]] \
+&& [[ "${COREG_AFFINE}" == "false" ]] \
+&& [[ "${COREG_RIGID}" == "false" ]]; then
+  COREG_RIGID=true
+fi
+if [[ "${COREG_RIGID}" == "true" ]] \
+|| [[ "${COREG_AFFINE}" == "true" ]] \
+|| [[ "${COREG_SYN}" == "true" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>COREGISTERING T2STAR MAP"; fi
+  if [[ -z ${DIR_XFM} ]]; then
+    DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+  fi
+  if [[ -z ${COREG_REF} ]]; then
+    COREG_REF=${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_T1w.nii.gz
+  fi
+  if [[ "${COREG_SYN}" == "true" ]]; then
+    COREG_RECIPE=syn
+  elif [[ "${COREG_AFFINE}" == "true" ]]; then
+    COREG_RECIPE=affine
+  else
+    COREG_RECIPE=rigid
+  fi
   coreg_fcn="coregistrationChef --no-png"
-  coreg_fcn="${coreg_fcn} --recipe-name ${COREG}"
-  coreg_fcn="${coreg_fcn} --fixed ${REF}"
-  coreg_fcn="${coreg_fcn} --label-to ${TO}"
+  coreg_fcn="${coreg_fcn} --recipe-name ${COREG_RECIPE}"
+  coreg_fcn="${coreg_fcn} --fixed ${COREG_REF}"
+  coreg_fcn="${coreg_fcn} --label-to ${COREG_TO}"
   coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
-  coreg_fcn="${coreg_fcn} --label-from ${FROM}"
+  coreg_fcn="${coreg_fcn} --label-from ${COREG_FROM}"
   coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
-  coreg_fcn="${coreg_fcn} --dir-xfm ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}"
+  coreg_fcn="${coreg_fcn} --dir-xfm ${DIR_XFM}"
   if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
   eval ${coreg_fcn}
-  rename "reg-${COREG}+${TO}_" "" ${DIR_SCRATCH}/*.nii.gz
+  rename "reg-${COREG_RECIPE}+${COREG_TO}_" "" ${DIR_SCRATCH}/*.nii.gz
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
-
   if [[ "${NO_PNG}" == "false" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATE COREG PNG"; fi
     make3Dpng \
@@ -230,21 +259,78 @@ if [[ -n ${COREG} ]]; then
       --fg-cbar \
     --layout "6:x;6:x;6:x;6:y;6:y;6:y;6:z;6:z;6:z" \
     --offset "0,0,0" \
-    --filename ${PIDSTR}_mod-T2star_reg-${TO}_xfm-rigid \
-    --dir-save ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
+    --filename ${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-${COREG_RECIPE} \
+    --dir-save ${DIR_XFM}
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
   fi
 fi
 
+# Normalize (if specified) -----------------------------------------------------
+if [[ "${NORM}" == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>APPLYING NORMALIZATION"; fi
+  if [[ -z ${NORM_XFM} ]]; then
+    NORM_XFM[0]=${DIR_XFM}/${PIDSTR}_from-T1w+rigid_to-${TEMPLATE}+${SPACE}_xfm-syn.nii.gz
+    NORM_XFM[1]=${DIR_XFM}/${PIDSTR}_from-T1w+rigid_to-${TEMPLATE}+${SPACE}_xfm-affine.mat
+  else
+    NORM_XFM=(${NORM_XFM//,/ })
+  fi
+  if [[ "${COREG_RECIPE}" == "syn" ]]; then
+    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-syn.nii.gz)
+  fi
+  if [[ "${COREG_RECIPE}" == "affine" ]]; then
+    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-affine.mat)
+  fi
+  if [[ "${COREG_RECIPE}" == "syn" ]]; then
+    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-rigid.mat)
+  fi
+  if [[ -z ${NORM_REF} ]]; then
+    NORM_REF=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
+  fi
+  norm_fcn="antsApplyTransforms -d 3 -n Linear"
+  norm_fcn="${norm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
+  norm_fcn="${norm_fcn} -o ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz"
+  for (( i=0; i<${#NORM_XFM[@]}; i++ )); do
+    norm_fcn="${norm_fcn} -t ${NORM_XFM[${i}]}"
+  done
+  norm_fcn="${norm_fcn} -r ${NORM_REF}"
+  eval ${norm_fcn}
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+fi
+
 # move out to save location ----------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>SAVING OUTPUT"; fi
-mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz ${DIR_SAVE}/
+if [[ "${COREG_RIGID}" == "true" ]] \
+|| [[ "${COREG_AFFINE}" == "true" ]] \
+|| [[ "${COREG_SYN}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
+    ${DIR_SAVE}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz
+else  
+  mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
+    ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
+fi
+if [[ "${NORM}" == "true" ]]; then
+  mv ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz \
+    ${DIR_SAVE}/
+fi
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # generate png -----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATING PNG"; fi
-  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"  
+  if [[ "${COREG_RIGID}" == "true" ]] \
+  || [[ "${COREG_AFFINE}" == "true" ]] \
+  || [[ "${COREG_SYN}" == "true" ]]; then
+    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz --bg-color "cubehelix"
+  else
+    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"
+  fi
+  if [[ "${NORM}" == "true" ]]; then
+    make3Dpng --bg ${NORM_REF} \
+      --fg ${DIR_SAVE}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz \
+      --fg-color "cubehelix" --fg-alpha 50 --fg-cbar \
+      --filename ${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star \
+      --dir-save ${DIR_SAVE}
+  fi
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 fi
 
