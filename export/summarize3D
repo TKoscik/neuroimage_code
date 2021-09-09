@@ -157,7 +157,7 @@ IFS=x read -r -a pixdimTemp <<< $(PrintHeader ${LABEL} 1)
 PIXDIM="${pixdimTemp[0]}x${pixdimTemp[1]}x${pixdimTemp[2]}"
 
 # Summarize stats according to look up table -----------------------------------
-Rscript ${INC_R}/summarize3d.R \
+Rscript ${INC_R}/summarize3D.R \
   ${DIR_SCRATCH}/${PREFIX}_tempSummary.tsv \
   ${STATS_LS} \
   ${PIXDIM} \
