@@ -293,6 +293,7 @@ if [[ "${NORM}" == "true" ]]; then
     norm_fcn="${norm_fcn} -t ${NORM_XFM[${i}]}"
   done
   norm_fcn="${norm_fcn} -r ${NORM_REF}"
+  if [[ "${VERBOSE}" == "true" ]]; then echo ${norm_fcn}; fi
   eval ${norm_fcn}
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 fi
