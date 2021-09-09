@@ -211,6 +211,7 @@ if [[ -n ${COREG} ]]; then
   coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
   coreg_fcn="${coreg_fcn} --label-from ${FROM}"
   coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
+  coreg_fcn="${coreg_fcn} --dir-xfm ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}"
   if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
   eval ${coreg_fcn}
   rename "reg-${COREG}+${TO}_" "" ${DIR_SCRATCH}/*.nii.gz
