@@ -7,6 +7,8 @@
 #                       - added feature to read TE times from JSON files
 #                       - added option to coregister, specify registration type
 #                       - added PNGs for output
+#            2021-09-09 - added options for rigid, affine, or syn coregistration
+#                       - added application of normalization transforms
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -270,7 +272,7 @@ fi
 
 # Normalize (if specified) -----------------------------------------------------
 if [[ "${NORM}" == "true" ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>APPLYING NORMALIZATION"; fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>APPLYING NORMALIZATION XFMS"; fi
   if [[ -z ${NORM_XFM} ]]; then
     NORM_XFM[0]=${DIR_XFM}/${PIDSTR}_from-T1w+rigid_to-${TEMPLATE}+${SPACE}_xfm-syn.nii.gz
     NORM_XFM[1]=${DIR_XFM}/${PIDSTR}_from-T1w+rigid_to-${TEMPLATE}+${SPACE}_xfm-affine.mat
