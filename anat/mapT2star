@@ -46,8 +46,8 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvn --long prefix:,image:,te:,\
 coreg-rigid,coreg-affine,coreg-syn,coreg-ref:,coreg-from:,coreg-to:,\
-norm,norm-xfm:,norm-ref:,\
-dir-save:,dir-scratch:,\
+norm,norm-xfm:,norm-ref:,template:,space:,\
+dir-save:,dir-xfm:,dir-scratch:,\
 help,no-log,no-png,verbose -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -68,8 +68,8 @@ COREG_TO=native
 NORM=
 NORM_XFM=
 NORM_REF=
-NORM_TEMPLATE=HCPICBM
-NORM_SPACE=1mm
+TEMPLATE=HCPICBM
+SPACE=1mm
 DIR_SAVE=
 DIR_XFM=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
@@ -95,8 +95,8 @@ while true; do
     --norm) NORM=true ; shift ;;
     --norm-xfm) NORM_XFM="$2" ; shift 2 ;;
     --norm-ref) NORM_REF="$2" ; shift 2 ;;
-    --norm-template) NORM_TEMPLATE="$2" ; shift 2 ;;
-    --norm-space) NORM_SPACE="$2" ; shift 2 ;;
+    --template) TEMPLATE="$2" ; shift 2 ;;
+    --space) SPACE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
