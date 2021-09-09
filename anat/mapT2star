@@ -326,7 +326,11 @@ if [[ "${NO_PNG}" == "false" ]]; then
   if [[ "${COREG_RIGID}" == "true" ]] \
   || [[ "${COREG_AFFINE}" == "true" ]] \
   || [[ "${COREG_SYN}" == "true" ]]; then
-    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz --bg-color "cubehelix"
+    make3Dpng --bg ${COREG_REF} \
+      --fg ${DIR_SAVE}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz \
+      --fg-color "cubehelix" --fg-alpha 50 --fg-cbar \
+      --filename ${PIDSTR}_reg-${COREG_TO}_T2star \
+      --dir-save ${DIR_SAVE}
   else
     make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"
   fi
