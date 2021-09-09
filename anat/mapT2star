@@ -45,7 +45,7 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvn --long prefix:,image:,te:,\
-coreg-rigid,coreg-affine,coreg-syn,coreg-ref:,coreg-from:,coreg-to:,\
+coreg-rigid,coreg-affine,coreg-syn,coreg-ref:,coreg-from:,coreg-to:,coreg-verbose,\
 norm,norm-xfm:,norm-ref:,template:,space:,\
 dir-save:,dir-xfm:,dir-scratch:,\
 help,no-log,no-png,verbose -n 'parse-options' -- "$@")
@@ -65,6 +65,7 @@ COREG_SYN=false
 COREG_REF=
 COREG_FROM=raw
 COREG_TO=native
+COREG_VERBOSE=false
 NORM=
 NORM_XFM=
 NORM_REF=
@@ -92,6 +93,7 @@ while true; do
     --coreg-ref) COREG_REF="$2" ; shift 2 ;;
     --coreg-from) COREG_FROM="$2" ; shift 2 ;;
     --coreg-to) COREG_TO="$2" ; shift 2 ;;
+    --coreg-verbose) COREG_VERBOSE=true ; shift ;;
     --norm) NORM=true ; shift ;;
     --norm-xfm) NORM_XFM="$2" ; shift 2 ;;
     --norm-ref) NORM_REF="$2" ; shift 2 ;;
@@ -243,13 +245,14 @@ if [[ "${COREG_RIGID}" == "true" ]] \
   coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
   coreg_fcn="${coreg_fcn} --dir-xfm ${DIR_XFM}"
   if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
+  if [[ "${COREG_VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --ants-verbose"; fi
   eval ${coreg_fcn}
   rename "reg-${COREG_RECIPE}+${COREG_TO}_" "" ${DIR_SCRATCH}/*.nii.gz
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
   if [[ "${NO_PNG}" == "false" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATE COREG PNG"; fi
     make3Dpng \
-    --bg ${REF} \
+    --bg ${COREG_REF} \
       --bg-color "#000000,#00FF00,#FFFFFF" \
       --bg-thresh "10,99" \
     --fg ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
