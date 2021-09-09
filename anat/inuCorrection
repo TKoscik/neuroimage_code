@@ -279,8 +279,12 @@ if [[ "${METHOD,,}" == "n4" ]] \
   n4_fcn="${n4_fcn} -c ${CONVERGENCE}"
   n4_fcn="${n4_fcn} -b ${BSPLINE}"
   n4_fcn="${n4_fcn} -t ${HIST_SHARPEN}"
-  n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${NEW_PREFIX}_${MOD[0]}.nii.gz,"
-  n4_fcn="${n4_fcn}${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz]"
+  if [[ "${KEEP,,}" == "false" ]]; then
+    n4_fcn="${n4_fcn} -o ${DIR_SCRATCH}/${NEW_PREFIX}_${MOD[0]}.nii.gz"
+  else
+    n4_fcn="${n4_fcn} -o [${DIR_SCRATCH}/${NEW_PREFIX}_${MOD[0]}.nii.gz,"
+    n4_fcn="${n4_fcn}${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz]"
+  fi
   n4_fcn="${n4_fcn} -v ${VERBOSE}"
   eval ${n4_fcn}
 
