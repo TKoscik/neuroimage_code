@@ -298,7 +298,12 @@ if [[ "${METHOD,,}" == "n4" ]] \
     if [[ ${VERBOSE} -eq 1 ]]; then echo ">>>GENERATING PNGS"; fi
     make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD[0]}.nii.gz
     if [[ "${KEEP,,}" == "true" ]]; then
-      make3Dpng --bg ${DIR_SAVE}/${NEW_FIELD}_biasField.nii.gz --bg-color "plasma"
+      make3Dpng --bg ${DIR_SAVE}/${NEW_FIELD}_biasField.nii.gz \
+        --bg-color "plasma"
+    else
+      make3Dpng --bg ${DIR_SCRATCH}/${NEW_FIELD}_biasField.nii.gz \
+        --bg-color "plasma" \
+        --dir-save ${DIR_SAVE}
     fi
     if [[ ${VERBOSE} -eq 1 ]]; then echo "DONE"; fi
   fi
