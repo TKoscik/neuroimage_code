@@ -68,7 +68,8 @@ initialize-transforms-per-stage,\
 interpolation:,\
 restrict-deformation:,\
 initial-fixed-transform:,\
-initial-moving-transform:,metric:,\
+initial-moving-transform:,\
+metric:,\
 transform:,\
 convergence:,\
 smoothing-sigmas:,\
