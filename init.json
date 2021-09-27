@@ -7,8 +7,8 @@
         "INC_TEMPLATE": "${INC_DB}/templates",
         "INC_R": "${DIR_INC}/R",
         "INC_LUT": "${DIR_INC}/lut",
-        "INC_IMPORT": "${INC_TMP}/import",
-        "INC_QC": "${INC_TMP}/qc",
+        "INC_IMPORT": "/Dedicated/inc_scratch/import",
+        "INC_QC": "/Dedicated/inc_scratch/qc",
         "PINCAPP": "/Shared/pinc/sharedopt/apps"
     },
     "export_paths": [

@@ -1006,7 +1006,7 @@ for (( i=0; i<${NY}; i++ )); do
       ${DIR_SCRATCH}/Y${i}.png
   fi
 done
-for (( i=0; i<${NX}; i++ )); do
+for (( i=0; i<${NZ}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
       LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
