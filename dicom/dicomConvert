@@ -122,12 +122,12 @@ for (( i=0; i<${N_SCAN}; i++ )); do
 done
 
 if [[ -n ${REORIENT} ]]; then
-  if [[ "${REORIENT,,}" =~ "r" ]] | [[ "${REORIENT,,}" =~ "l" ]]; then
-    if [[ "${REORIENT,,}" =~ "p" ]] | [[ "${REORIENT,,}" =~ "a" ]]; then
-      if [[ "${REORIENT,,}" =~ "i" ]] | [[ "${REORIENT,,}" =~ "s" ]]; then
+  if [[ "${REORIENT,,}" =~ "r" ]] || [[ "${REORIENT,,}" =~ "l" ]]; then
+    if [[ "${REORIENT,,}" =~ "p" ]] || [[ "${REORIENT,,}" =~ "a" ]]; then
+      if [[ "${REORIENT,,}" =~ "i" ]] || [[ "${REORIENT,,}" =~ "s" ]]; then
         FLS=($(ls ${DIR_SAVE}/*.nii.gz))
         N=${#FLS[@]}
-        for (( i=0; i<${N}, i++ )); do
+        for (( i=0; i<${N}; i++ )); do
           CUR_ORIENT=$(3dinfo -orient ${FLS[${i}]})
           if [[ "${CUR_ORIENT,,}" != "${REORIENT,,}" ]]; then
             mv ${FLS[${i}]} ${DIR_SAVE}/temp.nii.gz

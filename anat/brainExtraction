@@ -43,7 +43,7 @@ trap egress EXIT
 OPTS=$(getopt -o hvln --long prefix:,label:,\
 image:,method:,suffix:,spatial-filter:,filter-radius:,automask-clip:,\
 dir-save:,dir-scratch:,\
-help,verbose,no-log -n 'parse-options' -- "$@")
+help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1

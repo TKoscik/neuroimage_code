@@ -62,7 +62,7 @@ save-state:,\
 restore-state:,\
 write-composite-transform,\
 print-similarity-measure-interval:,\
-write-internal-volumes:,\
+write-interval-volumes:,\
 collapse-output-transforms,\
 initialize-transforms-per-stage,\
 interpolation:,\
@@ -94,6 +94,7 @@ keep-inv-xfm,\
 dir-save:,\
 dir-xfm:,\
 dir-scratch:,\
+dir-interval:,\
 verbose,\
 help,\
 no-log,\
@@ -139,7 +140,7 @@ while true; do
     --restore-state) RESTORE_STATE="$2" ; shift 2 ;;
     --write-composite-transform) WRITE_COMPOSITE_TRANSFORM=true ; shift ;;
     --print-similarity-measure-interval) PRINT_SIMILARITY_MEASURE_INTERVAL="$2" ; shift 2 ;;
-    --write-internal-volumes) WRITE_INTERNAL_VOLUMES="$2" ; shift 2 ;;
+    --write-interval-volumes) WRITE_INTERVAL_VOLUMES="$2" ; shift 2 ;;
     --collapse-output-transforms) COLLAPSE_OUTPUT_TRANSFORMS=true ; shift ;;
     --initialize-transforms-per-stage) INITIALIZE_TRANSFORMS_PER_STAGE="true" ; shift ;;
     --interpolation) INTERPOLATION="$2" ; shift 2 ;;
@@ -171,6 +172,7 @@ while true; do
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --dir-interval) DIR_INTERVAL="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -951,8 +953,8 @@ fi
 if [[ ${PRINT_SIMILARITY_MEASURE_INTERVAL} -ne 0 ]]; then
   antsCoreg="${antsCoreg} --print-similarity-measure-interval ${PRINT_SIMILARITY_MEASURE_INTERVAL}"
 fi
-if [[ ${WRITE_INTERNAL_VOLUMES} -ne 0 ]]; then
-  antsCoreg="${antsCoreg} --write-internal-voumes ${WRITE_INTERNAL_VOLUMES}"
+if [[ ${WRITE_INTERVAL_VOLUMES} -ne 0 ]]; then
+  antsCoreg="${antsCoreg} --write-interval-voumes ${WRITE_INTERVAL_VOLUMES}"
 fi
 if [[ "${COLLAPSE_OUTPUT_TRANSFORMS}" == "true" ]]; then
   antsCoreg="${antsCoreg} --collapse-output-transforms 1"
@@ -1041,21 +1043,20 @@ mkdir -p ${DIR_SAVE}
 if [[ "${KEEP_FWD_XFM}" == "true" ]] || [[ "${KEEP_INV_XFM}" == "true" ]]; then mkdir -p ${DIR_XFM}; fi
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
-##DEBUG
-#mkdir -p /Shared/koscikt_scratch/toHOME/coregChef_test/
-#cp ${FIXED[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/FIXED_0.nii.gz
-#cp ${FIXED[1]} /Shared/koscikt_scratch/toHOME/coregChef_test/FIXED_1.nii.gz
-#cp ${FIXED_MASK[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/FIXED_MASK.nii.gz
-#cp ${MOVING[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/MOVING_0.nii.gz
-#cp ${MOVING[1]} /Shared/koscikt_scratch/toHOME/coregChef_test/MOVING_1.nii.gz
-#cp ${MOVING_MASK[0]} /Shared/koscikt_scratch/toHOME/coregChef_test/MOVING_MASK.nii.gz
-#exit 0
-
 # run coregistration -----------------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>run coregistration"; fi
 #writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${antsCoreg}"
 eval "${antsCoreg}"
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
+
+# if intervals are written save to desired directory ===========================
+if [[ ${WRITE_INTERVAL_VOLUMES} -ne 0 ]]; then
+  if [[ -z ${DIR_INTERVAL} ]]; then
+    DIR_INTERVAL=${DIR_SAVE}
+  fi
+  rename "Stage" "${PIDSTR}_stage-" ${DIR_SCRATCH}/Stage*
+  mv ${DIR_SCRATCH}/${PIDSTR}_stage-* ${DIR_INTERVAL}/
+fi
 
 # apply transforms =============================================================
 if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>apply transforms to MOVING"; fi
@@ -1162,23 +1163,23 @@ if [[ "${NO_PNG}" == "false" ]]; then
   for (( i=0; i<${#MOVING_OUTPUT[@]}; i++ )); do
     make3Dpng \
       --bg ${DIR_SAVE}/${MOVING_OUTPUT[${i}]} \
-      --bg-threshold "5,99" \
+      --bg-threshold "2.5,97.5" \
       --dir-save ${DIR_SAVE}
   done
   if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     for (( i=0; i<${#APPLY_OUTPUT[@]}; i++ )); do
         make3Dpng \
           --bg ${DIR_SAVE}/${APPLY_OUTPUT[${i}]} \
-          --bg-threshold "5,99" \
+          --bg-threshold "2.5,97.5" \
           --dir-save ${DIR_SAVE}
     done
   fi
   make3Dpng \
     --bg ${FIXED[0]} \
       --bg-color "#000000,#00FF00,#FFFFFF" \
-      --bg-thresh "10,99" \
+      --bg-thresh "2.5,97.5" \
     --fg ${DIR_SAVE}/${MOVING_OUTPUT[0]} \
-      --fg-thresh "10,99" \
+      --fg-thresh "2.5,97.5" \
       --fg-color "#000000,#FF00FF,#FFFFFF" \
       --fg-alpha 50 \
       --fg-cbar \
@@ -1193,4 +1194,5 @@ fi
 # End of Function
 #===============================================================================
 exit 0
+
 
