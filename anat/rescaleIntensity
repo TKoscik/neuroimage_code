@@ -39,7 +39,7 @@ function egress {
 trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
-image:,mask:,keep-neg,lo:,hi:,datatype:,\
+image:,keep-neg,lo:,hi:,datatype:,\
 dir-save:,dir-scratch:,\
 help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -50,11 +50,10 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 IMAGE=
-MASK=
 KEEP_NEG=false
 LO=0
-HI=0.999
-DATATYPE="INT"
+HI=1
+DATATYPE="UINT16"
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -69,7 +68,6 @@ while true; do
     -n | --no-png) NO_PNG=true ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
-    --mask) MASK="$2" ; shift 2 ;;
     --keep-neg) KEEP_NEG=true ; shift ;;
     --lo) LO="$2" ; shift 2 ;;
     --hi) HI="$2" ; shift 2 ;;
@@ -91,20 +89,33 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -v | --verbose   add verbose output to log file'
   echo '  -k | --keep      keep preliminary processing steps'
   echo '  -l | --no-log    disable writing to output log'
-  echo '  --prefix         prefix for output, default: sub-123_ses-1234abcd'
+  echo '  -n | --no-png    disable making png of output'
+  echo '  --prefix         prefix for output'
+  echo '                     default: sub-123_ses-1234abcd_prep-rescale'
   echo '  --image          input nii.gz file'
-  echo '  --mask           estimate intensity limtis within mask'
   echo '  --keep-neg       toggle to keep negative values, default no'
   echo '  --lo             lower threshold as percentile of intensity,'
   echo '                   default=0, applied after thresholding at 0 if'
   echo '                   not keeping negative values'
-  echo '  -hi              upper threshold as percentil of intensity,'
+  echo '  --hi             upper threshold as percentil of intensity,'
   echo '                   applied after discarding/keeping negative values'
-  echo '                   default=0.9999'
-  echo '  --datatype       desired output datatype, default="INT" (signed integer)'
+  echo '                   default=1'
+  echo '  --datatype       desired output datatype, not case sensitive'
+  echo '                   options: INT8   (CHAR, signed 8-bit integer)'
+  echo '                            UINT8  (UCHAR, unsigned 8-bit integer)'
+  echo '                            INT16  (SHORT, signed 16-bit integer)'
+  echo '                  <DEFAULT> UINT16 (USHORT, unsigned 16-bit integer)'
+  echo '                            INT32  (INT, signed 32-bit integer)'
+  echo '                            UINT32 (UINT, unsigned 32-bit integer)'
+  echo '                            FLOAT  (FLOAT32, 32-bit floating point)'
+  echo '                            NULL   No Conversion'
   echo '  --dir-save       directory to save output,'
-  echo '         default: ${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}/ses-${SID}'
+  echo '      default: ${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}/ses-${SID}'
   echo '  --dir-scratch    directory for temporary workspace'
+  echo 'NOTE: given the default options the default behaviour of this'
+  echo '      function is to wipe out negative values and convert to datatype'
+  echo '      to 16-bit unsigned integers, and the intensity values are scaled'
+  echo '      to the dynamic range of this datatype'
   echo ''
   NO_LOG=true
   exit 0
@@ -121,11 +132,7 @@ DIRPID=sub-${PID}
 if [ -n "${SID}" ]; then DIRPID=${DIRPID}/ses-${SID}; fi
 if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${IMAGE})
-  PREP=$(getField -i ${PREFIX} -f prep)
-  if [[ -n ${PREP} ]]; then
-    PREP="${PREP}+"
-    PREFIX=$(modField -i ${PREFIX} -r -f prep)
-  fi
+  PREFIX=$(modField -i ${PREFIX} -a -f prep -v rescale)
 fi
 if [[ -z "${DIR_SAVE}" ]]; then 
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
@@ -133,46 +140,43 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
-# gather modality for output
+# gather modality for output ---------------------------------------------------
 MOD=($(getField -i ${IMAGE} -f "modality"))
 
-# set inputs and outputs
+# set inputs and outputs -------------------------------------------------------
 SRC=${IMAGE}
 NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v rescale)
 TRG=${DIR_SCRATCH}/${NEW_PREFIX}_${MOD}.nii.gz
 
-# cutoff negative values if desired
-if [[ "${RM_NEG}" == "true" ]]; then
+# cutoff negative values if desired --------------------------------------------
+if [[ "${KEEP_NEG}" == "true" ]]; then
   fslmaths ${IMAGE} -thr 0 ${TRG}
   SRC=${TRG}
 fi
 
-# truncate at desired percentile
-ImageMath 3 ${TRG} TruncateImageIntensity ${SRC} ${LO} ${HI} 100
-
-# convert datatype
-if [[ "${DATATYPE,,}" != "null" ]]; then
-  case ${DATATYPE,,} in
-    float) DT=0 ;;
-    uchar) DT=1 ;;
-    ushort) DT=2 ;;
-    uint) DT=3 ;;
-    ulong) DT=4 ;;
-    char) DT=5 ;;
-    short) DT=6 ;;
-    int) DT=7 ;;
-    long) DT=8 ;;
-    floatvec) DT=9 ;;
-    veccomp) DT=10 ;;
-    timecomp) DT=11 ;;
-    floatvec) DT=12 ;;
-  esac
-  ConvertImage 3 ${TRG} ${TRG} ${DT}
+# truncate at desired percentile -----------------------------------------------
+if [[ "${LO}" != 0 ]] || [[ "${HI}" != 1 ]]; then
+  ImageMath 3 ${TRG} TruncateImageIntensity ${SRC} ${LO} ${HI} 256
+  SRC=${TRG}
 fi
 
-#  copy output to final file
+# convert datatype -------------------------------------------------------------
+if [[ "${DATATYPE,,}" != "null" ]]; then
+  case ${DATATYPE,,} in
+    int8|char) ConvertImagePixelType ${TRG} ${SRC} 0 ;;
+    uint8|uchar) ConvertImagePixelType ${TRG} ${SRC} 1 ;;
+    int16|short) ConvertImagePixelType ${TRG} ${SRC} 2 ;;
+    uint16|ushort) ConvertImagePixelType ${TRG} ${SRC} 3 ;;
+    int32|int) ConvertImagePixelType ${TRG} ${SRC} 4 ;;
+    uint32|uint) ConvertImagePixelType ${TRG} ${SRC} 5 ;;
+    float|float32) ConvertInputImagePixelTypeToFloat ${TRG} ${SRC} 4 ;;
+  esac
+fi
+
+# copy output to final file ----------------------------------------------------
 mv ${TRG} ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
 
+# generate out PNG -------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
   make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
 fi
