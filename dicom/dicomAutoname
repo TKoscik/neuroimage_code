@@ -105,7 +105,7 @@ for (( i=0; i<${N_FLS}; i++)); do
   unset FNAME BNAME SUBDIR SUFFIX TEMP
   unset TLS QC_TSV OUT_STR
   FNAME="${FLS[${i}]##*/}"
-  BNAME="${FNAME[${i}]%%.*}"
+  BNAME="${FNAME%%.*}"
   FNAME_ORIG+="${BNAME}"
   TEMP=(${BNAME//_x-x_/ })
 
@@ -156,9 +156,9 @@ for (( i=0; i<${N_FLS}; i++)); do
 #### NOTE: This may break for multi echo / not be to BIDs standards but currently will work.  #### 
   unset PARTS
   PARTS=(${SUFFIX//_/ })
-  ARR_N=$((${#PARTS[@]}-1))
+  ARR_N=$(( ${#PARTS[@]}-1 ))
   TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_${PARTS[0]}*${PARTS[1]}*.nii.gz 2>/dev/null))
-  if [[ "${#TLS[@]}" > "1" ]]; then
+  if [[ "${#TLS[@]}" -ge "1" ]]; then
     PARTS=( "${PARTS[@]:0:${ARR_N}}" "run-${#TLS[@]}" "${PARTS[@]:${ARR_N}}" )
     SUFFIX=($(IFS=_ ; echo "${PARTS[*]}"))
   fi
@@ -167,7 +167,7 @@ for (( i=0; i<${N_FLS}; i++)); do
   rename "${BNAME}" "sub-${PID}_ses-${SID}_${SUFFIX}" ${DIR_INPUT}/*
 
   QC_TSV=${DIR_INPUT}/sub-${PID}_ses-${SID}_dicomConversion.tsv
-  if [[ ! -f ${OC_TSV} ]]; then
+  if [[ ! -f ${QC_TSV} ]]; then
     echo -ne "dir_dicom\t" > ${QC_TSV}
     echo -ne "series_description\t" >> ${QC_TSV}
     echo -ne "scan_date\t" >> ${QC_TSV}
@@ -201,11 +201,12 @@ for (( i=0; i<${N_FLS}; i++)); do
   echo -ne "-\t" >> ${QC_TSV}
   echo -e "-" >> ${QC_TSV}
 
+done
   mv ${DIR_INPUT} \
     ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
   chgrp -R Research-INC_img_core ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
   chmod -R 770 ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
-done
+
 
 #===============================================================================
 # End of Function

@@ -145,8 +145,7 @@ MOD=($(getField -i ${IMAGE} -f "modality"))
 
 # set inputs and outputs -------------------------------------------------------
 SRC=${IMAGE}
-NEW_PREFIX=$(modField -i ${PREFIX} -a -f prep -v rescale)
-TRG=${DIR_SCRATCH}/${NEW_PREFIX}_${MOD}.nii.gz
+TRG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
 # cutoff negative values if desired --------------------------------------------
 if [[ "${KEEP_NEG}" == "true" ]]; then
@@ -163,22 +162,22 @@ fi
 # convert datatype -------------------------------------------------------------
 if [[ "${DATATYPE,,}" != "null" ]]; then
   case ${DATATYPE,,} in
-    int8|char) ConvertImagePixelType ${TRG} ${SRC} 0 ;;
-    uint8|uchar) ConvertImagePixelType ${TRG} ${SRC} 1 ;;
-    int16|short) ConvertImagePixelType ${TRG} ${SRC} 2 ;;
-    uint16|ushort) ConvertImagePixelType ${TRG} ${SRC} 3 ;;
-    int32|int) ConvertImagePixelType ${TRG} ${SRC} 4 ;;
-    uint32|uint) ConvertImagePixelType ${TRG} ${SRC} 5 ;;
-    float|float32) ConvertInputImagePixelTypeToFloat ${TRG} ${SRC} 4 ;;
+    int8|char) ConvertImagePixelType ${SRC} ${TRG} 0 ;;
+    uint8|uchar) ConvertImagePixelType ${SRC} ${TRG} 1 ;;
+    int16|short) ConvertImagePixelType ${SRC} ${TRG} 2 ;;
+    uint16|ushort) ConvertImagePixelType ${SRC} ${TRG} 3 ;;
+    int32|int) ConvertImagePixelType ${SRC} ${TRG} 4 ;;
+    uint32|uint) ConvertImagePixelType ${SRC} ${TRG} 5 ;;
+    float|float32) ConvertInputImagePixelTypeToFloat ${SRC} ${TRG} 4 ;;
   esac
 fi
 
 # copy output to final file ----------------------------------------------------
-mv ${TRG} ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
+mv ${TRG} ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 
 # generate out PNG -------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
-  make3Dpng --bg ${DIR_SAVE}/${NEW_PREFIX}_${MOD}.nii.gz
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 fi
 
 #===============================================================================

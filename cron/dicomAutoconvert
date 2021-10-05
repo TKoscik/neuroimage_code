@@ -72,7 +72,7 @@ fi
 
 # get list of zip files --------------------------------------------------------
 ZIP_LS=($(ls ${DIR_INPUT}/*.zip))
-N_ZIP=${#N_ZIP[@]}
+N_ZIP=${#ZIP_LS[@]}
 
 # loop over folders ------------------------------------------------------------
 ## setup new folder in DIR_QC/dicom/pi-PI_project-PROJECT_sub-PID_YYmmdd
@@ -86,10 +86,11 @@ for (( i=0, i<${N_ZIP}; i++ )); do
   BNAME="${FNAME%%.*}"
 
   mkdir -p ${DIR_OUTPUT}/${BNAME}
-  mv ${ZIP_LS[${i}]} ${DIR_OUTPUT}/${BNAME}
+#  mv ${ZIP_LS[${i}]} ${DIR_OUTPUT}/${BNAME}
 
   dicomConvert \
-  --input ${DIR_OUTPUT}/${BNAME}/${FNAME%%.*}.zip \
+#  --input ${DIR_OUTPUT}/${BNAME}/${FNAME%%.*}.zip \
+  --input ${ZIP_LS[${i}]} \
   --dir-save ${DIR_OUTPUT}/${BNAME}
 
   dicomAutoname \

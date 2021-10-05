@@ -132,6 +132,7 @@ if [[ -n ${REORIENT} ]]; then
           if [[ "${CUR_ORIENT,,}" != "${REORIENT,,}" ]]; then
             mv ${FLS[${i}]} ${DIR_SAVE}/temp.nii.gz
             3dresample -orient ${REORIENT,,} -prefix ${FLS[${i}]} -input ${DIR_SAVE}/temp.nii.gz
+            rm ${DIR_SAVE}/temp.nii.gz
           fi
         done
       fi
