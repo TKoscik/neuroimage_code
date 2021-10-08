@@ -157,7 +157,7 @@ for (( i=0; i<${N_FLS}; i++)); do
   unset PARTS
   PARTS=(${SUFFIX//_/ })
   ARR_N=$(( ${#PARTS[@]}-1 ))
-  TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_${PARTS[0]}*${PARTS[1]}*.nii.gz 2>/dev/null))
+  TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_*${PARTS[0]}*${PARTS[1]}*.nii.gz 2>/dev/null))
   if [[ "${#TLS[@]}" -ge "1" ]]; then
     PARTS=( "${PARTS[@]:0:${ARR_N}}" "run-${#TLS[@]}" "${PARTS[@]:${ARR_N}}" )
     SUFFIX=($(IFS=_ ; echo "${PARTS[*]}"))

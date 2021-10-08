@@ -3,11 +3,11 @@
         "T1w": ["AXT1SE","AxialT1SPGR","CORFSPGRBRAVO","CORFSPGRBRAVOUNTILPROMO","CORMPRAGEPROMO","CORMPRAGET1HIPPO","CorFSPGRBRAVO","MPRAGEFor31P","MPRAGET1","MPRAGET16512512","MPRAGET14512512","MPRAGET1AXIAL450","MPRAGET1AXIAL","MPRAGET1COR","MPRAGET1Coronal","MPRAGET1CoronalTI900","MPRAGEPROMO","PUCorFSPGRBRAVO","PUCORFSPGRBRAVO","PUMPRAGEPROMO","PUSAGFSPGRBRAVO","SagCUBET1FS","SAGMPRAGEPROMO","SAGMPRAGET1","SAGFSPGRBRAVO","SagittalBRAVOT1","SCCorFSPGRBRAVO","SCSAGFSPGRBRAVO","T1","CORFSPGRBRAVOe1","CORFSPGRBRAVOe2","CORFSPGRBRAVOe3","CORFSPGRBRAVOe4","2MPRAGET1CoronalTI900","3MPRAGET1CoronalTI900","3DSagT1MPRAGE","MPRAGET1ND","3DT1","T1weighted","FilteredT1weighted","SCCORFSPGRBRAVO","MPRAGET1CoronalTI1000","MPRAGET1CoronalTI800","AxT1FSE","CORFSPGRBRAVORUNTHISUNTILPROMOWORKS","ABCDT1wMPRvNavsetter","T1wMPRvNav","T1wMPR","ABCDT1wMPRvNav","MPRAGET1TI1100","SagMPRAGET1R2X2","SagMPRAGET1R2X1","CORMPRAGE"],
         "proc-orig_T1w": ["ORIGT1","ORIGCORFSPGRBRAVO","ORIGCORFSPGRBRAVOUNTILPROMO","ORIGCORMPRAGEPROMO","ORIGCorFSPGRBRAVO","ORIGSAGFSPGRBRAVO","ORIGSAGMPRAGEPROMO","ORIGCORFSPGRBRAVOe1","ORIGCORFSPGRBRAVOe2","ORIGCORFSPGRBRAVOe3","ORIG3DSagT1MPRAGE","ORIGT1weighted"],
         "T2w": ["3DSAGCUBET2","AXT2FRFSE","CorCUBET2","CORCUBET2","CORCUBET2PROMO","CORCubeT2PROMO","CORHIPPOT2OBL","CORT2CubePROMO","CUBET2CORONAL","CUBET2SagittalTE65","CUBET2Sagittal","DRTT2SAGLO","DRTT2AXLO","DRTT2CORLO","DRTT2AXHI","PUCORCUBET2","PUCORCubeT2PROMO","PUCUBET2CORONAL","PUCUBET2Sagittal","PUCUBET2SagittalTE65","SagCUBET2","SagCUBET2HIRES5","SagCUBET2PROMO","SCCORCUBET2","T2","T2axial","T2PREP3DT2","T2TSECOR","T2TSECORFC","T2VAR155B15VERSION","T2VAR155B15VERSIONS3ND","4T2VAR155B15VERSION","5T2VAR155B15VERSION","6T2axial","3DSagT2Cube","t2spctrap2iso10","tsevfl","3DT2","T2weighted","FilteredT2weighted","PUCorCUBET2","T2VAR155","SCCorCUBET2","ABCDT2wSPCvNavsetter","ABCDT2wSPCvNav","FIESTA01x01x015","HighResAnat","AXT2","FIESTA009x01x012","t2spaceCOR"],
-        "proc-orig_T2w": ["ORIGT2","ORIG3DSAGCUBET2","ORIGCorCUBET2","ORIGCORCUBET2","ORIGCORCUBET2PROMO","ORIGCORT2CubePROMO","ORIGCUBET2CORONAL","ORIGCUBET2Sagittal","ORIGSagCUBET2PROMO","ORIG3DSagT2Cube"],
+        "proc-orig_T2w": ["ORIGT2","ORIG3DSAGCUBET2","ORIGCorCUBET2","ORIGSagCUBET2","ORIGCORCUBET2","ORIGCORCUBET2PROMO","ORIGCORT2CubePROMO","ORIGCUBET2CORONAL","ORIGCUBET2Sagittal","ORIGSagCUBET2PROMO","ORIG3DSagT2Cube"],
         "acq-SL10_T1rho": ["T1rhoSL10","T1RHOMAP10ms","T1rhoSL10NOAUTOPRESCANMANUALTHENSCAN","T1rhoSL10MANUALPRESCAN","T1rhonewSL10"],
         "acq-SL50_T1rho": ["T1rhoSL50","T1rhonewSL50"],
         "acq-SL60_T1rho": ["T1RHOMAP60ms"],
-        "acq-SL80_T1rho": ["T1rhoSL80"],
+        "acq-SL80_T1rho": ["T1rhoSL80","T1rhonewSL80"],
         "acq-SL90_T1rho": ["CPJgret2extv3TE90","CPJgret1rhoextv3TSL90"],
         "acq-SL+unk_T1rho": ["CPJgret1rhoextv3Bn","CPJgret1rhoextv3TSL0"],
         "T1map": [],
@@ -33,7 +33,7 @@
     },
     "dwi": {
         "acq-b500_dwi": ["DWIB5006Dir","dticmrrvx2b500ap","dticmrrvx2b500pa"],
-        "acq-b1000_dwi": ["DTI30Dirb1000","DTIb100045Dir","DTIb100045DirNew","DTIb100050Dir","DTIb100060Dir","DTIb100060DirMB","DWIb1000COR","MSDTI1mmb1000slgp1","MSDTI1mmb2000slgp1","DWIB100015Dir"],
+        "acq-b1000_dwi": ["DTI30Dirb1000","DTIb100045Dir","DTIb100045DirNew","DTIb100050Dir","DTIb100060Dir","DTIb100060DirMB","DWIb1000COR","MSDTI1mmb1000slgp1","MSDTI1mmb2000slgp1","DWIB100015Dir","DTIb100032DirMB"],
         "acq-b1800_dwi": ["DTIb180045Dir","DTIb180045DirNew","DTIb180050Dir","DTIb180060Dir","DTIb180060DirMB"],
         "acq-b2000_dwi": ["MBDifB200035DIR","MBDifB200035DIRREVPE","MBDifB200036DIR","MBDifB200036DIRREVPE","MBDifB200036DIR17","MBDifB200036DIR17REVPE","MBDiffB200035DIR","MBDiffB200035DIRREVPE","MBDiffB200036DIR","MBDiffB200036DIRREVPE","DWIB200015Dir"],
         "acq-b3000_dwi": ["DWIB300060Dir"],
@@ -43,7 +43,7 @@
         "acq-unk_dwi": ["DTI","AxDWI","Diffusion6Direction","Diffusion12Direction","DTITopUp","MBDiffusionRun198DIR","MSDTISCAPCN","7DTI30DIRECTIONSB15","DTI30Directionse1","dticmrrvx2b2k","DTI1","DTI2","DTI70Directions","DTI12DIRECTIONS","DIFF64DIR","DTI30DIRECTIONS","ABCDdMRI","DTITopUpSE32Dir","DTI30dir1b0run1","DTI30dir1b0run1ADC","DTI30dir1b0run1TRACEW","DTI30dir1b0run1FA","DTI30dir1b0run1ColFA"]
     },
     "loc": {
-        "loc": ["3PlaneLocSSFSE","3PlaneLocSSFSEi00004","3PlaneLocSSFSEi00007","3PlaneLocFGRE","ASSETcalibration","HOS","HOS2cm","HOS28usingGRE","loc","localizer","LOCALIZER","LOCFORSPECT","locobl","MSDTI1mmb10forcal","SAGLocSSFSE","SINGLEVOXEL40TEWSRTPutamen","SINGLEVOXEL40TEWSLEFT","NOTDIAGNOSTICTGchange719031sLASERCalTGCRBLWM","NOTDIAGNOSTICTGchange1303010sLASERCalTGPons","NOTDIAGNOSTICsLASERCRBLWM","NOTDIAGNOSTICsLASERPons","fidallspspblosi","fidallhardpulse","NOTDIAGNOSTIC31P3DFIDCSI","researchBSSTEAMVermis1684103","sLASERSV30Vermis","NOTDIAGNOSTICsLASERSV30Vermis","researchBSSTEAMPutamen568014","sLASERSV30Putamen","NOTDIAGNOSTICsLASERSV30Putamen","1localizer","NOTDIAGNOSTICwaterstability8ml","researchBSSTEAMVermis1850024","researchBSSTEAMPutamen1179023","researchBSSTEAMVermis4576445","researchBSSTEAMPutamen2028022","3PlaneLocSSFSEe1","3PlaneLocalizer","localizer32ch","GEHOSFOV28","LOCALIZERi00001","LOCALIZERi00004","LOCALIZERi00007","3PlaneLocalizeri00001","3PlaneLocalizeri00012","3PlaneLocalizeri00023","localizeri00001","localizeri00002","localizeri00003","3PlaneLoci00001","3PlaneLoci00011","3PlaneLoci00021","WATERAx2DIDEALFatWater","FATAx2DIDEALFatWater","InPhaseAx2DIDEALFatWaterph","OutPhaseAx2DIDEALFatWaterph","3PlaneLocSSFSEi00003","3PlaneLocSSFSEi00001","3PlaneLocSSFSEi00005","3PlaneLocSSFSEi00011","3PlaneLocSSFSEi00021","localizer32chi00001","localizer32chi00002","localizer32chi00003","3PlaneLocFGREi00001","3PlaneLocFGREi00013","3PlaneLocFGREi00025","3PlaneLocFGREi00004","3PlaneLocFGREi00007","LowResLoci00001","LowResLoci00002","LowResLoci00003","HighResLoci00001","HighResLoci00008","HighResLoci00015","HighResLoci000015","loci00001","loci00010","loci00019","3PlaneLocFGREi00011","3PlaneLocFGREi00021","3PlaneLocSSFSEi00010","3PlaneLocSSFSEi00019"]
+        "loc": ["3PlaneLocSSFSE","3PlaneLocSSFSEi00004","3PlaneLocSSFSEi00007","3PlaneLocFGRE","ASSETcalibration","3PlaneLocSSFSEi00006","HOS","HOS2cm","HOS28usingGRE","loc","localizer","LOCALIZER","LOCFORSPECT","locobl","MSDTI1mmb10forcal","SAGLocSSFSE","SINGLEVOXEL40TEWSRTPutamen","SINGLEVOXEL40TEWSLEFT","NOTDIAGNOSTICTGchange719031sLASERCalTGCRBLWM","NOTDIAGNOSTICTGchange1303010sLASERCalTGPons","NOTDIAGNOSTICsLASERCRBLWM","NOTDIAGNOSTICsLASERPons","fidallspspblosi","fidallhardpulse","NOTDIAGNOSTIC31P3DFIDCSI","researchBSSTEAMVermis1684103","sLASERSV30Vermis","NOTDIAGNOSTICsLASERSV30Vermis","researchBSSTEAMPutamen568014","sLASERSV30Putamen","NOTDIAGNOSTICsLASERSV30Putamen","1localizer","NOTDIAGNOSTICwaterstability8ml","researchBSSTEAMVermis1850024","researchBSSTEAMPutamen1179023","researchBSSTEAMVermis4576445","researchBSSTEAMPutamen2028022","3PlaneLocSSFSEe1","3PlaneLocalizer","localizer32ch","GEHOSFOV28","LOCALIZERi00001","LOCALIZERi00004","LOCALIZERi00007","3PlaneLocalizeri00001","3PlaneLocalizeri00012","3PlaneLocalizeri00023","localizeri00001","localizeri00002","localizeri00003","3PlaneLoci00001","3PlaneLoci00011","3PlaneLoci00021","WATERAx2DIDEALFatWater","FATAx2DIDEALFatWater","InPhaseAx2DIDEALFatWaterph","OutPhaseAx2DIDEALFatWaterph","3PlaneLocSSFSEi00003","3PlaneLocSSFSEi00001","3PlaneLocSSFSEi00005","3PlaneLocSSFSEi00011","3PlaneLocSSFSEi00021","localizer32chi00001","localizer32chi00002","localizer32chi00003","3PlaneLocFGREi00001","3PlaneLocFGREi00013","3PlaneLocFGREi00025","3PlaneLocFGREi00004","3PlaneLocFGREi00007","LowResLoci00001","LowResLoci00002","LowResLoci00003","HighResLoci00001","HighResLoci00008","HighResLoci00015","HighResLoci000015","loci00001","loci00010","loci00019","3PlaneLocFGREi00011","3PlaneLocFGREi00021","3PlaneLocSSFSEi00010","3PlaneLocSSFSEi00019"]
     },
     "fmap": {
         "fieldmap": ["FieldMap","FieldMapBOLD","FieldMape1","fMRIFieldmapP","fMRIFieldmapA","FieldMapBOLDe1","FieldMapBOLDe2","FieldMapBOLDe3","FieldMapBOLDe2ph","rsfMRIFieldMapt29477","Fieldmapping4X4X4APe1","Fieldmapping4X4X4APe2","Fieldmapping4X4X4APe2ph","Fieldmapping4X4X4AP"],
@@ -54,7 +54,9 @@
         "task-DDT_bold": ["DDT"],
         "task-HIPPO_bold": ["HIPPOTASK","HIPPO"],
         "task-NBACK_bold": ["NBACKAX"],
-        "task-rest_bold": ["fMRIAxRestingState","MBrsfMRI","MBrsfMRIREVPE","PUfMRIRestingState","PUREST","REST","RESTSTATE","RestingStatAX","fMRIRestingState","passiveAX","RestingStatAXe1","RESTRun3","RESTRun4REV","RESTRun1","RESTRun2REV","rest32chmb6APcmrrmbep2dbold","ABCDfMRIrest","restAP","restPA","Rest3PE1","Rest1PE1","Rest4PE2","Rest2PE2","RESTRun3t299840","RESTRun4REVt299840","RESTRun1t299840","RESTRun2REVt299840","ABCDfMRIrestPA","ABCDfMRIrestAP","RESTRun2REVt640","Rest3PE1t299987","Rest4PE2t299987","Rest1PE1t299987","Rest2PE2t299987","RESTRun3t166240","Rest1PE1t23187","rsfMRIRun1t312787","BOLDresting4X4X4AP","resttopupAP","resttopupPA"],
+        "task-breathhold_bold": ["funcboldtaskbreathhold"],
+        "task-checkerboard_bold": ["funcboldtaskcheckerboard"],
+        "task-rest_bold": ["fMRIAxRestingState","MBrsfMRI","MBrsfMRIREVPE","funcboldtaskrestrun1","PUfMRIRestingState","PUREST","REST","RESTSTATE","RestingStatAX","fMRIRestingState","passiveAX","RestingStatAXe1","RESTRun3","RESTRun4REV","RESTRun1","RESTRun2REV","rest32chmb6APcmrrmbep2dbold","ABCDfMRIrest","restAP","restPA","Rest3PE1","Rest1PE1","Rest4PE2","Rest2PE2","RESTRun3t299840","RESTRun4REVt299840","RESTRun1t299840","RESTRun2REVt299840","ABCDfMRIrestPA","ABCDfMRIrestAP","RESTRun2REVt640","Rest3PE1t299987","Rest4PE2t299987","Rest1PE1t299987","Rest2PE2t299987","RESTRun3t166240","Rest1PE1t23187","rsfMRIRun1t312787","BOLDresting4X4X4AP","resttopupAP","resttopupPA"],
         "task-SIMON_bold": ["SimonAX"],
         "task-Sternberg_bold": ["STERNBERGTASK"],
         "task-TIMING_bold": ["TIMINGTASKRun1","TIMINGTASKRun2","TIMINGTASKRun3","TIMINGTASKRun4"],
@@ -65,7 +67,12 @@
         "mrs": ["NOTDIAGTGchangeCalibphantom","NOTDIAGTGchangesLASERCalTGPons","NOTDIAGTGchangesLASERCalTGCRBLWM","NOTDIAGsLASERCRBLWM","NOTDIAGsLASERPons","sLASERCRBLWM","sLASERPons"]
     },
     "perf": {
-        "asl": ["3DASL","3DASLNOMUSIC","CBF","CerebralBloodFlow"]
+        "asl": ["3DASL","3DASLNOMUSIC","CBF","CerebralBloodFlow"],
+        "acq-preview_flow": ["Ax4DFLOW3slab80VENCPreviewe1","Ax4DFLOW3slab80VENCPreviewe2","Ax4DFLOW3slab80VENCPreviewe3","Ax4DFLOW3slab80VENCPreviewe4"],
+        "acq-anatomy_flow": ["Ax4DFLOW3slab80VENCAnatomy"],
+        "dir-LR_flow": ["Ax4DFLOW3slab80VENCLRFlowe2"],
+        "dir-SI_flow": ["Ax4DFLOW3slab80VENCSIFlowe4"],
+        "dir-AP_flow": ["Ax4DFLOW3slab80VENCAPFlowe3"]
     },
     "qsm": {
         "qsm": ["QSMe1","QSMe2","QSMe3","QSMe4","QSMe5","QSMe6","QSMe7","QSMe8","QSMe9"]
