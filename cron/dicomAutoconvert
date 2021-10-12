@@ -86,11 +86,10 @@ for (( i=0, i<${N_ZIP}; i++ )); do
   BNAME="${FNAME%%.*}"
 
   mkdir -p ${DIR_OUTPUT}/${BNAME}
-#  mv ${ZIP_LS[${i}]} ${DIR_OUTPUT}/${BNAME}
+  mv ${ZIP_LS[${i}]} ${DIR_OUTPUT}/${BNAME}
 
   dicomConvert \
-#  --input ${DIR_OUTPUT}/${BNAME}/${FNAME%%.*}.zip \
-  --input ${ZIP_LS[${i}]} \
+  --input ${DIR_OUTPUT}/${BNAME}/${FNAME%%.*}.zip \
   --dir-save ${DIR_OUTPUT}/${BNAME}
 
   dicomAutoname \

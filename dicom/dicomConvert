@@ -99,7 +99,10 @@ else
     echo "ERROR [INC:${FCN_NAME}] Input must be either a directory or zip file"
     exit 1
   fi
-  cp ${INPUT} ${DIR_SAVE}/
+  DIR_INPUT=${INPUT%/*}
+  if [[ "${DIR_INPUT}" != "${DIR_SAVE}" ]]; then
+    cp ${INPUT} ${DIR_SAVE}/
+  fi
   unzip -qq ${DIR_SAVE}/${FNAME} -d ${DIR_SAVE}
   DIR_DCM=($(find ${DIR_SAVE} -type f -name '*.dcm*' -printf '%h\n' | sort -u))
 fi
