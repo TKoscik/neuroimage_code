@@ -235,7 +235,7 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CONVERT BRIK TO NIFTI"; fi
 3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
   ${DIR_SCRATCH}/work_dir/s5.t2.star+orig
-3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_optimal_T2star.nii.gz \
+3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_optimalEcho_T2star.nii.gz \
   ${DIR_SCRATCH}/opt.combined+orig   
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
@@ -275,8 +275,9 @@ if [[ "${COREG_RIGID}" == "true" ]] \
   coreg_fcn="${coreg_fcn} --recipe-name ${COREG_RECIPE}"
   coreg_fcn="${coreg_fcn} --fixed ${COREG_REF}"
   coreg_fcn="${coreg_fcn} --label-to ${COREG_TO}"
-  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
+  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_optimalEcho_T2star.nii.gz"
   coreg_fcn="${coreg_fcn} --label-from ${COREG_FROM}"
+  coreg_fcn="${coreg_fcn} --apply-to ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
   coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
   coreg_fcn="${coreg_fcn} --dir-xfm ${DIR_XFM}"
   if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
