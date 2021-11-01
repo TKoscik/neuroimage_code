@@ -46,7 +46,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvn --long prefix:,image:,te:,\
+OPTS=$(getopt -o hvn --long prefix:,image:,te:,no-median-filter,filter-size:,\
 coreg-rigid,coreg-affine,coreg-syn,coreg-ref:,coreg-from:,coreg-to:,coreg-verbose,\
 norm,norm-xfm:,norm-ref:,template:,space:,\
 dir-save:,dir-xfm:,dir-scratch:,\
@@ -61,6 +61,8 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 TE=
+MEDIAN_FILTER=true
+FILTER_SIZE=3
 COREG_RIGID=false
 COREG_AFFINE=false
 COREG_SYN=false
@@ -89,6 +91,8 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --te) TE="$2" ; shift 2 ;;
+    --no-median-filter) MEDIAN_FILTER="false" ; shift ;;
+    --filter-size) FILTER_SIZE="$2" ; shift 2 ;;
     --coreg-rigid) COREG_RIGID=true ; shift ;;
     --coreg-affine) COREG_AFFINE=true ; shift ;;
     --coreg-syn) COREG_SYN=true ; shift ;;
@@ -186,6 +190,18 @@ fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
 
+# median filter (if specified) -------------------------------------------------
+if [[ "${MEDIAN_FILTER}" == "true" ]]; then 
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>APPLYING MEDIAN FILTER"; fi
+  for (( i=0; i<${N}; i++ )); do
+    fslmaths ${IMG_LS[${i}]} -kernel boxv ${FILTER_SIZE} -fmedian \
+      ${DIR_SCRATCH}/${PREFIX}_echo-${i}_T2star.nii.gz
+    IMG_LS[${i}]=${DIR_SCRATCH}/${PREFIX}_echo-${i}_T2star.nii.gz
+  done
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+fi
+  
+
 # fit echoes, calculate weights ------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>COMPUTING WEIGHTS"; fi
 fit_str="@compute_OC_weights"
@@ -203,15 +219,32 @@ if [[ "${VERBOSE}" == "true" ]]; then echo ${fit_str}; fi
 eval ${fit_str}
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
-# weight echoes ----------------------------------------------------------------
-if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>WEIGHTING ECHOES"; fi
-wt_str="3dMean"
-wt_str="${wt_str} -weightset ${DIR_SCRATCH}/weights+orig"
-wt_str="${wt_str} -prefix ${DIR_SCRATCH}/t2star.nii.gz"
-for (( i=0; i<${N}; i++ )); do wt_str="${wt_str} ${IMG_LS[${i}]}"; done
-if [[ "${VERBOSE}" == "true" ]]; then echo ${wt_str}; fi
-eval ${wt_str}
-mv ${DIR_SCRATCH}/t2star.nii.gz ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz
+# use 3dMean to get optimal recombination of weights for coregistration
+# l.hopkins 1/1/2021
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CREATING OPTIMAL RECOMINATION OF WEIGHTS"; fi
+fit_str="3dMean"
+fit_str="${fit_str} -weightset \""
+fit_str="${fit_str} ${DIR_SCRATCH}/weights+orig \""
+fit_str="${fit_str} -prefix ${DIR_SCRATCH}/opt.combined \""
+fit_str="${fit_str} ${DIR_SCRATCH}/*echo*"
+if [[ "${VERBOSE}" == "true" ]]; then echo ${fit_str}; fi
+eval ${fit_str}
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+
+# convert BRIK to NIFTI --------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CONVERT BRIK TO NIFTI"; fi
+3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
+  ${DIR_SCRATCH}/work_dir/s5.t2.star+orig
+3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_optimal_T2star.nii.gz \
+  ${DIR_SCRATCH}/opt.combined+orig   
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+
+# mask out background noise from calculation -----------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>REMOVE BG NOISE VIA AUTOMASK"; fi
+3dAutomask -prefix ${DIR_SCRATCH}/mask-fg.nii.gz -clfrac 0.1 -q ${IMG_LS[0]}
+fslmaths ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
+  -mas ${DIR_SCRATCH}/mask-fg.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # coregistration (if specified) ------------------------------------------------
@@ -313,6 +346,8 @@ if [[ "${COREG_RIGID}" == "true" ]] \
 else  
   mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
     ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_optimal_T2star.nii.gz \
+    ${DIR_SAVE}/${PREFIX}_optimal_T2star.nii.gz  
 fi
 if [[ "${NORM}" == "true" ]]; then
   mv ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz \
