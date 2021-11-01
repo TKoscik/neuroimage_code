@@ -120,7 +120,7 @@ mkdir -p ${DIR_SCRATCH}
 
 # intialize output
 MERGED=${DIR_SCRATCH}/${PREFIX}.nii.gz
-fslmaths ${LABEL[0]} -mul 0 ${MERGED}
+fslmaths ${LABEL[0]} -nan -mul 0 ${MERGED}
 TLABEL=${DIR_SCRATCH}/label_temp.nii.gz
 TMASK=${DIR_SCRATCH}/mask_temp.nii.gz
 
@@ -154,10 +154,10 @@ for (( i=0; i<${N_LABEL}; i++ )); do
         elif [[ "${TVAL[${l}]}" == *":"* ]]; then
           unset TRANGE
           TRANGE=(${TVAL[${l}]//\:/ })
-          fslmaths ${TLABEL} -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
+          fslmaths ${TLABEL} -nan -thr ${TRANGE[0]} -uthr ${TRANGE[1]} ${TLABEL}
           3dRank -overwrite -prefix ${TLABEL} -input ${TLABEL}          
         else
-          fslmaths ${TLABEL} -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
+          fslmaths ${TLABEL} -nan -thr ${TVAL[${l}]} -uthr ${TVAL[${l}]} -bin ${TLABEL}
         fi
         fslmaths ${TLABEL} -bin ${TMASK}
         fslmaths ${TLABEL} -add ${MAX} -mas ${TMASK} -add ${MERGED} ${MERGED}

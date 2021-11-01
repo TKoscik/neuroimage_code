@@ -12,18 +12,17 @@ KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
 HPC_Q=${QUEUE}
 HPC_SLOTS=${NSLOTS}
-KEEP=false
 NO_LOG=false
 umask 007
 
-# actions on exit, write to logs, clean scratch
+# actions on exit, write to logs, clean scratch --------------------------------
 function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
   if [[ "${NO_LOG}" == "false" ]]; then
-    logBenchmark --operator ${OPERATOR} \
-    --hardware ${HARDWARE} --kernel ${KERNEL} --hpc-q ${HPC_Q} --hpc-slots ${HPC_SLOTS} \
-    --fcn-name ${FCN_NAME} --proc-start ${PROC_START} --proc-stop ${PROC_STOP} --exit-code ${EXIT_CODE}
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
   fi
 }
 trap egress EXIT
@@ -44,12 +43,12 @@ LUT_JSON=${INC_LUT}/series_description.json
 DIR_SCRATCH=${INC_SCRATCH}/dicomConversion_${DATE_SUFFIX}
 DIR_SAVE=${INC_QC}/dicomConversion
 HELP=false
-VERBOSE=0
+VERBOSE=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --dir-input) DIR_INPUT="$2" ; shift 2 ;;
     --lut-json) LUT_JSON="$2" ; shift 2 ;;
@@ -66,7 +65,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -l | --no-log            disable writing to output log'
@@ -94,6 +92,7 @@ DIR_DCM=($(find ${DIR_INPUT} -type f -name '*.dcm*' -printf '%h\n' | sort -u))
 FLS=($(ls ${DIR_INPUT}/*.nii.gz))
 N_FLS=${#FLS[@]}
 
+if [[ "${VERBOSE}" == "true" ]]; then echo ">>>${FCN_NAME}: initializing variables"; fi
 PI=$(getField -i ${DIR_INPUT} -f pi)
 PROJECT=$(getField -i ${DIR_INPUT} -f project)
 PID=$(getField -i ${DIR_INPUT} -f sub)
@@ -102,6 +101,7 @@ BNAME="${FNAME[0]%%.*}"
 TEMP=(${BNAME//_x-x_/ })
 SID="${TEMP[2]:0:8}T${TEMP[2]:8}"
 
+if [[ "${VERBOSE}" == "true" ]]; then echo ">>>${FCN_NAME}: check each filename"; fi
 for (( i=0; i<${N_FLS}; i++)); do
   unset FNAME BNAME SUBDIR SUFFIX TEMP
   unset TLS QC_TSV OUT_STR
@@ -109,21 +109,24 @@ for (( i=0; i<${N_FLS}; i++)); do
   BNAME="${FNAME%%.*}"
   FNAME_ORIG+="${BNAME}"
   TEMP=(${BNAME//_x-x_/ })
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>basename: ${BNAME}"; fi
 
-  # get/check Participant ID
+  # get/check Participant ID ---------------------------------------------------
   if [[ -z "${PID}" ]]; then
     PID=${TEMP[1]}
   elif [[ "${TEMP[1]}" != ${PID} ]]; then
     echo "WARNING [INC:${FCN_NAME}] non-matching participant identifier detected: expected PID-${PID}, non-match PID-${TEMP[1]}"
   fi
-    
-  # check Session ID
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tPID: ${PID}"; fi
+
+  # check Session ID -----------------------------------------------------------
   CHK_SID="${TEMP[2]:0:8}T${TEMP[2]:8}"
   if [[ "${CHK_SID}" != "${SID}" ]]; then
     echo "WARNING [INC:${FCN_NAME}] non-matching session identifier detected: expected SID-${SID}, non-match SID-${CHK_SID}"
-  fi    
-    
-  # look up file suffix
+  fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tSID: ${SID}"; fi
+
+  # look up file suffix --------------------------------------------------------
   CHK_DESC=$(echo "${TEMP[4]}" | sed 's/[^a-zA-Z0-9]//g')
   LUT_FCN='LUT_DESC=($(cat '${LUT_JSON}
   LUT_FCN="${LUT_FCN} | jq 'to_entries[]"
@@ -132,6 +135,7 @@ for (( i=0; i<${N_FLS}; i++)); do
   LUT_FCN="${LUT_FCN} | .key }"
   LUT_FCN="${LUT_FCN} | [.key1, .key2]'"
   LUT_FCN="${LUT_FCN} | tr -d ' [],"'"'"'))"
+  echo ${LUT_FCN}
   eval ${LUT_FCN}
   if [[ -z ${LUT_DESC[@]} ]]; then
     SUBDIR=unk
@@ -140,50 +144,41 @@ for (( i=0; i<${N_FLS}; i++)); do
     SUBDIR=${LUT_DESC[0]}
     SUFFIX=${LUT_DESC[1]}
   fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tSUBDIR: ${SUBDIR}"; fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tSUFFIX: ${SUFFIX}"; fi
   
-  # Check for same name files and append a run flag
-#  TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_${SUFFIX}*.nii.gz))
-#  if [[ "${TLS}" > "1" ]]; then
-#    unset PARTS
-#    PARTS=(${SUFFIX//_/ })
-#    for (( j=0; j<${#PARTS[@]}; j++ )); do
-#      if [[ "${PARTS[${j}]}" =~ "run-" ]]; then
-#        ${PARTS[${j}]}="run-${#TLS[@]}"
-#        break
-#      fi
-#    done
-#    SUFFIX=($(IFS=_ ; echo "${PARTS[*]}"))
-#  fi
-#### NOTE: This may break for multi echo / not be to BIDs standards but currently will work.  #### 
-  unset PARTS
-  PARTS=(${SUFFIX//_/ })
-  ARR_N=$(( ${#PARTS[@]}-1 ))
-  TLS=($(ls ${DIR_INPUT}/sub-${PID}_ses-${SID}_*${PARTS[0]}*${PARTS[1]}*.nii.gz 2>/dev/null))
-  if [[ "${#TLS[@]}" -ge "1" ]]; then
-    PARTS=( "${PARTS[@]:0:${ARR_N}}" "run-${#TLS[@]}" "${PARTS[@]:${ARR_N}}" )
-    SUFFIX=($(IFS=_ ; echo "${PARTS[*]}"))
+  # Check for same name files and append a run flag ----------------------------
+  ## NOTE: This may break for multi echo / not be to BIDs standard
+  ##       but currently will work.
+  FCHK=${DIR_INPUT}/sub-${PID}_ses-${SID}_${SUFFIX}.nii.gz
+  if [[ -f ${FCHK} ]]; then
+    if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tidentical names or multi-runs detected, appending run-flag"; fi
+    RCHK="true"
+    RUN=0
+    while [[ "${RCHK}" == "true" ]]; do
+      RUN=$((${RUN}+1))
+      CHKFIELD=$(getField -i ${SUFFIX} -f run)
+      if [[ -z ${CHKFIELD} ]]; then 
+        SUFFIX=$(modField -i ${SUFFIX} -a -f run -v ${RUN})
+      else
+        SUFFIX=$(modField -i ${SUFFIX} -m -f run -v ${RUN})
+      fi
+      FCHK=${DIR_INPUT}/sub-${PID}_ses-${SID}_${SUFFIX}.nii.gz
+      if [[ ! -f ${FCHK} ]]; then
+        RCHK="false"
+      fi
+    done
   fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tSUFFIX: ${SUFFIX}"; fi
 
-  # rename output files
+  # rename output files --------------------------------------------------------
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tauto-renaming files"; fi
   rename "${BNAME}" "sub-${PID}_ses-${SID}_${SUFFIX}" ${DIR_INPUT}/*
 
   QC_TSV=${DIR_INPUT}/sub-${PID}_ses-${SID}_dicomConversion.tsv
   if [[ ! -f ${QC_TSV} ]]; then
-    echo -ne "dir_dicom\t" > ${QC_TSV}
-    echo -ne "series_description\t" >> ${QC_TSV}
-    echo -ne "scan_date\t" >> ${QC_TSV}
-    echo -ne "fname_orig\t" >> ${QC_TSV}
-    echo -ne "fname_auto\t" >> ${QC_TSV}
-    echo -ne "fname_manual\t" >> ${QC_TSV}
-    echo -ne "subdir\t" >> ${QC_TSV}
-    echo -ne "chk_view\t" >> ${QC_TSV}
-    echo -ne "chk_orient\t" >> ${QC_TSV}
-    echo -ne "rate_quality\t" >> ${QC_TSV}
-    echo -ne "qc_action\t" >> ${QC_TSV}
-    echo -ne "operator\t" >> ${QC_TSV}
-    echo -ne "qc_date\t" >> ${QC_TSV}
-    echo -ne "operator2\t" >> ${QC_TSV}
-    echo -e "qc_date2" >> ${QC_TSV}
+    echo -e "dir_dicom\tseries_description\tscan_date\tfname_orig\tfname_auto\tfname_manual\tsubdir\tchk_view\tchk_orient\trate_quality\tqc_action\toperator\tqc_date\toperator2\tqc_date2" > ${QC_TSV}
+    if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tinitializing ${DIR_INPUT}/sub-${PID}_ses-${SID}_dicomConversion.tsv"; fi
   fi
   DIR_DCM_TEMP=${DIR_DCM[${i}]//${DIR_INPUT}\/}
   echo -ne "${DIR_DCM_TEMP}\t" >> ${QC_TSV}
@@ -201,16 +196,21 @@ for (( i=0; i<${N_FLS}; i++)); do
   echo -ne "-\t" >> ${QC_TSV}
   echo -ne "-\t" >> ${QC_TSV}
   echo -e "-" >> ${QC_TSV}
-
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tinfo written to tsv"; fi
 done
-  mv ${DIR_INPUT} \
-    ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
-  chgrp -R Research-INC_img_core ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
-  chmod -R 770 ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
 
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>moving converted dicoms according to new names"; fi
+mv ${DIR_INPUT} \
+  ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>setting group ownership to Research-INC_img_core"; fi
+chgrp -R Research-INC_img_core ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>setting permissions to 770"; fi
+chmod -R 770 ${DIR_SAVE}/pi-${PI}_project-${PROJECT}_sub-${PID}_ses-${SID}
 
 #===============================================================================
 # End of Function
 #===============================================================================
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "DONE"; fi
 exit 0
+
 

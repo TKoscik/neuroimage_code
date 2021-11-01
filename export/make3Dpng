@@ -43,7 +43,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long help,verbose,no-log,\
 bg:,bg-volume:,bg-mask:,bg-mask-volume:,bg-threshold:,bg-alpha:,bg-color:,bg-order:,bg-cbar,\
-fg:,fg-volume:,fg-mask:,fg-mask-volume:,fg-threshold:,fg-alpha:,fg-color:,fg-order:,fg-cbar,\
+fg:,fg-volume:,fg-mask:,fg-mask-volume:,fg-threshold:,fg-alpha:,fg-color:,fg-order:,fg-cbar:,\
 roi:,roi-volume:,roi-value:,roi-color:,roi-order:,roi-cbar,\
 layout:,offset:,limits:,\
 no-slice-label,use-vox-label,no-lr-label,label-decimal:,\
@@ -129,7 +129,7 @@ while true; do
     --fg-threshold) FG_THRESH="$2" ; shift 2 ;;
     --fg-color) FG_COLOR="$2" ; shift 2 ;;
     --fg-order) FG_ORDER="$2" ; shift 2 ;;
-    --fg-cbar) FG_CBAR="false" ; shift ;;
+    --fg-cbar) FG_CBAR="$2" ; shift 2 ;;
     --roi) ROI="$2" ; shift 2 ;;
     --roi-volume) ROI_VOL="$2" ; shift 2 ;;
     --roi-value) ROI_VALUE="$2" ; shift 2 ;;
@@ -339,14 +339,34 @@ FG_N=${#FG[@]}
 if [[ ${FG_N} -gt 1 ]]; then
   if [[ ${#FG_VOL[@]} -eq 1 ]]; then
     for (( i=0; i<${FG_N}; i++ )); do
-      FG_VOL[${i}]=(${FG_VOL[0]})
+      FG_VOL[${i}]=${FG_VOL[0]}
     done
   fi
   if [[ ${#FG_MASK_VOL[@]} -eq 1 ]]; then
     for (( i=0; i<${FG_N}; i++ )); do
-      FG_MASK_VOL[${i}]=(${FG_MASK_VOL[0]})
+      FG_MASK_VOL[${i}]=${FG_MASK_VOL[0]}
     done
   fi
+  if [[ ${#FG_THRESH[@]} -eq 1 ]]; then
+    for (( i=0; i<${FG_N}; i++ )); do
+      FG_THRESH[${i}]=${FG_THRESH[0]}
+    done
+  fi  
+  if [[ ${#FG_COLOR[@]} -eq 1 ]]; then
+    for (( i=0; i<${FG_N}; i++ )); do
+      FG_COLOR[${i}]=${FG_COLOR[0]}
+    done
+  fi  
+  if [[ ${#FG_ORDER[@]} -eq 1 ]]; then
+    for (( i=0; i<${FG_N}; i++ )); do
+      FG_ORDER[${i}]=${FG_ORDER[0]}
+    done
+  fi  
+  if [[ ${#FG_CBAR[@]} -eq 1 ]]; then
+    for (( i=0; i<${FG_N}; i++ )); do
+      FG_CBAR[${i}]=${FG_CBAR[0]}
+    done
+  fi  
 fi
 
 if [[ "${VERBOSE}" == "true" ]]; then echo ">>>parsing ROI arguments"; fi
@@ -541,7 +561,13 @@ ZLIM=(9999 0)
 if [[ -n "${LIM_CHK}" ]]; then
   for (( i=0; i<${#LIM_CHK[@]}; i++ )); do
     unset BB_STR BB
-    BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
+    if [[ "${LIM_CHK[${i}]}" == "FG_MASK" ]] \
+    || [[ "${LIM_CHK[${i}]}" == "BG_MASK" ]] \
+    || [[ "${LIM_CHK[${i}]}" == "ROI" ]]; then
+      BB_STR=$(3dAutobox -extent -noclust -input ${LIM_CHK[${i}]} 2>&1)
+    else
+      BB_STR=$(3dAutobox -extent -input ${LIM_CHK[${i}]} 2>&1)
+    fi
     BBX=$(echo ${BB_STR} | sed -e 's/.*x=\(.*\) y=.*/\1/') #"#'# prevents bad syntax highlighting
     BBY=$(echo ${BB_STR} | sed -e 's/.*y=\(.*\) z=.*/\1/') #"#'#
     BBZ=$(echo ${BB_STR} | sed -e 's/.*z=\(.*\) Extent.*/\1/') #"#'#
@@ -764,9 +790,9 @@ fi
 ## generate slice PNGs
 if [[ "${VERBOSE}" == "true" ]]; then echo ">>>generate background slices"; fi
 HILO=(${BG_THRESH//,/ })
-if [[ -n ${BG_MASK} ]]; then
-  LO=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[0]})
-  HI=$(fslstats -K ${BG_MASK} ${BG} -p ${HILO[1]})
+if [[ -n ${BG_MASK} ]]; then 
+  LO=$(fslstats ${BG} -k ${BG_MASK} -P ${HILO[0]})
+  HI=$(fslstats ${BG} -k ${BG_MASK} -P ${HILO[1]})
 else
   LO=$(fslstats ${BG} -p ${HILO[0]})
   HI=$(fslstats ${BG} -p ${HILO[1]})
@@ -850,12 +876,12 @@ if [[ -n ${FG} ]]; then
   for (( i=0; i<${#FG[@]}; i++ )); do
     unset HILO LO HI
     HILO=(${FG_THRESH[${i}]//,/ })
-    if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" != "null" ]]; then
+    if [[ -z ${FG_MASK} ]] || [[ "${FG_MASK[${i}]}" == "null" ]]; then
       LO=$(fslstats ${FG[${i}]} -p ${HILO[0]})
       HI=$(fslstats ${FG[${i}]} -p ${HILO[1]})
     else
-      LO=$(fslstats -K ${FG_MASK[${i}]} ${FG[${i}]} -p ${HILO[0]})
-      HI=$(fslstats -K ${FG_MASK[${i}]} ${FG[${i}]} -p ${HILO[1]})
+      LO=$(fslstats ${FG[${i}]} -k ${FG_MASK[${i}]} -P ${HILO[0]})
+      HI=$(fslstats ${FG[${i}]} -k ${FG_MASK[${i}]} -P ${HILO[1]})
     fi
 
     ## generate color bar
@@ -875,6 +901,7 @@ if [[ -n ${FG} ]]; then
         caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_LO.png
       text_fcn='TTXT=$(printf "%0.'${COLOR_DECIMAL}'f\n" ${HI})'
       eval ${text_fcn}
+echo "${i}: ${LO} ${HI}"
       convert -background "transparent" -fill ${COLOR_TEXT} \
         -font ${FONT} -pointsize ${FONT_SIZE} \
         caption:"${TTXT}" -rotate 90 ${DIR_SCRATCH}/LABEL_HI.png
@@ -997,6 +1024,7 @@ if [[ -n ${ROI} ]]; then
   fslmaths ${DIR_SCRATCH}/ROI_OUTLINE.nii.gz -bin ${DIR_SCRATCH}/ROI_MASK.nii.gz
   ## generate color bar
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>make ROI color bar"; fi
+  echo ${ROI_N}
   Rscript ${INC_R}/makeColors.R \
     "palette" ${ROI_COLOR} "n" ${ROI_N} \
     "order" ${ROI_ORDER} "bg" ${COLOR_PANEL} \
@@ -1193,9 +1221,9 @@ if [[ "${BG_CBAR}" == "true" ]]; then
 fi
 if [[ -n ${FG} ]]; then
   TLS=($(ls ${DIR_SCRATCH}/CBAR_FG*.png))
-  TBOOL=(${FG_CBAR//,/ })
+  TBOOL=(${FG_CBAR//;/ })
   for (( i=0; i<${#TLS[@]}; i++ )); do
-    if [[ "${TBOOL[${i}]}" == "true" ]]; then
+    if [[ "${FG_CBAR[${i}]}" == "true" ]]; then
       CBAR_LS+=("${TLS[${i}]}")
     fi
   done
@@ -1218,7 +1246,7 @@ if [[ ${#CBAR_LS[@]} -gt 0 ]]; then
   montage_fcn="${montage_fcn} -tile x1"
   montage_fcn="${montage_fcn} -geometry +0+0"
   montage_fcn="${montage_fcn} -gravity center"
-  montage_fcn=${montage_fcn}' -background "transparent"'
+  montage_fcn="${montage_fcn} -background \"${COLOR_PANEL}\""
   montage_fcn="${montage_fcn} ${DIR_SCRATCH}/${FILENAME}.png"
   eval ${montage_fcn}
 else
