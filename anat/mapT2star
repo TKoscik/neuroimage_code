@@ -223,9 +223,9 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 # l.hopkins 1/1/2021
 if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CREATING OPTIMAL RECOMINATION OF WEIGHTS"; fi
 fit_str="3dMean"
-fit_str="${fit_str} -weightset \""
-fit_str="${fit_str} ${DIR_SCRATCH}/weights+orig \""
-fit_str="${fit_str} -prefix ${DIR_SCRATCH}/opt.combined \""
+fit_str="${fit_str} -weightset"
+fit_str="${fit_str} ${DIR_SCRATCH}/weights+orig"
+fit_str="${fit_str} -prefix ${DIR_SCRATCH}/opt.combined"
 fit_str="${fit_str} ${DIR_SCRATCH}/*echo*"
 if [[ "${VERBOSE}" == "true" ]]; then echo ${fit_str}; fi
 eval ${fit_str}
