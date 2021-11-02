@@ -347,7 +347,7 @@ if [[ "${COREG_RIGID}" == "true" ]] \
 else  
   mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
     ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
-  mv ${DIR_SCRATCH}/${PREFIX}_optimal_T2star.nii.gz \
+  mv ${DIR_SCRATCH}/${PREFIX}_optimalEcho_T2star.nii.gz \
     ${DIR_SAVE}/${PREFIX}_optimal_T2star.nii.gz  
 fi
 if [[ "${NORM}" == "true" ]]; then
