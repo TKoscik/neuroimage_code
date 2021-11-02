@@ -101,6 +101,13 @@ BNAME="${FNAME[0]%%.*}"
 TEMP=(${BNAME//_x-x_/ })
 SID="${TEMP[2]:0:8}T${TEMP[2]:8}"
 
+# get modality list from series description lookup table:
+## loop over target directories: e.g., anat, dwi, func, etc.
+## loop over modalities for each target directory
+DLS=$(jq:x)
+
+
+
 if [[ "${VERBOSE}" == "true" ]]; then echo ">>>${FCN_NAME}: check each filename"; fi
 for (( i=0; i<${N_FLS}; i++)); do
   unset FNAME BNAME SUBDIR SUFFIX TEMP
