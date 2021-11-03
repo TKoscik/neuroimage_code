@@ -9,6 +9,7 @@
 #                       - added PNGs for output
 #            2021-09-09 - added options for rigid, affine, or syn coregistration
 #                       - added application of normalization transforms
+#            2021-11-02 - fixed T2star and T2starw for outputs
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -219,29 +220,28 @@ if [[ "${VERBOSE}" == "true" ]]; then echo ${fit_str}; fi
 eval ${fit_str}
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
-# use 3dMean to get optimal recombination of weights for coregistration --------
-# l.hopkins 1/1/2021
-if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CREATING OPTIMAL RECOMINATION OF WEIGHTS"; fi
-fit_str="3dMean"
-fit_str="${fit_str} -weightset"
-fit_str="${fit_str} ${DIR_SCRATCH}/weights+orig"
-fit_str="${fit_str} -prefix ${DIR_SCRATCH}/opt.combined"
-fit_str="${fit_str} ${DIR_SCRATCH}/*echo*"
-if [[ "${VERBOSE}" == "true" ]]; then echo ${fit_str}; fi
-eval ${fit_str}
-if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
-
-# convert BRIK to NIFTI --------------------------------------------------------
-if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CONVERT BRIK TO NIFTI"; fi
+# convert T2star BRIK to NIFTI -------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CONVERT T2star BRIK TO NIFTI"; fi
 3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
   ${DIR_SCRATCH}/work_dir/s5.t2.star+orig
-3dAFNItoNIFTI -prefix ${DIR_SCRATCH}/${PREFIX}_optimalEcho_T2star.nii.gz \
-  ${DIR_SCRATCH}/opt.combined+orig   
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+
+# use 3dMean to get optimal recombination of weights for coregistration --------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>CREATING OPTIMAL ECHO COMBOINATION: T2star-weighted"; fi
+wt_str="3dMean"
+wt_str="${wt_str} -weightset ${DIR_SCRATCH}/weights+orig"
+wt_str="${wt_str} -prefix ${DIR_SCRATCH}/t2star-weighted.nii.gz"
+for (( i=0; i<${N}; i++ )); do wt_str="${wt_str} ${IMG_LS[${i}]}"; done
+if [[ "${VERBOSE}" == "true" ]]; then echo ${wt_str}; fi
+eval ${wt_str}
+mv ${DIR_SCRATCH}/t2star-weighted.nii.gz ${DIR_SCRATCH}/${PREFIX}_T2starw.nii.gz
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # mask out background noise from calculation -----------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>REMOVE BG NOISE VIA AUTOMASK"; fi
-3dAutomask -prefix ${DIR_SCRATCH}/mask-fg.nii.gz -clfrac 0.1 -q ${IMG_LS[0]}
+3dAutomask -prefix ${DIR_SCRATCH}/mask-fg.nii.gz -clfrac 0.1 -q \
+  ${DIR_SCRATCH}/${PREFIX}_T2starw.nii.gz
+## apply FG mask to T2star to remove DIV0 -like results from BG
 fslmaths ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
   -mas ${DIR_SCRATCH}/mask-fg.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz
@@ -275,29 +275,45 @@ if [[ "${COREG_RIGID}" == "true" ]] \
   coreg_fcn="${coreg_fcn} --recipe-name ${COREG_RECIPE}"
   coreg_fcn="${coreg_fcn} --fixed ${COREG_REF}"
   coreg_fcn="${coreg_fcn} --label-to ${COREG_TO}"
-  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_optimalEcho_T2star.nii.gz"
+  coreg_fcn="${coreg_fcn} --moving ${DIR_SCRATCH}/${PREFIX}_T2starw.nii.gz"
   coreg_fcn="${coreg_fcn} --label-from ${COREG_FROM}"
-  coreg_fcn="${coreg_fcn} --apply-to ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
   coreg_fcn="${coreg_fcn} --dir-save ${DIR_SCRATCH}"
   coreg_fcn="${coreg_fcn} --dir-xfm ${DIR_XFM}"
   if [[ "${VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --verbose"; fi
   if [[ "${COREG_VERBOSE}" == "true" ]]; then coreg_fcn="${coreg_fcn} --ants-verbose"; fi
   eval ${coreg_fcn}
-  rename "reg-${COREG_RECIPE}+${COREG_TO}_" "" ${DIR_SCRATCH}/*.nii.gz
+  rename "reg-${COREG_RECIPE}+${COREG_TO}_" "reg-${COREG_TO}_" ${DIR_SCRATCH}/*.nii.gz
   if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
+
+  ## apply native transformation to T2star
+  XFMSTR=mod-T2starw_from-${COREG_FROM}_to-${COREG_TO}
+  if [[ "${COREG_RECIPE}" == "syn" ]]; then
+    NTV_XFM+=(${DIR_XFM}/${PIDSTR}_${XFMSTR}_xfm-syn.nii.gz)
+  fi
+  if [[ "${COREG_RECIPE}" == "affine" ]]; then
+    NTV_XFM+=(${DIR_XFM}/${PIDSTR}_${XFMSTR}_xfm-affine.mat)
+  fi
+  if [[ "${COREG_RECIPE}" == "rigid" ]]; then
+    NTV_XFM+=(${DIR_XFM}/${PIDSTR}_${XFMSTR}_xfm-rigid.mat)
+  fi
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>APPLY NATIVE XFM TO T2star"; fi
+  xfm_fcn="antsApplyTransforms -d 3 -n Linear"
+  xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
+  xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PIDSTR}_reg-${COREG_TO}_T2star.nii.gz"
+  for (( i=0; i<${#NTV_XFM[@]}; i++ )); do
+    xfm_fcn="${xfm_fcn} -t ${NTV_XFM[${i}]}"
+  done
+  xfm_fcn="${xfm_fcn} -r ${COREG_REF}"
+  if [[ "${VERBOSE}" == "true" ]]; then echo ${xfm_fcn}; fi
+  eval ${xfm_fcn}
+
   if [[ "${NO_PNG}" == "false" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATE COREG PNG"; fi
     make3Dpng \
-    --bg ${COREG_REF} \
-      --bg-color "#000000,#00FF00,#FFFFFF" \
-      --bg-thresh "10,99" \
-    --fg ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
-      --fg-thresh "10,99" \
-      --fg-color "#000000,#FF00FF,#FFFFFF" \
-      --fg-alpha 50 \
-      --fg-cbar \
-    --layout "6:x;6:x;6:x;6:y;6:y;6:y;6:z;6:z;6:z" \
-    --offset "0,0,0" \
+    --bg ${COREG_REF} --bg-color "#000000,#00FF00,#FFFFFF" --bg-thresh "10,99" \
+    --fg ${DIR_SCRATCH}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz \
+      --fg-thresh "10,99" --fg-color "#000000,#FF00FF,#FFFFFF" --fg-alpha 50 --fg-cbar \
+    --layout "6:x;6:x;6:x;6:y;6:y;6:y;6:z;6:z;6:z" --offset "0,0,0" \
     --filename ${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-${COREG_RECIPE} \
     --dir-save ${DIR_XFM}
     if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
@@ -314,20 +330,32 @@ if [[ "${NORM}" == "true" ]]; then
     NORM_XFM=(${NORM_XFM//,/ })
   fi
   if [[ "${COREG_RECIPE}" == "syn" ]]; then
-    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-syn.nii.gz)
+    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_${XFMSTR}_xfm-syn.nii.gz)
   fi
   if [[ "${COREG_RECIPE}" == "affine" ]]; then
-    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-affine.mat)
+    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_${XFMSTR}_xfm-affine.mat)
   fi
-  if [[ "${COREG_RECIPE}" == "syn" ]]; then
-    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_mod-T2star_reg-${COREG_TO}_xfm-rigid.mat)
+  if [[ "${COREG_RECIPE}" == "rigid" ]]; then
+    NORM_XFM+=(${DIR_XFM}/${PIDSTR}_${XFMSTR}_xfm-rigid.mat)
   fi
   if [[ -z ${NORM_REF} ]]; then
     NORM_REF=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_T1w.nii.gz
   fi
+  ## apply normalization to T2star
   norm_fcn="antsApplyTransforms -d 3 -n Linear"
   norm_fcn="${norm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz"
   norm_fcn="${norm_fcn} -o ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz"
+  for (( i=0; i<${#NORM_XFM[@]}; i++ )); do
+    norm_fcn="${norm_fcn} -t ${NORM_XFM[${i}]}"
+  done
+  norm_fcn="${norm_fcn} -r ${NORM_REF}"
+  if [[ "${VERBOSE}" == "true" ]]; then echo ${norm_fcn}; fi
+  eval ${norm_fcn}
+
+  ## apply normalization to T2star-weighted
+  norm_fcn="antsApplyTransforms -d 3 -n Linear"
+  norm_fcn="${norm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_T2starw.nii.gz"
+  norm_fcn="${norm_fcn} -o ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2starw.nii.gz"
   for (( i=0; i<${#NORM_XFM[@]}; i++ )); do
     norm_fcn="${norm_fcn} -t ${NORM_XFM[${i}]}"
   done
@@ -342,38 +370,37 @@ if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>SAVING OUTPUT"; fi
 if [[ "${COREG_RIGID}" == "true" ]] \
 || [[ "${COREG_AFFINE}" == "true" ]] \
 || [[ "${COREG_SYN}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
-    ${DIR_SAVE}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz ${DIR_SAVE}/
+  mv ${DIR_SCRATCH}/${PREFIX}_reg-${COREG_TO}_T2starw.nii.gz ${DIR_SAVE}/
 else  
-  mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz \
-    ${DIR_SAVE}/${PREFIX}_T2star.nii.gz
-  mv ${DIR_SCRATCH}/${PREFIX}_optimalEcho_T2star.nii.gz \
-    ${DIR_SAVE}/${PREFIX}_optimal_T2star.nii.gz  
+  mv ${DIR_SCRATCH}/${PREFIX}_T2star.nii.gz ${DIR_SAVE}/
+  mv ${DIR_SCRATCH}/${PREFIX}_T2starw.nii.gz ${DIR_SAVE}/  
 fi
 if [[ "${NORM}" == "true" ]]; then
-  mv ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz \
-    ${DIR_SAVE}/
+  mv ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz ${DIR_SAVE}/
+  mv ${DIR_SCRATCH}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2starw.nii.gz ${DIR_SAVE}/
 fi
 if [[ "${VERBOSE}" == "true" ]]; then echo -e "\tDONE"; fi
 
 # generate png -----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
+  CPAL="#000000,#1A1147,#004769,#007F37,#428D00,#C17313,#FF648C,#EC86FF,#B7C8FF,#BFF6F8,#FFFFFF,#ECECEC,#DADADA,#C8C8C8,#B6B6B6,#A3A3A3,#919191,#7F7F7F,#6D6D6D,#5B5B5B,#484848,#363636,#242424,#121212,#000000"
   if [[ "${VERBOSE}" == "true" ]]; then echo -ne ">>>GENERATING PNG"; fi
   if [[ "${COREG_RIGID}" == "true" ]] \
   || [[ "${COREG_AFFINE}" == "true" ]] \
   || [[ "${COREG_SYN}" == "true" ]]; then
     make3Dpng --bg ${COREG_REF} \
-      --fg ${DIR_SAVE}/${PREFIX}_reg-${COREG_TO}_T2star.nii.gz \
-      --fg-color "cubehelix" --fg-alpha 50 --fg-cbar \
+      --fg ${DIR_SAVE}/${PIDSTR}_reg-${COREG_TO}_T2star.nii.gz \
+      --fg-color ${CPAL} --fg-alpha 50 \
       --filename ${PIDSTR}_reg-${COREG_TO}_T2star \
       --dir-save ${DIR_SAVE}
   else
-    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_T2star.nii.gz --bg-color "cubehelix"
+    make3Dpng --bg ${DIR_SAVE}/${PIDSTR}_T2star.nii.gz --bg-color ${CPAL}
   fi
   if [[ "${NORM}" == "true" ]]; then
     make3Dpng --bg ${NORM_REF} \
       --fg ${DIR_SAVE}/${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star.nii.gz \
-      --fg-color "cubehelix" --fg-alpha 50 --fg-cbar \
+      --fg-color ${CPAL} --fg-alpha 50 \
       --filename ${PIDSTR}_reg-${TEMPLATE}+${SPACE}_T2star \
       --dir-save ${DIR_SAVE}
   fi
@@ -384,4 +411,5 @@ fi
 # End of Function
 #===============================================================================
 exit 0
+
 
