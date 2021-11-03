@@ -60,10 +60,10 @@
         "task-breathhold_bold": ["funcboldtaskbreathhold"],
         "task-checkerboard_bold": ["funcboldtaskcheckerboard"],
         "task-rest_bold": ["fMRIAxRestingState","MBrsfMRI","MBrsfMRIREVPE","funcboldtaskrestrun1","PUfMRIRestingState","PUREST","REST","RESTSTATE","RestingStatAX","fMRIRestingState","passiveAX","RestingStatAXe1","RESTRun3","RESTRun4REV","RESTRun1","RESTRun2REV","rest32chmb6APcmrrmbep2dbold","ABCDfMRIrest","restAP","restPA","Rest3PE1","Rest1PE1","Rest4PE2","Rest2PE2","RESTRun3t299840","RESTRun4REVt299840","RESTRun1t299840","RESTRun2REVt299840","ABCDfMRIrestPA","ABCDfMRIrestAP","RESTRun2REVt640","Rest3PE1t299987","Rest4PE2t299987","Rest1PE1t299987","Rest2PE2t299987","RESTRun3t166240","Rest1PE1t23187","rsfMRIRun1t312787","BOLDresting4X4X4AP","resttopupAP","resttopupPA"],
-        "task-SIMON_bold": ["SimonAX"],
         "task-Sternberg_bold": ["STERNBERGTASK"],
         "task-TIMING_bold": ["TIMINGTASKRun1","TIMINGTASKRun2","TIMINGTASKRun3","TIMINGTASKRun4"],
         "task-unk_bold": ["fMRIRun1","MBTEST","RLWM","fMRI1","fMRI2","fMRI3","fMRI4","fMRI3PA","fMRI4AP","fMRI1PA","fMRI2AP","fMRIMB4t6687","fMRIMB4t6436","fMRIMB4t424879","fMRI64x64FOV2cmt55917","fMRI64x64FOV2cmt109917","fMRI64x64FOV2cmt415917"],
+        "proc-z_bold": ["SimonAX"],
         "proc-mean_bold": ["MeanEpi135","MeanEpi150","MeanEpi180","MeanEpi240","MeanEpi246","MeanEpi300","MeanEpi327","MeanEpi330","MeanEpi333","MeanEpi357","MeanEpi150e1"]
     },
     "mrs": {
@@ -71,6 +71,7 @@
     },
     "perf": {
         "asl": ["3DASL","3DASLNOMUSIC","CBF","CerebralBloodFlow"],
+        "flow": ["Ax4DFLOW3slab80VENCPreview","Ax4DFLOW3slab80VENCLRFlow","Ax4DFLOW3slab80VENCSIFlow","Ax4DFLOW3slab80VENCAPFlow"],
         "acq-preview_flow": ["Ax4DFLOW3slab80VENCPreviewe1","Ax4DFLOW3slab80VENCPreviewe2","Ax4DFLOW3slab80VENCPreviewe3","Ax4DFLOW3slab80VENCPreviewe4"],
         "acq-anatomy_flow": ["Ax4DFLOW3slab80VENCAnatomy"],
         "dir-LR_flow": ["Ax4DFLOW3slab80VENCLRFlowe2"],

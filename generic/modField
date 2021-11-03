@@ -138,8 +138,8 @@ if [[ "${NO_SORT}" == "false" ]]; then
   SORT_LS=(${SORT_LS//,/ })
   ORDER=
   COUNT=0
-  for (( i=0; i<${#FLAG[@]}; i++ )); do
-    for (( j=0; j<${#SORT_LS[@]}; j++ )); do
+  for (( j=0; j<${#SORT_LS[@]}; j++ )); do
+    for (( i=0; i<${#FLAG[@]}; i++ )); do
       if [[ "${FLAG[${i}]}" == "${SORT_LS[${j}]}" ]]; then
         COUNT=$(ezMath -x "${COUNT} + 1" -d 0)
         ORDER[${i}]=${COUNT}
@@ -167,7 +167,6 @@ for (( i=0; i<=${#FLAG[@]}; i++ )); do
   for (( j=0; j<${#FLAG[@]}; j++ )); do
     if [[ ${ORDER[${j}]} -eq ${i} ]]; then
       if [[ "${FLAG[${j}]}" != "remove" ]]; then
-        unset TSTR
         if [[ "${FLAG[${j}]}" != "modality" ]]; then
           TSTR="${FLAG[${j}]}-${VALUE[${j}]}"
         else
