@@ -121,10 +121,11 @@ mkdir -p ${DIR_SAVE}
 #  Make label set
 fslmaths ${MASK_LS[0]} -bin ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz
 for (( i=1; i<${N_MASK}; i++ )); do
-  MULTIPLIER=$(echo "2^${i}" | bc -l)
+  #MULTIPLIER=$(echo "2^${i}" | bc -l)
+  MULTIPLIER=$(ezMath -x "2^${i}" -d 0)
   fslmaths ${MASK_LS[${i}]} -bin -mul ${MULTIPLIER} \
     -add ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz \
-    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz
+    ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz -odt int
 done
 mv ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}.nii.gz ${DIR_SAVE}/
 

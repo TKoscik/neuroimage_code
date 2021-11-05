@@ -270,6 +270,7 @@ if [[ ${#METHOD[@]} > 1 ]]; then
   MASK_LS+=(${PREFIX}_mask-${LABEL}+MALF${SUFFIX}.nii.gz)
 
   ## make INTERSECTION mask
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>making intersection mask"; fi
   INTERSECT=$(ezMath -x "2^${#METHOD[@]}-1" -d 0)
   fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz \
     -thr ${INTERSECT} -uthr ${INTERSECT} -bin \
@@ -277,6 +278,7 @@ if [[ ${#METHOD[@]} > 1 ]]; then
   MASK_LS+=(${PREFIX}_mask-${LABEL}+INTERSECT${SUFFIX}.nii.gz)
 
   ## make UNION mask
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>making union mask"; fi
   fslmaths ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+VENN${SUFFIX}.nii.gz \
     -bin ${DIR_SCRATCH}/${PREFIX}_mask-${LABEL}+UNION${SUFFIX}.nii.gz
   MASK_LS+=(${PREFIX}_mask-${LABEL}+UNION${SUFFIX}.nii.gz)
@@ -289,16 +291,11 @@ if [[ "${NO_PNG}" == "false" ]]; then
     TNAME=${MASK_LS[${i}]%%.*}
     png_fcn="make3Dpng --bg ${IMAGE[0]}"
     png_fcn=${png_fcn}' --bg-threshold "5,99"'
-    if [[ "${TNAME}" == *"VENN"* ]]; then
-      png_fcn="${png_fcn} --fg ${DIR_SCRATCH}/${MASK_LS[${i}]}"
-      png_fcn=${png_fcn}' --fg-color "timbow"'
-      png_fcn=${png_fcn}' --fg-order "random"'
-      png_fcn=${png_fcn}' --fg-alpha 50'
-      png_fcn=${png_fcn}' --fg-cbar'
-    else
-      png_fcn="${png_fcn} --roi ${DIR_SCRATCH}/${MASK_LS[${i}]}"
-      png_fcn=${png_fcn}' --roi-color "#FF0000"'
-    fi
+    png_fcn="${png_fcn} --fg ${DIR_SCRATCH}/${MASK_LS[${i}]}"
+    png_fcn=${png_fcn}' --fg-color "timbow"'
+    png_fcn=${png_fcn}' --fg-order "random"'
+    png_fcn=${png_fcn}' --fg-alpha 50'
+    png_fcn=${png_fcn}' --fg-cbar'
     png_fcn=${png_fcn}' --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z"'
     png_fcn=${png_fcn}' --offset "0,0,0"'
     png_fcn="${png_fcn} --filename ${TNAME}"

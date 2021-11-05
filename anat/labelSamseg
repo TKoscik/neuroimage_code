@@ -142,7 +142,7 @@ if [[ "${LESION}" == "true" ]] || [[ "${WM_ANOMALY}" == "true" ]]; then
       MOD=$(getField -i ${IMAGE[${i}]} -f modality)
       if [[ "${MOD,,}" == "flair" ]] || [[ "${MOD,,}" == "t2w" ]]; then
         CONTRAST+=(1)
-      elif [[ "${MOD,,}" == "t2star" ]]; then
+      elif [[ "${MOD,,}" == "t2starw" ]] || [[ "${MOD,,}" == "t2star" ]]; then
         CONTRAST+=(-1)
       else
         echo "Contrast for ${MOD} not specified using value 0"
