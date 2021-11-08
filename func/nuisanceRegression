@@ -170,13 +170,16 @@ fslmeants -i ${DIR_SCRATCH}/resid.nii.gz \
   -o ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D \
   --label=${MASK_BRAIN}
 
+mv ${DIR_SCRATCH}/resid.nii.gz ${DIR_SAVE}/${PREFIX}_resid.nii.gz
+
 if [[ ${NO_PNG} == "false" ]]; then
   unset TSLS
-  if [[ -f ${DIR_RGR}/${PREFIX}_ts-brain+raw.1D ]]; then
-    TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+raw.1D)
+  PFXTMP=$(modField -i ${PREFIX} -r -f reg)
+  if [[ -f ${DIR_RGR}/${PFXTMP}_ts-brain+raw.1D ]]; then
+    TSLS+=(${DIR_RGR}/${PFXTMP}_ts-brain+raw.1D)
   fi
-  if [[ -f ${DIR_RGR}/${PREFIX}_ts-brain+mocoReg.1D ]]; then
-    TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+mocoReg.1D)
+  if [[ -f ${DIR_RGR}/${PFXTMP}_ts-brain+mocoReg.1D ]]; then
+    TSLS+=(${DIR_RGR}/${PFXTMP}_ts-brain+mocoReg.1D)
   fi
   if [[ -f ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D ]]; then
     TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+resid.1D)
@@ -186,8 +189,8 @@ if [[ ${NO_PNG} == "false" ]]; then
     for (( i=0; i<${#TSLS[@]}; i++ )); do
       fcn_str="${fcn_str} ${TSLS[${i}]}"
     done
-    ${DIR_RGR}/${PREFIX}_ts-brain+raw.1D \
-    ${DIR_RGR}/${PREFIX}_ts-brain+mocoReg.1D \
+    ${DIR_RGR}/${PFXTMP}_ts-brain+raw.1D \
+    ${DIR_RGR}/${PFXTMP}_ts-brain+mocoReg.1D \
     ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D \
     fcn_str="${fcn_str} > ${DIR_RGR}/${PREFIX}_ts-processing.1D"
     sed -i 's/  */\t/g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
@@ -198,8 +201,6 @@ if [[ ${NO_PNG} == "false" ]]; then
   fi
   regressorPlot --regressor ${TOPLOT}
 fi
-
-mv ${DIR_SCRATCH}/resid.nii.gz ${DIR_SAVE}/${PREFIX}_resid.nii.gz
 
 #===============================================================================
 # End of Function
