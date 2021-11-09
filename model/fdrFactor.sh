@@ -43,7 +43,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvlor --long inputs:,thresh-lo:,thresh-hi:,mask:,\
+OPTS=$(getopt -o hvlor --long inputs:,mask:,lo:,hi:,\
 dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -54,22 +54,22 @@ eval set -- "$OPTS"
 
 # Set default values for function ----------------------------------------------
 INPUTS=
-THRESH_LO=
-THRESH_HI=
 MASK=
+LO=
+HI=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
-
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
-
-    
-    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --inputs) INPUTS="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
+    --lo) LO="$2" ; shift 2 ;;
+    --hi) HI="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
@@ -85,21 +85,13 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help            display command help'
   echo '  -l | --no-log          disable writing to output log'
   echo '  -v | --verbose         verbose output'
-  echo '  -o | --onsets          file containing onsets, FSL 3 column format'
-  echo '                         onset duration amplitude'
-  echo '  -r | --ref-ts          number of TRs and TR defined by reference'
-  echo '                         time-series'
-  echo '  --ntr                  number of TRs in output'
-  echo '  --tr                   reptition time in s'
-  echo '  --poly                 order of polynomial detrending,'
-  echo '                         default -1 no detrend (polort input)'
-  echo '  --im                   flag to indicate output should be single trial'
-  echo '                         responses, i.e., a separate convolved time'
-  echo '                         series for each onset time in the input files'
-  echo '  --filename             name of output filename, ([_hrf].csv appended)'
-  echo '  --colnames             logical to add column names to output, taken'
-  echo '                         from onset file names, or a comma separated'
-  echo '                         list of column names'
+  echo '  --inputs               comma separate list of files to include in'
+  echo '                         FWHM calculation, should match data to be'
+  echo '                         modelled'
+  echo '  --mask                 binary mask of region of interest,'
+  echo '                         e.g., mask-brain'
+  echo '  --lo                   lower limit of valid values in data'
+  echo '  --hi                   upper limit of valid values'
   echo '  --dir-save             location to save output'
   echo '  --dir-scratch          location for temporary files'
   echo ''
@@ -171,3 +163,10 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask-FWHM.nii.gz \
 
 FDR_FACTOR=($(fslstats ${DIR_SCRATCH}/mask-FWHM.nii.gz -V))
 echo ${FDR_FACTOR[0]}
+
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
