@@ -43,7 +43,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvlor --long onsets:,ref-ts:,ntr:,tr:,:poly:,\
+OPTS=$(getopt -o hvlor --long onsets:,ref-ts:,ntr:,tr:,:poly:,im,\
 filename:,colnames:,dir-save:,dir-scratch:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -58,6 +58,7 @@ REF_TS=
 NTR=
 TR=
 ONSETS=
+IM=false
 FILENAME=
 COLNAMES=true
 DIR_SAVE=
@@ -76,6 +77,7 @@ while true; do
     --ntr) NTR="$2" ; shift 2 ;;
     --tr) TR="$2" ; shift 2 ;;
     --poly) POLY="$2" ; shift 2 ;;
+    --im) IM=true ; shift ;;
     --filename) FILENAME="$2" ; shift 2 ;;
     --colnames) COLNAMES="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -102,6 +104,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --tr                   reptition time in s'
   echo '  --poly                 order of polynomial detrending,'
   echo '                         default -1 no detrend (polort input)'
+  echo '  --im                   flag to indicate output should be single trial'
+  echo '                         responses, i.e., a separate convolved time'
+  echo '                         series for each onset time in the input files'
   echo '  --filename             name of output filename, ([_hrf].csv appended)'
   echo '  --colnames             logical to add column names to output, taken'
   echo '                         from onset file names, or a comma separated'
@@ -154,6 +159,12 @@ if [[ "${COLNAMES}" == "true" ]]; then
   done
 fi
 
+# set stim times arg -----------------------------------------------------------
+OUTTYPE="FSL"
+if [[ "${IM}" == "true" ]]; then
+  OUTTYPE="IM"
+done
+
 # initialize output ------------------------------------------------------------
 touch ${DIR_SCRATCH}/${FILENAME}.csv
 
@@ -166,7 +177,7 @@ touch ${DIR_SCRATCH}/${FILENAME}.csv
 for (( i=0, i<${NONS}; i++ )); do
   3dDeconvolve -polort ${POLY} -nodata ${NTR} ${TR} \
     -num_stimts 1 \
-    -stim_times_FSL 1 ${ONSETS} 'SPMG1' \
+    -stim_times_${OUTTYPE} 1 ${ONSETS} 'SPMG1' \
     -x1D ${DIR_SCRATCH}/${FILENAME}_${i}_ -x1D_stop
   # append column name to file if needed
   if [[ "${COLNAMES[0]}" != "false" ]]; then
