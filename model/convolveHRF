@@ -184,7 +184,7 @@ for (( i=0, i<${NONS}; i++ )); do
     sed -i "1s/^/${COLNAMES[${i}]}\n/" ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
   fi
   # paste column to output file
-  paste -d , ${DIR_SCRATCH}/${FILENAME}.1D ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
+  paste -d , ${DIR_SCRATCH}/${FILENAME}.csv ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
 done
 
 #===============================================================================
