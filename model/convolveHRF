@@ -20,27 +20,27 @@ NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
-function egress {
-  EXIT_CODE=$?
-  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-  if [[ "${KEEP}" == "false" ]]; then
-    if [[ -n ${DIR_SCRATCH} ]]; then
-      if [[ -d ${DIR_SCRATCH} ]]; then
-        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          rm -R ${DIR_SCRATCH}
-        else
-          rmdir ${DIR_SCRATCH}
-        fi
-      fi
-    fi
-  fi
-  if [[ "${NO_LOG}" == "false" ]]; then
-    unset LOGSTR
-    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
-    writeLog --benchmark --string ${LOGSTR}
-  fi
-}
-trap egress EXIT
+# function egress {
+#   EXIT_CODE=$?
+#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+#   if [[ "${KEEP}" == "false" ]]; then
+#     if [[ -n ${DIR_SCRATCH} ]]; then
+#       if [[ -d ${DIR_SCRATCH} ]]; then
+#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+#           rm -R ${DIR_SCRATCH}
+#         else
+#           rmdir ${DIR_SCRATCH}
+#         fi
+#       fi
+#     fi
+#   fi
+#   if [[ "${NO_LOG}" == "false" ]]; then
+#     unset LOGSTR
+#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+#     writeLog --benchmark --string ${LOGSTR}
+#   fi
+# }
+# trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvlor --long onsets:,ref-ts:,ntr:,tr:,:poly:,im,\
@@ -130,7 +130,7 @@ else
   if [[ -z ${NTR} ]] || [[ -z ${TR} ]]; then
     echo "A reference time-series or # TR and TR must be provided"
     exit 1
- fi
+  fi
 fi
 
 # parse onsets filenames -------------------------------------------------------
@@ -138,15 +138,15 @@ ONSETS=(${ONSETS//,/ })
 NONS=${#ONSETS[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${INPUT})
-PID=$(getField -i ${INPUT} -f sub)
-SID=$(getField -i ${INPUT} -f ses)
+DIR_PROJECT=$(getDir -i ${REF_TS})
+PID=$(getField -i ${REF_TS} -f sub)
+SID=$(getField -i ${REF_TS} -f ses)
 PIDSTR=sub-${PID}
 DIRPID=sub-${PID}
 if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
 if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 ## set default filename and save directory (if needed) - - - - - - - - - - - - -
-if [[ -z ${FILENAME} ]]; then FILENAME="$(getBidsBase -s -i ${ONSETS[0]})_hrf" fi
+if [[ -z ${FILENAME} ]]; then FILENAME="$(getBidsBase -s -i ${ONSETS[0]})_hrf"; fi
 if [[ -z ${DIR_SAVE} ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIRPID}
 fi
@@ -163,9 +163,10 @@ fi
 OUTTYPE="FSL"
 if [[ "${IM}" == "true" ]]; then
   OUTTYPE="IM"
-done
+fi
 
 # initialize output ------------------------------------------------------------
+mkdir ${DIR_SCRATCH}
 touch ${DIR_SCRATCH}/${FILENAME}.csv
 
 # task-convolution -------------------------------------------------------------
@@ -174,11 +175,11 @@ touch ${DIR_SCRATCH}/${FILENAME}.csv
 ## TR - repetition time (s)
 ## output is ${OUT_PREFIX}.xmat.1D
 ## for single-trial output, use stim_times_IM (check this works with FSL format)
-for (( i=0, i<${NONS}; i++ )); do
+for (( i=0; i<${NONS}; i++ )); do
   3dDeconvolve -polort ${POLY} -nodata ${NTR} ${TR} \
     -num_stimts 1 \
     -stim_times_${OUTTYPE} 1 ${ONSETS} 'SPMG1' \
-    -x1D ${DIR_SCRATCH}/${FILENAME}_${i}_ -x1D_stop
+    -x1D ${DIR_SCRATCH}/${FILENAME}_${i} -x1D_stop
   # append column name to file if needed
   if [[ "${COLNAMES[0]}" != "false" ]]; then
     sed -i "1s/^/${COLNAMES[${i}]}\n/" ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
@@ -187,8 +188,15 @@ for (( i=0, i<${NONS}; i++ )); do
   paste -d , ${DIR_SCRATCH}/${FILENAME}.csv ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
 done
 
+
+#Move hrf and xmat to save directory
+## for single-trial output, use stim_times_IM (check this works with FSL format)
+for (( i=0; i<${NONS}; i++ )); do
+  mv ${DIR_SCRATCH}/${FILENAME}.csv ${DIR_SAVE}/${FILENAME}.csv
+  mv ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D ${DIR_SAVE}/${FILENAME}_${i}.xmat.1D
+done
+
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
-
