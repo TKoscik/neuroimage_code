@@ -19,7 +19,7 @@ KEEP=false
 NO_LOG=false
 umask 007
 
-actions on exit, write to logs, clean scratch
+# actions on exit, write to logs, clean scratch
 function egress {
   EXIT_CODE=$?
   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
