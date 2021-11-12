@@ -146,7 +146,7 @@ for (( i=0; i<${N}; i++ )); do
 
   # calculate FWHM ---------------------------------------------------------------
   fwhm_fcn="FWHM=($(3dFWHMx"
-  fwhm_fcn="${fwhm_fcn} -mask  ${DIR_SCRATCH}/mask.nii.gz"
+  fwhm_fcn="${fwhm_fcn} -mask ${DIR_SCRATCH}/mask.nii.gz"
   fwhm_fcn="${fwhm_fcn} -out -"
   if [[ "${IS4D}" == "false" ]]; then fwhm_fcn="${fwhm_fcn} -2difMAD"; fi
   fwhm_fcn="${fwhm_fcn} -ShowMeClassicFWHM"
@@ -162,7 +162,7 @@ ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask-FWHM.nii.gz \
   ${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]} 0 1 0
 
 FDR_FACTOR=($(fslstats ${DIR_SCRATCH}/mask-FWHM.nii.gz -V))
-echo ${FDR_FACTOR[0]}
+echo "${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]} ${FDR_FACTOR[0]}"
 
 
 #===============================================================================
