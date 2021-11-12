@@ -228,14 +228,14 @@ fi
 
 # get normalization transforms -------------------------------------------------
 if [[ -z ${XFM_NORM} ]]; then
-  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*native_to-${TEMPLATE}*))
+  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*native_to-${TEMPLATE}*)) || true
 fi
 ## for backwards compatibility with different naming schemes
 if [[ -z ${XFM_NORM} ]]; then
-  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*${TARGET}+rigid_to-${TEMPLATE}*))
+  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*${TARGET}+rigid_to-${TEMPLATE}*)) || true
 fi
 if [[ -z ${XFM_NORM} ]]; then
-  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/xfm/${DIRPID}/*${TARGET}+rigid_to-${TEMPLATE}*))
+  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/xfm/${DIRPID}/*${TARGET}+rigid_to-${TEMPLATE}*)) || true
 fi
 if [[ -z "${XFM_NORM}" ]]; then
   echo "Normalization transform(s) not found, aborting"
@@ -276,7 +276,7 @@ fi
 if [[ ${PAD} -ne 0 ]]; then
   pad4D --ts ${TS_BOLD} --pad ${PAD} --dir-save ${DIR_SCRATCH}
   ls ${DIR_SCRATCH}/${PREFIX}*
-  TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}_prep-pad${PAD}_bold.nii.gz)
+  TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}*_prep-pad${PAD}_bold.nii.gz)
 fi
 
 # initialize mean BOLD ---------------------------------------------------------
