@@ -1,0 +1,194 @@
+#!/bin/bash -e
+#===============================================================================
+# Convolve ONSETS
+## using SPM Gamma function, (SPMG1 input in AFNI), essentially this is the
+## 'canonical HRF'
+# Authors: Timothy Koscik, PhD 
+# Date: 2021-11-09
+# CHANGELOG: <description of major changes to functionality>
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvlor --long onsets:,ref-ts:,ntr:,tr:,:poly:,im,\
+filename:,colnames:,dir-save:,dir-scratch:,\
+help,verbose,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ----------------------------------------------
+POLY=-1
+REF_TS=
+NTR=
+TR=
+ONSETS=
+IM=false
+FILENAME=
+COLNAMES=true
+DIR_SAVE=
+
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -o | --onsets) ONSETS="$2" ; shift 2 ;;
+    -r | --ref-ts) REF_TS="$2" ; shift 2 ;;
+    --ntr) NTR="$2" ; shift 2 ;;
+    --tr) TR="$2" ; shift 2 ;;
+    --poly) POLY="$2" ; shift 2 ;;
+    --im) IM=true ; shift ;;
+    --filename) FILENAME="$2" ; shift 2 ;;
+    --colnames) COLNAMES="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help            display command help'
+  echo '  -l | --no-log          disable writing to output log'
+  echo '  -v | --verbose         verbose output'
+  echo '  -o | --onsets          file containing onsets, FSL 3 column format'
+  echo '                         onset duration amplitude'
+  echo '  -r | --ref-ts          number of TRs and TR defined by reference'
+  echo '                         time-series'
+  echo '  --ntr                  number of TRs in output'
+  echo '  --tr                   reptition time in s'
+  echo '  --poly                 order of polynomial detrending,'
+  echo '                         default -1 no detrend (polort input)'
+  echo '  --im                   flag to indicate output should be single trial'
+  echo '                         responses, i.e., a separate convolved time'
+  echo '                         series for each onset time in the input files'
+  echo '  --filename             name of output filename, ([_hrf].csv appended)'
+  echo '  --colnames             logical to add column names to output, taken'
+  echo '                         from onset file names, or a comma separated'
+  echo '                         list of column names'
+  echo '  --dir-save             location to save output'
+  echo '  --dir-scratch          location for temporary files'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+
+# if a reference time-series is specified, get NTR and TR from NIfTI header ----
+if [[ -n ${REF_TS} ]]; then
+  NTR=$(niiInfo -i ${REF_TS} -f numtr)
+  TR=$(niiInfo -i ${REF_TS} -f tr)
+else
+  if [[ -z ${NTR} ]] || [[ -z ${TR} ]]; then
+    echo "A reference time-series or # TR and TR must be provided"
+    exit 1
+ fi
+fi
+
+# parse onsets filenames -------------------------------------------------------
+ONSETS=(${ONSETS//,/ })
+NONS=${#ONSETS[@]}
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${INPUT})
+PID=$(getField -i ${INPUT} -f sub)
+SID=$(getField -i ${INPUT} -f ses)
+PIDSTR=sub-${PID}
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
+## set default filename and save directory (if needed) - - - - - - - - - - - - -
+if [[ -z ${FILENAME} ]]; then FILENAME="$(getBidsBase -s -i ${ONSETS[0]})_hrf" fi
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIRPID}
+fi
+
+# set column names (if needed) -------------------------------------------------
+if [[ "${COLNAMES}" == "true" ]]; then
+  unset COLNAMES
+  for (( i=0; i<${NONS}; i++ )); do
+    COLNAMES+=$(getField -i ${ONSETS[${i}]} -f modality)
+  done
+fi
+
+# set stim times arg -----------------------------------------------------------
+OUTTYPE="FSL"
+if [[ "${IM}" == "true" ]]; then
+  OUTTYPE="IM"
+done
+
+# initialize output ------------------------------------------------------------
+touch ${DIR_SCRATCH}/${FILENAME}.csv
+
+# task-convolution -------------------------------------------------------------
+## ONSETS is FSL 3-column format:  onset duration amplitude (tab-delimited, s)
+## NTR - number of TRs
+## TR - repetition time (s)
+## output is ${OUT_PREFIX}.xmat.1D
+## for single-trial output, use stim_times_IM (check this works with FSL format)
+for (( i=0, i<${NONS}; i++ )); do
+  3dDeconvolve -polort ${POLY} -nodata ${NTR} ${TR} \
+    -num_stimts 1 \
+    -stim_times_${OUTTYPE} 1 ${ONSETS} 'SPMG1' \
+    -x1D ${DIR_SCRATCH}/${FILENAME}_${i}_ -x1D_stop
+  # append column name to file if needed
+  if [[ "${COLNAMES[0]}" != "false" ]]; then
+    sed -i "1s/^/${COLNAMES[${i}]}\n/" ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
+  fi
+  # paste column to output file
+  paste -d , ${DIR_SCRATCH}/${FILENAME}.csv ${DIR_SCRATCH}/${FILENAME}_${i}.xmat.1D
+done
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
