@@ -19,28 +19,28 @@ KEEP=false
 NO_LOG=false
 umask 007
 
-# actions on exit, write to logs, clean scratch
-# function egress {
-#   EXIT_CODE=$?
-#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-#   if [[ "${KEEP}" == "false" ]]; then
-#     if [[ -n ${DIR_SCRATCH} ]]; then
-#       if [[ -d ${DIR_SCRATCH} ]]; then
-#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-#           rm -R ${DIR_SCRATCH}
-#         else
-#           rmdir ${DIR_SCRATCH}
-#         fi
-#       fi
-#     fi
-#   fi
-#   if [[ "${NO_LOG}" == "false" ]]; then
-#     unset LOGSTR
-#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
-#     writeLog --benchmark --string ${LOGSTR}
-#   fi
-# }
-# trap egress EXIT
+actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvlor --long onsets:,ref-ts:,ntr:,tr:,:poly:,im,\
