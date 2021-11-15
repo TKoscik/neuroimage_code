@@ -19,7 +19,8 @@
         "export",
         "func",
         "generic",
-        "log"
+        "log",
+        "model"
     ],
     "software": {
         "openblas": {
