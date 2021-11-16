@@ -101,7 +101,7 @@ mkdir ${DIR_DWI}/tensor
 
 dtifit \
   -k ${IMAGE} \
-  -o ${DIR_DWI}/tensor/${PREFIX}_ \
+  -o ${DIR_DWI}/tensor/${PREFIX}_Scalar \
   -r ${DIR_DWI}/${PREFIX}.bvec \
   -b ${DIR_DWI}/${PREFIX}.bval \
   -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+FSL.nii.gz
