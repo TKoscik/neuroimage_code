@@ -104,8 +104,8 @@ dtifit \
   -o ${DIR_DWI}/tensor/${PREFIX}_ \
   -r ${DIR_DWI}/${PREFIX}.bvec \
   -b ${DIR_DWI}/${PREFIX}.bval \
-  -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain.nii.gz
-rename "Scalar_" "scalar-" ${DIR_DWI}/tensor/${PREFIX}_*
+  -m ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+FSL.nii.gz
+rename Scalar_ scalar- ${DIR_DWI}/tensor/${PREFIX}_*
 
 #===============================================================================
 # End of Function

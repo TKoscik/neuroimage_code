@@ -101,7 +101,7 @@ fi
 # Eddy Correction
 #==============================================================================
 if [ -z ${B0_MASK} ]; then
-  MASK_LS=$(ls ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+dil*.nii.gz)
+  MASK_LS=$(ls ${DIR_DWI}/${PREFIX}_mod-B0_mask-brain+FSL+*.nii.gz)
   BRAIN_MASK=${MASK_LS[0]}
 fi
 
