@@ -103,12 +103,12 @@ fi
 # Start of Function
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${{DWI_FILE})
+DIR_PROJECT=$(getDir -i ${DWI_FILE})
 PID=$(getField -i ${DWI_FILE} -f sub)
 SID=$(getField -i ${DWI_FILE} -f ses)
-DIR_SUBSES="sub-$PID}"
+DIR_SUBSES="sub-${PID}"
 if [[ -n ${SID} ]]; then
-  DIR_SUBSES="sub-$PID}/ses-${SID}"
+  DIR_SUBSES="sub-${PID}/ses-${SID}"
 fi
 if [ -z "${PREFIX}" ]; then
   PREFIX=$(getBidsBase -s -i ${DWI_FILE})
