@@ -104,11 +104,11 @@ fi
 #===============================================================================
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${{DWI_FILE})
-PID=$(getField -i ${{DWI_FILE} -f sub)
-SID=$(getField -i ${{DWI_FILE} -f ses)
-DIR_SUBSES="sub-${PID}"
+PID=$(getField -i ${DWI_FILE} -f sub)
+SID=$(getField -i ${DWI_FILE} -f ses)
+DIR_SUBSES="sub-$PID}"
 if [[ -n ${SID} ]]; then
-  DIR_SUBSES="ses-${SID}"
+  DIR_SUBSES="sub-$PID}/ses-${SID}"
 fi
 if [ -z "${PREFIX}" ]; then
   PREFIX=$(getBidsBase -s -i ${DWI_FILE})
@@ -145,8 +145,9 @@ FIB_FILE=($(ls ${DIR_SCRATCH}/${PREFIX}*fib.gz))
 mv ${FIB_FILE} ${DIR_SAVE}/${PREFIX}.fib.gz
 mkdir -p ${DIR_PROJECT}/qc/src_reports
 mv ${DIR_SCRATCH}/src_report.txt ${DIR_PROJECT}/qc/src_reports/${PREFIX}_src_report.txt
-mv ${DIR_SCRATCH}/${PREFIX}_wb-track* ${DIR_SAVE}
-mv ${DIR_SCRATCH}/*mapping.gz ${DIR_SAVE}
+mv ${DIR_SCRATCH}/${PREFIX}.src.gz ${DIR_SAVE}
+#mv ${DIR_SCRATCH}/${PREFIX}_wb-track* ${DIR_SAVE}
+#mv ${DIR_SCRATCH}/*mapping.gz ${DIR_SAVE}
 
 #===============================================================================
 # End of Function
