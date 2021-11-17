@@ -1,0 +1,216 @@
+#!/bin/bash -e
+#===============================================================================
+# 3dLSS
+# Authors: Lauren Hopkins
+# Date: 2021-11-17
+# CHANGELOG:
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# #actions on exit, write to logs, clean scratch
+# function egress {
+#   EXIT_CODE=$?
+#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+#   if [[ "${KEEP}" == "false" ]]; then
+#     if [[ -n ${DIR_SCRATCH} ]]; then
+#       if [[ -d ${DIR_SCRATCH} ]]; then
+#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+#           rm -R ${DIR_SCRATCH}
+#         else
+#           rmdir ${DIR_SCRATCH}
+#         fi
+#       fi
+#     fi
+#   fi
+#   if [[ "${NO_LOG}" == "false" ]]; then
+#     unset LOGSTR
+#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+#     writeLog --benchmark --string ${LOGSTR}
+#   fi
+# }
+# trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvkln --long prefix:,\
+image:,mask:,im_matrix:,automask,do_check,\
+dir-save:,dir-scratch:,\
+help,verbose,keep,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+IMAGE=
+MASK=
+AUTOMASK=false
+DO_CHECK=false
+GOFORIT=0
+IM_MATRIX=
+DIR_SAVE=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=0
+KEEP=false
+
+
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --image) IMAGE="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
+    --im_matrix) IM_MATRIX="$2" ; shift 2 ;;
+    --automask) AUTOMASK=true ; shift ;;
+    --do_check) DO_CHECK=true ; shift ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo "Usage: ${FCN_NAME}"
+  echo '  -h | --help              display command help'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --image                  list of images, can include * to find matches'
+  echo '                           must be comma-separated, not bash array'
+  echo '  --mask <value>           Optional. Mask corresponding to ts_bold'
+  echo '  --im_matrix              stim_times_IM x1D matrix'
+  echo '                           obtained from deconvolve with stim_times_IM option'
+  echo '  --automask               Will automatically mask input data.'
+  echo '  --do_check               Adds LSS output to original stim_times_IM matrix.'
+  echo '                           and graphs output to compare weights'
+  echo '  --dir-save <value>       directory to save output, default varies by'
+  echo '                           function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+# gather func images ---------------------------------------------------------
+unset IMG_LS
+unset IMG
+IMG=(${IMAGE//,/ })
+for (( i=0; i<${#IMG[@]}; i++ )); do
+  IMG_LS+=($(ls ${IMG[${i}]}))
+done
+N=${#IMG_LS[@]}
+
+# if verbose, print out input --------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo 'VERBOSE'
+  echo "[INC:${FCN_NAME}]"
+  echo -e "  BOLD input images:"
+  for (( i=0; i<${N}; i++ )); do echo -e "    ${IMG_LS[${i}]}"; done
+fi
+
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${IMG_LS[0]})
+PID=$(getField -i ${IMG_LS[0]} -f sub)
+SID=$(getField -i ${IMG_LS[0]} -f ses)
+PIDSTR=sub-${PID}
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then
+  PIDSTR=${PIDSTR}_ses-${SID}
+  DIRPID=${DIRPID}/ses-${SID}
+fi
+if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
+if [[ -z ${DIR_SAVE} ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/LSS/${DIRPID}
+fi
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_SCRATCH}
+
+if [[ ! -f "${IMAGE}" ]]; then
+  echo "The BOLD file does not exist. aborting."
+  exit 1
+fi
+
+# BOLD input
+BOLD_TS=$IMG_LS
+
+if [[ ! -f "${IM_MATRIX}" ]]; then
+    echo "Either your x1D matrix doesn't exist or"
+    echo "you have not yet created it."
+    echo "To create necessary matrix run deconvolution"
+    echo "with --stim_times_im flag."
+    exit 1
+fi
+
+# start writing fx
+lss_fcn="3dLSS"
+lss_fcn="${lss_fcn} -input ${BOLD_TS}"
+lss_fcn="${lss_fcn} -matrix ${IM_MATRIX}"
+lss_fcn="${lss_fcn} -prefix ${PREFIX}"
+lss_fcn="${lss_fcn} -save1D ${DIR_SCRATCH}/${PREFIX}_lss.1D"
+
+# mask options
+if [[ -f "${MASK}" ]]; then
+  lss_fcn="${lss_fcn} -mask ${MASK}"
+elif [[ "${AUTOMASK}" == "true" ]]; then
+  lss_fcn="${lss_fcn} -automask"
+elif [[ -n "${MASK}" ]] && [[ ! -e "${MASK}" ]]; then
+  echo "Mask ${MASK} does not exist."
+  echo "Either get the right filename or"
+  echo "try -automask if you want (will take longer)."
+fi
+
+# run it
+echo "---------------------------------"
+echo "Your LSS command is ------------ "
+echo "---------------------------------"
+echo ${lss_fcn} 2>&1 | tee ${DIR_SCRATCH}/lss_command.txt
+
+eval ${lss_fcn}
+
+# quick check - got from AFNI 3dLSS help page
+if [[ "${DO_CHECK}" == "true" ]]; then
+    1dmatcalc "&read(${IM_MATRIX}) &transp &read(${DIR_SCRATCH}/${PREFIX}_lss.1D) &mult &write(${DIR_SCRATCH}/R.mult.1D)"
+    1dplot ${DIR_SCRATCH}/R.mult.1D & | -png ${DIR_SCRATCH}/R.mult_plot
+    #1dgrayplot ${DIR_SCRATCH}/R.mult.1D & | -png ${DIR_SCRATCH}/R.mult_grayplot
+fi
+
+# move stuff over
+mv ${DIR_SCRATCH}/${PREFIX}_lss.1D ${DIR_SAVE}/${PREFIX}_lss.1D
+mv ${DIR_SCRATCH}/lss_command.txt ${DIR_SAVE}/lss_command.txt
+if [[ "${DO_CHECK}" == "true" ]]; then
+    mv ${DIR_SCRATCH}/R.mult.1D ${DIR_SAVE}/R.mult.1D
+    mv ${DIR_SCRATCH}/R.mult_plot ${DIR_SAVE}/R.mult_plot
+fi
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
