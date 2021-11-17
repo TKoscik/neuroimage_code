@@ -18,7 +18,7 @@ PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
 DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 OPERATOR=$(whoami)
-KERNEL="$(unname -s)"
+KERNEL="$(uname -s)"
 HARDWARE="$(uname -m)"
 HPC_Q=${QUEUE}
 HPC_SLOTS=${NSLOTS}
@@ -26,33 +26,33 @@ KEEP=false
 NO_LOG=false
 umask 007
 
-actions on exit, write to logs, clean scratch
-function egress {
-  EXIT_CODE=$?
-  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-  if [[ "${KEEP}" == "false" ]]; then
-    if [[ -n ${DIR_SCRATCH} ]]; then
-      if [[ -d ${DIR_SCRATCH} ]]; then
-        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          rm -R ${DIR_SCRATCH}
-        else
-          rmdir ${DIR_SCRATCH}
-        fi
-      fi
-    fi
-  fi
-  if [[ "${NO_LOG}" == "false" ]]; then
-    unset LOGSTR
-    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
-    writeLog --benchmark --string ${LOGSTR}
-  fi
-}
-trap egress EXIT
+# #actions on exit, write to logs, clean scratch
+# function egress {
+#   EXIT_CODE=$?
+#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+#   if [[ "${KEEP}" == "false" ]]; then
+#     if [[ -n ${DIR_SCRATCH} ]]; then
+#       if [[ -d ${DIR_SCRATCH} ]]; then
+#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+#           rm -R ${DIR_SCRATCH}
+#         else
+#           rmdir ${DIR_SCRATCH}
+#         fi
+#       fi
+#     fi
+#   fi
+#   if [[ "${NO_LOG}" == "false" ]]; then
+#     unset LOGSTR
+#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+#     writeLog --benchmark --string ${LOGSTR}
+#   fi
+# }
+# trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
 image:,mask:,polort:,goforit:,\
-stim_times:,fsl_stims:,ortvec,rmodel:,stim_times_im,x1d_stop,\
+stim_times:,fsl_stims,ortvec,rmodel:,stim_times_im,x1d_stop,\
 fitts:,errts:,fout:,rout:,tout:,bucket:,iresp:,jobs,automask,\
 convert_fsl,\
 dir-save:,dir-scratch:,\
@@ -73,8 +73,8 @@ GOFORIT=0
 STIM_TIMES=
 ORTVEC=
 RMODEL=
-STIM_TIMES_IM=true
-FSL_STIMS=true
+STIM_TIMES_IM=false
+FSL_STIMS=false
 CONVERT_FSL=false
 X1D_STOP=false
 FITTS=true
@@ -102,7 +102,7 @@ KEEP=false
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
@@ -113,7 +113,7 @@ while true; do
     --stim_times) STIM_TIMES="$2" ; shift 2 ;;
     --ortvec) ORTVEC="$2" ; shift 2 ;;
     --rmodel) RMODEL="$2" ; shift 2 ;;
-    --stim_times_im) STIM_TIMES_IM="$2" ; shift 2 ;;
+    --stim_times_im) STIM_TIMES_IM=true ; shift 2 ;;
     --fsl_stims) FSL_STIMS=true ; shift ;;
     --convert_fsl) CONVERT_FSL=true ; shift ;;
     --fitts) FITTS="$2" ; shift ;;
@@ -203,6 +203,7 @@ for (( i=0; i<${#IMG[@]}; i++ )); do
 done
 N=${#IMG_LS[@]}
 
+echo 'VERBOSE'
 # if verbose, print out input --------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then
   echo "[INC:${FCN_NAME}]"
@@ -223,7 +224,7 @@ if [[ -n ${SID} ]]; then
 fi
 if [[ -z ${PREFIX} ]]; then PREFIX=${PIDSTR}; fi
 if [[ -z ${DIR_SAVE} ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/deconvolution
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/deconvolution/${DIRPID}
 fi
 mkdir -p ${DIR_SAVE}
 mkdir -p ${DIR_SCRATCH}
@@ -232,6 +233,8 @@ if [[ ! -f "${IMAGE}" ]]; then
   echo "The BOLD file does not exist. aborting."
   exit 1
 fi
+
+echo "PREFIX = ${PREFIX}"
 
 # partial out stim times ------------------------------------------------------
 STIMULI=(${STIM_TIMES//,/ })
@@ -258,6 +261,8 @@ STIM_NAMES=(${FILE_NAME//,/ })
 
 # convert fsl 3 columnn stim timing format to afni format ---------------------
 unset AFNI_FILES
+
+echo "CONVERT FSL = ${CONVERT_FSL}"
 if [[ "${CONVERT_FSL}" == "true" ]]; then
   for (( i=0; i<${N_STIM}; i++ )); do
     timing_tool.py -fsl_timing_files ${STIMULI[${i}]} \
@@ -265,30 +270,52 @@ if [[ "${CONVERT_FSL}" == "true" ]]; then
     if [[ ${i} == 0 ]]; then
       AFNI_FILES="${DIR_SCRATCH}/${STIM_NAMES[${i}]}_afni_timing.txt"
     else
-      AFNI_FILES="${AFNI_FILES}, ${DIR_SCRATCH}/${STIM_NAMES[${i}]}_afni_timing.txt"
+      AFNI_FILES="${AFNI_FILES},${DIR_SCRATCH}/${STIM_NAMES[${i}]}_afni_timing.txt"
     fi
   done
+  STIMULI=(${AFNI_FILES//,/ })
 fi
 
 
 # let's do that decon
 # for if stim input is in fsl 3 column format - default
 unset decon_fcn
+echo "STIM TIMES IM = ${STIM_TIMES_IM}"
 
-decon_fcn="3dDeconvolution"
+decon_fcn="3dDeconvolve"
 decon_fcn="${decon_fcn} -input ${BOLD_TS}"
 decon_fcn="${decon_fcn} -polort ${POLORT}"
 decon_fcn="${decon_fcn} -num_stimts ${N_STIM}"
-if [[ "${FSL_STIMS}" == "true" ]]; then
-  for (( i=0; i<${N_STIM}; i++ )); do
-    STIM_NUM=`expr $i + 1`
-    decon_fcn="${decon_fcn} -stim_times_FSL ${STIM_NUM} ${STIMULI[${i}]} 'dmUBLOCK(1)' -stim_label ${STIM_NAMES[${i}]}"
-  done
-elif [[ "${CONVERT_FSL}" == "true" ]]; then
-    STIM_NUM=`expr $i + 1`
-    decon_fcn="${decon_fcn} -stim_times ${STIM_NUM} ${AFNI_FILES[${I}]} 'BLOCK(2,1)' -stim_label ${STIM_NAMES[${i}]}"
+if [[ "${STIM_TIMES_IM}" == "false" ]]; then
+  if [[ "${FSL_STIMS}" == "true" ]]; then
+    for (( i=0; i<${N_STIM}; i++ )); do
+      STIM_NUM=`expr $i + 1`
+      decon_fcn="${decon_fcn} -stim_times_FSL ${STIM_NUM} ${STIMULI[${i}]} 'dmUBLOCK(1)' -stim_label ${STIM_NUM} ${STIM_NAMES[${i}]}"
+    done
+  elif [[ "${CONVERT_FSL}" == "true" ]]; then
+    for (( i=0; i<${N_STIM}; i++ )); do
+      STIM_NUM=`expr $i + 1`
+      decon_fcn="${decon_fcn} -stim_times ${STIM_NUM} ${STIMULI[${i}]} 'BLOCK(2,1)' -stim_label ${STIM_NUM} ${STIM_NAMES[${i}]}"
+    done
   fi
+  decon_fcn="${decon_fcn} -x1D ${DIR_SCRATCH}/${PREFIX}_x1D"
+else
+# stim_times_IM
+# IMPORTANT NOTE: cant do stim_times and stim_times_IM in same 3ddeconvolve call
+  if [[ "${FSL_STIMS}" == "true" ]]; then
+    for (( i=0; i<${N_STIM}; i++ )); do
+      IM_NUM=`expr $i + 1`
+      decon_fcn="${decon_fcn} -stim_times_IM ${IM_NUM} ${STIMULI[${i}]} 'dmUBLOCK(1)' -stim_label ${IM_NUM} ${STIM_NAMES[${i}]}_IM"
+    done
+  else
+    for (( i=0; i<${N_STIM}; i++ )); do
+      IM_NUM=`expr $i + 1`
+      decon_fcn="${decon_fcn} -stim_times_IM ${IM_NUM} ${STIMULI[${i}]} 'BLOCK(2,1)' -stim_label ${IM_NUM} ${STIM_NAMES[${i}]}_IM"
+    done
+  fi
+  decon_fcn="${decon_fcn} -x1D ${DIR_SCRATCH}/${PREFIX}_x1D_IM"
 fi
+
 decon_fcn="${decon_fcn} -jobs ${JOBS}"
 
 
@@ -316,14 +343,6 @@ else
   done
 fi
 
-# stim_times_IM
-if [[ "${STIM_TIMES_IM}" == "true" ]]; then
-  for (( i=0; i<${N_STIM}; i++ )); do
-    IM_NUM=`expr $i + 1`
-    decon_fcn="${decon_fcn} -stim_times_IM ${IM_NUM} ${STIMULI[${i}]} 'dmUBLOCK(1)'"
-  done
-fi
-
 # x1D_stop
 if [[ "${X1D_STOP}" == "true" ]]; then
   decon_fcn="${decon_fcn} -x1D_stop"
@@ -346,7 +365,14 @@ fi
 #################### HARDCODED FOR SCA ####################
 ############# UNTIL I FIGURE OUT A BETTER WAY #############
 ##################### TO SPECIFY GLTS #####################
-#decon_fcn="${decon_fcn} -gltsym"
+
+# Gary's pilot glt
+decon_fcn="${decon_fcn} -num_glt 1"
+if [[ "${STIM_TIMES_IM}" == "false" ]]; then
+  decon_fcn="${decon_fcn} -gltsym 'SYM: -ev_rest +ev_hold ' -glt_label 1 "Hold-Rest""
+else
+  econ_fcn="${decon_fcn} -gltsym 'SYM: -ev_rest_IM +ev_hold_IM ' -glt_label 1 "Hold-Rest""
+fi
 
 # output stat options
 # F-stat
@@ -386,19 +412,44 @@ elif [[ "${IRESP}" == "true" ]] && [[ "${CONVERT_FSL}" == "false" ]]; then
   echo "--------------------------------------"
 fi
 
+# run it
+echo "---------------------------------"
+echo "Your deconvolution command is -- "
+echo "---------------------------------"
+echo ${decon_fcn} 2>&1 | tee ${DIR_SCRATCH}/decon_command.txt
 
+eval ${decon_fcn}
 
 # move files over
+if [[ "${CONVERT_FSL}" == "true" ]]; then
+  for (( i=0; i<${N_STIM}; i++ )); do
+    if [[ ! -f ${DIR_SAVE}/${STIM_NAMES[${i}]}_afni_timing.txt ]]; then
+      mv ${DIR_SCRATCH}/${STIM_NAMES[${i}]}_afni_timing.txt ${DIR_SAVE}/${STIM_NAMES[${i}]}_afni_timing.txt
+    fi
+ done
+fi
+
 if [[ "${IRESP}" == "true" ]]; then
   for (( i=0; i<${N_STIM}; i++ )); do
     mv ${DIR_SCRATCH}/${STIM_NAMES[${i}]}_iresp.nii.gz ${DIR_SAVE}/${STIM_NAMES[${i}]}_iresp.nii.gz
   done
 fi
-mv ${DIR_SCRATCH}/${PREFIX}_errts.nii.gz ${DIR_SAVE}/${PREFIX}_errts.nii.gz
-mv ${DIR_SCRATCH}/${PREFIX}_bucket.nii.gz ${DIR_SAVE}/${PREFIX}_bucket.nii.gz
+
+if [[ "${STIM_TIMES_IM}" == "false" ]]; then
+  mv ${DIR_SCRATCH}/${PREFIX}_errts.nii.gz ${DIR_SAVE}/${PREFIX}_errts.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_bucket.nii.gz ${DIR_SAVE}/${PREFIX}_bucket.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_x1D ${DIR_SAVE}/${PREFIX}_x1D
+  mv ${DIR_SCRATCH}/decon_command.txt ${DIR_SAVE}/decon_command.txt
+  mv ${DIR_SCRATCH}/${PREFIX}_bucket.REML_cmd ${DIR_SAVE}/${PREFIX}_bucket.REML_cmd
+else
+  mv ${DIR_SCRATCH}/${PREFIX}_errts.nii.gz ${DIR_SAVE}/${PREFIX}_errts_IM.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_bucket.nii.gz ${DIR_SAVE}/${PREFIX}_bucket_IM.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_x1D_IM ${DIR_SAVE}/${PREFIX}_x1D_IM
+  mv ${DIR_SCRATCH}/decon_command.txt ${DIR_SAVE}/decon_command_IM.txt
+  mv ${DIR_SCRATCH}/${PREFIX}_bucket.REML_cmd ${DIR_SAVE}/${PREFIX}_bucket_IM.REML_cmd
+fi
 
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
-
