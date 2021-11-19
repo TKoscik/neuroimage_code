@@ -1,0 +1,269 @@
+#!/bin/bash -e
+#===============================================================================
+# Functional Timeseries - Motion Correction ONLY, WITHOUT Registration
+#-------------------------------------------------------------------------------
+# This function performs BOLD timeseries motion correction. Normalization to
+# an anatomical template needs to be done separately. Motion corrections are
+# completed using ANTs. The processing steps in the procedure
+# are as follows:
+# 1) calculate mean BOLD TS, for an initial target for motion correction
+# 2) rigid-body (6 DF) motion correction, remake mean BOLD TS
+# 3) affine (12 DF) motion correction, remake mean BOLD TS
+# 4) fiunal rigid, affine, and SyN motioon correction, remake BOLD TS
+# Authors: Timothy R. Koscik, PhD
+# Date: 2021-11-19
+#===============================================================================
+
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvkln --long prefix:,\
+ts-bold:,\
+dir-xfm:,dir-save:,dir-scratch:,\
+keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
+if [[ $? != 0 ]]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+TS_BOLD=
+DIR_SAVE=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=1
+KEEP=false
+NO_PNG=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -v | --verbose) VERBOSE=1 ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
+    --prefix) PREFIX="$2" ; shift 2 ;;
+    --ts-bold) TS_BOLD="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -v | --verbose           add verbose output to log file'
+  echo '  -k | --keep              keep preliminary processing steps'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  -n | --no-png            disable PNG output'
+  echo '  --prefix <value>         scan prefix,'
+  echo '                           default: sub-123_ses-1234abcd'
+  echo '  --ts-bold <value>        Full path to single, run timeseries'
+  echo '  --dir-save <value>       directory to save output, default varies by function'
+  echo '  --dir-scratch <value>    directory for temporary workspace'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#==============================================================================
+# Start of Function
+#==============================================================================
+TS_RAW=${TS_BOLD}
+
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${TS_BOLD})
+PID=$(getField -i ${TS_BOLD} -f sub)
+SID=$(getField -i ${TS_BOLD} -f ses)
+if [[ ! -f "${TS_BOLD}" ]]; then
+  echo "The BOLD file does not exist. Exiting."
+  exit 1
+fi
+if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${TS_BOLD}); fi
+if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func; fi
+PIDSTR=sub-${PID}
+DIRPID=sub-${PID}
+if [[ -n "${SID}" ]]; then
+  PIDSTR=${PIDSTR}_ses-${SID}
+  DIRPID=${DIRPID}/ses-${SID}
+fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
+
+# Motion Correction ===========================================================
+# Get timeseries info ---------------------------------------------------------
+NTR=$(niiInfo -i ${TS_BOLD} -f numTR)
+TR=$(niiInfo -i ${TS_BOLD} -f TR)
+# check in here for 4d file.
+if [[ "${NTR}" == 1 ]]; then
+  echo "Input file is not a 4D file. Aborting."
+  exit 1
+fi
+
+# initialize mean BOLD ---------------------------------------------------------
+antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
+
+# rigid body motion correction to mean BOLD (6 df) -----------------------------
+antsMotionCorr \
+  -d 3 -u 1 -e 1 -n ${NTR} -v ${VERBOSE} \
+  -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
+  -t Rigid[0.1] \
+  -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
+  -i 20x15x5x1 \
+  -s 3x2x1x0 \
+  -f 4x3x2x1
+
+cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
+rm ${DIR_SCRATCH}/temp.csv
+rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
+
+# affine motion correction to mean BOLD ----------------------------------------
+antsMotionCorr \
+  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
+  -o [${DIR_SCRATCH}/${PREFIX}_affine_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
+  -t Affine[0.1] \
+  -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
+  -i 20x15x5x1 \
+  -s 3x2x1x0 \
+  -f 4x3x2x1
+
+cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
+sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+12.1D
+rm ${DIR_SCRATCH}/temp.csv
+rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
+
+# get brain mask of mean BOLD -------------------------------------------------
+bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
+mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+
+# SyN motion correction to mean bold -------------------------------------------
+antsMotionCorr \
+  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
+  -o [${DIR_SCRATCH}/${PREFIX}_moco_,${DIR_SCRATCH}/${PREFIX}_moco.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
+  -t Rigid[0.25] \
+    -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
+    -i 20x15x5x1 \
+    -s 3x2x1x0 \
+    -f 4x3x2x1 \
+  -t Affine[0.25] \
+    -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
+    -i 20x15x5x1 \
+    -s 3x2x1x0 \
+    -f 4x3x2x1 \
+  -t SyN[0.2,3,0] \
+    -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
+    -i 20x15x5x1 \
+    -s 3x2x1x0 \
+    -f 4x3x2x1
+
+# get brain mask of mean BOLD --------------------------------------------------
+bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
+mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
+  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+
+# Move files to appropriate locations ------------------------------------------
+## move regressors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkdir -p ${DIR_SAVE}/regressors/${DIRPID}
+mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_SAVE}/regressors/${DIRPID}/
+mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_SAVE}/regressors/${DIRPID}/
+
+## move raw space brain mask - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkdir -p ${DIR_SAVE}/mask
+mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+  ${DIR_SAVE}/mask/${PREFIX}_proc-moco_mask-brain.nii.gz
+
+## move moco bold TS - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkdir -p ${DIR_SAVE}/moco_only
+mv ${DIR_SCRATCH}/${PREFIX}_moco.nii.gz \
+  ${DIR_SAVE}/moco_only/${PREFIX}_proc-moco_bold.nii.gz
+
+## move moco mean bold - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkdir -p ${DIR_SAVE}/moco_mean
+mv ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+  ${DIR_SAVE}/moco_mean/${PREFIX}_proc-moco+mean_bold.nii.gz
+
+# extract time series for plotting ---------------------------------------------
+# get raw whole brain time series
+fslmeants -i ${TS_RAW} -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+raw.1D \
+  --label=${DIR_SAVE}/${PREFIX}_proc-moco_mask-brain.nii.gz 
+
+# get moco whole brain time series
+fslmeants -i ${DIR_SAVE}/${PREFIX}_proc-moco_bold.nii.gz \
+  -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+moco.1D \
+  --label=${DIR_SAVE}/${PREFIX}_proc-moco_mask-brain.nii.gz
+
+if [[ "${KEEP}" == "true" ]]; then
+  mkdir -p ${DIR_PROJECT}/derivative/inc/prep/${DIRPID}/func
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/func
+fi
+
+# generate output PNGs ---------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  ## mean bold overlay on template, masked with brain mask
+  make3Dpng --bg ${DIR_SAVE}/moco_mean/${PREFIX}_proc-moco+mean_bold.nii.gz \
+    --fg ${DIR_SAVE}/mask/${PREFIX}_proc-moco_mask-brain.nii.gz \
+    --fg-color "#FF69B4" --fg-alpha 50 \
+    --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z" \
+    --offset "0,0,0"
+  ## image of slices in 4d
+  make4Dpng --bg ${DIR_SAVE}/moco_mean/${PREFIX}_proc-moco+mean_bold.nii.gz \
+    --fg ${DIR_SAVE}/moco_only/${PREFIX}_proc-moco_bold.nii.gz \
+    --fg-mask ${DIR_SAVE}/mask/${PREFIX}_proc-moco_mask-brain.nii.gz \
+    --fg-color "hot" --layout "5x11" --plane "z" --slice 0.51 \
+    --filename ${PREFIX}_proc-moco_bold \
+    --dir-save ${DIR_SAVE}/moco_only
+fi
+
+#===============================================================================
+# End of function
+#===============================================================================
+exit 0
+
+
