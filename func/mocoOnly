@@ -141,10 +141,12 @@ if [[ "${NTR}" == 1 ]]; then
   exit 1
 fi
 
+echo "initialize mean BOLD"
 # initialize mean BOLD ---------------------------------------------------------
 antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 
 # rigid body motion correction to mean BOLD (6 df) -----------------------------
+echo "rigid body motion correction to mean BOLD"
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NTR} -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
@@ -161,6 +163,7 @@ rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
 
 # affine motion correction to mean BOLD ----------------------------------------
+echo "affine motion correction to mean BOLD"
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_affine_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
@@ -177,12 +180,14 @@ rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 
 # get brain mask of mean BOLD -------------------------------------------------
+echo "get brain mask of mean BOLD"
 bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 
 # SyN motion correction to mean bold -------------------------------------------
+echo "SyN motion correction to mean bold"
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_moco_,${DIR_SCRATCH}/${PREFIX}_moco.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
@@ -203,6 +208,7 @@ antsMotionCorr \
     -f 4x3x2x1
 
 # get brain mask of mean BOLD --------------------------------------------------
+echo "get brain mask of mean BOLD"
 bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
@@ -210,31 +216,37 @@ mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
 
 # Move files to appropriate locations ------------------------------------------
 ## move regressors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "move regressors"
 mkdir -p ${DIR_SAVE}/regressors/${DIRPID}
 mv ${DIR_SCRATCH}/${PREFIX}_moco+6.1D ${DIR_SAVE}/regressors/${DIRPID}/
 mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D ${DIR_SAVE}/regressors/${DIRPID}/
 
 ## move raw space brain mask - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "move raw space brain mask"
 mkdir -p ${DIR_SAVE}/mask
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
   ${DIR_SAVE}/mask/${PREFIX}_proc-moco_mask-brain.nii.gz
 
 ## move moco bold TS - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "move moco bold TS"
 mkdir -p ${DIR_SAVE}/moco_only
 mv ${DIR_SCRATCH}/${PREFIX}_moco.nii.gz \
   ${DIR_SAVE}/moco_only/${PREFIX}_proc-moco_bold.nii.gz
 
 ## move moco mean bold - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+evho "move moco mean bold"
 mkdir -p ${DIR_SAVE}/moco_mean
 mv ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SAVE}/moco_mean/${PREFIX}_proc-moco+mean_bold.nii.gz
 
 # extract time series for plotting ---------------------------------------------
 # get raw whole brain time series
+echo "get raw whole brain time series"
 fslmeants -i ${TS_RAW} -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+raw.1D \
   --label=${DIR_SAVE}/${PREFIX}_proc-moco_mask-brain.nii.gz 
 
 # get moco whole brain time series
+echo "get moco whole brain time series"
 fslmeants -i ${DIR_SAVE}/${PREFIX}_proc-moco_bold.nii.gz \
   -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+moco.1D \
   --label=${DIR_SAVE}/${PREFIX}_proc-moco_mask-brain.nii.gz
@@ -244,6 +256,7 @@ if [[ "${KEEP}" == "true" ]]; then
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/func
 fi
 
+echo "PNG section"
 # generate output PNGs ---------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
   ## mean bold overlay on template, masked with brain mask
