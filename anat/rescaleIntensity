@@ -39,7 +39,7 @@ function egress {
 trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
-image:,mask:,keep-neg,truncate:,truncate-method:,max:,\
+image:,mask:,keep-neg,lo:,hi:,truncate-value:,max:,\
 datatype:,\
 dir-save:,dir-scratch:,\
 help,verbose,no-log,no-png -n 'parse-options' -- "$@")
@@ -53,9 +53,10 @@ PREFIX=
 IMAGE=
 MASK
 KEEP_NEG=false
-TRUNCATE="0,1"
-TRUNCATE_METHOD="percent"
-MAX_VALUE="10000"
+LO=0
+HI=1
+TRUNCATE_VALUE=false
+MAX="10000"
 DATATYPE="short"
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
@@ -73,8 +74,9 @@ while true; do
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --keep-neg) KEEP_NEG=true ; shift ;;
-    --truncate) TRUNCATE="$2" ; shift 2 ;;
-    --truncate-method) TRUNCATE_METHOD="$2" ; shift 2 ;;
+    --lo) LO="$2" ; shift 2 ;;
+    --hi) HI="$2" ; shift 2 ;;
+    --truncate-value) TRUNCATE_VALUE=true ; shift ;;
     --max) MAX_VALUE="$2" ; shift 2 ;;
     --datatype) DATATYPE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -107,12 +109,10 @@ if [[ "${HELP}" == "true" ]]; then
   echo '                   default=1'
   echo '  --datatype       desired output datatype, not case sensitive'
   echo '                   options: INT8   (CHAR, signed 8-bit integer)'
-  echo '                            UINT8  (UCHAR, unsigned 8-bit integer)'
-  echo '                            INT16  (SHORT, signed 16-bit integer)'
-  echo '                  <DEFAULT> UINT16 (USHORT, unsigned 16-bit integer)'
+  echo '                  <DEFAULT> INT16  (SHORT, signed 16-bit integer)'
   echo '                            INT32  (INT, signed 32-bit integer)'
-  echo '                            UINT32 (UINT, unsigned 32-bit integer)'
   echo '                            FLOAT  (FLOAT32, 32-bit floating point)'
+  echo '                            DOUBLE  (DOUBLE64,FLOAT64, 64-bit floating point)'
   echo '                            NULL   No Conversion'
   echo '  --dir-save       directory to save output,'
   echo '      default: ${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}/ses-${SID}'
@@ -139,23 +139,23 @@ case ${DATATYPE,,} in
 esac
 
 # set default MAX_VALUE --------------------------------------------------------
-if [[ -z ${MAX_VALUE} ]]; then
-  MAX_VALUE=10000
+if [[ -z ${MAX} ]]; then
+  MAX=10000
   if [[ "${DATATYPE,,}" == "char" ]] ; then
-    MAX_VALUE=255
+    MAX=255
   fi
 fi
 
 # check desired output range ---------------------------------------------------
-if [[ "${DATATYPE,,}" == "char" ]] && [[ ${MAX_VALUE} -gt 255 ]]; then
+if [[ "${DATATYPE,,}" == "char" ]] && [[ ${MAX} -gt 255 ]]; then
   echo "[INC: ${FCN_NAME}]: Output value out of range. INT8/CHAR Max = 255"
   exit 1
 fi
-if [[ "${DATATYPE,,}" == "short" ]] && [[ ${MAX_VALUE} -gt 32767 ]]; then
+if [[ "${DATATYPE,,}" == "short" ]] && [[ ${MAX} -gt 32767 ]]; then
   echo "[INC: ${FCN_NAME}]: Output value out of range. INT16/SHORT Max = 32767"
   exit 1
 fi
-if [[ "${DATATYPE,,}" == "int" ]] && [[ ${MAX_VALUE} -gt 2147483648 ]]; then
+if [[ "${DATATYPE,,}" == "int" ]] && [[ ${MAX} -gt 2147483648 ]]; then
   echo "[INC: ${FCN_NAME}]: Output value out of range. INT32/INT Max = 2147483648"
   exit 1
 fi
@@ -193,19 +193,19 @@ IMAGE_RS=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
 # truncate intensities ---------------------------------------------------------
 ## set 0 point to lower bound of truncation
-TRUNCATE=(${TRUNCATE//,/ })
-if [[ ${TRUNCATE_METHOD,,} == "percent" ]]; then
+if [[ ${TRUNCATE_VALUE,,} == "false" ]]; then
   if [[ -n ${MASK}]]; then
-    TLO=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${TRUNCATE[0]})
-    THI=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${TRUNCATE[1]})
+    LO=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${LO})
+    HI=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${HI})
   else
-    TLO=$(fslstats ${IMAGE_RS} -p ${TRUNCATE[0]})
-    THI=$(fslstats ${IMAGE_RS} -p ${TRUNCATE[1]})
+    LO=$(fslstats ${IMAGE_RS} -p ${LO})
+    HI=$(fslstats ${IMAGE_RS} -p ${HI})
   fi
 fi
-fslmaths ${IMAGE_RS} \
-  -thr ${TRUNCATE[0]} -uthr ${TRUNCATE[1]} \
-  -sub ${TRUNCATE[0]} \
+fslmaths ${IMAGE_RS} -uthr ${HI} -bin -mul ${HI} -sub ${LO} -thr 0 \
+  ${DIR_SCRATCH}/upper_trunc_roi.nii.gz
+fslmaths ${IMAGE_RS} -thr ${LO} -uthr ${HI} -sub ${LO} \
+  -add ${DIR_SCRATCH}/upper_trunc_roi.nii.gz \
   ${IMAGE_RS}
 
 # get denominator for normailzation --------------------------------------------
@@ -213,10 +213,7 @@ MINMAX=($(fslstats ${IMAGE_RS} -a -R))
 DENOM=$(ezMath "${MINMAX[1]}-${MINMAX[0]}" -d 4)
 
 # convert to final range and datatype ------------------------------------------
-fslmaths -dt float ${IMAGE_RS} \
-  -div ${DENOM} \
-  -mul ${MAX_VALUE} \
-  ${IMAGE_RS} -odt ${DATATYPE}
+fslmaths -dt float ${IMAGE_RS} -div ${DENOM} -mul ${MAX} ${IMAGE_RS} -odt ${DATATYPE}
 
 # restore negatives if necessary -----------------------------------------------
 if [[ "${KEEP_NEG}" == "true" ]]; then
