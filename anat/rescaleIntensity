@@ -39,7 +39,8 @@ function egress {
 trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
-image:,keep-neg,lo:,hi:,datatype:,\
+image:,mask:,keep-neg,truncate:,truncate-method:,max:,\
+datatype:,\
 dir-save:,dir-scratch:,\
 help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -50,10 +51,12 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 IMAGE=
+MASK
 KEEP_NEG=false
-LO=0
-HI=1
-DATATYPE="UINT16"
+TRUNCATE="0,1"
+TRUNCATE_METHOD="percent"
+MAX_VALUE="10000"
+DATATYPE="short"
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
@@ -68,9 +71,11 @@ while true; do
     -n | --no-png) NO_PNG=true ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
+    --mask) MASK="$2" ; shift 2 ;;
     --keep-neg) KEEP_NEG=true ; shift ;;
-    --lo) LO="$2" ; shift 2 ;;
-    --hi) HI="$2" ; shift 2 ;;
+    --truncate) TRUNCATE="$2" ; shift 2 ;;
+    --truncate-method) TRUNCATE_METHOD="$2" ; shift 2 ;;
+    --max) MAX_VALUE="$2" ; shift 2 ;;
     --datatype) DATATYPE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -124,6 +129,37 @@ fi
 #===============================================================================
 # Rescale Intensity
 #===============================================================================
+# check datatype ---------------------------------------------------------------
+case ${DATATYPE,,} in
+  int8|char) DATATYPE="char" ;;
+  int16|short) DATATYPE="short" ;;
+  int32|int) DATATYPE="int" ;;
+  float|float32) DATATYPE="float" ;;
+  double|double64|float64) DATATYPE="double" ;;
+esac
+
+# set default MAX_VALUE --------------------------------------------------------
+if [[ -z ${MAX_VALUE} ]]; then
+  MAX_VALUE=10000
+  if [[ "${DATATYPE,,}" == "char" ]] ; then
+    MAX_VALUE=255
+  fi
+fi
+
+# check desired output range ---------------------------------------------------
+if [[ "${DATATYPE,,}" == "char" ]] && [[ ${MAX_VALUE} -gt 255 ]]; then
+  echo "[INC: ${FCN_NAME}]: Output value out of range. INT8/CHAR Max = 255"
+  exit 1
+fi
+if [[ "${DATATYPE,,}" == "short" ]] && [[ ${MAX_VALUE} -gt 32767 ]]; then
+  echo "[INC: ${FCN_NAME}]: Output value out of range. INT16/SHORT Max = 32767"
+  exit 1
+fi
+if [[ "${DATATYPE,,}" == "int" ]] && [[ ${MAX_VALUE} -gt 2147483648 ]]; then
+  echo "[INC: ${FCN_NAME}]: Output value out of range. INT32/INT Max = 2147483648"
+  exit 1
+fi
+
 # Set up BIDs compliant variables and workspace --------------------------------
 DIR_PROJECT=$(getDir -i ${IMAGE})
 PID=$(getField -i ${IMAGE} -f sub)
@@ -143,37 +179,54 @@ mkdir -p ${DIR_SAVE}
 # gather modality for output ---------------------------------------------------
 MOD=($(getField -i ${IMAGE} -f "modality"))
 
-# set inputs and outputs -------------------------------------------------------
-SRC=${IMAGE}
-TRG=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+# deal with negative values ----------------------------------------------------
+if [[ "${KEEP_NEG}" == "false" ]]; then
+  fslmaths ${IMAGE} -thr 0 ${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+else
+  ## make negative mask 1/-1 - - - - - - - - - - - - - - - - - - - - - - - - - -
+  fslmaths ${IMAGE} -uthr 0 -abs -bin -mul -2 -add 1 \
+    ${DIR_SCRATCH}/${PREFIX}_${MOD}_mask-neg.nii.gz
+  ## convert to absolute value for processing - - - - - - - - - - - - - - - - - 
+  fslmaths ${IMAGE} -abs -thr 0 ${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+fi
+IMAGE_RS=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
-# cutoff negative values if desired --------------------------------------------
+# truncate intensities ---------------------------------------------------------
+## set 0 point to lower bound of truncation
+TRUNCATE=(${TRUNCATE//,/ })
+if [[ ${TRUNCATE_METHOD,,} == "percent" ]]; then
+  if [[ -n ${MASK}]]; then
+    TLO=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${TRUNCATE[0]})
+    THI=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${TRUNCATE[1]})
+  else
+    TLO=$(fslstats ${IMAGE_RS} -p ${TRUNCATE[0]})
+    THI=$(fslstats ${IMAGE_RS} -p ${TRUNCATE[1]})
+  fi
+fi
+fslmaths ${IMAGE_RS} \
+  -thr ${TRUNCATE[0]} -uthr ${TRUNCATE[1]} \
+  -sub ${TRUNCATE[0]} \
+  ${IMAGE_RS}
+
+# get denominator for normailzation --------------------------------------------
+MINMAX=($(fslstats ${IMAGE_RS} -a -R))
+DENOM=$(ezMath "${MINMAX[1]}-${MINMAX[0]}" -d 4)
+
+# convert to final range and datatype ------------------------------------------
+fslmaths -dt float ${IMAGE_RS} \
+  -div ${DENOM} \
+  -mul ${MAX_VALUE} \
+  ${IMAGE_RS} -odt ${DATATYPE}
+
+# restore negatives if necessary -----------------------------------------------
 if [[ "${KEEP_NEG}" == "true" ]]; then
-  fslmaths ${IMAGE} -thr 0 ${TRG}
-  SRC=${TRG}
-fi
-
-# truncate at desired percentile -----------------------------------------------
-if [[ "${LO}" != 0 ]] || [[ "${HI}" != 1 ]]; then
-  ImageMath 3 ${TRG} TruncateImageIntensity ${SRC} ${LO} ${HI} 256
-  SRC=${TRG}
-fi
-
-# convert datatype -------------------------------------------------------------
-if [[ "${DATATYPE,,}" != "null" ]]; then
-  case ${DATATYPE,,} in
-    int8|char) ConvertImagePixelType ${SRC} ${TRG} 0 ;;
-    uint8|uchar) ConvertImagePixelType ${SRC} ${TRG} 1 ;;
-    int16|short) ConvertImagePixelType ${SRC} ${TRG} 2 ;;
-    uint16|ushort) ConvertImagePixelType ${SRC} ${TRG} 3 ;;
-    int32|int) ConvertImagePixelType ${SRC} ${TRG} 4 ;;
-    uint32|uint) ConvertImagePixelType ${SRC} ${TRG} 5 ;;
-    float|float32) ConvertInputImagePixelTypeToFloat ${SRC} ${TRG} 4 ;;
-  esac
+  fslmaths ${IMAGE_RS} \
+    -mul ${DIR_SCRATCH}/${PREFIX}_${MOD}_mask-neg.nii.gz \
+    ${IMAGE_RS} -odt ${DATATYPE}
 fi
 
 # copy output to final file ----------------------------------------------------
-mv ${TRG} ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
+mv ${IMAGE_RS} ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
 
 # generate out PNG -------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
@@ -184,5 +237,4 @@ fi
 # End of Function
 #===============================================================================
 exit 0
-
 
