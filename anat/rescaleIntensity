@@ -51,7 +51,7 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 IMAGE=
-MASK
+MASK=
 KEEP_NEG=false
 LO=0
 HI=1
@@ -104,7 +104,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --lo             lower threshold as percentile of intensity,'
   echo '                   default=0, applied after thresholding at 0 if'
   echo '                   not keeping negative values'
-  echo '  --hi             upper threshold as percentil of intensity,'
+  echo '  --hi             upper threshold as percentile of intensity,'
   echo '                   applied after discarding/keeping negative values'
   echo '                   default=1'
   echo '  --datatype       desired output datatype, not case sensitive'
