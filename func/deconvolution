@@ -54,7 +54,7 @@ OPTS=$(getopt -o hvkln --long prefix:,\
 image:,mask:,polort:,goforit:,\
 stim_times:,fsl_stims,ortvec,rmodel:,stim_times_im,x1d_stop,\
 fitts:,errts:,fout:,rout:,tout:,bucket:,iresp:,jobs,automask,\
-convert_fsl,\
+convert_fsl,concat_stims,\
 dir-save:,dir-scratch:,\
 help,verbose,keep,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
@@ -76,6 +76,7 @@ RMODEL=
 STIM_TIMES_IM=false
 FSL_STIMS=false
 CONVERT_FSL=false
+CONCAT_STIMS=false
 X1D_STOP=false
 FITTS=true
 ERRTS=true
@@ -116,6 +117,7 @@ while true; do
     --stim_times_im) STIM_TIMES_IM=true ; shift 2 ;;
     --fsl_stims) FSL_STIMS=true ; shift ;;
     --convert_fsl) CONVERT_FSL=true ; shift ;;
+    --concat_stims) CONCAT_STIMS=true ; shift ;;
     --fitts) FITTS="$2" ; shift ;;
     --errts) ERRTS="$2" ; shift ;;
     --fout) FOUT="$2" ; shift ;;
@@ -168,6 +170,9 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --convert_fsl            Convert fsl timing files to afni. Good if want any models '
   echo '                           other than dmBLOCK which youm probably will eventually'
   echo '                           default: false'
+  echo '  --concat_stims           Put stim time files into one sequential file with all trials '
+  echo '                           Useful for 3dLSS and single-trial beta analyses'
+  echo '                           default: false'
   echo '  --rmodel <value>         Comma separated list of ?????????????????????'
   echo '  --jobs <value>           Make that CPU go vroom-vroom'
   echo '                           Value must be numeric, greater than 0 and less'
@@ -203,7 +208,7 @@ for (( i=0; i<${#IMG[@]}; i++ )); do
 done
 N=${#IMG_LS[@]}
 
-echo 'VERBOSE'
+echo "VERBOSE = ${VERBOSE}"
 # if verbose, print out input --------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then
   echo "[INC:${FCN_NAME}]"
@@ -244,8 +249,19 @@ N_STIM=${#STIMULI[@]}
 RMODELS=(${RMODEL//,/ })
 N_MODEL=${#RMODELS[@]}
 
-
 BOLD_TS=$IMG_LS
+
+# convert fsl 3 columnn stim timing format to afni format ---------------------
+unset AFNI_FILES
+echo "CONVERT FSL = ${CONVERT_FSL}"
+echo "CONCAT STIMS = ${CONCAT_STIMS}"
+
+if [[ "${CONCAT_STIMS}" == "true" ]]; then
+  for i in "${STIMULI[@]}"; do cat "$i"; done > ${DIR_SCRATCH}/merged.stims
+  STIMULI=${DIR_SCRATCH}/merged.stims
+  sort -k1 -n ${STIMULI} > ${DIR_SCRATCH}/merged.stims.sorted
+  STIMULI=${DIR_SCRATCH}/merged.stims.sorted
+fi
 
 # stim names from file names
 for (( i=0; i<${N_STIM}; i++ )); do
@@ -259,10 +275,6 @@ for (( i=0; i<${N_STIM}; i++ )); do
 done
 STIM_NAMES=(${FILE_NAME//,/ })
 
-# convert fsl 3 columnn stim timing format to afni format ---------------------
-unset AFNI_FILES
-
-echo "CONVERT FSL = ${CONVERT_FSL}"
 if [[ "${CONVERT_FSL}" == "true" ]]; then
   for (( i=0; i<${N_STIM}; i++ )); do
     timing_tool.py -fsl_timing_files ${STIMULI[${i}]} \
@@ -367,12 +379,13 @@ fi
 ##################### TO SPECIFY GLTS #####################
 
 # Gary's pilot glt
-decon_fcn="${decon_fcn} -num_glt 1"
-if [[ "${STIM_TIMES_IM}" == "false" ]]; then
-  decon_fcn="${decon_fcn} -gltsym 'SYM: -ev_rest +ev_hold ' -glt_label 1 "Hold-Rest""
-else
-  econ_fcn="${decon_fcn} -gltsym 'SYM: -ev_rest_IM +ev_hold_IM ' -glt_label 1 "Hold-Rest""
-fi
+# or maybe no glts in future
+# decon_fcn="${decon_fcn} -num_glt 1"
+# if [[ "${STIM_TIMES_IM}" == "false" ]]; then
+#   decon_fcn="${decon_fcn} -gltsym 'SYM: -ev_rest +ev_hold ' -glt_label 1 "Hold-Rest""
+# else
+#   econ_fcn="${decon_fcn} -gltsym 'SYM: -ev_rest_IM +ev_hold_IM ' -glt_label 1 "Hold-Rest""
+# fi
 
 # output stat options
 # F-stat
@@ -427,6 +440,10 @@ if [[ "${CONVERT_FSL}" == "true" ]]; then
       mv ${DIR_SCRATCH}/${STIM_NAMES[${i}]}_afni_timing.txt ${DIR_SAVE}/${STIM_NAMES[${i}]}_afni_timing.txt
     fi
  done
+fi
+
+if [[ "${CONCAT_STIMS}" == "true" ]]
+  mv ${DIR_SCRATCH}/merged.stims.sorted ${DIR_SAVE}/merged.stims.sorted
 fi
 
 if [[ "${IRESP}" == "true" ]]; then

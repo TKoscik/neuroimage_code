@@ -181,9 +181,10 @@ HEADER=$(head -n 1 ${LUT})
 HEADER=(${HEADER///})
 HEADER=("${HEADER[@]:1}")
 HDR_STR=$(echo ${HEADER[@]})
-HDR_STR=${HDR_STR// /\t}
+HDR_STR=${HDR_STR// /,}
 if [[ ! -f ${SUMMARY_FILE} ]]; then
-  echo -e "participant_id\tsession_id\tsummary_date\tmeasure\t${HDR_STR[@]}" >> ${SUMMARY_FILE}
+  echo -e "participant_id,session_id,summary_date,measure,${HDR_STR[@]}" >> ${SUMMARY_FILE}
+  sed -i 's/,/\t/g' ${SUMMARY_FILE}
 fi
 
 # append to summary file or save output .txt if not

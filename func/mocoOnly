@@ -234,7 +234,7 @@ mv ${DIR_SCRATCH}/${PREFIX}_moco.nii.gz \
   ${DIR_SAVE}/moco_only/${PREFIX}_proc-moco_bold.nii.gz
 
 ## move moco mean bold - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-evho "move moco mean bold"
+echo "move moco mean bold"
 mkdir -p ${DIR_SAVE}/moco_mean
 mv ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SAVE}/moco_mean/${PREFIX}_proc-moco+mean_bold.nii.gz
@@ -242,17 +242,19 @@ mv ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
 # extract time series for plotting ---------------------------------------------
 # get raw whole brain time series
 echo "get raw whole brain time series"
+DIR_REGRESSOR=${DIR_SAVE}/regressors/${DIRPID}
+mkdir -p ${DIR_REGRESSOR}
 fslmeants -i ${TS_RAW} -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+raw.1D \
-  --label=${DIR_SAVE}/${PREFIX}_proc-moco_mask-brain.nii.gz 
+  --label=${DIR_SAVE}/mask/${PREFIX}_proc-moco_mask-brain.nii.gz 
 
 # get moco whole brain time series
 echo "get moco whole brain time series"
-fslmeants -i ${DIR_SAVE}/${PREFIX}_proc-moco_bold.nii.gz \
+fslmeants -i ${DIR_SAVE}/moco_only/${PREFIX}_proc-moco_bold.nii.gz \
   -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+moco.1D \
-  --label=${DIR_SAVE}/${PREFIX}_proc-moco_mask-brain.nii.gz
+  --label=${DIR_SAVE}/mask/${PREFIX}_proc-moco_mask-brain.nii.gz
 
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivative/inc/prep/${DIRPID}/func
+  mkdir -p ${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/func
   mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/func
 fi
 
