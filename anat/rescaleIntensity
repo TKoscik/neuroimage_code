@@ -141,7 +141,7 @@ esac
 # set default MAX_VALUE --------------------------------------------------------
 if [[ -z ${MAX} ]]; then
   MAX=10000
-  if [[ "${DATATYPE,,}" == "char" ]] ; then
+  if [[ "${DATATYPE,,}" == "char" ]]; then
     MAX=255
   fi
 fi
@@ -194,7 +194,7 @@ IMAGE_RS=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 # truncate intensities ---------------------------------------------------------
 ## set 0 point to lower bound of truncation
 if [[ ${TRUNCATE_VALUE,,} == "false" ]]; then
-  if [[ -n ${MASK}]]; then
+  if [[ -n ${MASK} ]]; then
     LO=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${LO})
     HI=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${HI})
   else
