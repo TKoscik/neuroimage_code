@@ -48,6 +48,8 @@
 # - fix depadded version not being output due to bad naming in fslmerge
 # - various non-functional, code cleaning changes
 #===============================================================================
+# UPDATE BY L. HOPKINS 2021-12-02
+# - added skullstrip option to ss before registration - for when ANTS fails on vanilla
 
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
 FCN_NAME=($(basename "$0"))
@@ -86,11 +88,11 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
-ts-bold:,\
+ts-bold:,target:,\
 native-anat:,native-mod:,native-mask:,which-mask:,\
 xfm-align:,xfm-norm:,\
 template:,template_mod:,space:,\
-pad:,\
+pad:,skullstrip,\
 dir-xfm:,dir-save:,dir-scratch:,\
 keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -102,10 +104,12 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 TS_BOLD=
+TARGET=T1w
 NATIVE_ANAT=
 NATIVE_MOD=T1w
 NATIVE_MASK=
 WHICH_MASK=mask-brain
+SKULLSTRIP=
 XFM_ALIGN=
 XFM_NORM=
 TEMPLATE=HCPICBM
@@ -129,10 +133,12 @@ while true; do
     -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
+    --target) TARGET="$2" ; shift 2 ;;
     --native-anat) NATIVE_ANAT="$2" ; shift 2 ;;
     --native-mod) NATIVE_MOD="$2" ; shift 2 ;;
     --native-mask) NATIVE_MASK="$2" ; shift 2 ;;
-    --which-mask) WHICH_MASK="$2" ; shift 2 ;;
+    --which-mask) WHICH_MASK=true ; shift 2 ;;
+    --skullstrip) SKULLSTRIP=true ; shift 2 ;;
     --xfm-align) XFM_ALIGN="$2" ; shift 2 ;;
     --xfm-norm) XFM_NORM="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
@@ -200,6 +206,23 @@ if [[ -z ${DIR_XFM} ]]; then
 fi
 
 # get native anatomical --------------------------------------------------------
+if [[ "${SKULLSTRIP}" == "true" ]]; then
+  mkdir -p ${DIR_PROJECT}/derivatives/inc/anat/skullstrip
+  mkdir -p ${DIR_PROJECT}/derivatives/inc/func/skullstrip
+  if [[ ! -f ${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz ]]; then
+    echo "--------------------------------------------"
+    echo "SKULLSTRIPPING ANAT BEFORE REGISTER"
+    echo "--------------------------------------------"
+    3dcalc -overwrite -a ${DIR_PROJECT}/derivatives/inc/anat/${PIDSTR}_T1w.nii.gz \
+      -b ${DIR_PROJECT}/derivatives/inc/anat/mask/${PIDSTR}_mask-brain.nii.gz \
+      -expr '(a*b)' -prefix ${DIR_ANAT}/skullstrip/${PREFIX}_brain_only_T1w.nii.gz
+
+    NATIVE_ANAT=${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz
+  else
+    NATIVE_ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz)) || true
+  fi
+fi   
+
 if [[ -z ${NATIVE_ANAT} ]]; then
   NATIVE_ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}*${NATIVE_MOD}.nii.gz))
 fi
@@ -227,6 +250,9 @@ if [[ ! -f ${XFM_ALIGN} ]]; then
 fi
 
 # get normalization transforms -------------------------------------------------
+if [[ -z ${XFM_NORM} ]]; then
+  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*native_to-${TEMPLATE}*)) || true
+fi
 if [[ -z ${XFM_NORM} ]]; then
   XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*native_to-${TEMPLATE}*)) || true
 fi
@@ -319,6 +345,19 @@ bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+
+# skullstrip func for better reg
+if [[ "${SKULLSTRIP}" == "true" ]]; then
+    echo "--------------------------------------------"
+    echo "SKULLSTRIPPING FUNC BEFORE REGISTER"
+    echo "--------------------------------------------"
+    3dcalc -overwrite -a ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+      -b ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+      -expr '(a*b)' -prefix ${DIR_FUNC}/skullstrip/${PREFIX}_brain_only_bold.nii.gz
+
+    mv -f ${DIR_FUNC}/skullstrip/${PREFIX}_avg.nii.gz
+
+fi  
 
 # Registration to subject space -----------------------------------------------
 antsRegistration \
