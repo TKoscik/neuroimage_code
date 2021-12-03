@@ -89,7 +89,7 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
 ts-bold:,target:,\
-native-anat:,native-mod:,native-mask:,which-mask:,\
+native-anat:,native-mod:,native-mask:,mask-method:,\
 xfm-align:,xfm-norm:,\
 template:,template_mod:,space:,\
 pad:,skullstrip,\
@@ -108,8 +108,7 @@ TARGET=T1w
 NATIVE_ANAT=
 NATIVE_MOD=T1w
 NATIVE_MASK=
-WHICH_MASK=mask-brain
-SKULLSTRIP=
+MASK_METHOD="none"
 XFM_ALIGN=
 XFM_NORM=
 TEMPLATE=HCPICBM
@@ -137,8 +136,7 @@ while true; do
     --native-anat) NATIVE_ANAT="$2" ; shift 2 ;;
     --native-mod) NATIVE_MOD="$2" ; shift 2 ;;
     --native-mask) NATIVE_MASK="$2" ; shift 2 ;;
-    --which-mask) WHICH_MASK=true ; shift 2 ;;
-    --skullstrip) SKULLSTRIP=true ; shift 2 ;;
+    --mask-method) SKULLSTRIP=true ; shift 2 ;;
     --xfm-align) XFM_ALIGN="$2" ; shift 2 ;;
     --xfm-norm) XFM_NORM="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
@@ -205,24 +203,7 @@ if [[ -z ${DIR_XFM} ]]; then
   DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}
 fi
 
-# get native anatomical --------------------------------------------------------
-if [[ "${SKULLSTRIP}" == "true" ]]; then
-  mkdir -p ${DIR_PROJECT}/derivatives/inc/anat/skullstrip
-  mkdir -p ${DIR_PROJECT}/derivatives/inc/func/skullstrip
-  if [[ ! -f ${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz ]]; then
-    echo "--------------------------------------------"
-    echo "SKULLSTRIPPING ANAT BEFORE REGISTER"
-    echo "--------------------------------------------"
-    3dcalc -overwrite -a ${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_${NATIVE_MOD}.nii.gz \
-      -b ${DIR_PROJECT}/derivatives/inc/anat/mask/${PIDSTR}_mask-brain.nii.gz \
-      -expr '(a*b)' -prefix ${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz
-
-    NATIVE_ANAT=${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz
-  else
-    NATIVE_ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz)) || true
-  fi
-fi   
-
+# find anatomical unless given -------------------------------------------------
 if [[ -z ${NATIVE_ANAT} ]]; then
   NATIVE_ANAT=($(ls ${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}*${NATIVE_MOD}.nii.gz))
 fi
@@ -231,11 +212,18 @@ if [[ -z ${NATIVE_ANAT} ]] || [[ ! -f ${NATIVE_ANAT} ]]; then
   exit 1
 fi
 
-# get native mask --------------------------------------------------------------
-if [[ -z ${NATIVE_MASK} ]]; then
-  NATIVE_MASK=($(ls ${DIR_PROJECT}/derivatives/inc/anat/mask/${PIDSTR}*${WHICH_MASK}.nii.gz))
+# skull strip anat -------------------------------------------------------------
+if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
+  if [[ -z ${NATIVE_MASK} ]]; then
+    NATIVE_MASK=${DIR_PROJECT}/derivatives/inc/anat/mask/${PIDSTR}_mask-brain.nii.gz
+  fi
+  if [[ ! -f ${NATIVE_MASK} ]]; then
+    echo "Native anatomical mask not found, aborting."
+    exit 1
+  fi
+  fslmaths ${NATIVE_ANAT} -mas ${NATIVE_MASK} ${DIR_SCRATCH}/${PIDSTR}_roi-mask_${NATIVE_MOD}.nii.gz
 fi
-if [[ -z ${NATIVE_MASK} ]] || [[ ! -f ${NATIVE_MASK} ]]; then
+if [[ -n ${NATIVE_MASK} ]] && [[ ! -f ${NATIVE_MASK} ]]; then
   echo "Native anatomical mask not found, aborting."
   exit 1
 fi
@@ -344,42 +332,41 @@ mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 
 # skullstrip func for better reg
-if [[ "${SKULLSTRIP}" == "true" ]]; then
-    echo "--------------------------------------------"
-    echo "SKULLSTRIPPING FUNC BEFORE REGISTER"
-    echo "--------------------------------------------"
-    3dcalc -overwrite -a ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
-      -b ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-      -expr '(a*b)' -prefix ${DIR_PROJECT}/derivatives/inc/func/skullstrip/${PREFIX}_brain_only_bold.nii.gz
-
-    mv -f ${DIR_PROJECT}/derivatives/inc/func/skullstrip/${PREFIX}_brain_only_bold.nii.gz \
-      ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
-
-fi  
+if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
+    fslmaths ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+      -mas ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_roi-mask_bold.nii.gz
+fi
 
 # Registration to subject space -----------------------------------------------
-antsRegistration \
-  -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE} \
-  -o ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_ \
-  -r ${XFM_ALIGN} \
-  -t Rigid[0.25] \
-    -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32,Regular,0.2] \
-    -c [1200x1200x100,1e-6,5] \
-    -f 4x2x1 \
-    -s 2x1x0vox \
-    -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz] \
-  -t Affine[0.25] \
-    -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32,Regular,0.2] \
-    -c [200x20,1e-6,5] \
-    -f 2x1 \
-    -s 1x0vox \
-    -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz] \
-  -t SyN[0.2,3,0] \
-    -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32] \
-    -c [40x20x0,1e-7,8] \
-    -f 4x2x1 \
-    -s 2x1x0vox \
-    -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]
+ants_fcn="antsRegistration"
+ants_fcn="${ants_fcn} -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE}"
+ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_"
+ants_fcn="${ants_fcn} -r ${XFM_ALIGN}"
+ants_fcn="${ants_fcn} -t Rigid[0.25]"
+ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32,Regular,0.2]"
+ants_fcn="${ants_fcn} -c [1200x1200x100,1e-6,5]"
+ants_fcn="${ants_fcn} -f 4x2x1"
+ants_fcn="${ants_fcn} -s 2x1x0vox"
+if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
+  ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
+fi
+ants_fcn="${ants_fcn} -t Affine[0.25]"
+ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32,Regular,0.2]"
+ants_fcn="${ants_fcn} -c [200x20,1e-6,5]"
+ants_fcn="${ants_fcn} -f 2x1"
+ants_fcn="${ants_fcn} -s 1x0vox"
+if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
+  ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
+fi
+ants_fcn="${ants_fcn} -t SyN[0.2,3,0]"
+ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32]"
+ants_fcn="${ants_fcn} -c [40x20x0,1e-7,8]"
+ants_fcn="${ants_fcn} -f 4x2x1"
+ants_fcn="${ants_fcn} -s 2x1x0vox"
+if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
+  ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
+fi
 
 # check if desired space template exists, if not resample ----------------------
 TRG=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_${TEMPLATE_MOD}.nii.gz
