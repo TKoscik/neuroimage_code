@@ -92,7 +92,7 @@ ts-bold:,target:,\
 native-anat:,native-mod:,native-mask:,mask-method:,\
 xfm-align:,xfm-norm:,\
 template:,template_mod:,space:,\
-pad:,skullstrip,\
+pad:,\
 dir-xfm:,dir-save:,dir-scratch:,\
 keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -166,6 +166,11 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix <value>         scan prefix,'
   echo '                           default: sub-123_ses-1234abcd'
   echo '  --ts-bold <value>        Full path to single, run timeseries'
+  echo '  --mask-method            "none" (default) no masking will be done'
+  echo '                           "apply" skull strip anatomical and mean bold'
+  echo '                                   for registration'
+  echo '                           "restrict" use masks in ants registration'
+  echo '                           "apply_and_restrict" both'
   echo '  --target <value>         target modality to work with, default=T1w'
   echo '  --template <value>       name of template to use, e.g., HCPICBM'
   echo '  --space <value>          spacing of template to use, e.g., 1mm'
