@@ -119,14 +119,16 @@ DIR_XFM=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=1
+VERBOSE=false
+ANTS_VERBOSE=0
 KEEP=false
 NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
+    --ant-verbose) ANTS_VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -n | --no-png) NO_PNG=true ; shift ;;
@@ -295,7 +297,7 @@ antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 
 # rigid body motion correction to mean BOLD (6 df) -----------------------------
 antsMotionCorr \
-  -d 3 -u 1 -e 1 -n ${NTR} -v ${VERBOSE} \
+  -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
   -t Rigid[0.1] \
   -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
@@ -311,7 +313,7 @@ rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
 
 # Affine registration to mean BOLD ---------------------------------------------
 antsMotionCorr \
-  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
+  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${ANTS_VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_affine_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
   -t Affine[0.1] \
   -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
@@ -341,8 +343,8 @@ if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
 fi
 
 # Registration to subject space -----------------------------------------------
-ants_fcn="antsRegistration"
-ants_fcn="${ants_fcn} -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE}"
+ants_fcn="antsRegistration --random-seed 16049644"
+ants_fcn="${ants_fcn} -d 3 -u 0 -z 1 -l 1 -n Linear -v ${ANTS_VERBOSE}"
 ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_"
 ants_fcn="${ants_fcn} -r ${XFM_ALIGN}"
 ants_fcn="${ants_fcn} -t Rigid[0.25]"
@@ -369,6 +371,8 @@ ants_fcn="${ants_fcn} -s 2x1x0vox"
 if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
   ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
 fi
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "ANTS Coregistration Mean BOLD to ANATOMICAL\n\n${ants_fcn//--/\n--}\n"; fi
+eval ${ants_fcn}
 
 # check if desired space template exists, if not resample ----------------------
 TRG=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_${TEMPLATE_MOD}.nii.gz
@@ -418,7 +422,7 @@ eval ${xfm_fcn}
 
 # redo motion correction to normalized mean bold ------------------------------
 antsMotionCorr \
-  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
+  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${ANTS_VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_moco+warp_,${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz] \
   -t Rigid[0.25] \
     -m MI[${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
