@@ -371,7 +371,7 @@ ants_fcn="${ants_fcn} -s 2x1x0vox"
 if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
   ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
 fi
-if [[ "${VERBOSE}" == "true" ]]; then echo -e "ANTS Coregistration Mean BOLD to ANATOMICAL\n\n${ants_fcn//--/\n--}\n"; fi
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "ANTS Coregistration Mean BOLD to ANATOMICAL\n\n${ants_fcn// -/ \\\n -}\n"; fi
 eval ${ants_fcn}
 
 # check if desired space template exists, if not resample ----------------------
