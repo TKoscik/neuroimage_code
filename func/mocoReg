@@ -213,9 +213,9 @@ if [[ "${SKULLSTRIP}" == "true" ]]; then
     echo "--------------------------------------------"
     echo "SKULLSTRIPPING ANAT BEFORE REGISTER"
     echo "--------------------------------------------"
-    3dcalc -overwrite -a ${DIR_PROJECT}/derivatives/inc/anat/${PIDSTR}_T1w.nii.gz \
+    3dcalc -overwrite -a ${DIR_PROJECT}/derivatives/inc/anat/native/${PIDSTR}_${NATIVE_MOD}.nii.gz \
       -b ${DIR_PROJECT}/derivatives/inc/anat/mask/${PIDSTR}_mask-brain.nii.gz \
-      -expr '(a*b)' -prefix ${DIR_ANAT}/skullstrip/${PREFIX}_brain_only_T1w.nii.gz
+      -expr '(a*b)' -prefix ${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz
 
     NATIVE_ANAT=${DIR_PROJECT}/derivatives/inc/anat/skullstrip/${PREFIX}_brain_only_${NATIVE_MOD}.nii.gz
   else
@@ -250,9 +250,6 @@ if [[ ! -f ${XFM_ALIGN} ]]; then
 fi
 
 # get normalization transforms -------------------------------------------------
-if [[ -z ${XFM_NORM} ]]; then
-  XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*native_to-${TEMPLATE}*)) || true
-fi
 if [[ -z ${XFM_NORM} ]]; then
   XFM_NORM=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/*native_to-${TEMPLATE}*)) || true
 fi
@@ -353,9 +350,10 @@ if [[ "${SKULLSTRIP}" == "true" ]]; then
     echo "--------------------------------------------"
     3dcalc -overwrite -a ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
       -b ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-      -expr '(a*b)' -prefix ${DIR_FUNC}/skullstrip/${PREFIX}_brain_only_bold.nii.gz
+      -expr '(a*b)' -prefix ${DIR_PROJECT}/derivatives/inc/func/skullstrip/${PREFIX}_brain_only_bold.nii.gz
 
-    mv -f ${DIR_FUNC}/skullstrip/${PREFIX}_avg.nii.gz
+    mv -f ${DIR_PROJECT}/derivatives/inc/func/skullstrip/${PREFIX}_brain_only_bold.nii.gz \
+      ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 
 fi  
 

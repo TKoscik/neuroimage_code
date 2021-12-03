@@ -45,7 +45,6 @@
         "ref-image": ["default"],
         "apply-to": ["optional"],
         "apply-to-name": ["optional"],
-        "rescale-intensity": ["0,1"],
         "keep-fwd-xfm": ["true"],
         "keep-inv-xfm": ["true"],
         "dir-save": ["default"],

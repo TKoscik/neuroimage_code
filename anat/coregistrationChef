@@ -19,27 +19,27 @@ NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
-# function egress {
-#   EXIT_CODE=$?
-#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-#   if [[ "${KEEP}" == "false" ]]; then
-#     if [[ -n ${DIR_SCRATCH} ]]; then
-#       if [[ -d ${DIR_SCRATCH} ]]; then
-#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-#           rm -R ${DIR_SCRATCH}
-#         else
-#           rmdir ${DIR_SCRATCH}
-#         fi
-#       fi
-#     fi
-#   fi
-#   if [[ "${NO_LOG}" == "false" ]]; then
-#     unset LOGSTR
-#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
-#     writeLog --benchmark --string ${LOGSTR}
-#   fi
-# }
-# trap egress EXIT
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvaldn --long recipe-json:,\
@@ -88,7 +88,6 @@ label-reg:,\
 ref-image:,\
 apply-to:,\
 apply-to-name:,\
-rescale-intensity:,\
 keep-fwd-xfm,\
 keep-inv-xfm,\
 dir-save:,\
@@ -166,7 +165,6 @@ while true; do
     --ref-image) REF_IMAGE="$2" ; shift 2 ;;
     --apply-to) APPLY_TO="$2" ; shift 2 ;;
     --apply-to-name) APPLY_TO_NAME="$2" ; shift 2 ;;
-    --rescale-intensity) RESCALE_INTENSITY="$2" ; shift 2 ;;
     --keep-fwd-xfm) KEEP_FWD_XFM="true" ; shift ;;
     --keep-inv-xfm) KEEP_INV_XFM="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
@@ -457,14 +455,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '--apply-to                additional images to apply transforms to but not include'
   echo '                          in registration process                                 '
   echo '--apply-to-name           manually change filename of additional output files     '
-  echo '--rescale-intensity       rescale image intensity after registration ANTs will    '
-  echo '                          often result in some negative values after              '
-  echo '                          interpolation. To disable set to "false", otherwise     '
-  echo '                          images are truncated at 0 (no negative values), then    '
-  echo '                          further truncated at desired percentages of the image   '
-  echo '                          intensity, "LO,HI" where LO is the lower percentile     '
-  echo '                          bound and HI is the upper percentile bound, default is  '
-  echo '                          "0,1"                                                   '
   echo '--keep-fwd-xfm            toggle to disable saving forward transforms             '
   echo '--keep-inv-xfm            toggle to disable saving inverse transforms             '
   echo '--dir-save                directory to save warped output                         '
@@ -1084,22 +1074,7 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   eval ${apply_xfm}
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
   
-  ## rescale intensity if selected ---------------------------------------------
-  echo "RESCALE INTENSITY = ${RESCALE_INTENSITY}"
-  if [[ "${RESCALE_INTENSITY,,}" != "false" ]]; then
-    RSVALS=(${RESCALE_INTENSITY//,/ })
-    echo "IMAGE = ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]}"
-    echo "LO = ${RSVALS[0]}"
-    echo "HI = ${RSVALS[1]}"
-    rescaleIntensity --image ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} \
-      --lo ${RSVALS[0]} --hi ${RSVALS[1]} \
-      --dir-save ${DIR_SCRATCH}
-    echo "MOVE 1"  
-    mv ${DIR_SCRATCH}/*prep-rescale*.nii.gz ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
-  else
-  echo "MOVE 2"
-    mv ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
-  fi
+  mv ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
 done
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
@@ -1133,16 +1108,7 @@ if [[ "${APPLY_TO[0]}" != "optional" ]]; then
     #writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
     eval ${apply_xfm}
     
-    ## rescale intensity if selected ---------------------------------------------
-    if [[ "${RESCALE_INTENSITY,,}" != "false" ]]; then
-      RSVALS=(${RESCALE_INTENSITY//,/ })
-      rescaleIntensity --image ${DIR_SCRATCH}/${APPLY_OUTPUT[${i}]} \
-        --lo ${RSVALS[0]} --hi ${RSVALS[1]} \
-        --dir-save ${DIR_SCRATCH}
-      mv ${DIR_SCRATCH}/*prep-rescale*.nii.gz ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}
-    else
-      mv ${DIR_SCRATCH}/${APPLY_OUTPUT[${i}]} ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}
-    fi
+    mv ${DIR_SCRATCH}/${APPLY_OUTPUT[${i}]} ${DIR_SAVE}/${APPLY_OUTPUT[${i}]}
   done
   if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 fi
