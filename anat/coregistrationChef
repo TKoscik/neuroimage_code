@@ -19,27 +19,27 @@ NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
-function egress {
-  EXIT_CODE=$?
-  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-  if [[ "${KEEP}" == "false" ]]; then
-    if [[ -n ${DIR_SCRATCH} ]]; then
-      if [[ -d ${DIR_SCRATCH} ]]; then
-        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          rm -R ${DIR_SCRATCH}
-        else
-          rmdir ${DIR_SCRATCH}
-        fi
-      fi
-    fi
-  fi
-  if [[ "${NO_LOG}" == "false" ]]; then
-    unset LOGSTR
-    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
-    writeLog --benchmark --string ${LOGSTR}
-  fi
-}
-trap egress EXIT
+# function egress {
+#   EXIT_CODE=$?
+#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+#   if [[ "${KEEP}" == "false" ]]; then
+#     if [[ -n ${DIR_SCRATCH} ]]; then
+#       if [[ -d ${DIR_SCRATCH} ]]; then
+#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+#           rm -R ${DIR_SCRATCH}
+#         else
+#           rmdir ${DIR_SCRATCH}
+#         fi
+#       fi
+#     fi
+#   fi
+#   if [[ "${NO_LOG}" == "false" ]]; then
+#     unset LOGSTR
+#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+#     writeLog --benchmark --string ${LOGSTR}
+#   fi
+# }
+# trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvaldn --long recipe-json:,\
@@ -1082,15 +1082,22 @@ for (( i=0; i<${#MOVING[@]}; i++ )); do
   fi
   #writeScript -d ${DIR_PROJECT} -p ${PIDSTR} -s "${apply_xfm}"
   eval ${apply_xfm}
+  if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
   
   ## rescale intensity if selected ---------------------------------------------
+  echo "RESCALE INTENSITY = ${RESCALE_INTENSITY}"
   if [[ "${RESCALE_INTENSITY,,}" != "false" ]]; then
     RSVALS=(${RESCALE_INTENSITY//,/ })
+    echo "IMAGE = ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]}"
+    echo "LO = ${RSVALS[0]}"
+    echo "HI = ${RSVALS[1]}"
     rescaleIntensity --image ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} \
       --lo ${RSVALS[0]} --hi ${RSVALS[1]} \
       --dir-save ${DIR_SCRATCH}
+    echo "MOVE 1"  
     mv ${DIR_SCRATCH}/*prep-rescale*.nii.gz ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
   else
+  echo "MOVE 2"
     mv ${DIR_SCRATCH}/${MOVING_OUTPUT[${i}]} ${DIR_SAVE}/${MOVING_OUTPUT[${i}]}
   fi
 done

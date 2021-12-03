@@ -39,8 +39,10 @@ function egress {
 trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
-image:,mask:,keep-neg,lo:,hi:,truncate-value:,max:,\
-datatype:,\
+image:,mask:,\
+nan:,keep-neg,\
+truncate:,lo:,hi:,not-p,zero-value:,\
+max:,datatype:,\
 dir-save:,dir-scratch:,\
 help,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -52,32 +54,38 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 MASK=
+NAN=0
 KEEP_NEG=false
+TRUNCATE=false
 LO=0
 HI=1
-TRUNCATE_VALUE=false
+NOT_P=false
+ZERO_VALUE="lo"
 MAX="10000"
 DATATYPE="short"
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
+VERBOSE=false
 NO_PNG=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -n | --no-png) NO_PNG=true ; shift ;;
     --prefix)  PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
+    --nan) NAN="$2" ; shift 2 ;;
     --keep-neg) KEEP_NEG=true ; shift ;;
+    --truncate) TRUNCATE=true ; shift ;;
     --lo) LO="$2" ; shift 2 ;;
     --hi) HI="$2" ; shift 2 ;;
-    --truncate-value) TRUNCATE_VALUE=true ; shift ;;
-    --max) MAX_VALUE="$2" ; shift 2 ;;
+    --not-p) NOT_P=true ; shift  ;;
+    --zero-value) ZERO_VALUE="$2" ; shift 2 ;;
+    --max) MAX="$2" ; shift 2 ;;
     --datatype) DATATYPE="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
@@ -100,13 +108,21 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --prefix         prefix for output'
   echo '                     default: sub-123_ses-1234abcd_prep-rescale'
   echo '  --image          input nii.gz file'
-  echo '  --keep-neg       toggle to keep negative values, default no'
-  echo '  --lo             lower threshold as percentile of intensity,'
-  echo '                   default=0, applied after thresholding at 0 if'
-  echo '                   not keeping negative values'
-  echo '  --hi             upper threshold as percentile of intensity,'
-  echo '                   applied after discarding/keeping negative values'
-  echo '                   default=1'
+  echo '  --mask           binary mask of region for calculating rescale values'
+  echo '  --nan            NANs must be removed before rescaling, specify value'
+  echo '                   to convert NANs to, default=0'
+  echo '  --keep-neg       toggle to keep negative values, default FALSE'
+  echo '                   applied before truncation or other processing'
+  echo '  --truncate       toggle truncation of values, will use mask if needed'
+  echo '  --not-p          toggle interpreting LO and HI inputs as values'
+  echo '                   rather than percentiles'
+  echo '  --lo             lower threshold percentile (or value), default=0'
+  echo '  --hi             upper threshold percentile (or value), default=1'
+  echo '  --zero-value     set the zero point in the image, default="lo" which'
+  echo '                   indicates to use the lower truncation value'
+  echo '                   set to "false" to disable'
+  echo '  --max            set max value for output, default is 10000,'
+  echo '                   unless datatype is char then the default is 255'
   echo '  --datatype       desired output datatype, not case sensitive'
   echo '                   options: INT8   (CHAR, signed 8-bit integer)'
   echo '                  <DEFAULT> INT16  (SHORT, signed 16-bit integer)'
@@ -117,10 +133,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  --dir-save       directory to save output,'
   echo '      default: ${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}/ses-${SID}'
   echo '  --dir-scratch    directory for temporary workspace'
-  echo 'NOTE: given the default options the default behaviour of this'
-  echo '      function is to wipe out negative values and convert to datatype'
-  echo '      to 16-bit unsigned integers, and the intensity values are scaled'
-  echo '      to the dynamic range of this datatype'
   echo ''
   NO_LOG=true
   exit 0
@@ -130,6 +142,7 @@ fi
 # Rescale Intensity
 #===============================================================================
 # check datatype ---------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo "[INC: ${FCN_NAME}] check datatype"; fi
 case ${DATATYPE,,} in
   int8|char) DATATYPE="char" ;;
   int16|short) DATATYPE="short" ;;
@@ -140,6 +153,9 @@ esac
 
 # set default MAX_VALUE --------------------------------------------------------
 if [[ -z ${MAX} ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] set default MAXIMUM OUTPUT VALUE"
+  fi
   MAX=10000
   if [[ "${DATATYPE,,}" == "char" ]]; then
     MAX=255
@@ -147,6 +163,9 @@ if [[ -z ${MAX} ]]; then
 fi
 
 # check desired output range ---------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] check MAXIMUM OUTPUT VALUE relative to DATATYPE"
+fi
 if [[ "${DATATYPE,,}" == "char" ]] && [[ ${MAX} -gt 255 ]]; then
   echo "[INC: ${FCN_NAME}]: Output value out of range. INT8/CHAR Max = 255"
   exit 1
@@ -161,6 +180,9 @@ if [[ "${DATATYPE,,}" == "int" ]] && [[ ${MAX} -gt 2147483648 ]]; then
 fi
 
 # Set up BIDs compliant variables and workspace --------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] setup BIDS information"
+fi
 DIR_PROJECT=$(getDir -i ${IMAGE})
 PID=$(getField -i ${IMAGE} -f sub)
 SID=$(getField -i ${IMAGE} -f ses)
@@ -170,60 +192,138 @@ if [[ -z "${PREFIX}" ]]; then
   PREFIX=$(getBidsBase -s -i ${IMAGE})
   PREFIX=$(modField -i ${PREFIX} -a -f prep -v rescale)
 fi
-if [[ -z "${DIR_SAVE}" ]]; then 
+if [[ -z "${DIR_SAVE}" ]]; then
   DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
 # gather modality for output ---------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] get MODALITY for output filename"
+fi
 MOD=($(getField -i ${IMAGE} -f "modality"))
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e "\t${MOD}"
+fi
+
+# temporary filename
+IMGRS=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+
+# deal with NANs ---------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] set NANs to ${NAN}"
+fi
+fslmaths ${IMAGE} -nanm -mul ${NAN} ${DIR_SCRATCH}/mask-nan.nii.gz
+fslmaths ${IMAGE} -nan -add ${DIR_SCRATCH}/mask-nan.nii.gz ${IMGRS}
 
 # deal with negative values ----------------------------------------------------
 if [[ "${KEEP_NEG}" == "false" ]]; then
-  fslmaths ${IMAGE} -thr 0 ${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] removing NEGATIVE values"
+  fi
+  fslmaths ${IMGRS} -thr 0 ${IMGRS}
 else
-  ## make negative mask 1/-1 - - - - - - - - - - - - - - - - - - - - - - - - - -
-  fslmaths ${IMAGE} -uthr 0 -abs -bin -mul -2 -add 1 \
-    ${DIR_SCRATCH}/${PREFIX}_${MOD}_mask-neg.nii.gz
-  ## convert to absolute value for processing - - - - - - - - - - - - - - - - - 
-  fslmaths ${IMAGE} -abs -thr 0 ${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] creating NEGATIVE value mask"
+  fi
+  fslmaths ${IMGRS} -uthr 0 -abs -bin -mul -2 -add 1 ${DIR_SCRATCH}/mask-neg.nii.gz
+  
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] using ABSOLUTE VALUE for processing"
+  fi
+  fslmaths ${IMGRS} -abs -thr 0 ${IMGRS}
 fi
-IMAGE_RS=${DIR_SCRATCH}/${PREFIX}_${MOD}.nii.gz
 
 # truncate intensities ---------------------------------------------------------
 ## set 0 point to lower bound of truncation
-if [[ ${TRUNCATE_VALUE,,} == "false" ]]; then
-  if [[ -n ${MASK} ]]; then
-    LO=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${LO})
-    HI=$(fslstats ${IMAGE_RS} -k ${MASK} -p ${HI})
+if [[ ${TRUNCATE,,} == "true" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] TRUNCATING image intensity values"
+  fi
+  if [[ "${NOT_P}" == "true" ]]; then
+    if [[ "${VERBOSE}" == "true" ]]; then
+      echo "[INC: ${FCN_NAME}] truncating by INTENSITY VALUE"
+    fi
+    fslmaths ${IMGRS} -uthr ${LO} -bin -mul ${LO} ${DIR_SCRATCH}/lo.nii.gz
+    fslmaths ${IMGRS} -thr ${HI} -bin -mul ${HI} ${DIR_SCRATCH}/hi.nii.gz
+    fslmaths ${IMGRS} -thr ${LO} -uthr ${HI} \
+      -add ${DIR_SCRATCH}/lo.nii.gz -add ${DIR_SCRATCH}/hi.nii.gz ${IMGRS} 
   else
-    LO=$(fslstats ${IMAGE_RS} -p ${LO})
-    HI=$(fslstats ${IMAGE_RS} -p ${HI})
+    if [[ "${VERBOSE}" == "true" ]]; then
+      echo "[INC: ${FCN_NAME}] truncating by INTENSITY PERCENTILE"
+    fi
+    if [[ -n ${MASK} ]]; then
+      ImageMath 3 ${IMGRS} TruncateImageIntensity ${IMGRS} ${LO} ${HI} 256 ${MASK}
+    else
+      ImageMath 3 ${IMGRS} TruncateImageIntensity ${IMGRS} ${LO} ${HI} 256
+    fi
   fi
 fi
-fslmaths ${IMAGE_RS} -uthr ${HI} -bin -mul ${HI} -sub ${LO} -thr 0 \
-  ${DIR_SCRATCH}/upper_trunc_roi.nii.gz
-fslmaths ${IMAGE_RS} -thr ${LO} -uthr ${HI} -sub ${LO} \
-  -add ${DIR_SCRATCH}/upper_trunc_roi.nii.gz \
-  ${IMAGE_RS}
 
-# get denominator for normailzation --------------------------------------------
-MINMAX=($(fslstats ${IMAGE_RS} -a -R))
-DENOM=$(ezMath "${MINMAX[1]}-${MINMAX[0]}" -d 4)
+# set zero value in image ------------------------------------------------------
+if [[ "${ZERO_VALUE}" != "false" ]]; then
+  if [[ "${ZERO_VALUE}" == "lo" ]]; then
+    if [[ "${NOT_P}" == "true" ]]; then
+      ZERO_VALUE=${LO}
+    else
+      if [[ -n ${MASK} ]]; then
+        ZERO_VALUE=($(fslstats ${IMGRS} -k ${MASK} -P 0))
+      else
+        ZERO_VALUE=($(fslstats ${IMGRS} -P 0))
+      fi
+    fi
+  fi
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] setting ${ZERO_VALUE} to ZERO"
+  fi
+  fslmaths ${IMGRS} -sub ${ZERO_VALUE} -thr 0 ${IMGRS}
+fi
+
+# get denominator for value normalization --------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] get denominators for NORMALIZING values"
+fi
+if [[ -n ${MASK} ]]; then
+  MINMAX=($(fslstats ${IMGRS} -k ${MASK} -R))
+else
+  MINMAX=($(fslstats ${IMGRS} -R))
+fi
+DENOM=$(ezMath -x "${MINMAX[1]}-${MINMAX[0]}" -d 4)
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e "\tdenominator=${DENOM}"
+fi
 
 # convert to final range and datatype ------------------------------------------
-fslmaths -dt float ${IMAGE_RS} -div ${DENOM} -mul ${MAX} ${IMAGE_RS} -odt ${DATATYPE}
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] convert to FINAL RANGE and DATATYPE"
+fi
+fslmaths -dt float ${IMGRS} -div ${DENOM} -mul ${MAX} ${IMGRS} -odt ${DATATYPE}
 
 # restore negatives if necessary -----------------------------------------------
 if [[ "${KEEP_NEG}" == "true" ]]; then
-  fslmaths ${IMAGE_RS} \
-    -mul ${DIR_SCRATCH}/${PREFIX}_${MOD}_mask-neg.nii.gz \
-    ${IMAGE_RS} -odt ${DATATYPE}
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo "[INC: ${FCN_NAME}] restore NEGATIVE VALUES"
+  fi
+  fslmaths ${IMGRS} -mul ${DIR_SCRATCH}/mask-neg.nii.gz \
+    ${IMGRS} -odt ${DATATYPE}
+fi
+
+# final verbose output ---------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  MINMAX=($(fslstats ${IMGRS} -R))
+  echo -e "\tFINAL RANGE: ${MINMAX[0]} - ${MINMAX[1]}"
+  if [[ -n ${MASK} ]]; then
+    MINMAX=($(fslstats ${IMGRS} -k ${MASK} -R))
+    echo -e "\tFINAL RANGE IN MASK: ${MINMAX[0]} - ${MINMAX[1]}"
+  fi
 fi
 
 # copy output to final file ----------------------------------------------------
-mv ${IMAGE_RS} ${DIR_SAVE}/${PREFIX}_${MOD}.nii.gz
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo "[INC: ${FCN_NAME}] save RESCALED OUTPUT"
+fi
+mv ${IMGRS} ${DIR_SAVE}/
 
 # generate out PNG -------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
@@ -234,4 +334,5 @@ fi
 # End of Function
 #===============================================================================
 exit 0
+
 

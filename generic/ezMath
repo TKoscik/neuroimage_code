@@ -33,4 +33,9 @@ fi
 
 printf '%.*f\n' "${DIGITS}" "$(bc -l <<< "a=${EXPRESSION}; if(a>0) a+=5/10^(${DIGITS}+1) else if (a<0) a-=5/10^(${DIGITS}+1); scale=${DIGITS}; a/1")"
 
+#ANSWER=$(echo "${EXPRESSION}" | bc -l)
+#ROUND_FCN="$(printf '%.${DIGITS}f', ${ANSWER})"
+#echo ${ROUND_FCN}
+#ROUNDED=$(eval ${ROUND_FCN})
+#echo ${ROUNDED}
 
