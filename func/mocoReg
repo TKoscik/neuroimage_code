@@ -506,16 +506,19 @@ if [[ "${NO_PNG}" == "false" ]]; then
   make3Dpng --bg ${TRG} \
     --fg ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold.nii.gz \
     --fg-mask ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz \
-    --fg-color "hot" \
+    --fg-color "hot" --fg-alpha 50 \
     --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z" \
     --offset "0,0,0" \
+    --no-slice-label --no-lr-label \
     --filename ${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold \
     --dir-save ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}
+
   ## image of slices in 4d
   make4Dpng --bg ${TRG} \
     --fg ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold.nii.gz \
     --fg-mask ${DIR_SAVE}/mask/${PREFIX}_reg-${TEMPLATE}+${SPACE}_acq-bold_mask-brain.nii.gz \
-    --fg-color "hot" --layout "5x11" --plane "z" --slice 0.51 \
+    --fg-color "hot" --fg-alpha 50 --layout "5x11" --plane "z" --slice 0.51 \
+    --no-slice-label --no-lr-label \
     --filename ${PREFIX}_reg-${TEMPLATE}+${SPACE}_bold \
     --dir-save ${DIR_SAVE}/moco_${TEMPLATE}+${SPACE}
 fi
