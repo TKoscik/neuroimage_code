@@ -331,11 +331,13 @@ bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 
-# skullstrip func for better reg
+# skullstrip func for better reg ----------------------------------------------
+AVG_MASK_STR=
 if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
-    fslmaths ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
-      -mas ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-      ${DIR_SCRATCH}/${PREFIX}_roi-mask_bold.nii.gz
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+    -mas ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_roi-mask_avg.nii.gz
+  AVG_MASK_STR=roi-mask_
 fi
 
 # Registration to subject space -----------------------------------------------
@@ -344,7 +346,7 @@ ants_fcn="${ants_fcn} -d 3 -u 0 -z 1 -l 1 -n Linear -v ${VERBOSE}"
 ants_fcn="${ants_fcn} -o ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_"
 ants_fcn="${ants_fcn} -r ${XFM_ALIGN}"
 ants_fcn="${ants_fcn} -t Rigid[0.25]"
-ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32,Regular,0.2]"
+ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_${AVG_MASK_STR}avg.nii.gz,1,32,Regular,0.2]"
 ants_fcn="${ants_fcn} -c [1200x1200x100,1e-6,5]"
 ants_fcn="${ants_fcn} -f 4x2x1"
 ants_fcn="${ants_fcn} -s 2x1x0vox"
@@ -352,7 +354,7 @@ if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
   ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
 fi
 ants_fcn="${ants_fcn} -t Affine[0.25]"
-ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32,Regular,0.2]"
+ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_${AVG_MASK_STR}avg.nii.gz,1,32,Regular,0.2]"
 ants_fcn="${ants_fcn} -c [200x20,1e-6,5]"
 ants_fcn="${ants_fcn} -f 2x1"
 ants_fcn="${ants_fcn} -s 1x0vox"
@@ -360,7 +362,7 @@ if [[ "${MASK_METHOD,,} == *"restrict"* ]]; then
   ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
 fi
 ants_fcn="${ants_fcn} -t SyN[0.2,3,0]"
-ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1,32]"
+ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_${AVG_MASK_STR}avg.nii.gz,1,32]"
 ants_fcn="${ants_fcn} -c [40x20x0,1e-7,8]"
 ants_fcn="${ants_fcn} -f 4x2x1"
 ants_fcn="${ants_fcn} -s 2x1x0vox"
