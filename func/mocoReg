@@ -487,6 +487,14 @@ mv ${DIR_SCRATCH}/${PREFIX}_moco+warp.nii.gz \
 mv ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
   ${DIR_SAVE}/mean_${TEMPLATE}+${SPACE}/${PREFIX}_reg-${TEMPLATE}+${SPACE}_proc-mean_bold.nii.gz
 
+## save coregistration transforms to xfm folder - - - - - - - - - - - - - - - -
+mv ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz \
+  ${DIR_XFM}/${PREFIX}_mod-bold_from-raw_to-native_xfm-syn.nii.gz
+mv ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1InverseWarp.nii.gz \
+  ${DIR_XFM}/${PREFIX}_mod-bold_from-raw_to-native_xfm-syn+inverse.nii.gz
+mv ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat \
+  ${DIR_XFM}/${PREFIX}_mod-bold_from-raw_to-native_xfm-affine.mat
+
 if [[ "${KEEP}" == "true" ]]; then
   mkdir -p ${DIR_SAVE}/prep/${DIRPID}
   mv ${DIR_SCRATCH}/* ${DIR_SAVE}/prep/${DIRPID}/
