@@ -293,11 +293,16 @@ fi
 # pad image for better registration -------------------------------------------
 if [[ ${PAD} -ne 0 ]]; then
   pad4D --ts ${TS_BOLD} --pad ${PAD} --dir-save ${DIR_SCRATCH}
-  ls ${DIR_SCRATCH}/${PREFIX}*
-  TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}*_prep-pad${PAD}_bold.nii.gz)
+  #ls ${DIR_SCRATCH}/${PREFIX}*
+  #TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}*_prep-pad${PAD}_bold.nii.gz)
+  TS_BOLD="${DIR_SCRATCH}/$(modField -i ${PREFIX} -a -f prep -v pad${PAD})_bold.nii.gz"
 fi
 
 # initialize mean BOLD ---------------------------------------------------------
+if [[ "${VERBOSE}" == "true"]]; then
+  echo ">>> initialize men BOLD, using: ${TS_BOLD}"
+  echo -e ">>> \tshould be padded"
+fi
 antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 
 # rigid body motion correction to mean BOLD (6 df) -----------------------------
