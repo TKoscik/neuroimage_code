@@ -299,8 +299,8 @@ if [[ ${PAD} -ne 0 ]]; then
 fi
 
 # initialize mean BOLD ---------------------------------------------------------
-if [[ "${VERBOSE}" == "true"]]; then
-  echo ">>> initialize men BOLD, using: ${TS_BOLD}"
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo ">>> initialize mean BOLD, using: ${TS_BOLD}"
   echo -e ">>> \tshould be padded"
 fi
 antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
