@@ -138,7 +138,7 @@ while true; do
     --native-anat) NATIVE_ANAT="$2" ; shift 2 ;;
     --native-mod) NATIVE_MOD="$2" ; shift 2 ;;
     --native-mask) NATIVE_MASK="$2" ; shift 2 ;;
-    --mask-method) SKULLSTRIP=true ; shift 2 ;;
+    --mask-method) MASK_METHOD=true ; shift 2 ;;
     --xfm-align) XFM_ALIGN="$2" ; shift 2 ;;
     --xfm-norm) XFM_NORM="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
