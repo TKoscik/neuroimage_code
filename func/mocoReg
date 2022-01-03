@@ -386,7 +386,7 @@ eval ${ants_fcn}
 
 # check if desired space template exists, if not resample ----------------------
 TRG=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_${TEMPLATE_MOD}.nii.gz
-if [[  -f ${TRG} ]]; then
+if [[ -f ${TRG} ]]; then
   ## find highest resolution version of template
   MINSZ=99999
   SZ=($(ls ${INC_TEMPLATE}/${TEMPLATE}))
