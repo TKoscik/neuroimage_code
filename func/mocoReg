@@ -467,7 +467,7 @@ fi
 
 # get raw whole brain time series
 fslmeants -i ${TS_RAW} -o ${DIR_REGRESSOR}/${PREFIX}_ts-brain+raw.1D \
-  --label=${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz 
+  --label=${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
   ${DIR_SAVE}/mask/${PREFIX}_acq-bold_mask-brain.nii.gz
 
