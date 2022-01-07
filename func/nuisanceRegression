@@ -185,7 +185,7 @@ if [[ ${NO_PNG} == "false" ]]; then
     TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+resid.1D)
   fi
   if [[ ${#TSLS} -gt 1 ]]; then
-    fcn_str="paste -d' ' "
+    fcn_str="paste -d ' ' "
     for (( i=0; i<${#TSLS[@]}; i++ )); do
       fcn_str="${fcn_str} ${TSLS[${i}]}"
     done
