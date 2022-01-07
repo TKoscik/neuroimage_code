@@ -229,6 +229,7 @@ if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
     exit 1
   fi
   fslmaths ${NATIVE_ANAT} -mas ${NATIVE_MASK} ${DIR_SCRATCH}/${PIDSTR}_roi-mask_${NATIVE_MOD}.nii.gz
+  NATIVE_ANAT=${DIR_SCRATCH}/${PIDSTR}_roi-mask_${NATIVE_MOD}.nii.gz
 fi
 if [[ -n ${NATIVE_MASK} ]] && [[ ! -f ${NATIVE_MASK} ]]; then
   echo "Native anatomical mask not found, aborting."
