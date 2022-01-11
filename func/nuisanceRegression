@@ -190,6 +190,7 @@ if [[ ${NO_PNG} == "false" ]]; then
       fcn_str="${fcn_str} ${TSLS[${i}]}"
     done
     fcn_str="${fcn_str} > ${DIR_RGR}/${PREFIX}_ts-processing.1D"
+    eval ${fcn_str}
     sed -i 's/  */\t/g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
     sed -i 's/\t$//g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
     TOPLOT=${DIR_RGR}/${PREFIX}_ts-processing.1D
