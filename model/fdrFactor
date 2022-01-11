@@ -43,8 +43,8 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvlor --long inputs:,mask:,lo:,hi:,\
-dir-scratch:,\
+OPTS=$(getopt -o hvlnr --long inputs:,mask:,lo:,hi:,\
+dir-scratch:,dir-save:,no-overwrite:,\
 help,verbose,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
@@ -57,20 +57,24 @@ INPUTS=
 MASK=
 LO=
 HI=
-DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX} 
+DIR_SAVE=
 HELP=false
 VERBOSE=false
+NO_OVERWRITE=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -n | --no-overwrite) NO_OVERWRITE=true ; shift ;;
     --inputs) INPUTS="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
     --lo) LO="$2" ; shift 2 ;;
     --hi) HI="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     -- ) shift ; break ;;
     * ) break ;;
   esac
@@ -85,6 +89,7 @@ if [[ "${HELP}" == "true" ]]; then
   echo '  -h | --help            display command help'
   echo '  -l | --no-log          disable writing to output log'
   echo '  -v | --verbose         verbose output'
+  echo '  -n | --no-overwite     toggle to keep existing FWHM files'
   echo '  --inputs               comma separate list of files to include in'
   echo '                         FWHM calculation, should match data to be'
   echo '                         modelled'
@@ -104,69 +109,106 @@ fi
 #===============================================================================
 INPUTS=(${INPUTS//,/ })
 N=${#INPUTS[@]}
-
+DIR_INPUTS=$(dirname ${INPUTS})
 # get BIDS info ----------------------------------------------------------------
 DIR_PROJECT=$(getDir -i ${INPUTS[0]})
 
+if [[ -z "${DIR_SAVE}" ]]; then
+  DIR_SAVE=${DIR_INPUTS}
+fi
+mkdir -p ${DIR_SCRATCH}
+mkdir -p ${DIR_SAVE}
+
 for (( i=0; i<${N}; i++ )); do
-  # check if time series or not ------------------------------------------------
-  IS4D=false
-  NVOL=$(niiInfo -i ${INPUTS[${i}]} -f vols)
-  if [[ ${NVOL} -ne 1 ]]; then
-    MOD=$(getField -i ${INPUTS[${i}]} -f modality)
-    if [[ "${MOD}" == "bold" ]]; then
-      IS4D=true
+  PFX=$(getBidsBase -s -i ${INPUTS[${i}]})
+  if [[ "${NO_OVERWRITE,,}" == "false" ]] || [[ ! -f ${DIR_SAVE}/${PFX}_3dFWHM.1D ]]; then
+    # check if time series or not ------------------------------------------------
+    IS4D=false
+    NVOL=$(niiInfo -i ${INPUTS[${i}]} -f vols)
+    if [[ ${NVOL} -ne 1 ]]; then
+      MOD=$(getField -i ${INPUTS[${i}]} -f modality)
+      if [[ "${MOD}" == "bold" ]]; then
+        IS4D=true
+      fi
     fi
-  fi
 
-  # check scratch is empty -----------------------------------------------------
-  rm ${DIR_SCRATCH}/*
+    # check scratch is empty -----------------------------------------------------
+    #rm ${DIR_SCRATCH}/*
+    files=$(shopt -s nullglob dotglob; echo ${DIR_SCRATCH}/*)
+    if [[ ${#files} -gt 0 ]]; then
+      echo "contains files -- REMOVING"
+      rm ${DIR_SCRATCH}/*
+    else 
+      echo "empty --  CONTINUING "
+    fi
 
-  # copy input to scratch for ease of use -------------------------------------
-  cp ${INPUTS[${i}]} ${DIR_SCRATCH}/input.nii.gz
-  cp ${MASK} ${DIR_SCRATCH}/mask.nii.gz
+    # copy input to scratch for ease of use -------------------------------------
+    cp ${INPUTS[${i}]} ${DIR_SCRATCH}/input.nii.gz
+    cp ${MASK} ${DIR_SCRATCH}/mask.nii.gz
 
-  # apply mask if porovided, copy to scratch for combining --------------------
-  fslmaths ${DIR_SCRATCH}/input.nii.gz -mas ${DIR_SCRATCH}/mask.nii.gz \
-    ${DIR_SCRATCH}/input.nii.gz
-
-  # threshold image --------------------------------------------------------------
-  if [[ -n ${THRESH_LO} ]]; then
-    fslmaths ${DIR_SCRATCH}/input.nii.gz -thr ${THRESH_LO} \
+    # apply mask if porovided, copy to scratch for combining --------------------
+    fslmaths ${DIR_SCRATCH}/input.nii.gz -mas ${DIR_SCRATCH}/mask.nii.gz \
       ${DIR_SCRATCH}/input.nii.gz
-    fslmaths ${DIR_SCRATCH}/input.nii.gz -bin \
-      ${DIR_SCRATCH}/mask.nii.gz -odt char
-  fi
-  if [[ -n ${THRESH_HI} ]]; then
-    fslmaths ${DIR_SCRATCH}/input.nii.gz -uthr ${THRESH_HI} \
-      ${DIR_SCRATCH}/input.nii.gz
-    fslmaths ${DIR_SCRATCH}/input.nii.gz -bin \
-      ${DIR_SCRATCH}/mask.nii.gz -odt char
-  fi
 
-  # calculate FWHM ---------------------------------------------------------------
-  fwhm_fcn="FWHM=($(3dFWHMx"
-  fwhm_fcn="${fwhm_fcn} -mask ${DIR_SCRATCH}/mask.nii.gz"
-  fwhm_fcn="${fwhm_fcn} -out -"
-  if [[ "${IS4D}" == "false" ]]; then fwhm_fcn="${fwhm_fcn} -2difMAD"; fi
-  fwhm_fcn="${fwhm_fcn} -ShowMeClassicFWHM"
-  fwhm_fcn="${fwhm_fcn} -dset ${DIR_SCRATCH}/input.nii.gz))"
-  eval ${fwhm_fcn}
+    # threshold image --------------------------------------------------------------
+    if [[ -n ${THRESH_LO} ]]; then
+      fslmaths ${DIR_SCRATCH}/input.nii.gz -thr ${THRESH_LO} \
+        ${DIR_SCRATCH}/input.nii.gz
+      fslmaths ${DIR_SCRATCH}/input.nii.gz -bin \
+        ${DIR_SCRATCH}/mask.nii.gz -odt char
+    fi
+    if [[ -n ${THRESH_HI} ]]; then
+      fslmaths ${DIR_SCRATCH}/input.nii.gz -uthr ${THRESH_HI} \
+        ${DIR_SCRATCH}/input.nii.gz
+      fslmaths ${DIR_SCRATCH}/input.nii.gz -bin \
+        ${DIR_SCRATCH}/mask.nii.gz -odt char
+    fi
 
+    # calculate FWHM ---------------------------------------------------------------
+    fwhm_fcn="3dFWHMx"
+    fwhm_fcn="${fwhm_fcn} -mask ${DIR_SCRATCH}/mask.nii.gz"
+    fwhm_fcn="${fwhm_fcn} -out -"
+    if [[ "${IS4D}" == "false" ]]; then fwhm_fcn="${fwhm_fcn} -2difMAD"; fi
+    fwhm_fcn="${fwhm_fcn} -ShowMeClassicFWHM"
+    fwhm_fcn="${fwhm_fcn} -dset ${DIR_SCRATCH}/input.nii.gz"
+    FWHM=($(eval ${fwhm_fcn})) >> ${DIR_SAVE}/${PFX}_3dFWHM.1D
+  else
+    FWHM=($(cat ${DIR_SAVE}/${PFX}_3dFWHM.1D))
+  fi
   for j in {0..2}; do
-    FWHM_AVG[${j}]=$(ezMath -x "${FWHM[${j}]}/${N}" -d 4)
+    TMP=$(ezMath -x "${FWHM[${j}]}/${N}" -d 4)
+    FWHM_AVG[${j}]=$(ezMath -x "${TMP}+${FWHM_AVG[${j}]}" -d 4)
   done
+  
+  # clean
+  if [[ -f ${PWD}/3dFWHMx.1D ]]; then
+    echo "----------"
+    echo "removing ${PWD}/3dFWHMx.1D "
+    echo "----------"
+    rm ${PWD}/3dFWHMx.1D
+  fi
+  if [[ -f ${DIR_SAVE}/3dFWHMx.1D ]]; then
+    echo "----------"
+    echo "removing ${DIR_SAVE}/3dFWHMx.1D "
+    echo "----------"
+    rm ${DIR_SAVE}/3dFWHMx.1D
+  fi
+
 done
 
+echo "Resolution for FDR Calculation: ${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]}"
 ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask-FWHM.nii.gz \
   ${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]} 0 1 0
 
 FDR_FACTOR=($(fslstats ${DIR_SCRATCH}/mask-FWHM.nii.gz -V))
-echo "${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]} ${FDR_FACTOR[0]}"
+touch ${DIR_SAVE}/FDR_FACTOR_${OPERATOR}_${DATE_SUFFIX}.txt
+log_file=${DIR_SAVE}/FDR_FACTOR_${OPERATOR}_${DATE_SUFFIX}.txt
+#echo "${FDR_FACTOR[0]} ${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]}" >> ${DIR_SAVE}/FDR_FACTOR_${OPERATOR}_${DATE_SUFFIX}.txt
 
-
+echo "${FDR_FACTOR[0]} ${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]}" | tee -a "$log_file"
 #===============================================================================
 # End of Function
 #===============================================================================
 exit 0
+
 

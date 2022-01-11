@@ -47,7 +47,7 @@ OPTS=$(getopt -o hvkl --long prefix:,\
 image:,zmap:,zdir:,zlo:,zhi:,zthresh:,plane:,nthresh:,method:,\
 no-z,no-mask,no-clean,\
 dir-z:,dir-mask:,dir-clean:,dir-scratch:,\
-help,verbose,no-log,no-png -n 'parse-options' -- "$@")
+help,keep,verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -75,12 +75,14 @@ DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=false
 NO_PNG=false
+KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -k | --keep) KEEP=true ; shift ;;
     -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
@@ -230,6 +232,11 @@ Rscript ${INC_R}/deghostSlice.R \
   "dir.save" ${DIR_SCRATCH}
 gzip ${DIR_SCRATCH}/*.nii
 
+echo ""
+echo "got here"
+echo ${NO_PNG}
+echo ""
+
 # save desired output ----------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
   if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
@@ -237,9 +244,11 @@ if [[ "${NO_PNG}" == "false" ]]; then
   if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
 fi
 if [[ "${NO_Z}" == "false" ]]; then
+  echo "Saving ${PREFIX}_mod-${MOD}_tensor-z.nii.gz "
   mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_tensor-z.nii.gz ${DIR_Z}/
   # generate Z PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
+    echo "Making PNG ${PREFIX}_mod-${MOD}_tensor-z"
     make4Dpng \
       --fg "${DIR_Z}/${PREFIX}_mod-${MOD}_tensor-z.nii.gz" \
       --fg-color "timbow" --fg-alpha 100 \
@@ -249,9 +258,11 @@ if [[ "${NO_Z}" == "false" ]]; then
   fi
 fi
 if [[ "${NO_MASK}" == "false" ]]; then
+  echo "Saving ${PREFIX}_mod-${MOD}_mask-deghost.nii.gz "
   mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz ${DIR_MASK}/
   # generate mask PNG - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
+    echo "Making PNG ${PREFIX}_mod-${MOD}_mask-deghost"
     make4Dpng \
       --fg "${IMAGE};${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_mask-deghost.nii.gz" \
       --fg-color "#000000,#FFFFFF;#000000,#FF0000" --fg-alpha 100 \
@@ -261,15 +272,18 @@ if [[ "${NO_MASK}" == "false" ]]; then
   fi
 fi
 if [[ "${NO_CLEAN}" == "false" ]]; then
+  echo "Saving ${PREFIX}_mod-${MOD}_deghost.nii.gz "
   mv ${DIR_SCRATCH}/${PREFIX}_mod-${MOD}_deghost.nii.gz ${DIR_CLEAN}/
   # generate deghosted PNG - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if [[ "${NO_PNG}" == "false" ]]; then
+    echo "Making PNG ${PREFIX}_mod-${MOD}_raw"
     make4Dpng \
       --fg "${INPUT}" \
       --fg-color "#000000,#FFFFFF" --fg-thresh "5,99" --fg-alpha 100 \
       --layout "5x11" --plane ${PNG_PLANE} --slice 0.51 \
       --filename ${PREFIX}_mod-${MOD}_raw \
       --dir-save ${DIR_CLEAN}
+    echo "Making PNG ${PREFIX}_mod-${MOD}_deghost"
     make4Dpng \
       --fg "${DIR_CLEAN}/${PREFIX}_mod-${MOD}_deghost.nii.gz" \
       --fg-color "#000000,#FFFFFF" --fg-alpha 100 --fg-thresh "5,99" \

@@ -104,11 +104,11 @@ for (i in 1:length(regressor.ls)) {
     ptitle <- "Relative Displacement (mm)"
     which.plot <- "plot6df"
     cls <- timbow(5)[c(2,4,5)]
-  } else if (grepl("displacement-framewise", tname)) {
+  } else if (grepl("displacement[+]framewise", tname)) {
     ptitle <- "Framewise Displacement"
     which.plot <- "plotVec"    
     cls <- "#000000"
-  } else if (grepl("displacement-RMS", tname)) {
+  } else if (grepl("displacemen[+]RMS", tname)) {
     ptitle <- "Displacement Root Mean Squared"
     which.plot <- "plotVec"
     cls <- "#000000"

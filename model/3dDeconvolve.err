@@ -1,0 +1,2 @@
+*+ WARNING: '-stim_times_FSL 1' file '/Dedicated/inc_database/project/gpierce/monitor/stim_times/ev_hold.txt' -- model 'SPMG1' is not of 'dm' type -- replacing with 'dmUBLOCK(1)'
+*+ WARNING: no -stim_label given for stim #1 ==> label = 'Stim#1'
