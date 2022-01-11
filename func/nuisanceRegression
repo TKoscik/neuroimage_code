@@ -185,13 +185,10 @@ if [[ ${NO_PNG} == "false" ]]; then
     TSLS+=(${DIR_RGR}/${PREFIX}_ts-brain+resid.1D)
   fi
   if [[ ${#TSLS} -gt 1 ]]; then
-    fcn_str="paste -d ' ' "
+    fcn_str="paste -d ' '"
     for (( i=0; i<${#TSLS[@]}; i++ )); do
       fcn_str="${fcn_str} ${TSLS[${i}]}"
     done
-    ${DIR_RGR}/${PFXTMP}_ts-brain+raw.1D \
-    ${DIR_RGR}/${PFXTMP}_ts-brain+mocoReg.1D \
-    ${DIR_RGR}/${PREFIX}_ts-brain+resid.1D \
     fcn_str="${fcn_str} > ${DIR_RGR}/${PREFIX}_ts-processing.1D"
     sed -i 's/  */\t/g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
     sed -i 's/\t$//g' ${DIR_RGR}/${PREFIX}_ts-processing.1D
