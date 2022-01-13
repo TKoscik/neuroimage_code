@@ -108,7 +108,7 @@ TARGET=T1w
 NATIVE_ANAT=
 NATIVE_MOD=T1w
 NATIVE_MASK=
-MASK_METHOD="apply"
+MASK_METHOD="apply_anat,apply_func"
 XFM_ALIGN=
 XFM_NORM=
 TEMPLATE=HCPICBM
@@ -220,7 +220,7 @@ if [[ -z ${NATIVE_ANAT} ]] || [[ ! -f ${NATIVE_ANAT} ]]; then
 fi
 
 # skull strip anat -------------------------------------------------------------
-if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
+if [[ "${MASK_METHOD,,}" == *"apply_anat"* ]]; then
   if [[ -z ${NATIVE_MASK} ]]; then
     NATIVE_MASK=${DIR_PROJECT}/derivatives/inc/anat/mask/${PIDSTR}_mask-brain.nii.gz
   fi
@@ -359,7 +359,7 @@ make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
 
 # skullstrip func for better reg ----------------------------------------------
 AVG_MASK_STR=
-if [[ "${MASK_METHOD,,}" == *"apply"* ]]; then
+if [[ "${MASK_METHOD,,}" == *"apply_func"* ]]; then
   fslmaths ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
     -mas ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
     ${DIR_SCRATCH}/${PREFIX}_roi-mask_avg.nii.gz
