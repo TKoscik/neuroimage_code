@@ -241,7 +241,7 @@ if [[ -z ${XFM_ALIGN} ]]; then
   XFM_ALIGN=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}_mod-${NATIVE_MOD}_from-raw_to-${TEMPLATE}_xfm-rigid.mat
 fi
 if [[ ! -f ${XFM_ALIGN} ]]; then
-  XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}_mod-${NATIVE_MOD}_from-raw_to-*_xfm-rigid.mat)
+  XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}_mod-${NATIVE_MOD}_from-raw_to-*_xfm-rigid.mat))
   if [[ -n ${XFM_ALIGN} ]]; then
     XFM_ALIGN=${XFM_ALIGN[0]}
   else
