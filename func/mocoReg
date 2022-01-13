@@ -241,8 +241,13 @@ if [[ -z ${XFM_ALIGN} ]]; then
   XFM_ALIGN=${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}_mod-${NATIVE_MOD}_from-raw_to-${TEMPLATE}_xfm-rigid.mat
 fi
 if [[ ! -f ${XFM_ALIGN} ]]; then
-  echo "Alignment registration not found, continuing with ANTs default initialization."
-  XFM_ALIGN=[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
+  XFM_ALIGN=($(ls ${DIR_PROJECT}/derivatives/inc/xfm/${DIRPID}/${PIDSTR}_mod-${NATIVE_MOD}_from-raw_to-*_xfm-rigid.mat)
+  if [[ -n ${XFM_ALIGN} ]]; then
+    XFM_ALIGN=${XFM_ALIGN[0]}
+  else
+    echo "Alignment registration not found, continuing with ANTs default initialization."
+    XFM_ALIGN=[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,1]
+  fi
 fi
 
 # get normalization transforms -------------------------------------------------
