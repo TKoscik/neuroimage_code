@@ -355,7 +355,7 @@ make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   --offset "0,0,0" \
   --no-slice-label --no-lr-label \
   --filename ${PREFIX}_mask-brain+init \
-  --dir-save ${DIR_SAVE}/mask
+  --dir-save ${DIR_SAVE}/qc
 
 # skullstrip func for better reg ----------------------------------------------
 AVG_MASK_STR=
@@ -463,8 +463,8 @@ make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
   --layout "9:x;9:x;9:x" \
   --offset "0,0,0" \
   --no-slice-label --no-lr-label \
-  --filename ${PREFIX}_mask-brain+init \
-  --dir-save ${DIR_SAVE}/coregQC
+  --filename ${PREFIX}_warpToNative \
+  --dir-save ${DIR_SAVE}/qc
 
 # redo motion correction to normalized mean bold ------------------------------
 antsMotionCorr \
