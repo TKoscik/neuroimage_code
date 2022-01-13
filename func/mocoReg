@@ -519,8 +519,8 @@ mv ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat \
   ${DIR_XFM}/${PREFIX}_mod-bold_from-raw_to-native_xfm-affine.mat
 
 if [[ "${KEEP}" == "true" ]]; then
-  mkdir -p ${DIR_SAVE}/prep/${DIRPID}
-  mv ${DIR_SCRATCH}/* ${DIR_SAVE}/prep/${DIRPID}/
+  mkdir -p ${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/func/
+  mv ${DIR_SCRATCH}/* ${DIR_PROJECT}/derivatives/inc/prep/${DIRPID}/func/
 fi
 
 # generate output PNGs ---------------------------------------------------------
