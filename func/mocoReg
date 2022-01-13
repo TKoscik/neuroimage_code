@@ -444,6 +444,8 @@ xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat"
 xfm_fcn="${xfm_fcn} -r ${TRG}"
 eval ${xfm_fcn}
 
+### ADD in here a separate transform to just T1 space, no XFM_NORM, and make PNG to evaluate registration to T1w.
+
 # redo motion correction to normalized mean bold ------------------------------
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${ANTS_VERBOSE} \
