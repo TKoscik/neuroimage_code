@@ -348,6 +348,14 @@ bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+  --fg ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+  --fg-color "transparent,#FFB469" --fg-alpha 25 --fg-cbar false \
+  --layout "9:x;9:x;9:x" \
+  --offset "0,0,0" \
+  --no-slice-label --no-lr-label \
+  --filename ${PREFIX}_mask-brain+init \
+  --dir-save ${DIR_SAVE}/mask
 
 # skullstrip func for better reg ----------------------------------------------
 AVG_MASK_STR=
