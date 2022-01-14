@@ -406,13 +406,13 @@ antsApplyTransforms -d 3 \
   -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz \
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat \
-  -r ${TRG}
+  -r ${NATIVE_ANAT}
 antsApplyTransforms -d 3 -n NearestNeighbor\
   -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warpToNative.nii.gz \
   -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz\
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz\
   -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat\
-  -r ${TRG}
+  -r ${NATIVE_ANAT}
 make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
   --fg ${DIR_SCRATCH}/${PREFIX}_mask-brain+warpToNative.nii.gz \
   --fg-color "transparent,#FFB469" --fg-alpha 25 --fg-cbar false \
