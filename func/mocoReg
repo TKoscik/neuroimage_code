@@ -395,8 +395,32 @@ ants_fcn="${ants_fcn} -s 2x1x0vox"
 if [[ "${MASK_METHOD,,}" == *"restrict"* ]]; then
   ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
 fi
-if [[ "${VERBOSE}" == "true" ]]; then echo -e "ANTS Coregistration Mean BOLD to ANATOMICAL\n\n${ants_fcn// -/ \\\n -}\n"; fi
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e "\n***Coregistration Mean BOLD to ANATOMICAL:\n${ants_fcn}\n"
+fi
 eval ${ants_fcn}
+
+# push transforms to native space for qc ---------------------------------------
+antsApplyTransforms -d 3 \
+  -o ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
+  -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz \
+  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat \
+  -r ${TRG}
+antsApplyTransforms -d 3 -n NearestNeighbor\
+  -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warpToNative.nii.gz \
+  -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz\
+  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz\
+  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat\
+  -r ${TRG}
+make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
+  --fg ${DIR_SCRATCH}/${PREFIX}_mask-brain+warpToNative.nii.gz \
+  --fg-color "transparent,#FFB469" --fg-alpha 25 --fg-cbar false \
+  --layout "9:x;9:x;9:x" \
+  --offset "0,0,0" \
+  --no-slice-label --no-lr-label \
+  --filename ${PREFIX}_warpToNative \
+  --dir-save ${DIR_SAVE}/qc
 
 # check if desired space template exists, if not resample ----------------------
 TRG=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_${TEMPLATE_MOD}.nii.gz
@@ -429,6 +453,9 @@ done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz"
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat"
 xfm_fcn="${xfm_fcn} -r ${TRG}"
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e "\n***mean BOLD to template:\n${xfm_fcn}\n"
+fi
 eval ${xfm_fcn}
 
 # push bold brain mask to template as well, useful for QC ----------------------
@@ -442,28 +469,19 @@ done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz"
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat"
 xfm_fcn="${xfm_fcn} -r ${TRG}"
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e "\n***BOLD brain mask to template:\n${xfm_fcn}\n"
+fi
 eval ${xfm_fcn}
 
-### ADD in here a separate transform to just T1 space, no XFM_NORM, and make PNG to evaluate registration to T1w.
-antsApplyTransforms -d 3 \
-  -o ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
-  -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
-  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz \
-  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat \
-  -r ${TRG}
-antsApplyTransforms -d 3 -n NearestNeighbor\
-  -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warpToNative.nii.gz \
-  -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz\
-  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz\
-  -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat\
-  -r ${TRG}
-make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
-  --fg ${DIR_SCRATCH}/${PREFIX}_mask-brain+warpToNative.nii.gz \
+# push transforms to template space for qc ---------------------------------------
+make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz \
+  --fg ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz \
   --fg-color "transparent,#FFB469" --fg-alpha 25 --fg-cbar false \
   --layout "9:x;9:x;9:x" \
   --offset "0,0,0" \
   --no-slice-label --no-lr-label \
-  --filename ${PREFIX}_warpToNative \
+  --filename ${PREFIX}_warpToTemplate \
   --dir-save ${DIR_SAVE}/qc
 
 # redo motion correction to normalized mean bold ------------------------------
