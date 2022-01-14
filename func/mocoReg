@@ -94,7 +94,7 @@ xfm-align:,xfm-norm:,\
 template:,template_mod:,space:,\
 pad:,\
 dir-xfm:,dir-save:,dir-scratch:,\
-keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
+keep,help,verbose,ants-verbose,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -396,7 +396,7 @@ if [[ "${MASK_METHOD,,}" == *"restrict"* ]]; then
   ants_fcn="${ants_fcn} -x [${NATIVE_MASK},${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz]"
 fi
 if [[ "${VERBOSE}" == "true" ]]; then
-  echo -e "\n***Coregistration Mean BOLD to ANATOMICAL:\n${ants_fcn}\n"
+  echo -e "\n***coregistration Mean BOLD to ANATOMICAL:\n${ants_fcn}\n"
 fi
 eval ${ants_fcn}
 
