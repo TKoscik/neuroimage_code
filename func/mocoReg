@@ -524,11 +524,10 @@ mv ${DIR_SCRATCH}/${PREFIX}_moco+12.1D \
 
 ## move raw space brain mask - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Depad brain mask
-#if [[ ${PAD} -ne 0 ]]; then
-#  DEPAD=$(ezMath -x "${PAD} * -1" -d 0)
-#  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
-#    PadImage ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz ${DEPAD}
-#fi
+if [[ ${PAD} -ne 0 ]]; then
+  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+    PadImage ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz "-${DEPAD}"
+fi
 
 # get raw whole brain time series
 antsApplyTransforms -d 3 -n GenericLabel \
