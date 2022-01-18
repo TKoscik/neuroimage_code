@@ -443,6 +443,12 @@ if [[ -f ${TRG} ]]; then
 fi
 
 # Push mean bold to template ---------------------------------------------------
+## depad mean bold
+if [[ ${PAD} -ne 0 ]]; then
+  ImageMath 3 ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+    PadImage ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz "-${PAD}"
+fi
+
 unset xfm_fcn
 xfm_fcn="antsApplyTransforms -d 3"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz"
