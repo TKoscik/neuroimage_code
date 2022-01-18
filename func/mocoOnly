@@ -50,10 +50,10 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkln --long prefix:,\
+OPTS=$(getopt -o havkdln --long prefix:,\
 ts-bold:,\
 dir-xfm:,dir-save:,dir-scratch:,\
-keep,help,verbose,no-log,no-png -n 'parse-options' -- "$@")
+keep,help,verbose,disp-field,alternate,no-log,no-png -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -63,10 +63,14 @@ eval set -- "$OPTS"
 # Set default values for function ---------------------------------------------
 PREFIX=
 TS_BOLD=
+DISP_FIELD=0
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
 VERBOSE=1
+DISP_FIELD=0
+DIR_XFM=
+ALTERNATE=false
 KEEP=false
 NO_PNG=false
 
@@ -74,11 +78,14 @@ while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
     -v | --verbose) VERBOSE=1 ; shift ;;
+    -a | --alternate) ALTERNATE=true ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
+    -d | --disp-field) DISP_FIELD=1 ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --ts-bold) TS_BOLD="$2" ; shift 2 ;;
+    --dir-xfm) DIR_XFM="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -122,6 +129,7 @@ if [[ ! -f "${TS_BOLD}" ]]; then
 fi
 if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${TS_BOLD}); fi
 if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func; fi
+if [[ -z "${DIR_XFM}" ]]; then DIR_XFM=${DIR_PROJECT}/derivatives/inc/xfm; fi
 PIDSTR=sub-${PID}
 DIRPID=sub-${PID}
 if [[ -n "${SID}" ]]; then
@@ -148,7 +156,7 @@ antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 # rigid body motion correction to mean BOLD (6 df) -----------------------------
 echo "rigid body motion correction to mean BOLD"
 antsMotionCorr \
-  -d 3 -u 1 -e 1 -n ${NTR} -v ${VERBOSE} \
+  -d 3 -u 1 -e 1 -n ${NTR} -v ${VERBOSE} -w ${DISP_FIELD} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
   -t Rigid[0.1] \
   -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
@@ -156,16 +164,16 @@ antsMotionCorr \
   -s 3x2x1x0 \
   -f 4x3x2x1
 
-cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
-cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
-sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
-rm ${DIR_SCRATCH}/temp.csv
-rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
+ cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+ cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
+ sed -i 's/,/\t/g' ${DIR_SCRATCH}/${PREFIX}_moco+6.1D
+ rm ${DIR_SCRATCH}/temp.csv
+ rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
 
 # affine motion correction to mean BOLD ----------------------------------------
 echo "affine motion correction to mean BOLD"
 antsMotionCorr \
-  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} \
+  -d 3 -u 1 -e 1 -n ${NTR} -l 1 -v ${VERBOSE} -w ${DISP_FIELD} \
   -o [${DIR_SCRATCH}/${PREFIX}_affine_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
   -t Affine[0.1] \
   -m MI[${DIR_SCRATCH}/${PREFIX}_avg.nii.gz,${TS_BOLD},1,32,Regular,0.2] \
@@ -185,6 +193,25 @@ bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
 mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
   ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+
+if [[ "${ALTERNATE}" == "true" ]]; then
+# fixed = avg replicated #TRs times
+  FIXED=${DIR_SCRATCH}/${PREFIX}_fixed.nii.gz
+  ImageMath 3 ${FIXED} ReplicateImage ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz ${NTR} ${TR} 0
+
+# run SyN to map the time series to this fixed space.
+  tx=SyN[0.1,3,0.0] # critical parameters (though others matter too)
+  antsRegistration --dimensionality 4 -f 1 -r ${DIR_SCRATCH}/${PREFIX}_affine_Warp.nii.gz \
+      --output   [${DIR_SCRATCH}/${PREFIX}_syn_,${DIR_SCRATCH}/${PREFIX}_syn-Warped.nii.gz] \
+      --interpolation Linear --use-histogram-matching 1 \
+      --winsorize-image-intensities [0.005,0.995] --transform $tx \
+      --metric meansquares[${FIXED},${TS_BOLD},1] \
+      --convergence [15x2,1e-6,4] --shrink-factors 2x1 \
+      --smoothing-sigmas 1x0vox --restrict-deformation 1x1x1x0
+
+#  make 3D transform to template then replicate maps so they can be applied to the original 4D dataset. 
+# coregChef next
+fi
 
 # SyN motion correction to mean bold -------------------------------------------
 echo "SyN motion correction to mean bold"
@@ -239,6 +266,26 @@ mkdir -p ${DIR_SAVE}/moco_mean
 mv ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   ${DIR_SAVE}/moco_mean/${PREFIX}_proc-moco+mean_bold.nii.gz
 
+## move alternate displacement files - - - - - - - - - - - - - - - - - - - - - -
+if [[ "${ALTERNATE}" == "true" ]]; then
+  echo "move alternate displacement files"
+  mkdir -p ${DIR_XFM}
+  mv ${DIR_SCRATCH}/${PREFIX}_syn_1Warp.nii.gz \
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_syn_1Warp.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_syn_0Warp.nii.gz \
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_syn_0Warp.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_syn_1InverseWarp.nii.gz \
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_syn_1InverseWarp.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_rigid_Warp.nii.gz \
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_rigid_Warp.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_rigid_InverseWarp.nii.gz \
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_rigid_InverseWarp.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_affine_Warp.nii.gz \
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_affine_Warp.nii.gz
+  mv ${DIR_SCRATCH}/${PREFIX}_affine_InverseWarp.nii.gz\
+    ${DIR_XFM}/${PREFIX}_ts-to-avg_affine_InverseWarp.nii.gz 
+fi
+
 # extract time series for plotting ---------------------------------------------
 # get raw whole brain time series
 echo "get raw whole brain time series"
@@ -274,7 +321,7 @@ if [[ "${NO_PNG}" == "false" ]]; then
     --fg-color "hot" --layout "5x11" --plane "z" --slice 0.51 \
     --filename ${PREFIX}_proc-moco_bold \
     --dir-save ${DIR_SAVE}/moco_only
-fi
+# fi
 
 #===============================================================================
 # End of function

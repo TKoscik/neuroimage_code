@@ -448,7 +448,7 @@ xfm_fcn="antsApplyTransforms -d 3"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_avg+warp.nii.gz"
 xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz"
 for (( i=0; i<${N_XFM}; i++ )); do
-  xfm_fcn="${xfm_fcn} -t ${XFM_NORM}"
+  xfm_fcn="${xfm_fcn} -t ${XFM_NORM[${i}]}"
 done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz"
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat"
@@ -464,7 +464,7 @@ xfm_fcn="antsApplyTransforms -d 3 -n NearestNeighbor"
 xfm_fcn="${xfm_fcn} -o ${DIR_SCRATCH}/${PREFIX}_mask-brain+warp.nii.gz"
 xfm_fcn="${xfm_fcn} -i ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz"
 for (( i=0; i<${N_XFM}; i++ )); do
-  xfm_fcn="${xfm_fcn} -t ${XFM_NORM}"
+  xfm_fcn="${xfm_fcn} -t ${XFM_NORM[${i}]}"
 done
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_1Warp.nii.gz"
 xfm_fcn="${xfm_fcn} -t ${DIR_SCRATCH}/${PREFIX}_xfm_toNative_0GenericAffine.mat"
