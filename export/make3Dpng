@@ -638,13 +638,17 @@ if [[ ${NX} > 0 ]]; then
   if [[ ${XLIM[0]} -lt 1 ]]; then XLIM[0]=1; fi
   if [[ ${XLIM[1]} -gt ${DIMS[0]} ]]; then XLIM[1]=${DIMS[0]}; fi
   TN=$((${NX}+1))
+  #RANGE=$(( ${XLIM[1]} - ${XLIM[0]} ))
+  #STEP=$(echo "${RANGE} / ${TN}" | bc -l)
+  #STEP=$(printf "%.0f" ${STEP})
   STEP=$(ezMath -x "(${XLIM[1]}-${XLIM[0]})/${TN}" -d 0)
   XVOX=($(seq ${XLIM[0]} ${STEP} ${XLIM[1]}))
   if [[ ${#XVOX[@]} -gt ${NX} ]]; then XVOX=${XVOX[@]:1:${#XVOX[@]}-1}; fi
   if [[ ${#XVOX[@]} -gt ${NX} ]]; then unset XVOX[${#XVOX[@]}-1]; fi
   if [[ ${#XVOX[@]} -gt ${NX} ]]; then XVOX=(${XVOX[@]:1:${NX}}); fi
   for (( i=0; i<${NX}; i++ )); do
-    XPCT+=($(ezMath -x "(${XVOX[${i}]}/${DIMS[0]})" -d 4))
+    XPCT+=($(ezMath -x "${XVOX[${i}]} / ${DIMS[0]}" -d 4))
+    #XPCT+=($(echo "scale=4; ${XVOX[${i}]} / ${DIMS[0]} | bc -l))
   done
   if [[ "${VERBOSE}" == "true" ]]; then
     echo -e ">>>X Slice Information:"
@@ -663,13 +667,17 @@ if [[ ${NY} > 0 ]]; then
   if [[ ${YLIM[0]} -lt 1 ]]; then YLIM[0]=1; fi
   if [[ ${YLIM[1]} -gt ${DIMS[1]} ]]; then YLIM[1]=${DIMS[1]}; fi
   TN=$((${NY}+1))
+  #RANGE=$(( ${YLIM[1]} - ${YLIM[0]} ))
+  #STEP=$(echo "${RANGE} / ${TN}" | bc -l)
+  #STEP=$(printf "%.0f" ${STEP})
   STEP=$(ezMath -x "(${YLIM[1]}-${YLIM[0]})/${TN}" -d 0)
   YVOX=($(seq ${YLIM[0]} ${STEP} ${YLIM[1]}))
   if [[ ${#YVOX[@]} -gt ${NY} ]]; then YVOX=${YVOX[@]:1:${#YVOX[@]}-1}; fi
   if [[ ${#YVOX[@]} -gt ${NY} ]]; then unset YVOX[${#YVOX[@]}-1]; fi
   if [[ ${#YVOX[@]} -gt ${NY} ]]; then YVOX=(${YVOX[@]:1:${NY}}); fi
   for (( i=0; i<${NY}; i++ )); do
-    YPCT+=($(ezMath -x "${YVOX[${i}]}/${DIMS[1]}" -d 4))
+    YPCT+=($(ezMath -x "${YVOX[${i}]} / ${DIMS[0]}" -d 4))
+    #YPCT+=($(echo "scale=4; ${YVOX[${i}]} / ${DIMS[0]} | bc -l))
   done
   if [[ "${VERBOSE}" == "true" ]]; then
     echo ">>>Y Slice Information"
@@ -688,13 +696,17 @@ if [[ ${NZ} > 0 ]]; then
   if [[ ${ZLIM[0]} -lt 1 ]]; then ZLIM[0]=1; fi
   if [[ ${ZLIM[1]} -gt ${DIMS[2]} ]]; then ZLIM[1]=${DIMS[2]}; fi
   TN=$((${NZ} + 1))
+  #RANGE=$(( ${ZLIM[1]} - ${ZLIM[0]} ))
+  #STEP=$(echo "${RANGE} / ${TN}" | bc -l)
+  #STEP=$(printf "%.0f" ${STEP})
   STEP=$(ezMath -x "(${ZLIM[1]}-${ZLIM[0]})/${TN}" -d 0)
   ZVOX=($(seq ${ZLIM[0]} ${STEP} ${ZLIM[1]}))
   if [[ ${#ZVOX[@]} -gt ${NZ} ]]; then ZVOX=${ZVOX[@]:1:${#ZVOX[@]}-1}; fi
   if [[ ${#ZVOX[@]} -gt ${NZ} ]]; then unset ZVOX[${#ZVOX[@]}-1]; fi
   if [[ ${#ZVOX[@]} -gt ${NZ} ]]; then ZVOX=(${ZVOX[@]:1:${NZ}}); fi
   for (( i=0; i<${NZ}; i++ )); do
-    ZPCT+=($(ezMath -x "${ZVOX[${i}]}/${DIMS[2]}" -d 4))
+    ZPCT+=($(ezMath -x "${ZVOX[${i}]} / ${DIMS[0]}" -d 4))
+    #ZPCT+=($(echo "scale=4; ${ZVOX[${i}]} / ${DIMS[0]} | bc -l))
   done
   if [[ "${VERBOSE}" == "true" ]]; then
     echo ">>>Z Slice Information"
@@ -1102,10 +1114,10 @@ for (( i=0; i<${NX}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo ">>>add slice labels X"; fi
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-      LABEL_X=$(ezMath -x "((${ORIGIN[0]}/${PIXDIM[0]})-${XVOX[${i}]})*${PIXDIM[0]}" -d ${LABEL_DECIMAL})
-      #LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[0]}/${PIXDIM[0]}" | bc -l)
-      #LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_X}-${XVOX[${i}]}" | bc -l)
-      #LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_X}*${PIXDIM[0]}" | bc -l)
+      #LABEL_X=$(ezMath -x "(( ${ORIGIN[0]} / ${PIXDIM[0]}) - ${XVOX[${i}]}) * ${PIXDIM[0]}" -d ${LABEL_DECIMAL})
+      LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[0]} / ${PIXDIM[0]}" | bc -l)
+      LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_X} - ${XVOX[${i}]}" | bc -l)
+      LABEL_X=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_X} * ${PIXDIM[0]}" | bc -l)
       LABEL_X="${LABEL_X}mm"
     else
       LABEL_X=${XVOX[${i}]}
@@ -1121,10 +1133,10 @@ for (( i=0; i<${NY}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo ">>>add slice labels Y"; fi
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-      LABEL_Y=$(ezMath -x "((${ORIGIN[1]}/${PIXDIM[1]})-${YVOX[${i}]})*${PIXDIM[1]}" -d ${LABEL_DECIMAL})
-      #LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
-      #LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Y}-${YVOX[${i}]}" | bc -l)
-      #LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
+      #LABEL_Y=$(ezMath -x "((${ORIGIN[1]}/${PIXDIM[1]})-${YVOX[${i}]})*${PIXDIM[1]}" -d ${LABEL_DECIMAL})
+      LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[1]}/${PIXDIM[1]}" | bc -l)
+      LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Y}-${YVOX[${i}]}" | bc -l)
+      LABEL_Y=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Y}*${PIXDIM[1]}" | bc -l)
       LABEL_Y="${LABEL_Y}mm"
     else
       LABEL_Y=${YVOX[${i}]}
@@ -1140,10 +1152,10 @@ for (( i=0; i<${NZ}; i++ )); do
   if [[ "${LABEL_NO_SLICE}" == "false" ]]; then
     if [[ "${VERBOSE}" == "true" ]]; then echo ">>>add slice labels Z"; fi
     if [[ "${LABEL_USE_VOX}" == "false" ]]; then
-      LABEL_Z=$(ezMath -x "((${ORIGIN[2]}/${PIXDIM[2]})-${ZVOX[${i}]})*${PIXDIM[2]}" -d ${LABEL_DECIMAL})
-      #LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
-      #LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Z}-${ZVOX[${i}]}" | bc -l)
-      #LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Z}*${PIXDIM[2]}" | bc -l)
+      #LABEL_Z=$(ezMath -x "((${ORIGIN[2]}/${PIXDIM[2]})-${ZVOX[${i}]})*${PIXDIM[2]}" -d ${LABEL_DECIMAL})
+      LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${ORIGIN[2]}/${PIXDIM[2]}" | bc -l)
+      LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Z}-${ZVOX[${i}]}" | bc -l)
+      LABEL_Z=$(echo "scale=${LABEL_DECIMAL}; ${LABEL_Z}*${PIXDIM[2]}" | bc -l)
       LABEL_Z="${LABEL_Z}mm"
     else
       LABEL_Z=${ZVOX[${i}]}
