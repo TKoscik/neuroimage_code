@@ -424,7 +424,7 @@ make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg+warpToNative.nii.gz \
 
 # check if desired space template exists, if not resample ----------------------
 TRG=${INC_TEMPLATE}/${TEMPLATE}/${SPACE}/${TEMPLATE}_${SPACE}_${TEMPLATE_MOD}.nii.gz
-if [[ -f ${TRG} ]]; then
+if [[ ! -f ${TRG} ]]; then
   ## find highest resolution version of template
   MINSZ=99999
   SZ=($(ls ${INC_TEMPLATE}/${TEMPLATE}))
@@ -434,11 +434,19 @@ if [[ -f ${TRG} ]]; then
     else
       SZ[${i}]=$(echo ${SZ[${i}]::-2})
     fi
-    if [[ ${SZ[${i}]} -lt ${MINSZ} ]]; then MINSZ=${SZ[${i}]}; fi
+    if [[ ${SZ[${i}]} -lt ${MINSZ} ]]; then
+      MINSZ=${SZ[${i}]}
+      TSZ=${SZ[${i}]}
+    fi
   done
-  ResampleImage 3 ${TRG} \
+  TSRC=${INC_TEMPLATE}/${TEMPLATE}/${TSZ}/${TEMPLATE}_${TSZ}_T1w.nii.gz
+
+  # convert space inout to string for resampling
+  SPACESTR=$(convSpacing -i ${SPACE})
+
+  ResampleImage 3 ${TSRC} \
     ${DIR_SCRATCH}/template_resampled_${SPACE}.nii.gz \
-    "${SPACE}x${SPACE}x${SPACE}" 0 0 6
+    ${SPACESTR} 0 0 6
   TRG=${DIR_SCRATCH}/template_resampled_${SPACE}.nii.gz
 fi
 
