@@ -89,7 +89,8 @@ trap egress EXIT
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvkln --long prefix:,\
 ts-bold:,target:,\
-native-anat:,native-mod:,native-mask:,mask-method:,\
+native-anat:,native-mod:,native-mask:,\
+mask-method:,mask-tool:,mask-clfrac:,\
 xfm-align:,xfm-norm:,\
 template:,template_mod:,space:,\
 pad:,\
@@ -109,6 +110,8 @@ NATIVE_ANAT=
 NATIVE_MOD=T1w
 NATIVE_MASK=
 MASK_METHOD="apply_anat,apply_func"
+MASK_TOOL="bet"
+MASK_CLFRAC=0.25
 XFM_ALIGN=
 XFM_NORM=
 TEMPLATE=HCPICBM
@@ -139,6 +142,8 @@ while true; do
     --native-mod) NATIVE_MOD="$2" ; shift 2 ;;
     --native-mask) NATIVE_MASK="$2" ; shift 2 ;;
     --mask-method) MASK_METHOD=true ; shift 2 ;;
+    --mask-tool) MASK_TOOL=true ; shift 2 ;;
+    --mask-clfrac) MASK_CLFRAC=true ; shift 2 ;;
     --xfm-align) XFM_ALIGN="$2" ; shift 2 ;;
     --xfm-norm) XFM_NORM="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
@@ -344,10 +349,21 @@ rm ${DIR_SCRATCH}/temp.csv
 rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 
 # get brain mask of mean BOLD -------------------------------------------------
-bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
-  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
-mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
-  ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+if [[ "${MASK_TOOL,,}" == "bet" ]]; then
+  bet ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz -m -n
+  mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
+fi
+if [[ "${MASK_TOOL,,}" == "automask" ]] && [[ "${MASK_TOOL,,}" == "afni" ]]; then
+  3dAutomask \
+    -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz  \
+    -clfrac ${MASK_CLFRAC} -q \
+    ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
+  CopyImageHeaderInformation ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
+    ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz 1 1 1
+fi
 make3Dpng --bg ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz \
   --fg ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz \
   --fg-color "transparent,#FFB469" --fg-alpha 25 --fg-cbar false \
