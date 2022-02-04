@@ -28,12 +28,12 @@ library(tools, quietly=TRUE, warn.conflicts=FALSE)
 library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
-sz <- nii.dims(nii)
+sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs")
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
 
 # load orientation parameters for output ---------------------------------------
-pixdim <- unlist(nii.hdr(nii, "pixdim"))
-orient <- nii.orient(nii)
+#pixdim <- unlist(nii.hdr(nii, "pixdim"))
+#orient <- nii.orient(nii)
 
 # load timeseries and zmaps into arrays ----------------------------------------
 ts <- array(0, dim=sz)
@@ -69,7 +69,7 @@ fname[length(fname)] <- paste0("mod-", fname[length(fname)])
 fname <- paste(fname, collapse="_")
 
 # save mask ---------------------------------------------------------------------
-init.nii(paste0(dir.save, "/", fname, "_mask-deghost.nii"), sz, pixdim, orient)
+init.nii(paste0(dir.save, "/", fname, "_mask-deghost.nii"), ref.nii=nii)
 for (i in 1:sz[4]) {
   write.nii.volume(paste0(dir.save, "/", fname, "_mask-deghost.nii"), i, mask[ , , ,i])
 }
@@ -91,7 +91,7 @@ if (method != "none") {
     for (i in 1:nrow(ts)) { ts[i, is.na(ts[i, ])] <- value }    
   }
   ts <- array(ts, dim=sz)
-  init.nii(paste0(dir.save, "/", fname, "_deghost.nii"), sz, pixdim, orient)
+  init.nii(paste0(dir.save, "/", fname, "_deghost.nii"), ref.nii=nii)
   for (i in 1:sz[4]) {
     write.nii.volume(paste0(dir.save, "/", fname, "_deghost.nii"), i, ts[ , , ,i])
   }
