@@ -303,7 +303,7 @@ fi
 # Motion correction ===========================================================
 # pad image for better registration -------------------------------------------
 if [[ ${PAD} -ne 0 ]]; then
-  pad4D --ts ${TS_BOLD} --pad ${PAD} --dir-save ${DIR_SCRATCH}
+  pad4D --ts ${TS_BOLD} --pad ${PAD} --prefix ${PREFIX} --dir-save ${DIR_SCRATCH}
   #ls ${DIR_SCRATCH}/${PREFIX}*
   # have to do it this way in case PREFIX is set different
   TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}*_prep-pad${PAD}_bold.nii.gz)

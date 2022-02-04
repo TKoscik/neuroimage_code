@@ -29,17 +29,15 @@ library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
 sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs"))
+print(sz)
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
-
-# load orientation parameters for output ---------------------------------------
-#pixdim <- unlist(nii.hdr(nii, "pixdim"))
-#orient <- nii.orient(nii)
 
 # load timeseries and zmaps into arrays ----------------------------------------
 ts <- array(0, dim=sz)
 z <- array(0, dim=sz)
 mask <- array(0, dim=sz)
 for (i in 1:sz[4]) {
+  print(i)
   ts[ , , , i] <- read.nii.volume(nii, i)
   z[ , , , i] <- read.nii.volume(zmap, i)
 }
