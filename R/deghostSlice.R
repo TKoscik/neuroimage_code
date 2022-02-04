@@ -28,10 +28,9 @@ library(tools, quietly=TRUE, warn.conflicts=FALSE)
 library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
-print("CHK1")
 sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs")
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
-print("CHK2")
+
 # load orientation parameters for output ---------------------------------------
 #pixdim <- unlist(nii.hdr(nii, "pixdim"))
 #orient <- nii.orient(nii)
