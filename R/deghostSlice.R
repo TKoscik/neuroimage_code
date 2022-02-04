@@ -28,8 +28,7 @@ library(tools, quietly=TRUE, warn.conflicts=FALSE)
 library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
-sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs"))
-print(sz)
+sz <- info.nii(nii, "pixdim")[2:5]
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
 
 # load timeseries and zmaps into arrays ----------------------------------------
