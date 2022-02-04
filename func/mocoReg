@@ -142,8 +142,8 @@ while true; do
     --native-mod) NATIVE_MOD="$2" ; shift 2 ;;
     --native-mask) NATIVE_MASK="$2" ; shift 2 ;;
     --mask-method) MASK_METHOD=true ; shift 2 ;;
-    --mask-tool) MASK_TOOL=true ; shift 2 ;;
-    --mask-clfrac) MASK_CLFRAC=true ; shift 2 ;;
+    --mask-tool) MASK_TOOL="$2" ; shift 2 ;;
+    --mask-clfrac) MASK_CLFRAC="$2" ; shift 2 ;;
     --xfm-align) XFM_ALIGN="$2" ; shift 2 ;;
     --xfm-norm) XFM_NORM="$2" ; shift 2 ;;
     --template) TEMPLATE="$2" ; shift 2 ;;
@@ -305,8 +305,10 @@ fi
 if [[ ${PAD} -ne 0 ]]; then
   pad4D --ts ${TS_BOLD} --pad ${PAD} --dir-save ${DIR_SCRATCH}
   #ls ${DIR_SCRATCH}/${PREFIX}*
-  #TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}*_prep-pad${PAD}_bold.nii.gz)
-  TS_BOLD="${DIR_SCRATCH}/$(modField -i ${PREFIX} -a -f prep -v pad${PAD})_bold.nii.gz"
+  # have to do it this way in case PREFIX is set different
+  TS_BOLD=$(ls ${DIR_SCRATCH}/${PREFIX}*_prep-pad${PAD}_bold.nii.gz)
+  TS_BOLD=${TS_BOLD[0]}
+  #TS_BOLD="${DIR_SCRATCH}/$(modField -i ${PREFIX} -a -f prep -v pad${PAD})_bold.nii.gz"
 fi
 
 # initialize mean BOLD ---------------------------------------------------------
@@ -317,6 +319,9 @@ fi
 antsMotionCorr -d 3 -a ${TS_BOLD} -o ${DIR_SCRATCH}/${PREFIX}_avg.nii.gz
 
 # rigid body motion correction to mean BOLD (6 df) -----------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo -e ">>> \tmoco to mean BOLD"
+fi
 antsMotionCorr \
   -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
   -o [${DIR_SCRATCH}/${PREFIX}_rigid_,${DIR_SCRATCH}/${PREFIX}.nii.gz,${DIR_SCRATCH}/${PREFIX}_avg.nii.gz] \
@@ -355,7 +360,8 @@ if [[ "${MASK_TOOL,,}" == "bet" ]]; then
   mv ${DIR_SCRATCH}/${PREFIX}_mask-brain_mask.nii.gz \
     ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz
 fi
-if [[ "${MASK_TOOL,,}" == "automask" ]] && [[ "${MASK_TOOL,,}" == "afni" ]]; then
+if [[ "${MASK_TOOL,,}" == "automask" ]] || [[ "${MASK_TOOL,,}" == "afni" ]]; then
+  echo "Using 3dAutomask to mask mean bold with clfrac = ${MASK_CLFRAC}"
   3dAutomask \
     -prefix ${DIR_SCRATCH}/${PREFIX}_mask-brain.nii.gz  \
     -clfrac ${MASK_CLFRAC} -q \
