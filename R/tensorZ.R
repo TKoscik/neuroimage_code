@@ -25,12 +25,8 @@ library(tools, quietly=TRUE)
 if (file_ext(nii) == "gz") { stop("input NII.GZ must be decompressed first") }
 
 # get image dimensions and check if 4D
-sz <- nii.dims(nii)
+sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs")
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
-
-# load orientation parameters for output
-pixdim <- unlist(nii.hdr(nii, "pixdim"))
-orient <- nii.orient(nii)
 
 # load timeseries into matrix, voxels in rows, time across columns
 ts <- matrix(0, nrow=prod(sz[1:3]), ncol=sz[4])
@@ -50,7 +46,7 @@ z.nii <- paste0(dir.save, "/",
   paste(tname[1:(length(tname)-1)], collapse="_"),
   "_mod-", tname[length(tname)],
   "_tensor-z.nii")
-init.nii(z.nii, dims=sz, pixdim=pixdim, orient=orient)
+init.nii(z.nii, ref.nii=nii)
 for (i in 1:sz[4]) { write.nii.volume(z.nii, i, z[ , , ,i]) }
 
 
