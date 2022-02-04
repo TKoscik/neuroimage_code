@@ -28,7 +28,7 @@ library(tools, quietly=TRUE, warn.conflicts=FALSE)
 library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
-sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs")
+sz <- c(info.nii(nii, "xyz"), info.nii(nii, "trs"))
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
 
 # load orientation parameters for output ---------------------------------------
