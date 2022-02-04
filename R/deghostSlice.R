@@ -29,6 +29,7 @@ library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
 sz <- info.nii(nii, "pixdim")[2:5]
+print(sprintf("Image size: X=%0.0f, Y=%0.0f, Z=%0.0f, t=%0.0f", sz[1], sz[2], sz[3], sz[4]))
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
 
 # load timeseries and zmaps into arrays ----------------------------------------
@@ -48,6 +49,7 @@ z <- switch(zdir, `abs` = abs(z), `pos` = z, `neg` =  z * (-1))
 plane.idx <- switch(plane, `z` = 3, `y` = 2, `x` = 1)
 in.plane <- 1:3
 in.plane <- in.plane[-which(in.plane==plane.idx)]
+print(sprintf("Correcting ghosting in %0.0f slices %s plane", plane, sz[plane.idx]))
 
 # threshold slices in each volume independently --------------------------------
 for (i in 1:sz[plane.idx]) {
