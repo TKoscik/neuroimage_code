@@ -25,7 +25,7 @@ library(tools, quietly=TRUE)
 if (file_ext(nii) == "gz") { stop("input NII.GZ must be decompressed first") }
 
 # get image dimensions and check if 4D
-sz <- info.nii(nii, "pixdim")[2:5]
+sz <- info.nii(nii, "dim")[2:5]
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
 
 # load timeseries into matrix, voxels in rows, time across columns
