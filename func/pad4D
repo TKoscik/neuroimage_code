@@ -40,7 +40,7 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hl --long ts:,pad:,dir-save:,dir-scratch:,\
+OPTS=$(getopt -o hl --long ts:,pad:,prefix:,dir-save:,dir-scratch:,\
 help,no-log -n 'parse-options' -- "$@")
 if [ $? != 0 ]; then
   echo "Failed parsing options" >&2

@@ -29,7 +29,9 @@ library(zoo, quietly=TRUE, warn.conflicts=FALSE)
 
 # get image dimensions and check if 4D -----------------------------------------
 sz <- info.nii(nii, "dim")[2:5]
-print(sprintf("Image size: X=%0.0f, Y=%0.0f, Z=%0.0f, t=%0.0f", sz[1], sz[2], sz[3], sz[4]))
+zsz <- info.nii(zmap, "dim")[2:5]
+print(sprintf("[INC deghostSlice.R]: Timeseries size: X=%0.0f, Y=%0.0f, Z=%0.0f, t=%0.0f",sz[1],sz[2],sz[3],sz[4]))
+print(sprintf("[INC deghostSlice.R]: ZMap size: X=%0.0f, Y=%0.0f, Z=%0.0f, t=%0.0f",zsz[1],zsz[2],zsz[3],zsz[4]))
 if (sz[4] <= 1) { stop("Not a 4D NII file") }
 
 # load timeseries and zmaps into arrays ----------------------------------------
@@ -37,7 +39,6 @@ ts <- array(0, dim=sz)
 z <- array(0, dim=sz)
 mask <- array(0, dim=sz)
 for (i in 1:sz[4]) {
-  print(i)
   ts[ , , , i] <- read.nii.volume(nii, i)
   z[ , , , i] <- read.nii.volume(zmap, i)
 }
@@ -49,7 +50,8 @@ z <- switch(zdir, `abs` = abs(z), `pos` = z, `neg` =  z * (-1))
 plane.idx <- switch(plane, `z` = 3, `y` = 2, `x` = 1)
 in.plane <- 1:3
 in.plane <- in.plane[-which(in.plane==plane.idx)]
-print(sprintf("Correcting ghosting in %0.0f slices %s plane", sz[plane.idx], plane))
+print(sprintf("Correcting ghosting in %0.0f slices %s plane in %0.0f volumes",
+  sz[plane.idx], plane, sz[4]))
 
 # threshold slices in each volume independently --------------------------------
 for (i in 1:sz[plane.idx]) {
@@ -68,7 +70,12 @@ fname[length(fname)] <- paste0("mod-", fname[length(fname)])
 fname <- paste(fname, collapse="_")
 
 # save mask ---------------------------------------------------------------------
-init.nii(paste0(dir.save, "/", fname, "_mask-deghost.nii"), ref.nii=nii)
+dims <- info.nii(nii, "dim")[2:5]
+pixdim <- info.nii(nii, "pixdim")
+orient <- info.nii(nii, "orient")
+datatype <- info.nii(nii, "datatype")
+init.nii(paste0(dir.save, "/", fname, "_mask-deghost.nii"),
+         dims=dims, pixdim=pixdim, orient=orient, datatype=datatype)
 for (i in 1:sz[4]) {
   write.nii.volume(paste0(dir.save, "/", fname, "_mask-deghost.nii"), i, mask[ , , ,i])
 }
@@ -90,7 +97,8 @@ if (method != "none") {
     for (i in 1:nrow(ts)) { ts[i, is.na(ts[i, ])] <- value }    
   }
   ts <- array(ts, dim=sz)
-  init.nii(paste0(dir.save, "/", fname, "_deghost.nii"), ref.nii=nii)
+  init.nii(paste0(dir.save, "/", fname, "_deghost.nii"),
+           dims=dims, pixdim=pixdim, orient=orient, datatype=datatype)
   for (i in 1:sz[4]) {
     write.nii.volume(paste0(dir.save, "/", fname, "_deghost.nii"), i, ts[ , , ,i])
   }
