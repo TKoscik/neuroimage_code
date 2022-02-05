@@ -239,9 +239,9 @@ echo ""
 
 # save desired output ----------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
-  if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="y"; fi
-  if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="z"; fi
-  if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="x"; fi
+  if [[ "${PLANE,,}" == "x" ]]; then PNG_PLANE="z"; fi
+  if [[ "${PLANE,,}" == "y" ]]; then PNG_PLANE="x"; fi
+  if [[ "${PLANE,,}" == "z" ]]; then PNG_PLANE="y"; fi
 fi
 if [[ "${NO_Z}" == "false" ]]; then
   echo "Saving ${PREFIX}_mod-${MOD}_tensor-z.nii.gz "
