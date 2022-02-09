@@ -1,0 +1,260 @@
+#!/bin/bash -e
+#===============================================================================
+# Functional Time-series - Motion Correction
+# Authors: Timothy R. Koscik, PhD
+# Date: 2022-02-09
+# Description:  This function performs iterative motion correction on a bold
+#               time-series, performing rigid, affine and non-linear motion
+#               correction sequentially while building more accurate average
+#               images in between. Once fully motion corrected, a final rigid or
+#               rigid/affine motion correction is calculated to the final mean
+#               bold to extract motion regressors
+# CHANGELOG: 
+#===============================================================================
+
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          echo 'deleting scratch'
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hvalntpr --long prefix:,\
+ts:,\
+regressor-type:,\
+dir-save:,dir-regressor:,dir-scratch:,\
+help,verbose,ants-verbose,no-log,no-png -n 'parse-options' -- "$@")
+if [[ $? != 0 ]]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+PREFIX=
+TS=
+RGR_TYPE="rigid"
+DIR_SAVE=
+DIR_RGR=
+DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+HELP=false
+VERBOSE=false
+ANTS_VERBOSE=0
+NO_LOG=false
+NO_PNG=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_LOG=true ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
+    -a | --ants-verbose) VERBOSE=true ; shift ;;
+    -p | --prefix) PREFIX="$2" ; shift 2 ;;
+    -t | --ts) TS="$2" ; shift 2 ;;
+    -r | --regressor-type) RGR_TYPE="$2" ; shift 2 ;;
+    --dir-save) DIR_SAVE="$2" ; shift 2 ;;
+    --dir-regressor) DIR_RGR="$2" ; shift 2 ;;
+    --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help                display command help'
+  echo '  -v | --verbose             verbose output'
+  echo '  -a | --ants-verbose        verbose output from ANTs functions'
+  echo '  -l | --no-log              disable writing to output log'
+  echo '  -n | --no-png              disable PNG output'
+  echo '  -p | --prefix  <optional>  filename, without extension to use for file'
+  echo '  -t | --ts                  time-series input'
+  echo '  -r | --regressor-type      type of regressor to save, default is rigid'
+  echo '                             other options are affine, and rigid/affine'
+  echo '  --dir-save                 location to save output (moco ts and mean)'
+  echo '  --dir-regressor            location to save output'
+  echo '  --dir-scratch              location for temporary files'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+TSLS=(${TS//,/ })
+NTS=${#TSLS[@]}
+PREFIX=(${PREFIX//,/ })
+
+MKSAVE="false"
+if [[ -z ${DIR_SAVE} ]]; then MKSAVE="true"; fi
+MKRGR="false"
+if [[ -z ${DIR_RGR} ]]; then MKRGR="true"; fi
+mkdir -p ${DIR_SCRATCH}
+
+# iterative over TS files
+for (( i=0; i<${NTS}; i++ )); do
+  TS=${TSLS[${i}]}
+  if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -s -i ${TS}); fi
+  
+  # Set up BIDs compliant variables and workspace --------------------------------
+  DIR_PROJECT=$(getDir -i ${TS})
+  PID=$(getField -i ${TS} -f sub)
+  SID=$(getField -i ${TS} -f ses)
+  PIDSTR=sub-${PID}
+  if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+  DIRPID=sub-${PID}
+  if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
+  if [[ "${MKSAVE}" == "true" ]]; then
+    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/moco
+  fi
+  if [[ "${MKRGR}" == "true" ]]; then
+    DIR_RGR=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}
+  fi
+  mkdir -p ${DIR_SAVE}
+  mkdir -p ${DIR_RGR}
+
+  ## gather TS information and set variable names
+  NTR=$(niiInfo -i ${TS} -f numTR)
+  TR=$(niiInfo -i ${TS} -f TR)
+  TS_MOCO=${DIR_SCRATCH}/${PREFIX}_bold.nii.gz
+  TS_MEAN=${DIR_SCRATCH}/${PREFIX}_proc-mean_bold.nii.gz
+  TS_NULL=${DIR_SCRATCH}/${PREFIX}_null_
+
+  ## clear scratch
+  rm ${DIR_SCRATCH}/*
+
+  ## intialize mean bold
+  antsMotionCorr -d 3 -a ${TS} -o ${TS_MEAN}
+
+  ## rigid motion correction
+  antsMotionCorr \
+    -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
+    -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+    -t Rigid[0.1] \
+      -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+
+  ## affine motion correction
+  antsMotionCorr \
+    -d 3 -u 1 -e 1 -l 1 -n ${NTR} -v ${ANTS_VERBOSE}  \
+    -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+    -t Affine[0.1] \
+      -m MI[${TS_MEAN},${TS_MOCO},1,32,Regular,0.2] \
+      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+
+  ## nonlinear motion correction
+  antsMotionCorr \
+    -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
+    -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+    -t Rigid[0.25] \
+      -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
+    -t Affine[0.25] \
+      -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
+    -t SyN[0.2,3,0] \
+      -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+
+  ## calculate regressors
+  if [[ "${RGR_TYPE,,}" == *"rigid"* ]]; then
+    antsMotionCorr \
+      -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
+      -o [${TS_NULL},${DIR_SCRATCH}/discard.nii.gz,${TS_MEAN}] \
+      -t Rigid[0.1] \
+        -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+        -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+    cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+    cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+6.1D
+    sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+6.1D
+    rm ${DIR_SCRATCH}/temp.csv
+    rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
+    regressorDisplacement --regressor ${DIR_RGR}/${PREFIX}_moco+6.1D
+  fi
+  if [[ "${RGR_TYPE,,}" == *"affine"* ]]; then
+    antsMotionCorr \
+      -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
+      -o [${TS_NULL},${DIR_SCRATCH}/discard.nii.gz,${TS_MEAN}] \
+      -t Rigid[0.1] \
+        -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+        -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
+      -t Affine[0.1] \
+        -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+        -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+    cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+    cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+12.1D
+    sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+12.1D
+    rm ${DIR_SCRATCH}/temp.csv
+    rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
+  fi
+
+  ## move output to save locations
+  mv ${TS_MOCO} ${DIR_SAVE}/${PREFIX}_bold.nii.gz
+  mv ${TS_MEAN} ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz
+
+  ## generate pngs
+  if [[ "${NO_PNG}" == "false" ]]; then
+    ### mean bold
+    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz \
+      --bg-color "hot" \
+      --layout "6:x;6:x;6:y;6:y;6:z;6:z" \
+      --offset "0,0,0" \
+      --no-slice-label --no-lr-label
+    ### image of slices in 4d
+    make4Dpng \
+      --fg ${DIR_SAVE}/${PREFIX}_bold.nii.gz \
+      --fg-color "hot" --fg-alpha 50 --layout "5x11" --plane "z" --slice 0.51 \
+      --no-slice-label --no-lr-label
+    ## make regressor plot
+    unset PLOTLS
+    PLOTLS="${DIR_RGR}/${PREFIX}_moco+6.1D"
+    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+absolute+mm.1D"
+    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+relative+mm.1D"
+    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+framewise.1D"
+    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+RMS.1D"
+    regressorPlot --regressor ${PLOTLS}
+  fi
+
+done
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
