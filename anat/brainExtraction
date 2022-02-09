@@ -206,8 +206,8 @@ if [[ "${METHOD,,}" == *"fsl"* ]] || [[ "${METHOD,,}" == *"bet"* ]]; then
 fi
 
 # run FSL's BET for B0-------------------------------------------------------------
-if [[ "${METHOD,,}" == *"b0"* ]]; then
-  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running FSL's BET on B0"; fi
+if [[ "${METHOD,,}" == *"b0"* ]] || [[ "${METHOD,,}" == *"func"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>Running FSL's BET"; fi
   fsl_fcn="bet ${IMAGE[0]}"
   fsl_fcn="${fsl_fcn} ${DIR_SCRATCH}/fsl_bet.nii.gz"
   fsl_fcn="${fsl_fcn} -m -n"
