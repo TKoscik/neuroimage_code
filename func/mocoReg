@@ -92,6 +92,7 @@ OPTS=$(getopt -o hvkln --long prefix:,\
 ts-bold:,target:,\
 native-anat:,native-mod:,native-mask:,\
 mask-method:,mask-tool:,mask-clfrac:,mask-thresh:,\
+extra-syn,\
 xfm-align:,xfm-norm:,\
 template:,template_mod:,space:,\
 pad:,\
@@ -120,6 +121,7 @@ TEMPLATE=HCPICBM
 TEMPLATE_MOD=T1w
 SPACE=2mm
 PAD=5
+EXTRA_SYN="false"
 DIR_XFM=
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
@@ -153,6 +155,7 @@ while true; do
     --template-mod) TEMPLATE_MOD="$2" ; shift 2 ;;
     --space) SPACE="$2" ; shift 2 ;;
     --pad) PAD="$2" ; shift 2 ;;
+    --extra-syn) EXTRA_SYN="true" ; shift ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -440,7 +443,11 @@ if [[ "${MASK_METHOD,,}" == *"restrict"* ]]; then
 fi
 ants_fcn="${ants_fcn} -t SyN[0.2,3,0]"
 ants_fcn="${ants_fcn} -m Mattes[${NATIVE_ANAT},${DIR_SCRATCH}/${PREFIX}_${AVG_MASK_STR}avg.nii.gz,1,32]"
-ants_fcn="${ants_fcn} -c [40x20x0,1e-7,8]"
+if [[ "${EXTRA_SYN}" == "true" ]]; then
+  ants_fcn="${ants_fcn} -c [80x40x0,1e-7,8]"
+else
+  ants_fcn="${ants_fcn} -c [40x20x0,1e-7,8]"
+fi
 ants_fcn="${ants_fcn} -f 4x2x1"
 ants_fcn="${ants_fcn} -s 2x1x0vox"
 if [[ "${MASK_METHOD,,}" == *"restrict"* ]]; then
