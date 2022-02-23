@@ -1155,7 +1155,7 @@ if [[ "${NO_PNG}" == "false" ]]; then
       --fg-thresh "2.5,97.5" \
       --fg-color "#000000,#FF00FF,#FFFFFF" \
       --fg-alpha 50 \
-      --fg-cbar \
+      --fg-cbar "false"\
     --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z" \
     --offset "0,0,0" \
     --filename ${PIDSTR}_${LABEL_REG} \
