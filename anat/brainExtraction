@@ -295,7 +295,7 @@ if [[ "${NO_PNG}" == "false" ]]; then
     png_fcn=${png_fcn}' --fg-color "timbow"'
     png_fcn=${png_fcn}' --fg-order "random"'
     png_fcn=${png_fcn}' --fg-alpha 50'
-    png_fcn=${png_fcn}' --fg-cbar'
+    png_fcn=${png_fcn}' --fg-cbar "false"'
     png_fcn=${png_fcn}' --layout "9:x;9:x;9:x;9:y;9:y;9:y;9:z;9:z;9:z"'
     png_fcn=${png_fcn}' --offset "0,0,0"'
     png_fcn="${png_fcn} --filename ${TNAME}"

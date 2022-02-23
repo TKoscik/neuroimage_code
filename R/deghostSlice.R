@@ -56,11 +56,16 @@ print(sprintf("Correcting ghosting in %0.0f slices %s plane in %0.0f volumes",
 # threshold slices in each volume independently --------------------------------
 for (i in 1:sz[plane.idx]) {
   for (j in 1:sz[4]) {
-    tmp <- switch(as.character(plane.idx),
-      `1` = tmp <- sum(z[i, , ,j] > zthresh, na.rm=TRUE),
-      `2` = tmp <- sum(z[ ,i, ,j] > zthresh, na.rm=TRUE),
-      `3` = tmp <- sum(z[ , ,i,j] > zthresh, na.rm=TRUE))
-    if (tmp > (prod(sz[in.plane]) * nthresh)) { mask[ , ,i,j] <- 1 }
+    if (plane == "x") {
+      tmp <- sum(z[i, , ,j] > zthresh, na.rm=TRUE)
+      if (tmp > (prod(sz[in.plane]) * nthresh)) { mask[i, , ,j] <- 1 }
+    } else if (plane == "y") {
+      tmp <- sum(z[ ,i, ,j] > zthresh, na.rm=TRUE)
+      if (tmp > (prod(sz[in.plane]) * nthresh)) { mask[ ,i, ,j] <- 1 }
+    } else if (plane == "z") {
+      tmp <- sum(z[ , ,i,j] > zthresh, na.rm=TRUE)
+      if (tmp > (prod(sz[in.plane]) * nthresh)) { mask[ , ,i,j] <- 1 }
+    }
   }
 }
 
