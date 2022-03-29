@@ -1,0 +1,338 @@
+value label	orig_label	label_short	label_short_hemi	hemisphere	tissue	major_compartment	compartment	roi_order	roi_group	label_group
+1	orbital_cortex_dorsolateral_left	260	ORBdl	ORBdl_left	left	gm	cerebrum	orbital cortex	1	1	orbital cortex left
+2	orbital_cortex_lateral_left	267	ORBl	ORBl_left	left	gm	cerebrum	orbital cortex	2	1	orbital cortex left
+3	orbital_cortex_medial_left	272	ORBm	ORBm_left	left	gm	cerebrum	orbital cortex	3	1	orbital cortex left
+4	orbital_cortex_ventral_left	300	ORBv	ORBv_left	left	gm	cerebrum	orbital cortex	4	1	orbital cortex left
+5	tenia_tecta_dorsal_left	261	ENTttd	ENTttd_left	left	gm	cerebrum	orbital cortex	5	1	orbital cortex left
+6	tenia_tecta_ventral_left	301	TTv	TTv_left	left	gm	cerebrum	orbital cortex	6	1	orbital cortex left
+7	subependymal_zone_left	140	SZ	SZ_left	left	gm	cerebrum	frontal cortex	7	2	frontal cortex left
+8	frontal_cortex_area3_left	263	FR3	FR3_left	left	gm	cerebrum	frontal cortex	8	2	frontal cortex left
+9	frontal_cortex_association_left	264	FrA	FrA_left	left	gm	cerebrum	frontal cortex	9	2	frontal cortex left
+10	parietal_cortex_lateral_association_left	268	PtA	PtA_left	left	gm	cerebrum	parietal cortex	10	3	parietal cortex left
+11	parietal_cortex_medial_association_left	273	Ptma	Ptma_left	left	gm	cerebrum	parietal cortex	11	3	parietal cortex left
+12	parietal_cortex_rostral_posterior_association_left	278	Ptrpa	Ptrpa_left	left	gm	cerebrum	parietal cortex	12	3	parietal cortex left
+13	temporal_cortex_association_left	290	TeA	TeA_left	left	gm	cerebrum	temporal cortex	13	4	temporal cortex left
+14	cingulate_area24a_left	169	CG24a	CG24a_left	left	gm	cerebrum	cingulate cortex	14	5	cingulate cortex left
+15	cingulate_area24a_prime_left	171	CG24ap	CG24ap_left	left	gm	cerebrum	cingulate cortex	15	5	cingulate cortex left
+16	cingulate_area24b_left	172	CG24b	CG24b_left	left	gm	cerebrum	cingulate cortex	16	5	cingulate cortex left
+17	cingulate_area24b_prime_left	173	CG24b'	CG24b'_left	left	gm	cerebrum	cingulate cortex	17	5	cingulate cortex left
+18	cingulate_area25_left	178	CG25	CG25_left	left	gm	cerebrum	cingulate cortex	18	5	cingulate cortex left
+19	cingulate_area29a_left	179	CG29a	CG29a_left	left	gm	cerebrum	cingulate cortex	19	5	cingulate cortex left
+20	cingulate_area29b_left	182	CG29b	CG29b_left	left	gm	cerebrum	cingulate cortex	20	5	cingulate cortex left
+21	cingulate_area29c_left	184	CG29c	CG29c_left	left	gm	cerebrum	cingulate cortex	21	5	cingulate cortex left
+22	cingulate_area30_left	186	CG30	CG30_left	left	gm	cerebrum	cingulate cortex	22	5	cingulate cortex left
+23	cingulate_area32_left	188	CG32	CG32_left	left	gm	cerebrum	cingulate cortex	23	5	cingulate cortex left
+24	claustrum_anterior_left	235	CLa	CLa_left	left	gm	cerebrum	claustrum	24	6	claustrum left
+25	claustrum_dorsal_left	256	CLd	CLd_left	left	gm	cerebrum	claustrum	25	6	claustrum left
+26	claustrum_dorsal_endopiriform_nucleus_left	257	ENPd	ENPd_left	left	gm	cerebrum	claustrum	26	6	claustrum left
+27	claustrum_endopiriform_left	265	CLendo	CLendo_left	left	gm	cerebrum	claustrum	27	6	claustrum left
+28	claustrum_ventral_left	297	CLv	CLv_left	left	gm	cerebrum	claustrum	28	6	claustrum left
+29	claustrum_endopiriform_ventral_nucleus_left	298	CLendovn	CLendovn_left	left	gm	cerebrum	claustrum	29	6	claustrum left
+30	insula_left	266	INS	INS_left	left	gm	cerebrum	insula	30	7	insula left
+31	piriform_cortex_left	274	PIR	PIR_left	left	gm	cerebrum	sensory olfactory	31	8	sensory olfactory left
+32	olfactory_bulb_glomerular_left	345	OBgl	OBgl_left	left	gm	cerebrum	sensory olfactory	32	8	sensory olfactory left
+33	olfactory_bulb_external_plexiform_left	346	OBep	OBep_left	left	gm	cerebrum	sensory olfactory	33	8	sensory olfactory left
+34	olfactory_bulb_mitral_left	347	OBm	OBm_left	left	gm	cerebrum	sensory olfactory	34	8	sensory olfactory left
+35	olfactory_bulb_internal_plexiform_left	348	OBip	OBip_left	left	gm	cerebrum	sensory olfactory	35	8	sensory olfactory left
+36	olfactory_bulb_granular_left	349	OBgr	OBgr_left	left	gm	cerebrum	sensory olfactory	36	8	sensory olfactory left
+37	anterior_olfactory_nucleus_left	352	AO	AO_left	left	gm	cerebrum	sensory olfactory	37	8	sensory olfactory left
+38	olfactory_peduncle_left	105	OP	OP_left	left	gm	cerebrum	sensory olfactory	38	8	sensory olfactory left
+39	olfactory_tubercle_left	145	OTu	OTu_left	left	gm	cerebrum	sensory olfactory	39	8	sensory olfactory left
+40	lateral_olfactory_tract_left	102	lo	lo_left	left	wm	cerebrum	sensory olfactory	40	8	sensory olfactory left
+41	accessory_olfactory_bulb_glomerular_layer_left	350	ABgl	ABgl_left	left	gm	cerebrum	sensory olfactory accessory	41	9	sensory olfactory accessory left
+42	accessory_olfactory_bulb_granular_layer_left	351	ABg	ABg_left	left	gm	cerebrum	sensory olfactory accessory	42	9	sensory olfactory accessory left
+43	primary_somatosensory_cortex_unspecified_left	280	S1u	S1u_left	left	gm	cerebrum	primary somatosensory cortex	43	10	primary somatosensory cortex left
+44	primary_somatosensory_cortex_barrel_left	281	S1bf	S1bf_left	left	gm	cerebrum	primary somatosensory cortex	44	10	primary somatosensory cortex left
+45	primary_somatosensory_cortex_dysgranular_left	282	S1dz	S1dz_left	left	gm	cerebrum	primary somatosensory cortex	45	10	primary somatosensory cortex left
+46	primary_somatosensory_cortex_forelimb_left	283	S1fl	S1fl_left	left	gm	cerebrum	primary somatosensory cortex	46	10	primary somatosensory cortex left
+47	primary_somatosensory_cortex_hindlimb_left	284	S1hl	S1hl_left	left	gm	cerebrum	primary somatosensory cortex	47	10	primary somatosensory cortex left
+48	primary_somatosensory_cortex_jaw_left	285	S1j	S1j_left	left	gm	cerebrum	primary somatosensory cortex	48	10	primary somatosensory cortex left
+49	primary_somatosensory_cortex_shoulder_left	286	S1s	S1s_left	left	gm	cerebrum	primary somatosensory cortex	49	10	primary somatosensory cortex left
+50	primary_somatosensory_cortex_trunk_left	287	S1tr	S1tr_left	left	gm	cerebrum	primary somatosensory cortex	50	10	primary somatosensory cortex left
+51	primary_somatosensory_cortex_upperlip_left	288	S1ul	S1ul_left	left	gm	cerebrum	primary somatosensory cortex	51	10	primary somatosensory cortex left
+52	secondary_somatosensory_cortex_left	289	S2	S2_left	left	gm	cerebrum	somatosensory secondary cortex	52	11	secondary somatosensory cortex left
+53	primary_auditory_cortex_left	208	A1	A1_left	left	gm	cerebrum	primary auditory cortex	53	12	primary auditory cortex left
+54	secondary_auditory_cortex_dorsal_left	217	A2d	A2d_left	left	gm	cerebrum	secondary auditory cortex	54	13	secondary auditory cortex left
+55	secondary_auditory_cortex_ventral_left	221	A2v	A2v_left	left	gm	cerebrum	secondary auditory cortex	55	13	secondary auditory cortex left
+56	primary_visual_cortex_unspecified_left	291	V1u	V1u_left	left	gm	cerebrum	primary visual cortex	56	14	primary visual cortex left
+57	primary_visual_cortex_binocular_left	292	V1b	V1b_left	left	gm	cerebrum	primary visual cortex	57	14	primary visual cortex left
+58	primary_visual_cortex_monocular_left	293	V1m	V1m_left	left	gm	cerebrum	primary visual cortex	58	14	primary visual cortex left
+59	secondary_visual_cortex_lateral_left	294	V2l	V2l_left	left	gm	cerebrum	secondary visual cortex	59	15	secondary visual cortex left
+60	secondary_visual_cortex_mediolateral_left	295	V2ml	V2ml_left	left	gm	cerebrum	secondary visual cortex	60	15	secondary visual cortex left
+61	secondary_visual_cortex_mediomedial_left	296	V2mm	V2mm_left	left	gm	cerebrum	secondary visual cortex	61	15	secondary visual cortex left
+62	primary_motor_cortex_left	269	M1	M1_left	left	gm	cerebrum	motor cortex	62	16	motor cortex left
+63	secondary_motor_cortex_left	270	M2	M2_left	left	gm	cerebrum	motor cortex	63	16	motor cortex left
+64	striatum_left	17	CPu	CPu_left	left	gm	cerebrum	basal ganglia	64	17	basal ganglia left
+65	globus_pallidus_left	144	GP	GP_left	left	gm	cerebrum	basal ganglia	65	17	basal ganglia left
+66	striatum_fundus_left	154	FUND	FUND_left	left	gm	cerebrum	basal ganglia	66	17	basal ganglia left
+67	nucleus_accumbens_left	155	NACC	NACC_left	left	gm	cerebrum	basal ganglia	67	17	basal ganglia left
+68	entorhinal_cortex_caudomedial_left	227	ENTcm	ENTcm_left	left	gm	cerebrum	entorhinal cortex	68	18	entorhinal cortex left
+69	entorhinal_cortex_dorsal_intermediate_left	258	ENTdi	ENTdi_left	left	gm	cerebrum	entorhinal cortex	69	18	entorhinal cortex left
+70	entorhinal_cortex_dorsolateral_left	259	ENTdl	ENTdl_left	left	gm	cerebrum	entorhinal cortex	70	18	entorhinal cortex left
+71	entorhinal_cortex_medial_left	271	ENTm	ENTm_left	left	gm	cerebrum	entorhinal cortex	71	18	entorhinal cortex left
+72	entorhinal_cortex_ventral_intermediate_left	299	ENTvi	ENTvi_left	left	gm	cerebrum	entorhinal cortex	72	18	entorhinal cortex left
+73	ectorhinal_cortex_left	262	ECT	ECT_left	left	gm	cerebrum	ectorhinal cortex	73	18	entorhinal cortex left
+74	perirhinal_cortex_left	277	PRh	PRh_left	left	gm	cerebrum	perirhinal cortex	74	18	entorhinal cortex left
+75	subiculum_pre_para_left	131	Spp	Spp_left	left	gm	cerebrum	hippocampus extended	75	19	hippocampus extended left
+76	subiculum_left	333	S	S_left	left	gm	cerebrum	hippocampus extended	76	19	hippocampus extended left
+77	hippocampus_CA1_stratum_oriens_left	305	CA1or	CA1or_left	left	gm	cerebrum	hippocampus CA1	77	20	hippocampus CA1 left
+78	hippocampus_CA1_stratum_lacunosum_moleculare_left	307	CA1lm	CA1lm_left	left	gm	cerebrum	hippocampus CA1	78	20	hippocampus CA1 left
+79	hippocampus_CA1_stratum_radiatum_left	309	CA1rad	CA1rad_left	left	gm	cerebrum	hippocampus CA1	79	20	hippocampus CA1 left
+80	hippocampus_CA1_pyramidal_left	335	CA1py	CA1py_left	left	gm	cerebrum	hippocampus CA1	80	20	hippocampus CA1 left
+81	hippocampus_CA2_pyramidal_left	311	CA2py	CA2py_left	left	gm	cerebrum	hippocampus CA2	81	21	hippocampus CA2 left
+82	hippocampus_CA2_stratum_oriens_left	313	CA2or	CA2or_left	left	gm	cerebrum	hippocampus CA2	82	21	hippocampus CA2 left
+83	hippocampus_CA2_stratum_radiatum_left	315	CA2rad	CA2rad_left	left	gm	cerebrum	hippocampus CA2	83	21	hippocampus CA2 left
+84	hippocampus_CA3_inner_pyramidal_left	317	CA3ipy	CA3ipy_left	left	gm	cerebrum	hippocampus CA3	84	22	hippocampus CA3 left
+85	hippocampus_CA3_outer_pyramidal_left	319	CA3opy	CA3opy_left	left	gm	cerebrum	hippocampus CA3	85	22	hippocampus CA3 left
+86	hippocampus_CA3_stratum_oriens_left	321	CA3or	CA3or_left	left	gm	cerebrum	hippocampus CA3	86	22	hippocampus CA3 left
+87	hippocampus_CA3_stratum_radiatum_left	323	CA3rad	CA3rad_left	left	gm	cerebrum	hippocampus CA3	87	22	hippocampus CA3 left
+88	hippocampus_CA3_stratum_lucidum_left	325	CA3sl	CA3sl_left	left	gm	cerebrum	hippocampus CA3	88	22	hippocampus CA3 left
+89	hippocampus_dentate_gyrus_molecular_left	327	DGm	DGm_left	left	gm	cerebrum	hippocampus dentate	89	23	hippocampus dentate left
+90	hippocampus_dentate_gyrus_granular_external_left	329	DGgre	DGgre_left	left	gm	cerebrum	hippocampus dentate	90	23	hippocampus dentate left
+91	hippocampus_dentate_gyrus_granular_internal_left	331	DGgri	DGgri_left	left	gm	cerebrum	hippocampus dentate	91	23	hippocampus dentate left
+92	amygdala_lateral_left	151	lAMG	lAMG_left	left	gm	cerebrum	amygdala	92	24	amygdala left
+93	amygdala_medial_left	355	mAMG	mAMG_left	left	gm	cerebrum	amygdala	93	24	amygdala left
+94	amygdalopiriform_transition_area_left	189	Apir	Apir_left	left	gm	cerebrum	amygdala extended	94	25	amygdala extended left
+95	bed_nucleus_stria_terminalis_left	76	BST	BST_left	left	gm	cerebrum	amygdala extended	95	25	amygdala extended left
+96	corticoamygdalar_transition_zone_left	255	CATZ	CATZ_left	left	gm	cerebrum	amygdala extended	96	25	amygdala extended left
+97	corticoamygdaloid_area_posterolateral_left	275	cxAMGpl	cxAMGpl_left	left	gm	cerebrum	amygdala extended	97	25	amygdala extended left
+98	corticoamygdaloid_area_posteromedial_left	276	csAMGpm	csAMGpm_left	left	gm	cerebrum	amygdala extended	98	25	amygdala extended left
+99	rostral_amygdalopiriform_area_left	279	rAMGPIR	rAMGPIR_left	left	gm	cerebrum	amygdala extended	99	25	amygdala extended left
+100	basal_forebrain_left	152	VP	VP_left	left	gm	cerebrum	septal nuclei	100	26	septal nuclei left
+101	lateral_septum_left	107	SEPTl	SEPTl_left	left	gm	cerebrum	septal nuclei	101	26	septal nuclei left
+102	medial_septum_left	153	SEPTm	SEPTm_left	left	gm	cerebrum	septal nuclei	102	26	septal nuclei left
+103	thalamus_left	4	Thal	Thal_left	left	gm	cerebrum	thalamus	103	27	thalamus left
+104	hypothalamus_left	150	Hypo	Hypo_left	left	gm	cerebrum	hypothalamus	104	27.5	hypothalamus left
+105	mammilary_body_left	61	MB	MB_left	left	gm	cerebrum	hypothalamus	105	27.5	hypothalamus left
+106	medial_preoptic_nucleus_left	356	MPA	MPA_left	left	gm	cerebrum	hypothalamus	106	27.5	hypothalamus left
+107	fimbria_left	11	fi	fi_left	left	wm	cerebrum	wm	107	29	wm left
+108	internal_capsule_left	12	ic	ic_left	left	wm	cerebrum	wm	108	29	wm left
+109	cerebral_peduncle_left	14	cxp	cxp_left	left	wm	cerebrum	wm	109	29	wm left
+110	fornix_left	22	f	f_left	left	wm	cerebrum	wm	110	29	wm left
+111	corpus_callosum_left	68	cc	cc_left	left	wm	cerebrum	wm	111	29	wm left
+112	anterior_commissure_pars_posterior_left	103	acp	acp_left	left	wm	cerebrum	wm	112	29	wm left
+113	optic_tract_left	116	opt	opt_left	left	wm	cerebrum	wm	113	29	wm left
+114	retroflexus_fasciculus_left	125	frf	frf_left	left	wm	cerebrum	wm	114	29	wm left
+115	stria_terminalis_left	159	st	st_left	left	wm	cerebrum	wm	115	29	wm left
+116	habenular_commissure_left	199	hbc	hbc_left	left	wm	cerebrum	wm	116	29	wm left
+117	stria_medullaris_left	205	SM	SM_left	left	wm	cerebrum	wm	117	29	wm left
+118	mammilothalamic_tract_left	212	mthal	mthal_left	left	wm	cerebrum	wm	118	29	wm left
+119	anterior_commissure_pars_anterior_left	215	aca	aca_left	left	wm	cerebrum	wm	119	29	wm left
+120	posterior_commissure	100	pc	pc	mid	wm	cerebrum	wm	120	29	wm mid
+121	orbital_cortex_dorsolateral_right	70	ORBdl	ORBdl_right	right	gm	cerebrum	orbital cortex	121	30	orbital cortex right
+122	orbital_cortex_lateral_right	79	ORBl	ORBl_right	right	gm	cerebrum	orbital cortex	122	30	orbital cortex right
+123	orbital_cortex_medial_right	84	ORBm	ORBm_right	right	gm	cerebrum	orbital cortex	123	30	orbital cortex right
+124	orbital_cortex_ventral_right	163	ORBv	ORBv_right	right	gm	cerebrum	orbital cortex	124	30	orbital cortex right
+125	tenia_tecta_dorsal_right	71	ENTttd	ENTttd_right	right	gm	cerebrum	orbital cortex	125	30	orbital cortex right
+126	tenia_tecta_ventral_right	165	TTv	TTv_right	right	gm	cerebrum	orbital cortex	126	30	orbital cortex right
+127	frontal_cortex_area3_right	73	FR3	FR3_right	right	gm	cerebrum	frontal cortex	127	31	frontal cortex right
+128	frontal_cortex_association_right	74	FrA	FrA_right	right	gm	cerebrum	frontal cortex	128	31	frontal cortex right
+129	subependymal_zone_right	240	SZ	SZ_right	right	gm	cerebrum	frontal cortex	129	31	frontal cortex right
+130	parietal_cortex_lateral_association_right	80	PtA	PtA_right	right	gm	cerebrum	parietal cortex	130	32	parietal cortex right
+131	parietal_cortex_medial_association_right	86	Ptma	Ptma_right	right	gm	cerebrum	parietal cortex	131	32	parietal cortex right
+132	parietal_cortex_rostral_posterior_association_right	108	Ptrpa	Ptrpa_right	right	gm	cerebrum	parietal cortex	132	32	parietal cortex right
+133	temporal_cortex_association_right	136	TeA	TeA_right	right	gm	cerebrum	temporal cortex	133	33	temporal cortex right
+134	cingulate_area24a_right	24	CG24a	CG24a_right	right	gm	cerebrum	cingulate cortex	134	34	cingulate cortex right
+135	cingulate_area24a_prime_right	26	CG24ap	CG24ap_right	right	gm	cerebrum	cingulate cortex	135	34	cingulate cortex right
+136	cingulate_area24b_right	27	CG24b	CG24b_right	right	gm	cerebrum	cingulate cortex	136	34	cingulate cortex right
+137	cingulate_area24b_prime_right	28	CG24b'	CG24b'_right	right	gm	cerebrum	cingulate cortex	137	34	cingulate cortex right
+138	cingulate_area25_right	29	CG25	CG25_right	right	gm	cerebrum	cingulate cortex	138	34	cingulate cortex right
+139	cingulate_area29a_right	30	CG29a	CG29a_right	right	gm	cerebrum	cingulate cortex	139	34	cingulate cortex right
+140	cingulate_area29b_right	35	CG29b	CG29b_right	right	gm	cerebrum	cingulate cortex	140	34	cingulate cortex right
+141	cingulate_area29c_right	37	CG29c	CG29c_right	right	gm	cerebrum	cingulate cortex	141	34	cingulate cortex right
+142	cingulate_area30_right	39	CG30	CG30_right	right	gm	cerebrum	cingulate cortex	142	34	cingulate cortex right
+143	cingulate_area32_right	41	CG32	CG32_right	right	gm	cerebrum	cingulate cortex	143	34	cingulate cortex right
+144	claustrum_anterior_right	58	CLa	CLa_right	right	gm	cerebrum	claustrum	144	35	claustrum right
+145	claustrum_dorsal_right	62	CLd	CLd_right	right	gm	cerebrum	claustrum	145	35	claustrum right
+146	claustrum_dorsal_endopiriform_nucleus_right	65	ENPd	ENPd_right	right	gm	cerebrum	claustrum	146	35	claustrum right
+147	claustrum_endopiriform_right	75	CLendo	CLendo_right	right	gm	cerebrum	claustrum	147	35	claustrum right
+148	claustrum_ventral_right	158	CLv	CLv_right	right	gm	cerebrum	claustrum	148	35	claustrum right
+149	claustrum_endopiriform_ventral_nucleus_right	160	CLendovn	CLendovn_right	right	gm	cerebrum	claustrum	149	35	claustrum right
+150	insula_right	78	INS	INS_right	right	gm	cerebrum	insula	150	36	insula right
+151	piriform_cortex_right	87	PIR	PIR_right	right	gm	cerebrum	sensory olfactory	151	37	sensory olfactory right
+152	olfactory_bulb_glomerular_right	337	OBgl	OBgl_right	right	gm	cerebrum	sensory olfactory	152	37	sensory olfactory right
+153	olfactory_bulb_external_plexiform_right	338	OBep	OBep_right	right	gm	cerebrum	sensory olfactory	153	37	sensory olfactory right
+154	olfactory_bulb_mitral_right	339	OBm	OBm_right	right	gm	cerebrum	sensory olfactory	154	37	sensory olfactory right
+155	olfactory_bulb_internal_plexiform_right	340	OBip	OBip_right	right	gm	cerebrum	sensory olfactory	155	37	sensory olfactory right
+156	olfactory_bulb_granular_right	341	OBgr	OBgr_right	right	gm	cerebrum	sensory olfactory	156	37	sensory olfactory right
+157	anterior_olfactory_nucleus_right	344	AO	AO_right	right	gm	cerebrum	sensory olfactory	157	37	sensory olfactory right
+158	olfactory_peduncle_right	5	OP	OP_right	right	gm	cerebrum	sensory olfactory	158	37	sensory olfactory right
+159	olfactory_tubercle_right	95	OTu	OTu_right	right	gm	cerebrum	sensory olfactory	159	37	sensory olfactory right
+160	lateral_olfactory_tract_right	101	lo	lo_right	right	wm	cerebrum	sensory olfactory	160	37	sensory olfactory right
+161	accessory_olfactory_bulb_glomerular_layer_right	342	ABgl	ABgl_right	right	gm	cerebrum	sensory olfactory accessory	161	38	sensory olfactory accessory right
+162	accessory_olfactory_bulb_granular_layer_right	343	ABg	ABg_right	right	gm	cerebrum	sensory olfactory accessory	162	38	sensory olfactory accessory right
+163	primary_somatosensory_cortex_unspecified_right	111	S1u	S1u_right	right	gm	cerebrum	primary somatosensory cortex	163	39	primary somatosensory cortex right
+164	primary_somatosensory_cortex_barrel_right	117	S1bf	S1bf_right	right	gm	cerebrum	primary somatosensory cortex	164	39	primary somatosensory cortex right
+165	primary_somatosensory_cortex_dysgranular_right	121	S1dz	S1dz_right	right	gm	cerebrum	primary somatosensory cortex	165	39	primary somatosensory cortex right
+166	primary_somatosensory_cortex_forelimb_right	126	S1fl	S1fl_right	right	gm	cerebrum	primary somatosensory cortex	166	39	primary somatosensory cortex right
+167	primary_somatosensory_cortex_hindlimb_right	127	S1hl	S1hl_right	right	gm	cerebrum	primary somatosensory cortex	167	39	primary somatosensory cortex right
+168	primary_somatosensory_cortex_jaw_right	128	S1j	S1j_right	right	gm	cerebrum	primary somatosensory cortex	168	39	primary somatosensory cortex right
+169	primary_somatosensory_cortex_shoulder_right	129	S1s	S1s_right	right	gm	cerebrum	primary somatosensory cortex	169	39	primary somatosensory cortex right
+170	primary_somatosensory_cortex_trunk_right	132	S1tr	S1tr_right	right	gm	cerebrum	primary somatosensory cortex	170	39	primary somatosensory cortex right
+171	primary_somatosensory_cortex_upperlip_right	134	S1ul	S1ul_right	right	gm	cerebrum	primary somatosensory cortex	171	39	primary somatosensory cortex right
+172	secondary_somatosensory_cortex_right	135	S2	S2_right	right	gm	cerebrum	secondary somatosensory cortex	172	40	secondary somatosensory cortex right
+173	primary_auditory_cortex_right	46	A1	A1_right	right	gm	cerebrum	primary auditory cortex	173	41	primary auditory cortex right
+174	secondary_auditory_cortex_dorsal_right	48	A2d	A2d_right	right	gm	cerebrum	 secondary auditory cortex	174	42	 secondary auditory cortex right
+175	secondary_auditory_cortex_ventral_right	49	A2v	A2v_right	right	gm	cerebrum	 secondary auditory cortex	175	42	 secondary auditory cortex right
+176	primary_visual_cortex_unspecified_right	137	V1u	V1u_right	right	gm	cerebrum	primary visual cortex	176	43	primary visual cortex right
+177	primary_visual_cortex_binocular_right	138	V1b	V1b_right	right	gm	cerebrum	primary visual cortex	177	43	primary visual cortex right
+178	primary_visual_cortex_monocular_right	141	V1m	V1m_right	right	gm	cerebrum	primary visual cortex	178	43	primary visual cortex right
+179	secondary_visual_cortex_lateral_right	142	V2l	V2l_right	right	gm	cerebrum	secondary visual cortex	179	44	secondary visual cortex right
+180	secondary_visual_cortex_mediolateral_right	147	V2ml	V2ml_right	right	gm	cerebrum	secondary visual cortex	180	44	secondary visual cortex right
+181	secondary_visual_cortex_mediomedial_right	149	V2mm	V2mm_right	right	gm	cerebrum	secondary visual cortex	181	44	secondary visual cortex right
+182	primary_motor_cortex_right	81	M1	M1_right	right	gm	cerebrum	motor cortex	182	45	motor cortex right
+183	secondary_motor_cortex_right	82	M2	M2_right	right	gm	cerebrum	motor cortex	183	45	motor cortex right
+184	striatum_right	7	CPu	CPu_right	right	gm	cerebrum	basal ganglia	184	46	basal ganglia right
+185	globus_pallidus_right	44	GP	GP_right	right	gm	cerebrum	basal ganglia	185	46	basal ganglia right
+186	striatum_fundus_right	54	FUND	FUND_right	right	gm	cerebrum	basal ganglia	186	46	basal ganglia right
+187	nucleus_accumbens_right	55	NACC	NACC_right	right	gm	cerebrum	basal ganglia	187	46	basal ganglia right
+188	entorhinal_cortex_caudomedial_right	50	ENTcm	ENTcm_right	right	gm	cerebrum	entorhinal cortex	188	47	entorhinal cortex right
+189	entorhinal_cortex_dorsal_intermediate_right	67	ENTdi	ENTdi_right	right	gm	cerebrum	entorhinal cortex	189	47	entorhinal cortex right
+190	entorhinal_cortex_dorsolateral_right	69	ENTdl	ENTdl_right	right	gm	cerebrum	entorhinal cortex	190	47	entorhinal cortex right
+191	ectorhinal_cortex_right	72	ECT	ECT_right	right	gm	cerebrum	entorhinal cortex	191	47	entorhinal cortex right
+192	entorhinal_cortex_medial_right	83	ENTm	ENTm_right	right	gm	cerebrum	entorhinal cortex	192	47	entorhinal cortex right
+193	perirhinal_cortex_right	104	PRh	PRh_right	right	gm	cerebrum	entorhinal cortex	193	47	entorhinal cortex right
+194	entorhinal_cortex_ventral_intermediate_right	162	ENTvi	ENTvi_right	right	gm	cerebrum	entorhinal cortex	194	47	entorhinal cortex right
+195	subiculum_pre_para_right	133	Spp	Spp_right	right	gm	cerebrum	hippocampus extended	195	48	hippocampus extended right
+196	subiculum_right	332	S	S_right	right	gm	cerebrum	hippocampus extended	196	48	hippocampus extended right
+197	hippocampus_CA1_stratum_lacunosum_moleculare_right	306	CA1lm	CA1lm_right	right	gm	cerebrum	hippocampus CA1	197	49	hippocampus CA1 right
+198	hippocampus_CA1_stratum_radiatum_right	308	CA1rad	CA1rad_right	right	gm	cerebrum	hippocampus CA1	198	49	hippocampus CA1 right
+199	hippocampus_CA1_pyramidal_right	334	CA1py	CA1py_right	right	gm	cerebrum	hippocampus CA1	199	49	hippocampus CA1 right
+200	hippocampus_CA1_stratum_oriens_right	336	CA1or	CA1or_right	right	gm	cerebrum	hippocampus CA1	200	49	hippocampus CA1 right
+201	hippocampus_CA2_pyramidal_right	310	CA2py	CA2py_right	right	gm	cerebrum	hippocampus CA2	201	50	hippocampus CA2 right
+202	hippocampus_CA2_stratum_oriens_right	312	CA2or	CA2or_right	right	gm	cerebrum	hippocampus CA2	202	50	hippocampus CA2 right
+203	hippocampus_CA2_stratum_radiatum_right	314	CA2rad	CA2rad_right	right	gm	cerebrum	hippocampus CA2	203	50	hippocampus CA2 right
+204	hippocampus_CA3_inner_pyramidal_right	316	CA3ipy	CA3ipy_right	right	gm	cerebrum	hippocampus CA3	204	51	hippocampus CA3 right
+205	hippocampus_CA3_outer_pyramidal_right	318	CA3opy	CA3opy_right	right	gm	cerebrum	hippocampus CA3	205	51	hippocampus CA3 right
+206	hippocampus_CA3_stratum_oriens_right	320	CA3or	CA3or_right	right	gm	cerebrum	hippocampus CA3	206	51	hippocampus CA3 right
+207	hippocampus_CA3_stratum_radiatum_right	322	CA3rad	CA3rad_right	right	gm	cerebrum	hippocampus CA3	207	51	hippocampus CA3 right
+208	hippocampus_CA3_stratum_lucidum_right	324	CA3sl	CA3sl_right	right	gm	cerebrum	hippocampus CA3	208	51	hippocampus CA3 right
+209	hippocampus_dentate_gyrus_molecular_right	326	DGm	DGm_right	right	gm	cerebrum	hippocampus dentate	209	52	hippocampus dentate right
+210	hippocampus_dentate_gyrus_granular_external_right	328	DGgre	DGgre_right	right	gm	cerebrum	hippocampus dentate	210	52	hippocampus dentate right
+211	hippocampus_dentate_gyrus_granular_internal_right	330	DGgri	DGgri_right	right	gm	cerebrum	hippocampus dentate	211	52	hippocampus dentate right
+212	amygdala_lateral_right	51	lAMG	lAMG_right	right	gm	cerebrum	amygdala	212	53	amygdala right
+213	amygdala_medial_right	353	mAMG	mAMG_right	right	gm	cerebrum	amygdala	213	53	amygdala right
+214	amygdalopiriform_transition_area_right	42	Apir	Apir_right	right	gm	cerebrum	amygdala extended	214	54	amygdala extended right
+215	corticoamygdalar_transition_zone_right	60	CATZ	CATZ_right	right	gm	cerebrum	amygdala extended	215	54	amygdala extended right
+216	corticoamygdaloid_area_posterolateral_right	88	cxAMGpl	cxAMGpl_right	right	gm	cerebrum	amygdala extended	216	54	amygdala extended right
+217	corticoamygdaloid_area_posteromedial_right	89	csAMGpm	csAMGpm_right	right	gm	cerebrum	amygdala extended	217	54	amygdala extended right
+218	rostral_amygdalopiriform_area_right	110	rAMGPIR	rAMGPIR_right	right	gm	cerebrum	amygdala extended	218	54	amygdala extended right
+219	bed_nucleus_stria_terminalis_right	176	BST	BST_right	right	gm	cerebrum	amygdala extended	219	54	amygdala extended right
+220	basal_forebrain_right	52	VP	VP_right	right	gm	cerebrum	septal nuclei	220	55	septal nuclei right
+221	medial_septum_right	53	SEPTm	SEPTm_right	right	gm	cerebrum	septal nuclei	221	55	septal nuclei right
+222	lateral_septum_right	207	SEPTl	SEPTl_right	right	gm	cerebrum	septal nuclei	222	55	septal nuclei right
+223	thalamus_right	204	Thal	Thal_right	right	gm	cerebrum	thalamus	223	56	thalamus right
+224	mammilary_body_right	161	MB	MB_right	right	gm	cerebrum	hypothalamus	224	57	hypothalamus right
+225	hypothalamus_right	250	Hypo	Hypo_right	right	gm	cerebrum	hypothalamus	225	57	hypothalamus right
+226	medial_preoptic_nucleus_right	354	MPA	MPA_right	right	gm	cerebrum	hypothalamus	226	57	hypothalamus right
+227	cingulum_right	56	cg	cg_right	right	wm	cerebrum	wm	227	58	wm right
+228	corpus_callosum_right	8	cc	cc_right	right	wm	cerebrum	wm	228	58	wm right
+229	anterior_commissure_pars_posterior_right	23	acp	acp_right	right	wm	cerebrum	wm	230	58	wm right
+230	retroflexus_fasciculus_right	25	frf	frf_right	right	wm	cerebrum	wm	231	58	wm right
+231	stria_terminalis_right	59	st	st_right	right	wm	cerebrum	wm	232	58	wm right
+232	habenular_commissure_right	99	hbc	hbc_right	right	wm	cerebrum	wm	233	58	wm right
+233	internal_capsule_right	112	ic	ic_right	right	wm	cerebrum	wm	234	58	wm right
+234	cerebral_peduncle_right	114	cxp	cxp_right	right	wm	cerebrum	wm	235	58	wm right
+235	anterior_commissure_pars_anterior_right	115	aca	aca_right	right	wm	cerebrum	wm	236	58	wm right
+236	fornix_right	122	f	f_right	right	wm	cerebrum	wm	237	58	wm right
+237	mammilothalamic_tract_right	210	mthal	mthal_right	right	wm	cerebrum	wm	238	58	wm right
+238	fimbria_right	211	fi	fi_right	right	wm	cerebrum	wm	239	58	wm right
+239	optic_tract_right	216	opt	opt_right	right	wm	cerebrum	wm	240	58	wm right
+240	stria_medullaris_right	225	SM	SM_right	right	wm	cerebrum	wm	241	58	wm right
+241	inferior_colliculus_left	43	IC	IC_left	left	gm	midbrain	midbrain	242	59	midbrain left
+242	superior_colliculus_left	109	SC	SC_left	left	gm	midbrain	midbrain	243	59	midbrain left
+243	periaqueductal_gray	10	PAG	PAG	mid	gm	midbrain	midbrain	244	59	midbrain mid
+244	midbrain_gm	194	MB	MB	mid	gm	midbrain	midbrain	245	59	midbrain mid
+245	ventral_tegmental_decussation	156	VTd	VTd	mid	wm	midbrain	midbrain	246	59	midbrain mid
+246	superior_colliculus_right	9	SC	SC_right	right	gm	midbrain	midbrain	247	59	midbrain right
+247	inferior_colliculus_right	143	IC	IC_right	right	gm	midbrain	midbrain	248	59	midbrain right
+248	cerebellum_lobule6_simple_left	91	Crblm6s	Crblm6s_left_gm	left	gm	cerebellum	cerebellum gm	249	60	cerebellum gm left
+249	cerebellum_lobule7_crus2_ansiform_left	93	Crblm7	Crblm7_left_gm	left	gm	cerebellum	cerebellum gm	250	60	cerebellum gm left
+250	cerebellum_lobule8_copula_left	96	Crblm8	Crblm8_left_gm	left	gm	cerebellum	cerebellum gm	251	60	cerebellum gm left
+251	cerebellum_paraflocculus_left	98	PFL	PFL_left_gm	left	gm	cerebellum	cerebellum gm	252	60	cerebellum gm left
+252	cerebellum_anterior_lobule_4_5_left	148	Crblm45	Crblm45_left_gm	left	gm	cerebellum	cerebellum gm	253	60	cerebellum gm left
+253	cerebellum_flocculus_left	197	CrblmFL	CrblmFL_left_gm	left	gm	cerebellum	cerebellum gm	254	60	cerebellum gm left
+254	cerebellum_lobule7_paramedian_left	200	Crblm7pm	Crblm7pm_left_gm	left	gm	cerebellum	cerebellum gm	255	60	cerebellum gm left
+255	cerebellum_lobule6_crus1_ansiform_left	192	Crblm6	Crblm6_left_gm	left	gm	cerebellum	cerebellum gm	256	60	cerebellum gm left
+256	cerebellum_interpositus_nucleus_left	3	INTN	INTN_left	left	gm	cerebellum	cerebellum nuclei	257	61	cerebellum nuclei left
+257	cerebellum_dentate_nucleus_left	201	DN	DN_left	left	gm	cerebellum	cerebellum nuclei	258	61	cerebellum nuclei left
+258	cerebellum_dentate_nucleus_left	206	FN	FN_left	left	gm	cerebellum	cerebellum nuclei	259	61	cerebellum nuclei left
+259	cerebellum_anterior_lobule4_5_left	31	Crblm45	Crblm45_left_wm	left	wm	cerebellum	cerebellum wm	260	62	cerebellum wm left
+260	cerebellum_lobule6_crus1_ansiform_left	170	Crblm6	Crblm6_left_wm	left	wm	cerebellum	cerebellum wm	261	62	cerebellum wm left
+261	cerebellum_flocculus_left	177	CrblmFL	CrblmFL_left_wm	left	wm	cerebellum	cerebellum wm	262	62	cerebellum wm left
+262	cerebellum_crus2_paramedian_trunk_left	195	CrblmCrus2pmtr	CrblmCrus2pmtr_left	left	wm	cerebellum	cerebellum wm	263	62	cerebellum wm left
+263	cerebellum_paraflocculus_left	243	PFL	PFL_left_wm	left	wm	cerebellum	cerebellum wm	264	62	cerebellum wm left
+264	cerebellum_lobule8_copula_left	244	Crblm8	Crblm8_left_wm	left	wm	cerebellum	cerebellum wm	265	62	cerebellum wm left
+265	cerebellum_crus1_simple_trunk_left	246	CrblmCrus1str	CrblmCrus1str_left	left	wm	cerebellum	cerebellum wm	266	62	cerebellum wm left
+266	cerebellum_lobule7_paramedian_left	248	Crblm7pm	Crblm7pm_left_wm	left	wm	cerebellum	cerebellum wm	267	62	cerebellum wm left
+267	cerebellum_lobule7_crus2_ansiform_left	249	Crblm7	Crblm7_left_wm	left	wm	cerebellum	cerebellum wm	268	62	cerebellum wm left
+268	cerebellum_lobule6_simple_left	251	Crblm6s	Crblm6s_left_wm	left	wm	cerebellum	cerebellum wm	269	62	cerebellum wm left
+269	cingulum_left	231	cg	cg_left	left	wm	cerebellum	cerebellum wm	270	62	cerebellum wm left
+270	superior_cerebellar_peduncle_left	222	scp	scp_left	left	wm	cerebellum	wm	271	63	wm left
+271	inferior_cerebellar_peduncle_left	223	icp	icp_left	left	wm	cerebellum	wm	272	63	wm left
+272	middle_cerebellar_peduncle_left	245	mcp	mcp_left	left	wm	cerebellum	wm	273	63	wm left
+273	cerebellum_lobule1_2_lingula	32	Crblm12l	Crblm12l	mid	gm	cerebellum	cerebellum gm	274	64	cerebellum gm mid
+274	cerebellum_lobule4_5_culmen	34	Crblm45c	Crblm45c	mid	gm	cerebellum	cerebellum gm	275	64	cerebellum gm mid
+275	cerebellum_lobule6_declive	36	Crblm6d	Crblm6d	mid	gm	cerebellum	cerebellum gm	276	64	cerebellum gm mid
+276	cerebellum_lobule8_pyramis	38	Crblm8p	Crblm8p_gm	mid	gm	cerebellum	cerebellum gm	277	64	cerebellum gm mid
+277	cerebellum_lobule10_nodulus	40	Crblm10n	Crblm10n_gm	mid	gm	cerebellum	cerebellum gm	278	64	cerebellum gm mid
+278	cerebellum_lobule3_central_dorsal	233	Crblm3cd	Crblm3cd_gm	mid	gm	cerebellum	cerebellum gm	279	64	cerebellum gm mid
+279	cerebellum_lobule7_tuber	237	Crblm7t	Crblm7t	mid	gm	cerebellum	cerebellum gm	280	64	cerebellum gm mid
+280	cerebellum_lobule9_uvula	239	Crblm9u	Crblm9u_gm	mid	gm	cerebellum	cerebellum gm	281	64	cerebellum gm mid
+281	cerebellum_lobule3_central_dorsal	33	Crblm3cd	Crblm3cd_wm	mid	wm	cerebellum	cerebellum wm	282	65	cerebellum wm mid
+282	cerebellum_arbor_vitae_trunk	47	CrblmAVtr	CrblmAVtr	mid	wm	cerebellum	cerebellum wm	283	65	cerebellum wm mid
+283	cerebellum_lobule9_uvula	139	Crblm9u	Crblm9u_wm	mid	wm	cerebellum	cerebellum wm	284	65	cerebellum wm mid
+284	cerebellum_lobule1_2	232	Crblm12	Crblm12	mid	wm	cerebellum	cerebellum wm	285	65	cerebellum wm mid
+285	cerebellum_lobule4_5	234	Crblm45	Crblm45	mid	wm	cerebellum	cerebellum wm	286	65	cerebellum wm mid
+286	cerebellum_lobule6_7	236	Crblm67	Crblm67	mid	wm	cerebellum	cerebellum wm	287	65	cerebellum wm mid
+287	cerebellum_lobule8_pyramis	238	Crblm8p	Crblm8p_wm	mid	wm	cerebellum	cerebellum wm	288	65	cerebellum wm mid
+288	cerebellum_lobule10_nodulus	252	Crblm10n	Crblm10n_wm	mid	wm	cerebellum	cerebellum wm	289	65	cerebellum wm mid
+289	cerebellum_lobule1_3_trunk	253	Crblm13tr	Crblm13tr	mid	wm	cerebellum	cerebellum wm	290	65	cerebellum wm mid
+290	cerebellum_lobule6_8_trunk	254	Crblm68tr	Crblm68tr	mid	wm	cerebellum	cerebellum wm	291	65	cerebellum wm mid
+291	cerebellum_anterior_lobule4_5_right	90	Crblm45	Crblm45_right_gm	right	gm	cerebellum	cerebellum gm	292	66	cerebellum gm right
+292	cerebellum_lobule6_crus1_ansiform_right	92	Crblm6	Crblm6_right_gm	right	gm	cerebellum	cerebellum gm	293	66	cerebellum gm right
+293	cerebellum_lobule7_paramedian_right	94	Crblm7pm	Crblm7pm_right_gm	right	gm	cerebellum	cerebellum gm	294	66	cerebellum gm right
+294	cerebellum_flocculus_right	97	CrblmFL	CrblmFL_right_gm	right	gm	cerebellum	cerebellum gm	295	66	cerebellum gm right
+295	cerebellum_lobule8_copula_right	196	Crblm8	Crblm8_right_gm	right	gm	cerebellum	cerebellum gm	296	66	cerebellum gm right
+296	cerebellum_paraflocculus_right	198	PFL	PFL_right_gm	right	gm	cerebellum	cerebellum gm	297	66	cerebellum gm right
+297	cerebellum_lobule6_simple_right	191	Crblm6s	Crblm6s_right_gm	right	gm	cerebellum	cerebellum gm	298	66	cerebellum gm right
+298	cerebellum_lobule7_crus2_ansiform_right	193	Crblm7	Crblm7_right_gm	right	gm	cerebellum	cerebellum gm	299	66	cerebellum gm right
+299	cerebellum_dentate_nucleus_right	1	DN	DN_right	right	gm	cerebellum	cerebellum nuclei	300	67	cerebellum nuclei right
+300	cerebellum_fastigial_nucleus_right	15	FN	FN_right	right	gm	cerebellum	cerebellum nuclei	301	67	cerebellum nuclei right
+301	cerebellum_interpositus_nucleus_right	203	INTN	INTN_right	right	gm	cerebellum	cerebellum nuclei	302	67	cerebellum nuclei right
+302	cerebellum_anterior_lobule4_5_right	21	Crblm45	Crblm45_right_wm	right	wm	cerebellum	cerebellum wm	303	68	cerebellum wm right
+303	cerebellum_flocculus_right	167	CrblmFL	CrblmFL_right_wm	right	wm	cerebellum	cerebellum wm	304	68	cerebellum wm right
+304	cerebellum_crus2_paramedian_trunk_right	175	CrblmCrus2pmtr	CrblmCrus2pmtr_right	right	wm	cerebellum	cerebellum wm	305	68	cerebellum wm right
+305	cerebellum_paraflocculus_right	183	PFL	PFL_right_wm	right	wm	cerebellum	cerebellum wm	306	68	cerebellum wm right
+306	cerebellum_lobule6_crus1_ansiform_right	220	Crblm6	Crblm6_right_wm	right	wm	cerebellum	cerebellum wm	307	68	cerebellum wm right
+307	cerebellum_lobule8_copula_right	224	Crblm8	Crblm8_right_wm	right	wm	cerebellum	cerebellum wm	308	68	cerebellum wm right
+308	cerebellum_crus1_simple_trunk_right	226	CrblmCrus1str	CrblmCrus1str_right	right	wm	cerebellum	cerebellum wm	309	68	cerebellum wm right
+309	cerebellum_lobule7_paramedian_right	228	Crblm7pm	Crblm7pm_right_wm	right	wm	cerebellum	cerebellum wm	310	68	cerebellum wm right
+310	cerebellum_lobule7_crus2_ansiform_right	229	Crblm7	Crblm7_right_wm	right	wm	cerebellum	cerebellum wm	311	68	cerebellum wm right
+311	cerebellum_lobule6_simple_right	241	Crblm6s	Crblm6s_right_wm	right	wm	cerebellum	cerebellum wm	312	68	cerebellum wm right
+312	middle_cerebellar_peduncle_right	45	mcp	mcp_right	right	wm	cerebellum	wm	313	69	wm right
+313	inferior_cerebellar_peduncle_right	123	icp	icp_right	right	wm	cerebellum	wm	314	69	wm right
+314	superior_cerebellar_peduncle_right	242	scp	scp_right	right	wm	cerebellum	wm	315	69	wm right
+315	pons	187	PONS	PONS	mid	gm	brainstem	pons	316	70	pons mid
+316	pontine_reticular_nucleus_left	185	PRN	PRN_left	left	gm	brainstem	pons	317	70	pons left
+317	pontine_reticular_nucleus_right	85	PRN	PRN_right	right	gm	brainstem	pons	318	70	pons right
+318	cuneate_nucleus_left	168	CU	CU_left	left	gm	brainstem	brainstem	319	71	brainstem left
+319	olivary_complex_inferior_left	213	IO	IO_left	left	gm	brainstem	brainstem	320	71	brainstem left
+320	olivary_complex_superior_left	214	SO	SO_left	left	gm	brainstem	brainstem	321	71	brainstem left
+321	corticospinal_tract_left	18	csc	csc_left	left	wm	brainstem	wm	322	72	wm left
+322	medial_lemniscus_left	120	ml	ml_left	left	wm	brainstem	wm	323	72	wm left
+323	facial_nerve_left	219	7n	7n_left	left	wm	brainstem	wm	324	72	wm left
+324	interpeduncular_nucleus	157	IP	IP	mid	gm	brainstem	brainstem	325	73	brainstem mid
+325	medulla	174	M	M	mid	gm	brainstem	brainstem	326	73	brainstem mid
+326	olivary_complex_inferior_right	113	IO	IO_right	right	gm	brainstem	brainstem	327	74	brainstem right
+327	olivary_complex_superior_right	124	SO	SO_right	right	gm	brainstem	brainstem	328	74	brainstem right
+328	cuneate_nucleus_right	166	CU	CU_right	right	gm	brainstem	brainstem	329	74	brainstem right
+329	corticospinal_tract_right	218	csc	csc_right	right	wm	brainstem	wm	330	75	wm right
+330	medial_lemniscus_right	20	ml	ml_right	right	wm	brainstem	wm	331	75	wm right
+331	facial_nerve_right	19	7n	7n_right	right	wm	brainstem	wm	332	75	wm right
+332	lateral_ventricle_left	77	LV	LV_left	left	csf	nonbrain	csf	333	76	csf left
+333	ventricle_4	118	4V	4V	mid	csf	nonbrain	csf	334	76	csf mid
+334	cerebral_aqueduct	119	Aq	Aq	mid	csf	nonbrain	csf	335	76	csf mid
+335	ventricle_3	146	V3	V3	mid	csf	nonbrain	csf	336	76	csf mid
+336	lateral_ventricle_right	57	LV	LV_right	right	csf	nonbrain	csf	337	76	csf right
+

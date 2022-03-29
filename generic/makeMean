@@ -122,9 +122,9 @@ IMAGE=(${IMAGE//,/ })
 NIMG=${#IMAGE[@]}
 
 # Set up BIDs compliant variables and workspace --------------------------------
-DIR_PROJECT=$(getDir -i ${INPUT})
-PID=$(getField -i ${INPUT} -f sub)
-SID=$(getField -i ${INPUT} -f ses)
+DIR_PROJECT=$(getDir -i ${IMAGE[0]})
+PID=$(getField -i ${IMAGE[0]} -f sub)
+SID=$(getField -i ${IMAGE[0]} -f ses)
 PIDSTR=sub-${PID}
 if [[ -n ${SID} ]]; then ${PIDSTR}="${PIDSTR}_ses-${SID}"; fi
 DIRPID=sub-${PID}
