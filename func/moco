@@ -117,141 +117,148 @@ fi
 #===============================================================================
 # Start of Function
 #===============================================================================
-TSLS=(${TS//,/ })
-NTS=${#TSLS[@]}
-PREFIX=(${PREFIX//,/ })
-
 MKSAVE="false"
-if [[ -z ${DIR_SAVE} ]]; then MKSAVE="true"; fi
 MKRGR="false"
+if [[ -z ${DIR_SAVE} ]]; then MKSAVE="true"; fi
 if [[ -z ${DIR_RGR} ]]; then MKRGR="true"; fi
 mkdir -p ${DIR_SCRATCH}
 
-# iterative over TS files
-for (( i=0; i<${NTS}; i++ )); do
-  TS=${TSLS[${i}]}
-  if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -s -i ${TS}); fi
-  
-  # Set up BIDs compliant variables and workspace --------------------------------
-  DIR_PROJECT=$(getDir -i ${TS})
-  PID=$(getField -i ${TS} -f sub)
-  SID=$(getField -i ${TS} -f ses)
-  PIDSTR=sub-${PID}
-  if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
-  DIRPID=sub-${PID}
-  if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
-  if [[ "${MKSAVE}" == "true" ]]; then
-    DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/moco
-  fi
-  if [[ "${MKRGR}" == "true" ]]; then
-    DIR_RGR=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}
-  fi
-  mkdir -p ${DIR_SAVE}
-  mkdir -p ${DIR_RGR}
+if [[ -z ${PREFIX} ]]; then PREFIX=$(getBidsBase -s -i ${TS}); fi
 
-  ## gather TS information and set variable names
-  NTR=$(niiInfo -i ${TS} -f numTR)
-  TR=$(niiInfo -i ${TS} -f TR)
-  TS_MOCO=${DIR_SCRATCH}/${PREFIX}_bold.nii.gz
-  TS_MEAN=${DIR_SCRATCH}/${PREFIX}_proc-mean_bold.nii.gz
-  TS_NULL=${DIR_SCRATCH}/${PREFIX}_null_
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${TS})
+PID=$(getField -i ${TS} -f sub)
+SID=$(getField -i ${TS} -f ses)
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then PIDSTR="${PIDSTR}_ses-${SID}"; fi
+DIRPID=sub-${PID}
+if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
+if [[ "${MKSAVE}" == "true" ]]; then
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/moco
+fi
+if [[ "${MKRGR}" == "true" ]]; then
+  DIR_RGR=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}
+fi
+mkdir -p ${DIR_SAVE}
+mkdir -p ${DIR_RGR}
 
-  ## clear scratch
-  rm ${DIR_SCRATCH}/*
+# gather TS information and set variable names ---------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tgathering TS info"; fi
+NTR=$(niiInfo -i ${TS} -f numTR)
+TR=$(niiInfo -i ${TS} -f TR)
+TS_MOCO=${DIR_SCRATCH}/${PREFIX}_bold.nii.gz
+TS_MEAN=${DIR_SCRATCH}/${PREFIX}_proc-mean_bold.nii.gz
+TS_NULL=${DIR_SCRATCH}/${PREFIX}_null_
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\t\t#TR=${NTR}\n\t\tTR=${TR}"; fi
 
-  ## intialize mean bold
-  antsMotionCorr -d 3 -a ${TS} -o ${TS_MEAN}
+# intialize mean bold ----------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tinitialize mean bold"; fi
+antsMotionCorr -d 3 -a ${TS} -o ${TS_MEAN}
 
-  ## rigid motion correction
+# rigid motion correction ------------------------------------------------------
+## parameters: -u 1 -> use a fixed reference image, i.e., mean bold
+##             -e 1 -> use scale estimator to control optimization
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\trigid motion correction"; fi
+antsMotionCorr \
+  -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
+  -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+  -t Rigid[0.1] \
+    -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+    -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+
+# affine motion correction -----------------------------------------------------
+## parameters: -u 1 -> use a fixed reference image, i.e., mean bold
+##             -e 1 -> use scale estimator to control optimization
+##             -l 1 -> estimate learning rate step size only at the beginning of
+##                     each level, useful for subsequent stages of finer scale
+##                     registration
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\taffine motion correction"; fi
+antsMotionCorr \
+  -d 3 -u 1 -e 1 -l 1 -n ${NTR} -v ${ANTS_VERBOSE}  \
+  -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+  -t Affine[0.1] \
+    -m MI[${TS_MEAN},${TS_MOCO},1,32,Regular,0.2] \
+    -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+
+# nonlinear motion correction --------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tnonlinear motion correction"; fi
+antsMotionCorr \
+  -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
+  -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+  -t Rigid[0.25] \
+    -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+    -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
+  -t Affine[0.25] \
+    -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+    -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
+  -t SyN[0.2,3,0] \
+    -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
+    -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+
+# calculate regressors ---------------------------------------------------------
+if [[ "${RGR_TYPE,,}" == *"rigid"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tcalculate RIGID motion regressors"; fi
   antsMotionCorr \
     -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
-    -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
+    -o [${TS_NULL},${DIR_SCRATCH}/discard.nii.gz,${TS_MEAN}] \
     -t Rigid[0.1] \
       -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
       -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
-
-  ## affine motion correction
-  antsMotionCorr \
-    -d 3 -u 1 -e 1 -l 1 -n ${NTR} -v ${ANTS_VERBOSE}  \
-    -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
-    -t Affine[0.1] \
-      -m MI[${TS_MEAN},${TS_MOCO},1,32,Regular,0.2] \
-      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
-
-  ## nonlinear motion correction
+  cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+6.1D
+  sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+6.1D
+  rm ${DIR_SCRATCH}/temp.csv
+  rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
+  regressorDisplacement --regressor ${DIR_RGR}/${PREFIX}_moco+6.1D
+fi
+if [[ "${RGR_TYPE,,}" == *"affine"* ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tcalculate affine motion regressors"; fi
   antsMotionCorr \
     -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
-    -o [${TS_NULL},${TS_MOCO},${TS_MEAN}] \
-    -t Rigid[0.25] \
+    -o [${TS_NULL},${DIR_SCRATCH}/discard.nii.gz,${TS_MEAN}] \
+    -t Rigid[0.1] \
       -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
       -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
-    -t Affine[0.25] \
-      -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
-      -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
-    -t SyN[0.2,3,0] \
+    -t Affine[0.1] \
       -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
       -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
+  cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+12.1D
+  sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+12.1D
+  rm ${DIR_SCRATCH}/temp.csv
+  rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
+fi
 
-  ## calculate regressors
-  if [[ "${RGR_TYPE,,}" == *"rigid"* ]]; then
-    antsMotionCorr \
-      -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
-      -o [${TS_NULL},${DIR_SCRATCH}/discard.nii.gz,${TS_MEAN}] \
-      -t Rigid[0.1] \
-        -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
-        -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
-    cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
-    cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+6.1D
-    sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+6.1D
-    rm ${DIR_SCRATCH}/temp.csv
-    rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
-    regressorDisplacement --regressor ${DIR_RGR}/${PREFIX}_moco+6.1D
-  fi
-  if [[ "${RGR_TYPE,,}" == *"affine"* ]]; then
-    antsMotionCorr \
-      -d 3 -u 1 -e 1 -n ${NTR} -v ${ANTS_VERBOSE} \
-      -o [${TS_NULL},${DIR_SCRATCH}/discard.nii.gz,${TS_MEAN}] \
-      -t Rigid[0.1] \
-        -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
-        -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1 \
-      -t Affine[0.1] \
-        -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
-        -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
-    cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
-    cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+12.1D
-    sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+12.1D
-    rm ${DIR_SCRATCH}/temp.csv
-    rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
-  fi
+# move output to save locations ------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tsave output"; fi
+mv ${TS_MOCO} ${DIR_SAVE}/${PREFIX}_bold.nii.gz
+mv ${TS_MEAN} ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz
 
-  ## move output to save locations
-  mv ${TS_MOCO} ${DIR_SAVE}/${PREFIX}_bold.nii.gz
-  mv ${TS_MEAN} ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz
-
-  ## generate pngs
-  if [[ "${NO_PNG}" == "false" ]]; then
-    ### mean bold
-    make3Dpng --bg ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz \
-      --bg-color "hot" \
-      --layout "6:x;6:x;6:y;6:y;6:z;6:z" \
-      --offset "0,0,0" \
-      --no-slice-label --no-lr-label
-    ### image of slices in 4d
-    make4Dpng \
-      --fg ${DIR_SAVE}/${PREFIX}_bold.nii.gz \
-      --fg-color "hot" --fg-alpha 50 --layout "5x11" --plane "z" --slice 0.51 \
-      --no-slice-label --no-lr-label
-    ## make regressor plot
-    unset PLOTLS
-    PLOTLS="${DIR_RGR}/${PREFIX}_moco+6.1D"
-    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+absolute+mm.1D"
-    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+relative+mm.1D"
-    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+framewise.1D"
-    PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+RMS.1D"
-    regressorPlot --regressor ${PLOTLS}
-  fi
-
-done
+# generate PNGs ----------------------------------------------------------------
+if [[ "${NO_PNG}" == "false" ]]; then
+  ## mean bold
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tgenerate mean BOLD PNG"; fi
+  make3Dpng --bg ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz \
+    --bg-color "hot" \
+    --layout "6:x;6:x;6:y;6:y;6:z;6:z" \
+    --offset "0,0,0" \
+    --no-slice-label --no-lr-label
+  ## image of slices in 4d
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tgenerate TS PNG"; fi
+  make4Dpng \
+    --fg ${DIR_SAVE}/${PREFIX}_bold.nii.gz \
+    --fg-color "hot" --fg-alpha 50 --layout "5x11" --plane "z" --slice 0.51 \
+    --no-slice-label --no-lr-label
+  ## make regressor plot
+  if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tgenerate regressor plot"; fi
+  unset PLOTLS
+  PLOTLS="${DIR_RGR}/${PREFIX}_moco+6.1D"
+  PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+absolute+mm.1D"
+  PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+relative+mm.1D"
+  PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+framewise.1D"
+  PLOTLS="${PLOTLS},${DIR_RGR}/${PREFIX}_displacement+RMS.1D"
+  regressorPlot --regressor ${PLOTLS}
+fi
 
 #===============================================================================
 # End of Function
