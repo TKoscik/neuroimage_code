@@ -300,6 +300,7 @@ if [[ "${NO_PNG}" == "false" ]]; then
     png_fcn=${png_fcn}' --offset "0,0,0"'
     png_fcn="${png_fcn} --filename ${TNAME}"
     png_fcn="${png_fcn} --dir-save ${DIR_SCRATCH}"
+    if [[ "${VERBOSE}" == "true" ]]; then echo ${png_fcn}; fi
     eval ${png_fcn}
   done
 fi
