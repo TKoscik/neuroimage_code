@@ -182,7 +182,7 @@ for (( i=0; i<${N}; i++ )); do
     echo ${N}
     TMP=$(echo "scale=4; ${FWHM[${j}]} / ${N}" | bc -l)
     echo ${TMP}
-    FWHM_AVG[${j}]=$(echo "scale=4; ${TMP}+${FWHM_AVG[${j}]}" | bc -l)
+    FWHM_AVG[${j}]=$(echo "scale=4; ${TMP} + ${FWHM_AVG[${j}]}" | bc -l)
     echo ${FWHM_AVG[@]}
   done
   
