@@ -176,8 +176,10 @@ for (( i=0; i<${N}; i++ )); do
     FWHM=($(cat ${DIR_SAVE}/${PFX}_3dFWHM.1D))
   fi
   for j in {0..2}; do
-    TMP=$(ezMath -x "${FWHM[${j}]}/${N}" -d 4)
-    FWHM_AVG[${j}]=$(ezMath -x "${TMP}+${FWHM_AVG[${j}]}" -d 4)
+    #TMP=$(ezMath -x "${FWHM[${j}]}/${N}" -d 4)
+    #FWHM_AVG[${j}]=$(ezMath -x "${TMP}+${FWHM_AVG[${j}]}" -d 4)
+    TMP=$(echo "scale=4; ${FWHM[${j}]} / ${N}" | bc -l)
+    FWHM_AVG[${j}]=$(echo "scale=4; ${TMP}+${FWHM_AVG[${j}]}" | bc -l)
   done
   
   # clean
