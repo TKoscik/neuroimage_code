@@ -178,12 +178,8 @@ for (( i=0; i<${N}; i++ )); do
     FWHM=($(cat ${DIR_SAVE}/${PFX}_3dFWHM.1D))
   fi
   for j in {0..2}; do
-    #TMP=$(ezMath -x "${FWHM[${j}]}/${N}" -d 4)
-    #FWHM_AVG[${j}]=$(ezMath -x "${TMP}+${FWHM_AVG[${j}]}" -d 4)
-    TMP=$(echo "scale=4; ${FWHM[${j}]} / ${N}" | bc -l)
-    echo ${FWHM_AVG[@]}
-    FWHM_AVG[${j}]=$(echo "scale=4; ${TMP} + ${FWHM_AVG[${j}]}" | bc -l)
-    echo ${FWHM_AVG[@]}
+    TMP=$(echo "scale=8; ${FWHM[${j}]} / ${N}" | bc -l)
+    FWHM_AVG[${j}]=$(echo "scale=8; ${TMP} + ${FWHM_AVG[${j}]}" | bc -l)
   done
   
   # clean
@@ -200,6 +196,10 @@ for (( i=0; i<${N}; i++ )); do
     rm ${DIR_SAVE}/3dFWHMx.1D
   fi
 
+done
+
+for j in {0..2}; do
+  FWHM_AVG[${j}]=$(echo "scale=4; ${FWHM_AVG[${j}]} * 1" | bc -l)
 done
 
 echo "Resolution for FDR Calculation: ${FWHM_AVG[0]}x${FWHM_AVG[1]}x${FWHM_AVG[2]}"
