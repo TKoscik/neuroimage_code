@@ -25,12 +25,12 @@ for (i in seq(1, length(args), 2)) {
   if (args[i] %in% c("aov", "do_aov", "aov_table", "do_aov_table")) { OUT_AOV <- as.logical(args[i+1]) }
   if (args[i] %in% c("difflsmeans", "diffmeans")) { OUT_DIFFLSMEANS <- as.logical(args[i+1]) }
   if (args[i] %in% c("fdr", "fdr_n", "fdr.n")) { FDR_N <- args[i+1] }
-  if (args[i] %in% c("ci", "confidence", "confidence_interval")) { CI <- args[i+1] }
+  if (args[i] %in% c("ci", "confidence", "confidence_interval")) { CI <- as.numeric(args[i+1]) }
   if (args[i] %in% c("dirsave", "dir_save", "dir.save", "savedir", "save_dir", "save.dir")) { DIR_SAVE <- args[i+1] }
   if (args[i] %in% c("prefix", "model", "modelname", "model_name", "model.name")) { MODEL_PFX <- args[i+1] }
   if (args[i] %in% c("log", "restartlog", "restart_log", "restart.log")) { RESTART_LOG <- args[i+1] }
   if (args[i] %in% c("rand", "rand_order", "randomize", "randomize_order")) { RAND_ORDER <- args[i+1] }
-  if (args[i] %in% c("ncores", "n_cores", "n.cores", "numcores", "num_cores", "num.cores")) { NUM_CORES <- args[i+1] }
+  if (args[i] %in% c("ncores", "n_cores", "n.cores", "numcores", "num_cores", "num.cores")) { NUM_CORES <- as.numeric(args[i+1]) }
   if (args[i] %in% c("verbose")) { VERBOSE <- as.logical(args[i+1]) }
 }
 
@@ -43,7 +43,8 @@ library(car)
 library(nifti.io)
 
 # set output directories -------------------------------------------------------
-dir.save <- sprintf("%s/%s_%s", DIR_SAVE, MODEL_PFX))
+#dir.save <- sprintf("%s/%s_%s", DIR_SAVE, MODEL_PFX)
+dir.save <- sprintf("%s/%s", DIR_SAVE, MODEL_PFX)
 dir.create(dir.save, showWarnings = FALSE, recursive=TRUE)
 
 # load data frame for analysis -------------------------------------------------
@@ -62,7 +63,8 @@ if (!is.na(VAR_FACTOR)) {
     if (length(factor_name) == 1) {
       pf[ , factor_name] <- as.factor(pf[ , factor_name])
     } else if (length(factor_name) == 2) {
-      tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2]))
+      #tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2]))
+      tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2])))
       pf[ , factor_name[1]] <- as.factor(pf[ , factor_name[1]], levels=tlevels)
     }
   }
@@ -129,11 +131,11 @@ model.fxn <- function(X, ...) {
   for (i in 1:nrow(df)) { df$nii[i] <- read.nii.voxel(df$fls[i], coords) }
   
   ## select appropriate model function - - - - - - - - - - - - - - - - - - - - -
-  if (FORM == "lm") {
+  if (FUNC == "lm") {
     mdl <- lm(FORM, df)
-  } else if (FORM == "lmer") {
+  } else if (FUNC == "lmer") {
     mdl <- lmer(FORM, df)
-  }  else if (FORM == "glmer") {
+  }  else if (FUNC == "glmer") {
     mdl <- glmer(FORM, df)
   }
 
@@ -145,7 +147,7 @@ model.fxn <- function(X, ...) {
     }
     ### Confidence Interval
     if (~is.na(CI) && CI != FALSE) {
-      out.ci <- confint(mdl, method="Wald", level=CI/100))
+      out.ci <- confint(mdl, method="Wald", level=CI/100)
       coef <- cbind(coef, na.omit(out.ci))
     }
     table.to.nii(in.table = coef, coords=coords, save.dir=DIR_SAVE,
@@ -186,7 +188,7 @@ model.fxn <- function(X, ...) {
 
 # Run voxels in parallel
 print("starting voxelwise models...")
-registerDoParallel(num.cores)
+registerDoParallel(NUM_CORES)
 invisible(foreach(X=1:n.vxls) %dopar% model.fxn(X))
 stopImplicitCluster() # Stop parallelization
 
