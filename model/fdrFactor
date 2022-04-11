@@ -119,6 +119,8 @@ fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
 
+FWHM_AVG=(0 0 0)
+
 for (( i=0; i<${N}; i++ )); do
   PFX=$(getBidsBase -s -i ${INPUTS[${i}]})
   if [[ "${NO_OVERWRITE,,}" == "false" ]] || [[ ! -f ${DIR_SAVE}/${PFX}_3dFWHM.1D ]]; then
@@ -178,10 +180,8 @@ for (( i=0; i<${N}; i++ )); do
   for j in {0..2}; do
     #TMP=$(ezMath -x "${FWHM[${j}]}/${N}" -d 4)
     #FWHM_AVG[${j}]=$(ezMath -x "${TMP}+${FWHM_AVG[${j}]}" -d 4)
-    echo ${FWHM[@]}
-    echo ${N}
     TMP=$(echo "scale=4; ${FWHM[${j}]} / ${N}" | bc -l)
-    echo ${TMP}
+    echo ${FWHM_AVG[@]}
     FWHM_AVG[${j}]=$(echo "scale=4; ${TMP} + ${FWHM_AVG[${j}]}" | bc -l)
     echo ${FWHM_AVG[@]}
   done
