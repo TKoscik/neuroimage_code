@@ -184,7 +184,7 @@ model.fxn <- function(X, ...) {
       out.ci <- confint(mdl, method="Wald", level=CI/100)
       coef <- cbind(coef, na.omit(out.ci))
     }
-    table.to.nii(in.table = coef, coords=coords, save.dir=DIR_SAVE,
+    table.to.nii(in.table = coef, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
   }
@@ -196,7 +196,7 @@ model.fxn <- function(X, ...) {
     if (!is.na(FDR_N)) {
       aov$pFDR <- p.adjust(aov[ ,pmatch("P", colnames(aov))], method="BY", n=FDR_N)
     }
-    table.to.nii(in.table = aov, coords=coords, save.dir=DIR_SAVE,
+    table.to.nii(in.table = aov, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
   }
@@ -208,7 +208,7 @@ model.fxn <- function(X, ...) {
     if (!is.na(FDR_N)) {
       dlsmeans$pFDR <- p.adjust(dflsmns[ ,pmatch("P", colnames(dflsmns))], method="BY", n=FDR_N)
     }
-    table.to.nii(in.table = dlsmeans, coords=coords, save.dir=DIR_SAVE,
+    table.to.nii(in.table = dlsmeans, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
   }
