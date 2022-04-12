@@ -70,6 +70,40 @@ if (!is.na(VAR_FACTOR)) {
   }
 }
 
+# load required libraries ------------------------------------------------------
+library(doParallel)
+library(lmerTest)
+library(car)
+library(nifti.io)
+
+# set output directories -------------------------------------------------------
+#dir.save <- sprintf("%s/%s_%s", DIR_SAVE, MODEL_PFX)
+dir.save <- sprintf("%s/%s", DIR_SAVE, MODEL_PFX)
+dir.create(dir.save, showWarnings = FALSE, recursive=TRUE)
+
+# load data frame for analysis -------------------------------------------------
+pf <- read.csv(DF_DATA)
+
+## you must make sure IDs are factors, and set the order of groups if not alphabetical
+pf[ , PID_VAR] <- as.factor(pf[ , PID_VAR])
+if (!is.na(SID_VAR)) {
+  pf[ , SID_VAR] <- as.factor(pf[ , SID_VAR])
+}
+
+if (!is.na(VAR_FACTOR)) {
+  factor_ls <- unlist(strsplit(VAR_FACTOR, split=";"))
+  for (i in 1:length(factor_ls)) {
+    factor_name <- unlist(strsplit(factor_ls[i], split=":"))[1]
+    if (length(factor_name) == 1) {
+      pf[ , factor_name] <- as.factor(pf[ , factor_name])
+    } else if (length(factor_name) == 2) {
+      #tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2]))
+      tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2])))
+      pf[ , factor_name[1]] <- as.factor(pf[ , factor_name[1]], levels=tlevels)
+    }
+  }
+}
+
 # match subjects to data -------------------------------------------------------
 pf$fls <- character(nrow(pf))
 for (i in 1:nrow(pf)) {
@@ -169,12 +203,12 @@ model.fxn <- function(X, ...) {
 
   ## output DIFFLSMEANS table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_DIFFLSMEANS) {
-    dflsmns <- difflsmeans(mdl)
+    dlsmeans <- difflsmeans(mdl)
     ### FDR correction
     if (!is.na(FDR_N)) {
-      dflsmns$pFDR <- p.adjust(dflsmns[ ,pmatch("P", colnames(dflsmns))], method="BY", n=FDR_N)
+      dlsmeans$pFDR <- p.adjust(dflsmns[ ,pmatch("P", colnames(dflsmns))], method="BY", n=FDR_N)
     }
-    table.to.nii(in.table = dflsmeans, coords=coords, save.dir=DIR_SAVE,
+    table.to.nii(in.table = dlsmeans, coords=coords, save.dir=DIR_SAVE,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
   }
@@ -191,5 +225,4 @@ print("starting voxelwise models...")
 registerDoParallel(NUM_CORES)
 invisible(foreach(X=1:n.vxls) %dopar% model.fxn(X))
 stopImplicitCluster() # Stop parallelization
-
 
