@@ -24,29 +24,29 @@ KEEP=false
 NO_LOG=false
 umask 007
 
-# actions on exit, write to logs, clean scratch
-function egress {
-  EXIT_CODE=$?
-  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-  if [[ "${KEEP}" == "false" ]]; then
-    if [[ -n ${DIR_SCRATCH} ]]; then
-      if [[ -d ${DIR_SCRATCH} ]]; then
-        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
-          echo 'deleting scratch'
-          rm -R ${DIR_SCRATCH}
-        else
-          rmdir ${DIR_SCRATCH}
-        fi
-      fi
-    fi
-  fi
-  if [[ "${NO_LOG}" == "false" ]]; then
-    unset LOGSTR
-    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
-    writeLog --benchmark --string ${LOGSTR}
-  fi
-}
-trap egress EXIT
+# # actions on exit, write to logs, clean scratch
+# function egress {
+#   EXIT_CODE=$?
+#   PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+#   if [[ "${KEEP}" == "false" ]]; then
+#     if [[ -n ${DIR_SCRATCH} ]]; then
+#       if [[ -d ${DIR_SCRATCH} ]]; then
+#         if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+#           echo 'deleting scratch'
+#           rm -R ${DIR_SCRATCH}
+#         else
+#           rmdir ${DIR_SCRATCH}
+#         fi
+#       fi
+#     fi
+#   fi
+#   if [[ "${NO_LOG}" == "false" ]]; then
+#     unset LOGSTR
+#     LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+#     writeLog --benchmark --string ${LOGSTR}
+#   fi
+# }
+# trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvalntpr --long prefix:,\
@@ -196,6 +196,7 @@ antsMotionCorr \
     -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
 
 # calculate regressors ---------------------------------------------------------
+# NOTE; REGRESSOR OUTPUT IS ${PREFIX}_MOCOparams.csv (no 'rigid_' or 'affine_' prefix)
 if [[ "${RGR_TYPE,,}" == *"rigid"* ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tcalculate RIGID motion regressors"; fi
   antsMotionCorr \
@@ -204,11 +205,16 @@ if [[ "${RGR_TYPE,,}" == *"rigid"* ]]; then
     -t Rigid[0.1] \
       -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
       -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
-  cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  echo -e ">>>\tantsMotionCorr done"
+  echo -e ">>>\tcat rigid_MOCOparams.csv"
+#  cat ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  cat ${TS_NULL}MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  echo -e ">>>\tcut temp"
   cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+6.1D
+  echo -e ">>>\tsed moco+6"
   sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+6.1D
-  rm ${DIR_SCRATCH}/temp.csv
-  rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
+  #rm ${DIR_SCRATCH}/temp.csv
+  #rm ${DIR_SCRATCH}/${PREFIX}_rigid_MOCOparams.csv
   regressorDisplacement --regressor ${DIR_RGR}/${PREFIX}_moco+6.1D
 fi
 if [[ "${RGR_TYPE,,}" == *"affine"* ]]; then
@@ -222,17 +228,27 @@ if [[ "${RGR_TYPE,,}" == *"affine"* ]]; then
     -t Affine[0.1] \
       -m MI[${TS_MEAN},${TS},1,32,Regular,0.2] \
       -i 20x15x5x1 -s 3x2x1x0 -f 4x3x2x1
-  cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  echo -e ">>>\tantsMotionCorr done"
+  echo -e ">>>\tcat affine_MOCOparams.csv"
+  #cat ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  cat ${TS_NULL}MOCOparams.csv | tail -n+2 > ${DIR_SCRATCH}/temp.csv
+  echo -e ">>>\tcut temp"
   cut -d, -f1-2 --complement ${DIR_SCRATCH}/temp.csv > ${DIR_RGR}/${PREFIX}_moco+12.1D
+  echo -e ">>>\tsed moco+12"
   sed -i 's/,/\t/g' ${DIR_RGR}/${PREFIX}_moco+12.1D
-  rm ${DIR_SCRATCH}/temp.csv
-  rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
+  #rm ${DIR_SCRATCH}/temp.csv
+  #rm ${DIR_SCRATCH}/${PREFIX}_affine_MOCOparams.csv
 fi
 
 # move output to save locations ------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>\tsave output"; fi
+echo -e ">>>\tTS_MOCO == ${TS_MOCO}"
+echo -e ">>>\tPREFIX == ${PREFIX}"
+echo -e ">>>\tDIR_SAVE == ${DIR_SAVE}"
+echo -e ">>>\tTS_MEAN == ${TS_MEAN}"
+echo -e ">>>\t***********************"
 mv ${TS_MOCO} ${DIR_SAVE}/${PREFIX}_bold.nii.gz
-mv ${TS_MEAN} ${DIR_SAVE}/${PREFIX}_proc-mean_bold.nii.gz
+mv ${TS_MEAN} ${DIR_SAVE}/mean/${PREFIX}_proc-mean_bold.nii.gz
 
 # generate PNGs ----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then

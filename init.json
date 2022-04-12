@@ -83,6 +83,7 @@
         "r_doparallel": "1.0.16_gcc-9.3.0",
         "r_effects": "4.2-0_gcc-9.3.0",
         "r_fastcluster": "1.1.25_gcc-9.3.0",
+        "r_fs": "1.5.0_gcc-9.3.0",
         "r_ggplot2": "3.3.3_gcc-9.3.0",
         "r_gridextra": "2.3_gcc-9.3.0",
         "r_hmisc": "4.4-2_gcc-9.3.0",

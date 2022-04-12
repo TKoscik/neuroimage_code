@@ -24,7 +24,7 @@ for (i in seq(1, length(args), 2)) {
   if (args[i] %in% c("coef", "do_coef", "coef_table", "do_coef_table")) { OUT_COEF <- as.logical(args[i+1]) }
   if (args[i] %in% c("aov", "do_aov", "aov_table", "do_aov_table")) { OUT_AOV <- as.logical(args[i+1]) }
   if (args[i] %in% c("difflsmeans", "diffmeans")) { OUT_DIFFLSMEANS <- as.logical(args[i+1]) }
-  if (args[i] %in% c("fdr", "fdr_n", "fdr.n")) { FDR_N <- args[i+1] }
+  if (args[i] %in% c("fdr", "fdr_n", "fdr.n")) { FDR_N <- as.numeric(args[i+1]) }
   if (args[i] %in% c("ci", "confidence", "confidence_interval")) { CI <- as.numeric(args[i+1]) }
   if (args[i] %in% c("dirsave", "dir_save", "dir.save", "savedir", "save_dir", "save.dir")) { DIR_SAVE <- args[i+1] }
   if (args[i] %in% c("prefix", "model", "modelname", "model_name", "model.name")) { MODEL_PFX <- args[i+1] }

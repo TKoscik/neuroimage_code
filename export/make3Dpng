@@ -618,7 +618,6 @@ for (( i=0; i<${#ROW_LAYOUT[@]}; i++ )); do
     esac
   done
 done
-
 # Calculate slices -------------------------------------------------------------
 ## -calculate limits + offset
 ## -check if limits are within the image
@@ -641,11 +640,11 @@ if [[ ${NX} > 0 ]]; then
   RANGE=$((${XLIM[1]}-${XLIM[0]} ))
   TN=$((${NX}-1))
   if [[ ${TN} -eq 0 ]]; then
-    STEP=$(echo "${RANGE} / 2" | bc -l)
+    STEP=$(echo "scale=4; ${RANGE} / 2" | bc -l)
     TVOX=($(seq ${XLIM[0]} ${STEP} ${XLIM[1]}))
     XVOX=${TVOX[1]}
   else
-    STEP=$(echo "${RANGE} / ${TN}" | bc -l)
+    STEP=$(echo "scale=4; ${RANGE} / ${TN}" | bc -l)
     XVOX=($(seq ${XLIM[0]} ${STEP} ${XLIM[1]}))
   fi
   for (( i=0; i<${NX}; i++ )); do
@@ -671,11 +670,11 @@ if [[ ${NY} > 0 ]]; then
   RANGE=$((${YLIM[1]}-${YLIM[0]}))
   TN=$((${NY}-1))
   if [[ ${TN} -eq 0 ]]; then
-    STEP=$(echo "${RANGE} / 2" | bc -l)
+    STEP=$(echo "scale=4; ${RANGE} / 2" | bc -l)
     TVOX=($(seq ${YLIM[0]} ${STEP} ${YLIM[1]}))
     YVOX=${TVOX[1]}
   else
-    STEP=$(echo "${RANGE} / ${TN}" | bc -l)
+    STEP=$(echo "scale=4; ${RANGE} / ${TN}" | bc -l)
     YVOX=($(seq ${YLIM[0]} ${STEP} ${YLIM[1]}))
   fi
   for (( i=0; i<${NY}; i++ )); do
@@ -701,11 +700,11 @@ if [[ ${NZ} > 0 ]]; then
   RANGE=$(( ${ZLIM[1]} - ${ZLIM[0]} ))
   TN=$((${NZ}-1))
   if [[ ${TN} -eq 0 ]]; then
-    STEP=$(echo "${RANGE} / 2" | bc -l)
+    STEP=$(echo "scale=4; ${RANGE} / 2" | bc -l)
     TVOX=($(seq ${ZLIM[0]} ${STEP} ${ZLIM[1]}))
     ZVOX=${TVOX[1]}
   else
-    STEP=$(echo "${RANGE} / ${TN}" | bc -l)
+    STEP=$(echo "scale=4; ${RANGE} / ${TN}" | bc -l)
     ZVOX=($(seq ${ZLIM[0]} ${STEP} ${ZLIM[1]}))
   fi
   for (( i=0; i<${NZ}; i++ )); do
