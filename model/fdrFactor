@@ -178,8 +178,8 @@ for (( i=0; i<${N}; i++ )); do
     FWHM=($(cat ${DIR_SAVE}/${PFX}_3dFWHM.1D))
   fi
   for j in {0..2}; do
-    TMP=$(echo "scale=8; ${FWHM[${j}]} / ${N}" | bc -l)
-    FWHM_AVG[${j}]=$(echo "scale=8; ${TMP} + ${FWHM_AVG[${j}]}" | bc -l)
+    TMP=$(echo "scale=6; ${FWHM[${j}]} / ${N}" | bc -l)
+    FWHM_AVG[${j}]=$(echo "scale=6; ${TMP} + ${FWHM_AVG[${j}]}" | bc -l)
   done
   
   # clean
