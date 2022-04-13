@@ -74,7 +74,7 @@ for (i in 1:nrow(pf)) {
   tname <- list.files(NII_DATA, pattern=pidstr, full.names=TRUE)
   is.nii <- rep(FALSE,length(tname))
   for (j in 1:length(tname)) {
-    fext <- unlist(strsplit(tname[j])), split="[.]"))
+    fext <- unlist(strsplit(tname[j], split="[.]"))
     if (fext[length(fext)] == "nii") { is.nii[j] <- TRUE }
   }
   tname <- tname[is.nii]
