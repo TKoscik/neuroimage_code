@@ -114,6 +114,13 @@ if (RAND_ORDER) { vxl.ls <- vxl.ls[sample(1:n.vxls, n.vxls, replace=F), ] }
 ## check if there are no voxels
 if (n.vxls == 0) { stop("There are no voxels in the specified ROI to run") }
 
+print("THIS IS the FDR_N")
+print(str(FDR_N))
+FDR_N <- as.numeric(FDR_N)
+CI <- as.numeric(CI)
+print(str(FDR_N))
+print(str(CI))
+
 # specify model function -------------------------------------------------------
 model.fxn <- function(X, ...) {
   ## load VOXELWISE DATA - - - - - - - - - - - - - - - - - - - - - - - - - - - -
