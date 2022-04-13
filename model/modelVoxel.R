@@ -43,18 +43,15 @@ library(car)
 library(nifti.io)
 
 # set output directories -------------------------------------------------------
-#dir.save <- sprintf("%s/%s_%s", DIR_SAVE, MODEL_PFX)
 dir.save <- sprintf("%s/%s", DIR_SAVE, MODEL_PFX)
 dir.create(dir.save, showWarnings = FALSE, recursive=TRUE)
 
 # load data frame for analysis -------------------------------------------------
 pf <- read.csv(DF_DATA)
 
-## you must make sure IDs are factors, and set the order of groups if not alphabetical
+## make sure IDs are factors, and set the order of groups if not alphabetical
 pf[ , PID_VAR] <- as.factor(pf[ , PID_VAR])
-if (!is.na(SID_VAR)) {
-  pf[ , SID_VAR] <- as.factor(pf[ , SID_VAR])
-}
+if (!is.na(SID_VAR)) { pf[ , SID_VAR] <- as.factor(pf[ , SID_VAR]) }
 
 if (!is.na(VAR_FACTOR)) {
   factor_ls <- unlist(strsplit(VAR_FACTOR, split=";"))
@@ -63,7 +60,6 @@ if (!is.na(VAR_FACTOR)) {
     if (length(factor_name) == 1) {
       pf[ , factor_name] <- as.factor(pf[ , factor_name])
     } else if (length(factor_name) == 2) {
-      #tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2]))
       tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2])))
       pf[ , factor_name[1]] <- as.factor(pf[ , factor_name[1]], levels=tlevels)
     }
@@ -74,17 +70,19 @@ if (!is.na(VAR_FACTOR)) {
 pf$fls <- character(nrow(pf))
 for (i in 1:nrow(pf)) {
   pidstr <- paste0("sub-", pf[i, PID_VAR])
-  if (!is.na(SID_VAR)) {
-      pidstr <- paste0(pidstr, "_ses-", pf[i, SID_VAR])
-  }
+  if (!is.na(SID_VAR)) { pidstr <- paste0(pidstr, "_ses-", pf[i, SID_VAR]) }
   tname <- list.files(NII_DATA, pattern=pidstr, full.names=TRUE)
-  if (length(tname) != 0) {
-    pf$fls[i] <- tname[1]
+  is.nii <- rep(FALSE,length(tname))
+  for (j in 1:length(tname)) {
+    fext <- unlist(strsplit(tname[j])), split="[.]"))
+    if (fext[length(fext)] == "nii") { is.nii[j] <- TRUE }
   }
+  tname <- tname[is.nii]
+  if (length(tname) != 0) { pf$fls[i] <- tname[1] }
 }
 ## remove rows without matched file
 pf <- pf[pf$fls != "", ]
-## check if pf is bad
+## check if pf is empty
 if (nrow(pf) == 0) { stop("Dataset is empty, please check inputs") }
 
 # load mask -------------------------------------------------------------------
@@ -111,16 +109,10 @@ if (file.exists(log.nii) == FALSE || RESTART_LOG == TRUE) {
 
 # set voxel looping poarameters ------------------------------------------------
 n.vxls <- nrow(vxl.ls)
-
 ## randomize order ---
-if (RAND_ORDER) {
-  vxl.ls <- vxl.ls[sample(1:n.vxls, n.vxls, replace=F), ]
-}
-
+if (RAND_ORDER) { vxl.ls <- vxl.ls[sample(1:n.vxls, n.vxls, replace=F), ] }
 ## check if there are no voxels
-if (n.vxls == 0) {
-  stop("There are no voxels in the specified ROI to run")
-}
+if (n.vxls == 0) { stop("There are no voxels in the specified ROI to run") }
 
 # specify model function -------------------------------------------------------
 model.fxn <- function(X, ...) {
@@ -141,6 +133,7 @@ model.fxn <- function(X, ...) {
 
   ## output Coefficient table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_COEF) {
+    coef <- as.data.frame(summary(mdl)$coef)
     ### FDR correction
     if (!is.na(FDR_N)) {
       coef$pFDR <- p.adjust(coef[ ,pmatch("P", colnames(coef))], method="BY", n=FDR_N)
@@ -172,7 +165,7 @@ model.fxn <- function(X, ...) {
     dlsmeans <- difflsmeans(mdl)
     ### FDR correction
     if (!is.na(FDR_N)) {
-      dlsmeans$pFDR <- p.adjust(dflsmns[ ,pmatch("P", colnames(dflsmns))], method="BY", n=FDR_N)
+      dlsmeans$pFDR <- p.adjust(dlsmeans[ ,pmatch("P", colnames(dlsmeans))], method="BY", n=FDR_N)
     }
     table.to.nii(in.table = dlsmeans, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
