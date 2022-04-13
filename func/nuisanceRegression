@@ -162,6 +162,7 @@ for (( i=0; i<${N_REG}; i++ )); do
 done
 AFNI_CALL="${AFNI_CALL} -TR ${TR}"
 
+echo -e ">>>>>>3DTPROJECT CALL: ${AFNI_CALL}"
 eval ${AFNI_CALL}
 
 ## export time series
