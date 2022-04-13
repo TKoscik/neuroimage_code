@@ -136,11 +136,11 @@ model.fxn <- function(X, ...) {
     coef <- as.data.frame(summary(mdl)$coef)
     ### FDR correction
     if (!is.na(FDR_N)) {
-      coef$pFDR <- p.adjust(coef[ ,pmatch("P", colnames(coef))], method="BY", n=FDR_N)
+      coef$pFDR <- p.adjust(coef[ ,pmatch("P", colnames(coef))], method="BY", n=as.numeric(FDR_N))
     }
     ### Confidence Interval
     if (~is.na(CI) && CI != FALSE) {
-      out.ci <- confint(mdl, method="Wald", level=CI/100)
+      out.ci <- confint(mdl, method="Wald", level=as.numeric(CI)/100)
       coef <- cbind(coef, na.omit(out.ci))
     }
     table.to.nii(in.table = coef, coords=coords, save.dir=dir.save,
