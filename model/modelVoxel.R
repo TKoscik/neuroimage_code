@@ -11,6 +11,7 @@ CI <- 95
 RESTART_LOG <- TRUE
 RAND_ORDER <- TRUE
 VERBOSE <- FALSE
+DEBUG <- as.numeric(NA)
 
 for (i in seq(1, length(args), 2)) {
   if (args[i] %in% c("nii", "nii_data", "nii.data")) { NII_DATA <- args[i+1] }
@@ -32,6 +33,7 @@ for (i in seq(1, length(args), 2)) {
   if (args[i] %in% c("rand", "rand_order", "randomize", "randomize_order")) { RAND_ORDER <- args[i+1] }
   if (args[i] %in% c("ncores", "n_cores", "n.cores", "numcores", "num_cores", "num.cores")) { NUM_CORES <- as.numeric(args[i+1]) }
   if (args[i] %in% c("verbose")) { VERBOSE <- as.logical(args[i+1]) }
+  if (args[i] %in% c("debug")) { DEBUG <- as.numeric(args[i+1]) }
 }
 
 #### SHOULD NOT NEED TO EDIT BELOW THIS POINT ##################################
@@ -118,70 +120,91 @@ if (n.vxls == 0) { stop("There are no voxels in the specified ROI to run") }
 model.fxn <- function(X, ...) {
   ## load VOXELWISE DATA - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   coords <- vxl.ls[X, ]
+  if (!is.na(DEBUG)) { print(sprintf("VOXEL: %0.0f %0.0f %0.0f", coords[1], coords[2], coords[3])) }
   df <- pf
   df$nii <- numeric(nrow(df))
   for (i in 1:nrow(df)) { df$nii[i] <- read.nii.voxel(df$fls[i], coords) }
-  
+  if (!is.na(DEBUG)) { print(">>>Data Loaded") }
+
   ## select appropriate model function - - - - - - - - - - - - - - - - - - - - -
+print(FORM)
   if (FUNC == "lm") {
-    mdl <- lm(FORM, df)
+    mdl <- lm(formula(FORM), df)
   } else if (FUNC == "lmer") {
-    mdl <- lmer(FORM, df)
+    mdl <- lmer(formula(FORM), df)
   }  else if (FUNC == "glmer") {
-    mdl <- glmer(FORM, df)
+    mdl <- glmer(formula(FORM), df)
   }
+  if (!is.na(DEBUG)) { print(">>>Models Run") }
 
   ## output Coefficient table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_COEF) {
     coef <- as.data.frame(summary(mdl)$coef)
+    if (!is.na(DEBUG)) { print(">>>COEF Table initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
-      coef$pFDR <- p.adjust(coef[ ,pmatch("P", colnames(coef))], method="BY", n=as.numeric(FDR_N))
+      coef$pFDR <- p.adjust(coef[ ,pmatch("P", colnames(coef))], method="BY", n=(FDR_N))
+      if (!is.na(DEBUG)) { print(">>>COEF FDR Calculated") }
     }
     ### Confidence Interval
-    if (~is.na(CI) && CI != FALSE) {
-      out.ci <- confint(mdl, method="Wald", level=as.numeric(CI)/100)
+    if (!is.na(CI) && CI != FALSE) {
+      out.ci <- confint(mdl, method="Wald", level=CI/100)
       coef <- cbind(coef, na.omit(out.ci))
+      if (!is.na(DEBUG)) { print(">>>COEF CI Calculated") }
     }
     table.to.nii(in.table = coef, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
+    if (!is.na(DEBUG)) { print(">>>COEF Table DONE") }
   }
 
   ## output ANOVA table - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_AOV) {
     aov <- Anova(mdl, type=3L, test.statistic="F")
+    if (!is.na(DEBUG)) { print(">>>AOV Table Initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
       aov$pFDR <- p.adjust(aov[ ,pmatch("P", colnames(aov))], method="BY", n=FDR_N)
+      if (!is.na(DEBUG)) { print(">>>AOV FDR Calculated") }
     }
     table.to.nii(in.table = aov, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
+    if (!is.na(DEBUG)) { print(">>>AOV Table DONE") }
   }
 
   ## output DIFFLSMEANS table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_DIFFLSMEANS) {
     dlsmeans <- difflsmeans(mdl)
+    if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table Initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
       dlsmeans$pFDR <- p.adjust(dlsmeans[ ,pmatch("P", colnames(dlsmeans))], method="BY", n=FDR_N)
+      if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS FDR Calculated") }
     }
     table.to.nii(in.table = dlsmeans, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
+    if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table DONE") }
   }
 
   if (VERBOSE) {
     print(sprintf("(%d, %d, %d) DONE, %d remaining", coords[1], coords[2], coords[3], n.vxls - X))
   }
 
-  write.nii.voxel(log.nii, coords, 2)
+  if (is.na(DEBUG)) { write.nii.voxel(log.nii, coords, 2) }
+  if (!is.na(DEBUG)) { print(">>>LOG Written") }
 }
 
-# Run voxels in parallel
-print("starting voxelwise models...")
-registerDoParallel(NUM_CORES)
-invisible(foreach(X=1:n.vxls) %dopar% model.fxn(X))
-stopImplicitCluster() # Stop parallelization
+if (!is.na(DEBUG)) {
+  for (X in 1:DEBUG) { model.fxn(X) }
+  print("DEBUG DONE")
+} else {
+  # Run voxels in parallel
+  print("starting voxelwise models...")
+  registerDoParallel(NUM_CORES)
+  invisible(foreach(X=1:n.vxls) %dopar% model.fxn(X))
+  stopImplicitCluster() # Stop parallelization
+}
+
 
