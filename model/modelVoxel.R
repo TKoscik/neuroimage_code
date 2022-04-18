@@ -177,7 +177,7 @@ model.fxn <- function(X, ...) {
 
   ## output DIFFLSMEANS table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_DIFFLSMEANS) {
-    dlsmeans <- difflsmeans(mdl)
+    dlsmeans <- as.data.frame(difflsmeans(mdl))
     rownames(dlsmeans) <- gsub(" - ", "minus", dlsmeans$levels)
     dlsmeans <- dlsmeans[, -c(1,2)]
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table Initialized") }
