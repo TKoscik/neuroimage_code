@@ -525,6 +525,8 @@ for (( i=0; i<${#PARAMS_DEFAULT[@]}; i++ )); do
     echo "ERROR [INC ${FCN_NAME}] ${VAR_NAME} required with no default"
     exit 3
   fi
+
+  eval 'if [[ ${#'${VAR_NAME}'} -eq 1 ]]; then '${VAR_NAME}'=(${'${VAR_NAME}'//;/ }); fi'
 done
 if [[ "${VERBOSE}" == "true" ]]; then echo " DONE"; fi
 
@@ -956,9 +958,6 @@ if [[ "${INITIALIZE_TRANSFORMS_PER_STAGE}" == "true" ]]; then
 else
   antsCoreg="${antsCoreg} --initialize-transforms-per-stage 0"
 fi
-if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
-  antsCoreg="${antsCoreg} --resrict-deformation ${RESTRICT_DEFORMATION}"
-fi
 if [[ "${INITIAL_FIXED_TRANSFORM}" == "default" ]]; then
   antsCoreg="${antsCoreg} --initial-fixed-transform [${MOVING[0]},${FIXED[0]},1]"
 elif [[ "${INITIAL_FIXED_TRANSFORM}" != "optional" ]]; then
@@ -991,6 +990,9 @@ for (( i=0; i<${#TRANSFORM[@]}; i++ )); do
   && [[ "${FIXED_MASK[0]}" != "optional" ]] \
   && [[ ${#FIXED_MASK[@]} -gt 1 ]]; then
     antsCoreg="${antsCoreg} --masks [${FIXED_MASK[${i}]},${MOVING_MASK[${i}]}]"
+  fi
+  if [[ "${RESTRICT_DEFORMATION}" != "optional" ]]; then
+    antsCoreg="${antsCoreg} --restrict-deformation ${RESTRICT_DEFORMATION[${i}]}"
   fi
   antsCoreg="${antsCoreg} --convergence ${CONVERGENCE[${i}]}"
   antsCoreg="${antsCoreg} --smoothing-sigmas ${SMOOTHING_SIGMAS[${i}]}"

@@ -116,12 +116,8 @@ if (RAND_ORDER) { vxl.ls <- vxl.ls[sample(1:n.vxls, n.vxls, replace=F), ] }
 ## check if there are no voxels
 if (n.vxls == 0) { stop("There are no voxels in the specified ROI to run") }
 
-print("THIS IS the FDR_N")
-print(str(FDR_N))
 FDR_N <- as.numeric(FDR_N)
 CI <- as.numeric(CI)
-print(str(FDR_N))
-print(str(CI))
 
 # specify model function -------------------------------------------------------
 model.fxn <- function(X, ...) {
@@ -134,7 +130,6 @@ model.fxn <- function(X, ...) {
   if (!is.na(DEBUG)) { print(">>>Data Loaded") }
 
   ## select appropriate model function - - - - - - - - - - - - - - - - - - - - -
-print(FORM)
   if (FUNC == "lm") {
     mdl <- lm(formula(FORM), df)
   } else if (FUNC == "lmer") {
@@ -183,6 +178,8 @@ print(FORM)
   ## output DIFFLSMEANS table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_DIFFLSMEANS) {
     dlsmeans <- difflsmeans(mdl)
+    rownames(dlsmeans) <- gsub(" - ", "minus", dlsmeans$levels)
+    dlsmeans <- dlsmeans[, -c(1,2)]
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table Initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
