@@ -178,21 +178,26 @@ model.fxn <- function(X, ...) {
   ## output DIFFLSMEANS table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_DIFFLSMEANS) {
     dlsmeans <- as.data.frame(difflsmeans(mdl))
+    print(str(df))
     print(str(dlsmeans))
     rownames(dlsmeans) <- gsub(" - ", "minus", dlsmeans$levels)
+    print(str(df))
     print(str(dlsmeans))
     dlsmeans <- dlsmeans[, -c(1,2)]
+    print(str(df))
     print(str(dlsmeans))
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table Initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
       dlsmeans$pFDR <- p.adjust(dlsmeans[ ,pmatch("P", colnames(dlsmeans))], method="BY", n=FDR_N)
+      print(str(df))
       print(str(dlsmeans))
       if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS FDR Calculated") }
     }
     table.to.nii(in.table = dlsmeans, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
+    print(str(df))
     print(str(dlsmeans))
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table DONE") }
   }
