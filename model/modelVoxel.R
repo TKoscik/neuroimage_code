@@ -60,10 +60,10 @@ if (!is.na(VAR_FACTOR)) {
   for (i in 1:length(factor_ls)) {
     factor_name <- unlist(strsplit(factor_ls[i], split=":"))[1]
     if (length(factor_name) == 1) {
-      pf[ , factor_name] <- as.factor(pf[ , factor_name])
+      pf[ , factor_name] <- factor(pf[ , factor_name])
     } else if (length(factor_name) == 2) {
       tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2])))
-      pf[ , factor_name[1]] <- as.factor(pf[ , factor_name[1]], levels=tlevels)
+      pf[ , factor_name[1]] <- factor(pf[ , factor_name[1]], levels=tlevels)
     }
   }
 }
@@ -178,18 +178,22 @@ model.fxn <- function(X, ...) {
   ## output DIFFLSMEANS table - - - - - - - - - - - - - - - - - - - - - - - - -
   if (OUT_DIFFLSMEANS) {
     dlsmeans <- as.data.frame(difflsmeans(mdl))
+    print(str(dlsmeans))
     rownames(dlsmeans) <- gsub(" - ", "minus", dlsmeans$levels)
+    print(str(dlsmeans))
     dlsmeans <- dlsmeans[, -c(1,2)]
     print(str(dlsmeans))
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table Initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
       dlsmeans$pFDR <- p.adjust(dlsmeans[ ,pmatch("P", colnames(dlsmeans))], method="BY", n=FDR_N)
+      print(str(dlsmeans))
       if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS FDR Calculated") }
     }
     table.to.nii(in.table = dlsmeans, coords=coords, save.dir=dir.save,
                  do.log=TRUE, model.string=FORM,
                  img.dims=img.dims, pixdim=pixdim, orient=orient)
+    print(str(dlsmeans))
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table DONE") }
   }
 
