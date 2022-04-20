@@ -60,10 +60,10 @@ if (!is.na(VAR_FACTOR)) {
   for (i in 1:length(factor_ls)) {
     factor_name <- unlist(strsplit(factor_ls[i], split=":"))[1]
     if (length(factor_name) == 1) {
-      pf[ , factor_name] <- as.factor(pf[ , factor_name])
+      pf[ , factor_name] <- factor(pf[ , factor_name])
     } else if (length(factor_name) == 2) {
       tlevels <- eval(parse(text=sprintf("c(%s)", factor_name[2])))
-      pf[ , factor_name[1]] <- as.factor(pf[ , factor_name[1]], levels=tlevels)
+      pf[ , factor_name[1]] <- factor(pf[ , factor_name[1]], levels=tlevels)
     }
   }
 }
