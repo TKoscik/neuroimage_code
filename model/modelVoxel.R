@@ -180,6 +180,7 @@ model.fxn <- function(X, ...) {
     dlsmeans <- as.data.frame(difflsmeans(mdl))
     rownames(dlsmeans) <- gsub(" - ", "minus", dlsmeans$levels)
     dlsmeans <- dlsmeans[, -c(1,2)]
+    print(str(dlsmeans))
     if (!is.na(DEBUG)) { print(">>>DIFFLSMEANS Table Initialized") }
     ### FDR correction
     if (!is.na(FDR_N)) {
