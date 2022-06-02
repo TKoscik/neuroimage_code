@@ -42,11 +42,11 @@ function egress {
 trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
-OPTS=$(getopt -o hvkl --long prefix:,\
+OPTS=$(getopt -o hnvkl --long prefix:,\
 image:,mask:,n-class:,class-label:,\
 dimension:,convergence:,likelihood-model:,mrf:,use-random:,posterior-form:,\
 dir-save:,dir-scratch:\
-help,verbose,keep,no-log -n 'parse-options' -- "$@")
+help,no-png,verbose,ants-verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
   echo "Failed parsing options" >&2
   exit 1
@@ -68,15 +68,19 @@ POSTERIOR_FORM=Socrates[0]
 DIR_SAVE=
 DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 HELP=false
-VERBOSE=0
+NO_PNG=false
+VERBOSE=false
+ANTS_VERBOSE=0
 KEEP=false
 
 while true; do
   case "$1" in
     -h | --help) HELP=true ; shift ;;
-    -v | --verbose) VERBOSE=1 ; shift ;;
+    -v | --verbose) VERBOSE=true ; shift ;;
+    --ants-verbose) ANTS_VERBOSE=1 ; shift ;;
     -k | --keep) KEEP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
+    -n | --no-png) NO_PNG=true ; shift ;;
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
@@ -101,7 +105,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FCN_NAME}"
   echo '  -h | --help              display command help'
   echo '  -v | --verbose           add verbose output to log file'
   echo '  -k | --keep              keep preliminary processing steps'
@@ -140,10 +143,7 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
-  if [[ -n "${SID}" ]]; then
-    DIR_SAVE=${DIR_SAVE}/ses-${SID}
-  fi
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/label/atropos+${N_CLASS}
 fi
 mkdir -p ${DIR_SCRATCH}
 mkdir -p ${DIR_SAVE}
@@ -154,25 +154,39 @@ fi
 
 # Resample images to 1mm isotropic voxels for GMM modeling,
 # useful for very large images
+if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>resampling to 1mm isotropic for initialization"; fi
 ResampleImage 3 ${IMAGE[0]} ${DIR_SCRATCH}/temp.nii.gz 1x1x1 0 0 1
 ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
 gunzip ${DIR_SCRATCH}/*.gz
 
 # fit a Gaussian mixture model to get initial values for k-means
-INIT_VALUES=($(Rscript ${INC_R}/histogramPeaksGMM.R \
+if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>estimating k-means seeds with GMM"; fi
+GMM_FIT=($(Rscript ${INC_R}/histogramPeaksGMM.R \
   ${DIR_SCRATCH}/temp.nii \
   ${DIR_SCRATCH}/mask.nii \
   ${DIR_SCRATCH} \
   "k" ${N_CLASS}))
+GMM_M=
+for (( i=0; i<${N_CLASS}; i++ )); do
+  unset TVAL
+  TVAL=${GMM_FIT[${i}]}
+  TVAL=(${TVAL//,/ })
+  GMM_M+=(${TVAL[0]})
+done
+INIT_VALUES=$(echo ${GMM_M[@]})
+INIT_VALUES=${INIT_VALUES// /,}
 
-# run Atropos tisue segmentation
+if [[ "${VERBOSE}" == "true" ]]; then echo -e "\t SEED VALUES:${INIT_VALUES[0]}"; fi
+
+# run Atropos tissue segmentation
+if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>running atropos tissue segmentation"; fi
 atropos_fcn="Atropos -d ${DIM}"
 atropos_fcn="${atropos_fcn} -c ${CONVERGENCE}"
 atropos_fcn="${atropos_fcn} -k ${LIKELIHOOD_MODEL}"
 atropos_fcn="${atropos_fcn} -m ${MRF}"
 atropos_fcn="${atropos_fcn} -r ${USE_RANDOM}"
 atropos_fcn="${atropos_fcn} -p ${POSTERIOR_FORM}"
-atropos_fcn="${atropos_fcn} -v ${VERBOSE}"
+atropos_fcn="${atropos_fcn} -v ${ANTS_VERBOSE}"
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
  atropos_fcn="${atropos_fcn} -a ${IMAGE[${i}]}"
 done
@@ -183,11 +197,22 @@ atropos_fcn="${atropos_fcn} -i kmeans[${N_CLASS},${INIT_VALUES}]"
 atropos_fcn="${atropos_fcn} -o [${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz,${DIR_SCRATCH}/posterior%d.nii.gz]"
 eval ${atropos_fcn}
 
+if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>saving results"; fi
 mv ${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz ${DIR_SAVE}/
 for (( i=0; i<${N_CLASS}; i++)); do
   POST_NUM=$((${i}+1))
   mv ${DIR_SCRATCH}/posterior${POST_NUM}.nii.gz ${DIR_SAVE}/${PREFIX}_posterior-${CLASS_LABEL[${i}]}
 done
+
+if [[ "${NO_PNG}" == "false" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>generating PNG"; fi
+  make3Dpng --bg ${IMAGE[${i}]} --bg-thresh "5,95" \
+  --fg ${DIR_SAVE}/${PIDSTR}_label-atropos+${N_CLASS}.nii.gz \
+  --fg-color "timbow" --fg-order "random" --fg-cbar "false" \
+  --layout "7:z;7:z;7:z;7:z" --offset "0,0,0" \
+  --filename ${PIDSTR}_label-atropos+${CLASS_N} \
+  --dir-save ${DIR_SAVE}
+fi
 
 #===============================================================================
 # End of Function

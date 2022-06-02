@@ -10,11 +10,11 @@ size <- 10000
 if (length(args)>3) {
   for (i in seq(4,length(args),2)) {
     if (args[i] == "k") {
-      k <- arg[i+1]
+      k <- as.numeric(args[i+1])
     } else if (args[i] == "iter") {
-      iter <- args[i+1]
+      iter <- as.numeric(args[i+1])
     } else if (args[i] == "size") {
-      size <- args[i+1]
+      size <- as.numeric(args[i+1])
     } 
   }
 }
