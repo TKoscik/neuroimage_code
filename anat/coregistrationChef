@@ -57,7 +57,7 @@ dir-template:,\
 template:,\
 space-source:,\
 space-target:,\
-dimensonality:,\
+dimensionality:,\
 save-state:,\
 restore-state:,\
 write-composite-transform,\
