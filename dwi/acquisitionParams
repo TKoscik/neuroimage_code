@@ -161,8 +161,8 @@ for i in ${DIR_DWI}/*_dwi.nii.gz; do
 
   SCANNER_TYPE=$(grep '"Manufacturer"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   SCANNER_TYPE=${SCANNER_TYPE::-1}
-  SCANNER_LOC=$(grep '"InstitutionName"' ${DTI_NAME}_dwi.json | awk '{print $2}')
-  SCANNER_LOC=${SCANNER_LOC::-1}
+ # SCANNER_LOC=$(grep '"InstitutionName"' ${DTI_NAME}_dwi.json | awk '{print $2}')
+ # SCANNER_LOC=${SCANNER_LOC::-1}
 
   PED_STRING=$(grep '"PhaseEncodingDirection"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   if [[ -z ${PED_STRING} ]]; then
