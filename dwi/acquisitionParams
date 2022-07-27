@@ -143,27 +143,35 @@ for i in ${DIR_DWI}/*_dwi.nii.gz; do
   NAME_BASE=${NAME_BASE::-11}
   DTI_NAME=${i::-11}
 
+#set up arrays with bvals
   B0s=($(cat ${DTI_NAME}_dwi.bval))
   NUM_B0s=0
 
   BVALS=($(cat ${DTI_NAME}_dwi.bval))
+#creates a refrence for each bval to a different line of the acq param file, one line per image 
   for j in "${BVALS[@]}"; do
     INDX="${INDX} ${ACQ_LINE}"
   done
+
+#seperate vector cordinateds into X Y & Z
   XVALS=($(sed "1q;d" ${DTI_NAME}_dwi.bvec))
   YVALS=($(sed "2q;d" ${DTI_NAME}_dwi.bvec))
   ZVALS=($(sed "3q;d" ${DTI_NAME}_dwi.bvec))
+
+#add seperated bvecs & bvals to a running array for all images
   TOTAL_BVALS="${TOTAL_BVALS} ${BVALS[@]}"
   echo $TOTAL_BVALS
   TOTAL_XVALS="${TOTAL_XVALS} ${XVALS[@]}"
   TOTAL_YVALS="${TOTAL_YVALS} ${YVALS[@]}"
   TOTAL_ZVALS="${TOTAL_ZVALS} ${ZVALS[@]}"
 
+#find scanner type from JSON file
   SCANNER_TYPE=$(grep '"Manufacturer"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   SCANNER_TYPE=${SCANNER_TYPE::-1}
-  SCANNER_LOC=$(grep '"InstitutionName"' ${DTI_NAME}_dwi.json | awk '{print $2}')
-  SCANNER_LOC=${SCANNER_LOC::-1}
+ # SCANNER_LOC=$(grep '"InstitutionName"' ${DTI_NAME}_dwi.json | awk '{print $2}')
+ # SCANNER_LOC=${SCANNER_LOC::-1}
 
+#find Phase encoding direction for the acq params file
   PED_STRING=$(grep '"PhaseEncodingDirection"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   if [[ -z ${PED_STRING} ]]; then
     PED_STRING=$(grep '"PhaseEncodingAxis"' ${DTI_NAME}_dwi.json | awk '{print $2}')
@@ -175,6 +183,7 @@ for i in ${DIR_DWI}/*_dwi.nii.gz; do
     PED=-1
   fi
 
+#find effective echo spacing for acq param file, if philips scanner it requires some math
   EES_STRING=$(grep '"EffectiveEchoSpacing"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   if [[ ${SCANNER_TYPE} == '"Philips"' ]]; then
     EES_STRING=$(grep '"PhilipsScaleSlope"' ${DTI_NAME}_dwi.json | awk '{print $2}')
@@ -184,16 +193,21 @@ for i in ${DIR_DWI}/*_dwi.nii.gz; do
     EES=$(echo "(${EES} / 10)" | bc -l)
   fi
   #"################################### preserve code highlighting on gitlab
+#find acquisition matrix PE 
   ACQ_MPE_STRING=$(grep '"AcquisitionMatrixPE"' ${DTI_NAME}_dwi.json | awk '{print $2}')
   ACQ_MPE=${ACQ_MPE_STRING::-1}
+#calculating the readout time 
   READOUT_TIME=$(echo "${EES} * ((${ACQ_MPE} / 2) - 1)" | bc -l)
   #"################################### preserve code highlighting on gitlab
+#creating the line for the acq param file that this image corresponds to
   echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_DWI}/${PREFIX}_dwisAcqParams.txt
+#adding to the acq line for the next image if one exists
   ACQ_LINE=$(echo "${ACQ_LINE} + 1" | bc -l)
 
+#find B0s in file and give an acq param line to each one
   touch ${DIR_DWI}/${NAME_BASE}_B0sAcqParams.txt
   for j in "${B0s[@]}"; do
-    k=$(echo "($j+0.5)/1" | bc)
+    k=$(echo "$j/10" | bc)
     #"################################### preserve code highlighting on gitlab
     if [ $k -eq 0 ]; then
       echo "0 ${PED} 0 ${READOUT_TIME}" >> ${DIR_DWI}/${NAME_BASE}_B0sAcqParams.txt

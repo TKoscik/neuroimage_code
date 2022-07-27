@@ -96,7 +96,6 @@ if [[ "${HELP}" == "true" ]]; then
   echo '------------------------------------------------------------------------'
   echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
   echo '------------------------------------------------------------------------'
-  echo "Usage: ${FUNC_NAME}"
   echo '  -h | --help              display command help'
   echo '  -c | --dry-run           test run of function'
   echo '  -v | --verbose           add verbose output to log file'
