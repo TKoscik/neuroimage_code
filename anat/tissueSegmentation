@@ -43,8 +43,8 @@ trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hnvkl --long prefix:,\
-image:,mask:,n-class:,class-label:,\
-dimension:,convergence:,likelihood-model:,mrf:,use-random:,posterior-form:,\
+image:,mask:,mask-dil:,n-class:,no-gmm-seed,class-label:,partial-set:,use-partial,\
+dimension:,initialization:,init-opts:,convergence:,likelihood-model:,mrf:,use-random:,posterior-formulation:,\
 dir-save:,dir-scratch:\
 help,no-png,verbose,ants-verbose,keep,no-log -n 'parse-options' -- "$@")
 if [[ $? != 0 ]]; then
@@ -57,9 +57,15 @@ eval set -- "$OPTS"
 PREFIX=
 IMAGE=
 MASK=
+MASK_DIL=0
 N_CLASS=
+NO_GMM_SEED=false
 CLASS_LABEL=
+PARTIAL_SET=
+USE_PARTIAL=false
 DIM=3
+INITIALIZATION="KMeans"
+INIT_OPTS=
 CONVERGENCE=[5,0.001]
 LIKELIHOOD_MODEL=Gaussian
 MRF=[0.1,1x1x1]
@@ -84,14 +90,20 @@ while true; do
     --prefix) PREFIX="$2" ; shift 2 ;;
     --image) IMAGE="$2" ; shift 2 ;;
     --mask) MASK="$2" ; shift 2 ;;
+    --mask-dil) MASK_DIL="$2" ; shift 2 ;;
     --n-class) N_CLASS="$2" ; shift 2 ;;
+    --no-gmm-seed) NO_GMM_SEED=true ; shift ;;
     --class-label) CLASS_LABEL="$2" ; shift 2 ;;
+    --partial-set) PARTIAL_SET="$2" ; shift 2 ;;
+    --use-partial) USE_PARTIAL=true ; shift ;;
     --dimension) DIM="$2" ; shift 2 ;;
+    --initialization) INITIALIZATION="$2" ; shift 2 ;;
+    --init-opts) INIT_OPTS="$2" ; shift 2 ;;
     --convergence) CONVERGENCE="$2" ; shift 2 ;;
     --likelihood-model) LIKELIHOOD_MODEL="$2" ; shift 2 ;;
     --mrf) MRF="$2" ; shift 2 ;;
     --use-random) USE_RANDOM="$2" ; shift 2 ;;
-    --posterior-form) POSTERIOR_FORM="$2" ; shift 2 ;;
+    --posterior-formulation) POSTERIOR_FORM="$2" ; shift 2 ;;
     --dir-save) DIR_SAVE="$2" ; shift 2 ;;
     --dir-scratch) DIR_SCRATCH="$2" ; shift 2 ;;
     -- ) shift ; break ;;
@@ -143,74 +155,137 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/label/atropos+${N_CLASS}
+  DIR_SAVE="${DIR_PROJECT}/derivatives/inc/anat/label/atropos"
 fi
 mkdir -p ${DIR_SCRATCH}
+echo ${DIR_SAVE}
 mkdir -p ${DIR_SAVE}
 
 if [[ -z "${CLASS_LABEL}" ]]; then
   CLASS_LABEL=($(seq 1 1 ${N_CLASS}))
+else
+  CLASS_LABEL=(${CLASS_LABEL//,/ })
 fi
 
-# Resample images to 1mm isotropic voxels for GMM modeling,
-# useful for very large images
-if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>resampling to 1mm isotropic for initialization"; fi
-ResampleImage 3 ${IMAGE[0]} ${DIR_SCRATCH}/temp.nii.gz 1x1x1 0 0 1
-ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
-gunzip ${DIR_SCRATCH}/*.gz
+# Dilate mask if specified -----------------------------------------------------
+MASK_ORIG=
+if [[ ${MASK_DIL} -gt 0 ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo ">>>>>dilating mask by ${MASK_DIL} voxels"
+  fi
+  ImageMath 3 ${DIR_SCRATCH}/mask_dil.nii.gz MD ${MASK} ${MASK_DIL}
+  MASK_ORIG=${MASK}
+  MASK=${DIR_SCRATCH}/mask_dil.nii.gz
+fi
 
-# fit a Gaussian mixture model to get initial values for k-means
-if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>estimating k-means seeds with GMM"; fi
-GMM_FIT=($(Rscript ${INC_R}/histogramPeaksGMM.R \
-  ${DIR_SCRATCH}/temp.nii \
-  ${DIR_SCRATCH}/mask.nii \
-  ${DIR_SCRATCH} \
-  "k" ${N_CLASS}))
-GMM_M=
-for (( i=0; i<${N_CLASS}; i++ )); do
-  unset TVAL
-  TVAL=${GMM_FIT[${i}]}
-  TVAL=(${TVAL//,/ })
-  GMM_M+=(${TVAL[0]})
-done
-INIT_VALUES=$(echo ${GMM_M[@]})
-INIT_VALUES=${INIT_VALUES// /,}
+# Fit Gaussian Mixture model to seed K-Means tissue segmentation ---------------
+## Resample images to 1mm isotropic voxels, useful for big images
+if [[ "${NO_GMM_SEED}" == "false" ]]; then
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo ">>>>>resampling to 1mm isotropic for initialization"
+  fi
+  ResampleImage 3 ${IMAGE[0]} ${DIR_SCRATCH}/temp.nii.gz 1x1x1 0 0 1
+  ResampleImage 3 ${MASK} ${DIR_SCRATCH}/mask.nii.gz 1x1x1 0 0 1
+  gunzip ${DIR_SCRATCH}/*.gz
 
-if [[ "${VERBOSE}" == "true" ]]; then echo -e "\t SEED VALUES:${INIT_VALUES[0]}"; fi
+  ## fit a Gaussian mixture model to get initial values for k-means
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo ">>>>>estimating k-means seeds with GMM"
+  fi
+  GMM_FIT=($(Rscript ${INC_R}/histogramPeaksGMM.R \
+    ${DIR_SCRATCH}/temp.nii \
+    ${DIR_SCRATCH}/mask.nii \
+    ${DIR_SCRATCH} \
+    "k" ${N_CLASS}))
+  GMM_M=
+  for (( i=0; i<${N_CLASS}; i++ )); do
+    unset TVAL
+    TVAL=${GMM_FIT[${i}]}
+    TVAL=(${TVAL//,/ })
+    GMM_M+=(${TVAL[0]})
+  done
+  INIT_VALUES=$(echo ${GMM_M[@]})
+  INIT_VALUES=${INIT_VALUES// /x}
 
-# run Atropos tissue segmentation
-if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>running atropos tissue segmentation"; fi
-atropos_fcn="Atropos -d ${DIM}"
-atropos_fcn="${atropos_fcn} -c ${CONVERGENCE}"
-atropos_fcn="${atropos_fcn} -k ${LIKELIHOOD_MODEL}"
-atropos_fcn="${atropos_fcn} -m ${MRF}"
-atropos_fcn="${atropos_fcn} -r ${USE_RANDOM}"
-atropos_fcn="${atropos_fcn} -p ${POSTERIOR_FORM}"
-atropos_fcn="${atropos_fcn} -v ${ANTS_VERBOSE}"
+  if [[ "${VERBOSE}" == "true" ]]; then
+    echo -e "\t SEED VALUES:${INIT_VALUES[0]}"
+  fi
+fi
+
+# run Atropos tissue segmentation ----------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo ">>>>>generating Atropos function call"
+fi
+
+atropos_fcn="Atropos --image-dimensionality ${DIM}"
+
 for (( i=0; i<${NUM_IMAGE}; i++ )); do
- atropos_fcn="${atropos_fcn} -a ${IMAGE[${i}]}"
+  atropos_fcn="${atropos_fcn} --intensity-image ${IMAGE[${i}]}"
 done
-if [ -n "${MASK}" ]; then
-  atropos_fcn="${atropos_fcn} -x ${MASK}"
+
+atropos_fcn="${atropos_fcn} --initialization ${INITIALIZATION}[${N_CLASS}"
+if [[ -n "${INIT_OPTS}" ]]; then
+  atropos_fcn="${atropos_fcn},${INIT_OPTS}]"
+elif [[ "${NO_GMM_SEED}" == "false" ]]; then
+  atropos_fcn="${atropos_fcn},${INIT_VALUES[0]}]"
+else
+  atropos_fcn="${atropos_fcn}]"
 fi
-atropos_fcn="${atropos_fcn} -i kmeans[${N_CLASS},${INIT_VALUES}]"
+
+if [[ -n ${PARTIAL_SET} ]]; then
+  PARTIAL_SET=(${PARTIAL_SET//,/ })
+  for (( i=0; i<${#PARTIAL_SET[@]}; i++ )); do
+    atropos_fcn="${atropos_fcn} --partial-volume-label-set ${PARTIAL_SET[${i}]}"
+  done
+fi
+
+if [[ "${USE_PARTIAL}" == "true" ]]; then
+  atropos_fcn="${atropos_fcn} --use-partial-volume-likelihoods 1"
+fi
+
+atropos_fcn="${atropos_fcn} --posterior-formulation ${POSTERIOR_FORM}"
+if [[ -n "${MASK}" ]]; then
+  atropos_fcn="${atropos_fcn} --mask-image ${MASK}"
+fi
+atropos_fcn="${atropos_fcn} --convergence ${CONVERGENCE}"
+atropos_fcn="${atropos_fcn} --likelihood-model ${LIKELIHOOD_MODEL}"
+atropos_fcn="${atropos_fcn} --mrf ${MRF}"
+atropos_fcn="${atropos_fcn} --use-random-seed ${USE_RANDOM}"
+atropos_fcn="${atropos_fcn} --verbose ${ANTS_VERBOSE}"
 atropos_fcn="${atropos_fcn} -o [${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz,${DIR_SCRATCH}/posterior%d.nii.gz]"
+
+if [[ "${VERBOSE}" == "true" ]]; then echo "${atropos_fcn}"; fi
+
+# run Atropos ------------------------------------------------------------------
+if [[ "${VERBOSE}" == "true" ]]; then
+  echo ">>>>>run Atropos"
+fi
 eval ${atropos_fcn}
 
+# apply mask if previously dilated ---------------------------------------------
+if [[ ${MASK_DIL} -gt 0 ]]; then
+  fslmaths ${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz \
+    -mas ${MASK_ORIG} \
+    ${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz
+fi
+
+# save output ------------------------------------------------------------------
 if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>saving results"; fi
 mv ${DIR_SCRATCH}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz ${DIR_SAVE}/
 for (( i=0; i<${N_CLASS}; i++)); do
   POST_NUM=$((${i}+1))
-  mv ${DIR_SCRATCH}/posterior${POST_NUM}.nii.gz ${DIR_SAVE}/${PREFIX}_posterior-${CLASS_LABEL[${i}]}
+  mv ${DIR_SCRATCH}/posterior${POST_NUM}.nii.gz \
+     ${DIR_SAVE}/${PREFIX}_posterior-${CLASS_LABEL[${i}]}.nii.gz
 done
 
+# generate PNG -----------------------------------------------------------------
 if [[ "${NO_PNG}" == "false" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo ">>>>>generating PNG"; fi
-  make3Dpng --bg ${IMAGE[${i}]} --bg-thresh "5,95" \
-  --fg ${DIR_SAVE}/${PIDSTR}_label-atropos+${N_CLASS}.nii.gz \
+  make3Dpng --bg ${IMAGE[0]} \
+  --fg ${DIR_SAVE}/${PREFIX}_label-atropos+${N_CLASS}.nii.gz \
   --fg-color "timbow" --fg-order "random" --fg-cbar "false" \
   --layout "7:z;7:z;7:z;7:z" --offset "0,0,0" \
-  --filename ${PIDSTR}_label-atropos+${CLASS_N} \
+  --filename ${PREFIX}_label-atropos+${N_CLASS} \
   --dir-save ${DIR_SAVE}
 fi
 
@@ -218,4 +293,5 @@ fi
 # End of Function
 #===============================================================================
 exit 0
+
 

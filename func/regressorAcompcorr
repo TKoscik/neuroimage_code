@@ -113,7 +113,7 @@ fi
 DIRPID="sub-${PID}"
 if [[ -n ${SID} ]]; then DIRPID="${DIRPID}/ses-${SID}"; fi
 if [[ -z "${PREFIX}" ]]; then PREFIX=$(getBidsBase -s -i ${TS}); fi
-if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressors/${DIRPID}; fi
+if [[ -z "${DIR_SAVE}" ]]; then DIR_SAVE=${DIR_PROJECT}/derivatives/inc/func/regressor/${DIRPID}; fi
 mkdir -p ${DIR_SAVE}
 
 if [[ -z ${LABEL} ]]; then
