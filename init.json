@@ -58,7 +58,7 @@
         },
         "DCM2NIIX": {
             "hostname": "all",
-            "version": "1.0.20200331",
+            "version": "1.0.20211006",
             "command": {"cmd1": "export ${SW_NAME}=${PINCAPP}/dcm2niix/Linux/x86_64/${SW_VERSION}/dcm2niix"}
         },
         "DSISTUDIO": {
