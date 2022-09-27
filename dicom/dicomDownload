@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 # DICOM download from XNAT
-# Authors: Steve Slevinski, Timothy R. Koscik
+# Authors: Steve Slevinski, Timothy R. Koscik, & Josh Cochran
 # Date: 2021-01-27
 #===============================================================================
 PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
