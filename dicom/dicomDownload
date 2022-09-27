@@ -152,7 +152,7 @@ echo "WHAT DATE " ${DATE_LS[${i}]}
   DTE=${DATE_LS[${i}]}
   echo ${DTE}
   
-  if [[ curl -fql ${URL} ]]; then 
+  if [[ curl -fqI -X GET -u ${UP} ${URL} ]]; then 
   echo 1 
   else 
   echo 0 
