@@ -148,7 +148,7 @@ echo "BEFORE FOR"
 for (( i=0; i<${#DATE_LS[@]}; i++ )); do
 echo "WHAT DATE " ${DATE_LS[${i}]}
   URL="https://rpacs.iibi.uiowa.edu/xnat/data/projects/"${XNAT_PROJECT}"/experiments?format=csv"
-  curl -X GET -u ${UP} ${URL} --silent --show-error \
+  curl -X GET -u ${UP} ${URL} -v --show-error \
     | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
     | grep ${DATE_LS[${i}]} \
     > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
