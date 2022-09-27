@@ -1,4 +1,6 @@
 #!/bin/bash -e
+
+source /Shared/inc_scratch/dev_code/inc_source.sh
 #===============================================================================
 # DICOM download from XNAT
 # Authors: Steve Slevinski, Timothy R. Koscik
