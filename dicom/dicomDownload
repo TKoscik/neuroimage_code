@@ -154,6 +154,7 @@ for (( i=0; i<${#DATE_LS[@]}; i++ )); do
   FNAME=${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 
   if [[ -s ${FNAME} ]]; then
+  echo "GOT TO IF"
     while read PID DT; do
       echo "PID" ${PID}
       echo "DT" ${DT}
@@ -163,6 +164,7 @@ for (( i=0; i<${#DATE_LS[@]}; i++ )); do
     done < ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
     rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
   else
+  echo "GOT TO THE ELSE"
     rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
   fi
 
