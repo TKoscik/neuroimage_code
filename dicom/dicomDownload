@@ -1,6 +1,4 @@
 #!/bin/bash -e
-
-source /Shared/inc_scratch/dev_code/inc_source.sh
 #===============================================================================
 # DICOM download from XNAT
 # Authors: Steve Slevinski, Timothy R. Koscik
@@ -147,28 +145,16 @@ if [[ "${#DATE_LS[@]}" == "2" ]]; then
 fi
 
 # download scans from specified project and date range -------------------------
-echo "BEFORE FOR"
 for (( i=0; i<${#DATE_LS[@]}; i++ )); do
-echo "WHAT DATE " ${DATE_LS[${i}]}
   URL="https://rpacs.iibi.uiowa.edu/xnat/data/projects/${XNAT_PROJECT}/experiments?format=csv"
-  DTE=${DATE_LS[${i}]}
-  echo ${DTE}
-  
-  echo "CURL3"
-  curl -X GET -u ${UP} ${URL} -f --show-error 2>&1 \
-    | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
-    | grep "${DTE}" 
-
-  echo "CURL4!!!"
-  curl -X GET -u ${UP} ${URL} -s --show-error \
+  curl -X GET -u ${UP} ${URL} -s --show-error --stderr - \
     | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
     | grep ${DATE_LS[${i}]} \
     > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
-  echo "BEFORE FNAME"
+
   FNAME=${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
-  echo "FNAME" ${FNAME}
+
   if [[ -s ${FNAME} ]]; then
-  echo "GOT TO IF"
     while read PID DT; do
       echo "PID" ${PID}
       echo "DT" ${DT}
@@ -178,7 +164,6 @@ echo "WHAT DATE " ${DATE_LS[${i}]}
     done < ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
     rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
   else
-  echo "GOT TO THE ELSE"
     rm ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
   fi
 
