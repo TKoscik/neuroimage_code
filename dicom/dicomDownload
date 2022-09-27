@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #===============================================================================
 # DICOM download from XNAT
 # Authors: Steve Slevinski, Timothy R. Koscik
@@ -17,16 +17,16 @@ NO_LOG=false
 umask 007
 
 # actions on exit, write to logs, clean scratch
-#function egress {
-#  EXIT_CODE=$?
-#  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
-#  if [[ "${NO_LOG}" == "false" ]]; then
-#    unset LOGSTR
-#    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},$#{PROC_STOP},${EXIT_CODE}"
-#    writeLog --benchmark --string ${LOGSTR}
-#  fi
-#}
-#trap egress EXIT
+function egress {
+ EXIT_CODE=$?
+ PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+ if [[ "${NO_LOG}" == "false" ]]; then
+   unset LOGSTR
+   LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},$#{PROC_STOP},${EXIT_CODE}"
+   writeLog --benchmark --string ${LOGSTR}
+ fi
+}
+trap egress EXIT
 
 # Parse inputs -----------------------------------------------------------------
 OPTS=$(getopt -o hvl --long prefix:,\
@@ -52,6 +52,7 @@ while true; do
     -h | --help) HELP=true ; shift ;;
     -l | --no-log) NO_LOG=true ; shift ;;
     --xnat-project) XNAT_PROJECT="$2" ; shift 2 ;;
+    --up) UP="$2" ; shift 2 ;;
     --download-date) DOWNLOAD_DATE="$2" ; shift 2 ;;
     --pi) PI="$2" ; shift 2 ;;
     --project) PROJECT="$2" ; shift 2 ;;
@@ -103,7 +104,8 @@ if [[ -z ${UP} ]]; then
     exit 1
   fi
 else
-  UP=$(cat ${UP})
+  #UP=$(cat ${UP})
+  UP=${UP}
 fi
 
 # make save directory if non standard ------------------------------------------
@@ -112,7 +114,7 @@ if [[ "${DIR_SAVE}" != "${INC_IMPORT}" ]]; then
 fi
 
 # use lookup table if PI and.or project unspecified ----------------------------
-if [[ -z ${PI} ]] |
+if [[ -z ${PI} ]] ||
    [[ -z ${PROJECT} ]]; then
   XNAT_LS=($(getColumn -i ${INC_DB}/projects.tsv -f xnat_project))
   for (( i=1; i<${#XNAT_LS[@]}; i++ )); do
@@ -148,10 +150,11 @@ fi
 for (( i=0; i<${#DATE_LS[@]}; i++ )); do
   echo "DATE: " ${DATE_LS[${i}]}
   URL="https://rpacs.iibi.uiowa.edu/xnat/data/projects/${XNAT_PROJECT}/experiments?format=csv"
-  curl -X GET -u ${UP} ${URL} -s --show-error \
+  curl -X GET -u ${UP} ${URL} --show-error \
     | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
-    | grep ${DATE_LS[${i}]} \
+    | grep "${DATE_LS[${i}]}" \
     > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
+    echo "EXIT STATUS OF PREVIOUS IS:::    $?"
 
   FNAME=${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 
@@ -159,7 +162,7 @@ for (( i=0; i<${#DATE_LS[@]}; i++ )); do
     while read PID DT; do
       echo "PID" ${PID}
       echo "DT" ${DT}
-      URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/"${PID}"/scans/ALL/files?format=zip"
+      URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/${PID}/scans/ALL/files?format=zip"
       curl -X GET -u $UP $URL --fail --silent --show-error \
       > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_"${PID}"_"${DT//[-:. ]}".zip"
     done < ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
