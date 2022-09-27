@@ -136,15 +136,11 @@ if [[ -z ${DOWNLOAD_DATE} ]]; then
   DOWNLOAD_DATE=$(date -d "yesterday 13:00" '+%Y-%m-%d')
 fi
 DATE_LS=(${DOWNLOAD_DATE//:/ })
-echo "DATE_LS" ${DATE_LS[@]}
 if [[ "${#DATE_LS[@]}" == "2" ]]; then
   start_time=$(date -u -d 'TZ="UTC" '${DATE_LS[0]}' 00:00:00' '+%s')  
-  echo "START TIME" ${start_time} 
   end_time=$(date -u -d 'TZ="UTC" '${DATE_LS[1]}' 23:59:59' '+%s')
-  echo "END TIME" ${end_time}
   interval=86400
   DATE_LS=($(seq ${start_time} ${interval} ${end_time} | xargs -I{} date -u -d 'TZ="UTC" @'{} '+%F'))
-  echo "DATE_LS PART 2" ${DATE_LS[@]}
 fi
 
 # download scans from specified project and date range -------------------------
@@ -159,6 +155,8 @@ for (( i=0; i<${#DATE_LS[@]}; i++ )); do
 
   if [[ -s ${FNAME} ]]; then
     while read PID DT; do
+      echo "PID" ${PID}
+      echo "DT" ${DT}
       URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/"${PID}"/scans/ALL/files?format=zip"
       curl -X GET -u $UP $URL --fail --silent --show-error \
       > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_"${PID}"_"${DT//[-:. ]}".zip"
