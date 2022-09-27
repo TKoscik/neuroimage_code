@@ -152,7 +152,7 @@ echo "WHAT DATE " ${DATE_LS[${i}]}
   DTE=${DATE_LS[${i}]}
   echo ${DTE}
   echo "CURL3"
-  curl -X GET -u ${UP} ${URL} -s --show-error \
+  curl -X GET -u ${UP} ${URL} -s -f --show-error \
     | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
     | grep "${DTE}" 
 
