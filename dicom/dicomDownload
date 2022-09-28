@@ -159,8 +159,6 @@ for (( i=0; i<${#DATE_LS[@]}; i++ )); do
 
   if [[ -s ${FNAME} ]]; then
     while read PID DT; do
-      echo "PID" ${PID}
-      echo "DT" ${DT}
       URL="https://rpacs.iibi.uiowa.edu/xnat/data/experiments/${PID}/scans/ALL/files?format=zip"
       curl -X GET -u $UP $URL --fail --silent --show-error \
       > ${DIR_SAVE}"/pi-"${PI}"_project-"${PROJECT}"_"${PID}"_"${DT//[-:. ]}".zip"
