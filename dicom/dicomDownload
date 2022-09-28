@@ -150,11 +150,10 @@ fi
 for (( i=0; i<${#DATE_LS[@]}; i++ )); do
   echo "DATE: " ${DATE_LS[${i}]}
   URL="https://rpacs.iibi.uiowa.edu/xnat/data/projects/${XNAT_PROJECT}/experiments?format=csv"
-  curl -X GET -u ${UP} ${URL} --show-error \
+  curl -X GET -u ${UP} ${URL} -s --show-error \
     | awk -F "\"*,\"*" '{ print $2"\t"$7 }' \
     | grep "${DATE_LS[${i}]}" \
     > ${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
-    echo "EXIT STATUS OF PREVIOUS IS:::    $?"
 
   FNAME=${DIR_SAVE}"/"${XNAT_PROJECT}_${DATE_LS[${i}]}".pids"
 
