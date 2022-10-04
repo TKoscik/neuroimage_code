@@ -97,13 +97,13 @@ if [[ -n ${SID} ]]; then
   PIDSTR=${PIDSTR}_ses-${SID}
 fi
 
-if [[ "${DIR_VAL,,}" == "default" ]]; then
+if [[ -z ${DIR_VAL} ]]; then
   DIR_VAL=${DIR_PROJECT}/derivatives/inc/dwi/bval+bvec
 fi
-if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
+if [[ -z ${DIR_SCRATCH} ]]; then
   DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
 fi
-if [[ "${DIR_PREP,,}" == "default" ]]; then
+if [[ -z ${DIR_PREP} ]]; then
   DIR_PREP=${DIR_PROJECT}/derivatives/inc/dwi/prep/${DIRPID}
 fi
 
