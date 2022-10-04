@@ -132,7 +132,7 @@ for j in ${!BVALS[@]}; do
 
  if [ ${k} -ge 95 ]; then
    if [ ${k} -le 140 ]; then
-     echo ${BVALS[${j}]}
+#     echo ${BVALS[${j}]}
      mv ${DIR_SCRATCH}/split/${PIDSTR}-split-*000${j}.nii.gz ${DIR_SCRATCH}/split_keep
      TOTAL_BVALS="${TOTAL_BVALS} ${BVALS[${j}]}"
      TOTAL_XVALS="${TOTAL_XVALS} ${XVALS[${j}]}"
@@ -140,7 +140,7 @@ for j in ${!BVALS[@]}; do
      TOTAL_ZVALS="${TOTAL_ZVALS} ${ZVALS[${j}]}"
    fi
  elif [ ${k} -eq 0 ]; then
-   echo ${BVALS[${j}]}
+#   echo ${BVALS[${j}]}
    mv ${DIR_SCRATCH}/split/${PIDSTR}-split-*000${j}.nii.gz ${DIR_SCRATCH}/split_keep
    TOTAL_BVALS="${TOTAL_BVALS} ${BVALS[${j}]}"
    TOTAL_XVALS="${TOTAL_XVALS} ${XVALS[${j}]}"
