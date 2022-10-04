@@ -1,0 +1,176 @@
+#!/bin/bash -e
+#===============================================================================
+# Function Description
+# Authors: Josh Cochran
+# Date: 7/1/2020
+#===============================================================================
+PROC_START=$(date +%Y-%m-%dT%H:%M:%S%z)
+FCN_NAME=($(basename "$0"))
+DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
+OPERATOR=$(whoami)
+KERNEL="$(uname -s)"
+HARDWARE="$(uname -m)"
+HPC_Q=${QUEUE}
+HPC_SLOTS=${NSLOTS}
+KEEP=false
+NO_LOG=false
+umask 007
+
+# actions on exit, write to logs, clean scratch
+function egress {
+  EXIT_CODE=$?
+  PROC_STOP=$(date +%Y-%m-%dT%H:%M:%S%z)
+  if [[ "${KEEP}" == "false" ]]; then
+    if [[ -n ${DIR_SCRATCH} ]]; then
+      if [[ -d ${DIR_SCRATCH} ]]; then
+        if [[ "$(ls -A ${DIR_SCRATCH})" ]]; then
+          rm -R ${DIR_SCRATCH}
+        else
+          rmdir ${DIR_SCRATCH}
+        fi
+      fi
+    fi
+  fi
+  if [[ "${NO_LOG}" == "false" ]]; then
+    unset LOGSTR
+    LOGSTR="${OPERATOR},${DIR_PROJECT},${PID},${SID},${HARDWARE},${KERNEL},${HPC_Q},${HPC_SLOTS},${FCN_NAME},${PROC_START},${PROC_STOP},${EXIT_CODE}"
+    writeLog --benchmark --string ${LOGSTR}
+  fi
+}
+trap egress EXIT
+
+# Parse inputs -----------------------------------------------------------------
+OPTS=$(getopt -o hl --long dir-val:,\
+dir-prep:,dwi:,\
+help,no-log -n 'parse-options' -- "$@")
+if [ $? != 0 ]; then
+  echo "Failed parsing options" >&2
+  exit 1
+fi
+eval set -- "$OPTS"
+
+# Set default values for function ---------------------------------------------
+DIR_VAL=
+DWI=
+DIR_PREP=
+HELP=false
+
+while true; do
+  case "$1" in
+    -h | --help) HELP=true ; shift ;;
+    -l | --no-log) NO_LOG=true ; shift ;;
+    --dir-val) DIR_VAL="$2" ; shift 2 ;;
+    --dwi) DWI="$2" ; shift 2 ;;
+    --dir-prep) DIR_PREP="$2" ; shift 2 ;;
+    -- ) shift ; break ;;
+    * ) break ;;
+  esac
+done
+
+# Usage Help -------------------------------------------------------------------
+if [[ "${HELP}" == "true" ]]; then
+  echo ''
+  echo '------------------------------------------------------------------------'
+  echo "Iowa Neuroimage Processing Core: ${FCN_NAME}"
+  echo '------------------------------------------------------------------------'
+  echo '  -h | --help              display command help'
+  echo '  -l | --no-log            disable writing to output log'
+  echo '  --dir-val <value>        directory with bvec & bval files'
+  echo '  --dwi <value>            eddy corrected image'
+  echo '  --dir-prep <value>       working dwi directory'
+  echo ''
+  NO_LOG=true
+  exit 0
+fi
+
+#===============================================================================
+# Start of Function
+#===============================================================================
+# Set up BIDs compliant variables and workspace --------------------------------
+DIR_PROJECT=$(getDir -i ${DWI})
+PID=$(getField -i ${DWI} -f sub)
+SID=$(getField -i ${DWI} -f ses)
+DIRPID=sub-${PID}
+PIDSTR=sub-${PID}
+if [[ -n ${SID} ]]; then
+  DIRPID=${DIRPID}/ses-${SID}
+  PIDSTR=${PIDSTR}_ses-${SID}
+fi
+
+if [[ "${DIR_VAL,,}" == "default" ]]; then
+  DIR_VAL=${DIR_PROJECT}/derivatives/inc/dwi/bval+bvec
+fi
+if [[ "${DIR_SCRATCH,,}" == "default" ]]; then
+  DIR_SCRATCH=${INC_SCRATCH}/${OPERATOR}_${DATE_SUFFIX}
+fi
+if [[ "${DIR_PREP,,}" == "default" ]]; then
+  DIR_PREP=${DIR_PROJECT}/derivatives/inc/dwi/prep/${DIRPID}
+fi
+
+mkdir -p ${DIR_PREP}
+mkdir -p ${DIR_SCRATCH}
+
+
+#seperate vector cordinateds into X Y & Z
+  XVALS=($(sed "1q;d" ${DIR_VAL}/${PIDSTR}.bvec))
+  YVALS=($(sed "2q;d" ${DIR_VAL}/${PIDSTR}.bvec))
+  ZVALS=($(sed "3q;d" ${DIR_VAL}/${PIDSTR}.bvec))
+
+#Get the bvals 
+  BVALS=($(cat ${DIR_VAL}/${PIDSTR}.bval))
+
+#Split dwi file into componet sections
+  mkdir -p ${DIR_SCRATCH}/split
+  fslsplit ${DWI} ${DIR_SCRATCH}/split/${PIDSTR}-split-0000 -t
+ 
+  mkdir -p ${DIR_SCRATCH}/split_keep
+
+#Sort to find the appropiate files
+for j in ${!BVALS[@]}; do 
+ unset k
+ k=$(echo "(${BVALS[${j}]}/10)" | bc)
+
+ if [ ${k} -ge 95 ]; then
+   if [ ${k} -le 140 ]; then
+     echo ${BVALS[${j}]}
+     mv ${DIR_SCRATCH}/split/${PIDSTR}-split-*000${j}.nii.gz ${DIR_SCRATCH}/split_keep
+     TOTAL_BVALS="${TOTAL_BVALS} ${BVALS[${j}]}"
+     TOTAL_XVALS="${TOTAL_XVALS} ${XVALS[${j}]}"
+     TOTAL_YVALS="${TOTAL_YVALS} ${YVALS[${j}]}"
+     TOTAL_ZVALS="${TOTAL_ZVALS} ${ZVALS[${j}]}"
+   fi
+ elif [ ${k} -eq 0 ]; then
+   echo ${BVALS[${j}]}
+   mv ${DIR_SCRATCH}/split/${PIDSTR}-split-*000${j}.nii.gz ${DIR_SCRATCH}/split_keep
+   TOTAL_BVALS="${TOTAL_BVALS} ${BVALS[${j}]}"
+   TOTAL_XVALS="${TOTAL_XVALS} ${XVALS[${j}]}"
+   TOTAL_YVALS="${TOTAL_YVALS} ${YVALS[${j}]}"
+   TOTAL_ZVALS="${TOTAL_ZVALS} ${ZVALS[${j}]}"
+ fi
+done
+
+#combine image by time
+B_SPLITS=($(ls ${DIR_SCRATCH}/split_keep))
+if [ ${#B_SPLITS[@]} -ne 0 ];then
+  fslmerge -t ${DIR_SCRATCH}/${PIDSTR}_b0+b1000_dwi.nii.gz ${DIR_SCRATCH}/split_keep/${PIDSTR}*
+fi  
+rm -r ${DIR_SCRATCH}/split
+
+#make new bvec and bval files
+echo $TOTAL_BVALS > ${DIR_SCRATCH}/${PIDSTR}_b0+b1000.bval
+echo $TOTAL_XVALS > ${DIR_SCRATCH}/XVals.txt
+echo $TOTAL_YVALS > ${DIR_SCRATCH}/YVals.txt
+echo $TOTAL_ZVALS > ${DIR_SCRATCH}/ZVals.txt
+cat ${DIR_SCRATCH}/XVals.txt ${DIR_SCRATCH}/YVals.txt ${DIR_SCRATCH}/ZVals.txt >> ${DIR_SCRATCH}/${PIDSTR}_b0+b1000.bvec
+
+#move to new home
+mv ${DIR_SCRATCH}/${PIDSTR}_b0+b1000.bvec ${DIR_PREP}
+mv ${DIR_SCRATCH}/${PIDSTR}_b0+b1000.bval ${DIR_PREP}
+mv ${DIR_SCRATCH}/${PIDSTR}_b0+b1000_dwi.nii.gz ${DIR_PREP}
+
+
+#===============================================================================
+# End of Function
+#===============================================================================
+exit 0
+
