@@ -80,6 +80,7 @@ Choose ONE of:
 EOF
     exit 1
 }
+SCRIPT_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 [ "$1" = "" ] && Usage
 
@@ -165,13 +166,13 @@ else
     echo "affine-registering target to Waxholm space"
     $FSLDIR/bin/fslmaths target -bin target_mask
     #$FSLDIR/bin/flirt -in target -inweight target_mask -ref $FSLDIR/data/standard/FMRIB58_FA_1mm -omat target_to_MNI152.mat -out target_to_MNI152
-    $FSLDIR/bin/flirt -in target -ref /home/zjpeters/Documents/mouseDevelopmental/templates/waxholm_200um.nii.gz -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -omat target_to_waxholm.mat -out target_to_waxholm
+    $FSLDIR/bin/flirt -in target -ref ${SCRIPT_DIR}/data/waxholm_200um.nii.gz -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -omat target_to_waxholm.mat -out target_to_waxholm
 
     echo "transforming (and upsampling) all FA images into Waxholm space"
     for f in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
 	     echo $f
 #	$FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r $FSLDIR/data/standard/FMRIB58_FA_1mm -w ${f}_to_${best}_warp --postmat=target_to_MNI152.mat
-      $FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r /home/zjpeters/Documents/mouseDevelopmental/templates/waxholm_200um.nii.gz -w ${f}_to_${best}_warp.nii.gz --postmat=target_to_waxholm.mat
+      $FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r ${SCRIPT_DIR}/data/waxholm_200um.nii.gz -w ${f}_to_${best}_warp.nii.gz --postmat=target_to_waxholm.mat
 #  $FSLDIR/bin/applywarp -i ${f}_to_target -o ${f}_to_waxholm -r /home/zjpeters/Documents/mouseDevelopmental/templates/waxholm_subsamp4.nii.gz -w target_to_waxholm.mat
     done
 

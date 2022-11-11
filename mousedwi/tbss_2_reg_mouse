@@ -82,7 +82,8 @@ Target-selection options - choose ONE of:
 EOF
     exit 1
 }
-
+# added this to grab the directory that this script is running from to redirect the inputs for the config and template files
+SCRIPT_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 do_reg(){
 
     f=$1
@@ -94,7 +95,7 @@ do_reg(){
 	if [ ! -f ${o}_warp.msf ] ; then
 	    echo $o
 	    touch ${o}_warp.msf
-	    echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -flirt \"-searchrx -180 180 -searchry -180 180 -searchrz -180 180\" -fnirt \"--config=/home/zjpeters/Documents/mouseDevelopmental/templates/FA_2_Waxholm_200um.cnf\"" >> .commands
+	    echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -flirt \"-searchrx -180 180 -searchry -180 180 -searchrz -180 180\" -fnirt \"--config=${SCRIPT_DIR}/data/FA_2_Waxholm_200um.cnf\"" >> .commands
 	fi
 
     done
@@ -113,7 +114,7 @@ if [ $1 = -n ] ; then
     done
 else
     if [ $1 = -T ] ; then
-	TARGET=/home/zjpeters/Documents/mouseDevelopmental/templates/waxholm_200um.nii.gz
+	TARGET=${SCRIPT_DIR}/data/waxholm_200um.nii.gz
     elif [ $1 = -t ] ; then
 	TARGET=$2
     else
