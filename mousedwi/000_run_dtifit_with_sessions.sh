@@ -61,9 +61,11 @@ while read participant_id age sex genotype; do
         if [ ! -d $derivatives/$participant_id ]; then
           mkdir ${derivatives}/${participant_id}
         fi
-        if [ ! -d ${derivatives}/${participant_id}/dtifit ]
+        if [ ! -d ${derivatives}/${participant_id}/dtifit ]; then
+          mkdir ${derivatives}/${participant_id}/dtifit
+        fi
         echo $participant_id $session_id; # prints the current subject info
-        run_dtifit &
+        run_dtifit
       done < $rawdata/${participant_id}/sessions.tsv
     fi
 done < $rawdata/participants.tsv
