@@ -19,7 +19,7 @@ run_dtifit(){
   fslmaths ${outputDir}/${participant_id}_${session_id}_b0.nii.gz -Tmean ${outputDir}/${participant_id}_${session_id}_b0_mean
   echo "Runing bias field correction"
   N4BiasFieldCorrection -d 3 -i ${outputDir}/${participant_id}_${session_id}_b0_mean.nii.gz -o [${outputDir}/${participant_id}_${session_id}_b0_bf_corr.nii.gz,${outputDir}/${participant_id}_${session_id}_b0_bfwarp.nii.gz]
-  fslmaths ${outputDir}/${participant_id}_${session_id}_dti.nii.gz -div ${outputDir}/${participant_id}_${session_id}_b0_bfwarp.nii.gz ${outputDir}/${participant_id}_${session_id}_bf_corr.nii.gz
+  fslmaths ${dtiDir}/${participant_id}_${session_id}_dti.nii.gz -div ${outputDir}/${participant_id}_${session_id}_b0_bfwarp.nii.gz ${outputDir}/${participant_id}_${session_id}_bf_corr.nii.gz
   echo "Extracting brain mask for $participant_id $session_id"
   RATS_MM -t 2500 -v 350 -k 4 ${outputDir}/${participant_id}_${session_id}_b0_mean.nii.gz ${outputDir}/${participant_id}_${session_id}_b0_mean_mask.nii.gz
   echo "Resample input to isotropic space"
