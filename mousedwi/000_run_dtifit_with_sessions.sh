@@ -33,7 +33,7 @@ run_dtifit(){
   # fslswapdim ${dtiDir}/nodif_brain_mask_200um.nii.gz -x y z ${dtiDir}/nodif_brain_mask_1mm.nii.gz
   echo "Running eddy current correction and DTIFit on $participant_id"
   eddy_correct ${outputDir}/${participant_id}_${session_id}_200um.nii.gz ${outputDir}/${participant_id}_${session_id}_200um 0
-  dtifit -k ${outputDir}/${participant_id}_${session_id}_200um -o ${outputDir}/dtifit/${participant_id}_${session_id}_dti -m ${dtiDir}/nodif_brain_mask_200um.nii.gz -r ${dtiDir}/bvecs -b ${dtiDir}/bvals #names files based on first seven characters of the original filename, this can be adjusted by changing "${dti:0:7} to the length of characters you want
+  dtifit -k ${outputDir}/${participant_id}_${session_id}_200um -o ${outputDir}/dtifit/${participant_id}_${session_id}_dti -m ${outputDir}/${participant_id}_${session_id}_nodif_brain_mask_200um.nii.gz -r ${dtiDir}/bvecs -b ${dtiDir}/bvals #names files based on first seven characters of the original filename, this can be adjusted by changing "${dti:0:7} to the length of characters you want
 }
 # section that reads the appropriate subjects to be analyzed from the participants.tsv file
 # have a version that includes sessions as well, but want to make it optional
@@ -64,5 +64,5 @@ while read participant_id age sex genotype; do
         echo $participant_id $session_id; # prints the current subject info
         run_dtifit &
       done < $rawdata/${participant_id}/sessions.tsv
-    ff
+    fi
 done < $rawdata/participants.tsv
