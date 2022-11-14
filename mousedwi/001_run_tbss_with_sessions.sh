@@ -26,10 +26,10 @@ while read participant_id age sex genotype; do
   while read session_id acq_date; do
     [ "$session_id" == session_id ] && continue;
     if [ $session_id == ses-baseline ]; then  # subject inclusion criteria
-      for actImage in $derivatives/${participant_id}/${participant_id}_${session_id}*_${imType}.nii.gz; do
+      for actImage in $derivatives/${participant_id}/dtifit/${participant_id}_${session_id}*_${imType}.nii.gz; do
         echo $participant_id $session_id; # prints the current subject info
         smooth=$derivatives/${participant_id}/${actImage%.nii.gz}_smooth.nii.gz
-        fslmaths $actimage -s 0.2 $smooth
+        fslmaths $actImage -s 0.2 $smooth
         denoise=${smooth//smooth/denoised}
         DenoiseImage -d 3 -i $smooth -o $denoise -v
         cp $denoise ${derivatives}/${experimental}
