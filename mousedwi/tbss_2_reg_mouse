@@ -114,7 +114,7 @@ if [ $1 = -n ] ; then
     done
 else
     if [ $1 = -T ] ; then
-	TARGET=${SCRIPT_DIR}/data/waxholm_200um.nii.gz
+	TARGET=${SCRIPT_DIR}/data/mouse_FA_in_waxholm_200um.nii.gz
     elif [ $1 = -t ] ; then
 	TARGET=$2
     else

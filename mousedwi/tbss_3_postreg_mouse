@@ -166,13 +166,13 @@ else
     echo "affine-registering target to Waxholm space"
     $FSLDIR/bin/fslmaths target -bin target_mask
     #$FSLDIR/bin/flirt -in target -inweight target_mask -ref $FSLDIR/data/standard/FMRIB58_FA_1mm -omat target_to_MNI152.mat -out target_to_MNI152
-    $FSLDIR/bin/flirt -in target -ref ${SCRIPT_DIR}/data/waxholm_200um.nii.gz -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -omat target_to_waxholm.mat -out target_to_waxholm
+    $FSLDIR/bin/flirt -in target -ref ${SCRIPT_DIR}/data/mouse_FA_in_waxholm_200um.nii.gz -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -omat target_to_waxholm.mat -out target_to_waxholm
 
     echo "transforming (and upsampling) all FA images into Waxholm space"
     for f in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
 	     echo $f
 #	$FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r $FSLDIR/data/standard/FMRIB58_FA_1mm -w ${f}_to_${best}_warp --postmat=target_to_MNI152.mat
-      $FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r ${SCRIPT_DIR}/data/waxholm_200um.nii.gz -w ${f}_to_${best}_warp.nii.gz --postmat=target_to_waxholm.mat
+      $FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r ${SCRIPT_DIR}/data/mouse_FA_in_waxholm_200um.nii.gz -w ${f}_to_${best}_warp.nii.gz --postmat=target_to_waxholm.mat
 #  $FSLDIR/bin/applywarp -i ${f}_to_target -o ${f}_to_waxholm -r /home/zjpeters/Documents/mouseDevelopmental/templates/waxholm_subsamp4.nii.gz -w target_to_waxholm.mat
     done
 
@@ -193,10 +193,11 @@ if [ $SKELETON = 0 ] ; then
     echo "skeletonising mean FA"
     $FSLDIR/bin/tbss_skeleton -i mean_FA -o mean_FA_skeleton
 else
-    $FSLDIR/bin/fslmaths $FSLDIR/data/standard/FMRIB58_FA_1mm -mas mean_FA_mask mean_FA
+    $FSLDIR/bin/fslmaths $FSLDIR/data/standard/mouse_FA_in_waxholm_200um.nii.gz -mas mean_FA_mask mean_FA
     $FSLDIR/bin/fslmaths mean_FA -bin mean_FA_mask
     $FSLDIR/bin/fslmaths all_FA -mas mean_FA_mask all_FA
-    $FSLDIR/bin/imcp $FSLDIR/data/standard/FMRIB58_FA-skeleton_1mm mean_FA_skeleton
+    # still need to create template skeleton below
+    $FSLDIR/bin/imcp $FSLDIR/data/standard/mouse_FA_in_waxholm_200um-skeleton_1mm mean_FA_skeleton
 fi
 
 echo "now view mean_FA_skeleton to check whether the default threshold of 0.2 needs changing, when running:"
