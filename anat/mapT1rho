@@ -50,7 +50,6 @@ if [[ $? != 0 ]]; then
 fi
 eval set -- "$OPTS"
 
-DATE_SUFFIX=$(date +%Y%m%dT%H%M%S%N)
 PREFIX=
 INPUT=
 TIMES=
@@ -120,7 +119,7 @@ if [[ -z "${PREFIX}" ]]; then
 fi
 
 if [[ -z "${DIR_SAVE}" ]]; then
-  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/anat/prep/sub-${PID}
+  DIR_SAVE=${DIR_PROJECT}/derivatives/inc/prep/sub-${PID}
   if [[ -n ${SID} ]]; then
   DIR_SAVE=${DIR_SAVE}/ses-${SID}
 fi
@@ -141,4 +140,5 @@ T1rhoMap \
 # End of Function
 #===============================================================================
 exit 0
+
 
