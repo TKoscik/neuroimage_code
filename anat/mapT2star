@@ -324,8 +324,8 @@ fi
 if [[ "${NORM}" == "true" ]]; then
   if [[ "${VERBOSE}" == "true" ]]; then echo -e ">>>APPLYING NORMALIZATION XFMS"; fi
   if [[ -z ${NORM_XFM} ]]; then
-    NORM_XFM[0]=${DIR_XFM}/${PIDSTR}_from-T1w+rigid_to-${TEMPLATE}+${SPACE}_xfm-syn.nii.gz
-    NORM_XFM[1]=${DIR_XFM}/${PIDSTR}_from-T1w+rigid_to-${TEMPLATE}+${SPACE}_xfm-affine.mat
+    NORM_XFM[0]=${DIR_XFM}/${PIDSTR}_from-native_to-${TEMPLATE}_xfm-syn.nii.gz
+    NORM_XFM[1]=${DIR_XFM}/${PIDSTR}_from-native_to-${TEMPLATE}_xfm-affine.mat
   else
     NORM_XFM=(${NORM_XFM//,/ })
   fi
